@@ -420,6 +420,36 @@ main {
   line-height: 1.62;
   color: #cfcdc5;
 }
+.hero-actions {
+  max-width: 29rem;
+  margin: 1.5rem 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.hero-button {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(238, 234, 224, 0.4);
+  border-radius: 99px;
+  padding: 0.85rem 1.15rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition: 0.3s var(--ease);
+}
+.hero-button.primary,
+.hero-button:hover {
+  background: var(--acid);
+  border-color: var(--acid);
+  color: var(--night);
+}
+.hero-button.primary:hover {
+  background: var(--paper);
+  border-color: var(--paper);
+}
 .hero-art {
   min-height: 30rem;
   position: relative;
@@ -766,54 +796,75 @@ main {
   line-height: 1.6;
   color: #4c4f48;
 }
-.work-grid {
-  display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
-  gap: var(--gutter);
+.home-work {
+  padding-block: clamp(4.5rem, 8vw, 8rem);
 }
-.work-card {
-  min-height: clamp(26rem, 55vw, 47rem);
+.work-feature {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(20rem, 0.8fr);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.work-feature-art {
+  min-height: clamp(28rem, 48vw, 43rem);
   position: relative;
   overflow: hidden;
-  background: #1b1d18;
-  display: flex;
-  align-items: flex-end;
-  padding: 1.5rem;
-}
-.work-card:nth-child(2) {
-  min-height: clamp(22rem, 45vw, 39rem);
-  margin-top: 12vw;
-  background: linear-gradient(140deg, #492f25, #141512 55%, #293029);
-}
-.work-card:first-child:before {
-  content: "";
-  position: absolute;
-  inset: 0;
   background:
     radial-gradient(
-      circle at 65% 34%,
-      rgba(255, 211, 154, 0.9) 0 2%,
+      circle at 66% 35%,
+      rgba(255, 211, 154, 0.88) 0 2%,
       transparent 9%
     ),
     linear-gradient(118deg, #10110f, #714534 57%, #121310);
 }
-.work-card-copy {
-  position: relative;
-  z-index: 2;
+.work-feature-art:after {
+  content: "HEAV / PORTFOLIO ACCESS";
+  position: absolute;
+  right: 1.2rem;
+  bottom: 1.2rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.17em;
 }
-.work-card h2 {
-  font: 500 clamp(2rem, 5vw, 5rem)/0.9 "Syne";
-  letter-spacing: -0.05em;
-  margin: 0.55rem 0;
-}
-.work-note {
-  grid-column: 1/-1;
-  border-top: 1px solid var(--line);
+.work-feature-copy {
+  padding: clamp(2rem, 5vw, 5rem);
   display: flex;
-  justify-content: space-between;
-  gap: 2rem;
-  padding-top: 1.3rem;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-start;
+}
+.work-feature-copy h2,
+.portfolio-panel h2 {
+  font: 500 clamp(3rem, 6vw, 6rem)/0.9 "Syne";
+  letter-spacing: -0.06em;
+  margin: auto 0 1.5rem;
+}
+.work-feature-copy h2 em,
+.portfolio-panel h2 em {
+  font-family: "Instrument Serif";
+  font-weight: 400;
+  color: var(--acid);
+}
+.work-feature-copy p,
+.portfolio-panel p {
+  max-width: 34rem;
   color: var(--muted);
+  font-size: clamp(1rem, 1.35vw, 1.18rem);
+  line-height: 1.7;
+  margin: 0 0 2rem;
+}
+.portfolio-panel {
+  display: grid;
+  grid-template-columns: 1fr 3fr;
+  gap: clamp(2rem, 6vw, 6rem);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding-block: clamp(2.5rem, 6vw, 5rem);
+}
+.portfolio-panel > div {
+  max-width: 60rem;
+}
+.portfolio-panel h2 {
+  margin-top: 0;
 }
 .cta-panel {
   min-height: 80svh;
@@ -904,11 +955,8 @@ main {
   color: var(--paper);
 }
 .reveal {
-  opacity: 0;
-  transform: translateY(28px);
-  transition:
-    opacity 0.8s var(--ease),
-    transform 0.8s var(--ease);
+  opacity: 1;
+  transform: none;
 }
 .reveal.seen {
   opacity: 1;
@@ -967,6 +1015,13 @@ main {
     margin: 1.6rem 0 0 8vw;
     max-width: calc(100% - 8vw);
     font-size: 1rem;
+  }
+  .hero-actions {
+    margin-left: 8vw;
+    max-width: calc(100% - 8vw);
+  }
+  .hero-button {
+    flex: 1 1 auto;
   }
   .hero-art {
     grid-row: 2;
@@ -1030,21 +1085,18 @@ main {
   .step p {
     grid-column: 2;
   }
-  .work-grid {
+  .work-feature {
     grid-template-columns: 1fr;
-    gap: 1rem;
   }
-  .work-card,
-  .work-card:nth-child(2) {
-    min-height: 72svh;
-    margin: 0;
+  .work-feature-art {
+    min-height: 46svh;
   }
-  .work-note {
-    display: block;
+  .work-feature-copy {
+    min-height: 31rem;
+    padding: 2rem 0;
   }
-  .work-note span {
-    display: block;
-    margin-top: 0.7rem;
+  .portfolio-panel {
+    grid-template-columns: 1fr;
   }
   .cta-panel {
     min-height: 72svh;

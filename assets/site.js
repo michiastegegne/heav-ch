@@ -70,24 +70,6 @@
   addEventListener("scroll", onScroll, { passive: true });
   onScroll();
 
-  const revealObserver =
-    "IntersectionObserver" in window
-      ? new IntersectionObserver(
-          (entries) =>
-            entries.forEach((entry) => {
-              if (entry.isIntersecting) {
-                entry.target.classList.add("seen");
-                revealObserver.unobserve(entry.target);
-              }
-            }),
-          { threshold: 0.12 },
-        )
-      : null;
-  $$(".reveal").forEach((element) =>
-    revealObserver
-      ? revealObserver.observe(element)
-      : element.classList.add("seen"),
-  );
   $$("[data-year]").forEach(
     (element) => (element.textContent = new Date().getFullYear()),
   );
