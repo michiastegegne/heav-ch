@@ -44,7 +44,9 @@
             "url": "https://heav.ch/",
             "email": "hello@heav.ch",
             "description": "Schweizer Filmproduktion für Brand Films, Imagefilme und Campaign Content.",
-            "founder": { "@id": "https://heav.ch/michias-tegegne/#person" }
+            "founder": {
+              "@id": "https://heav.ch/michias-tegegne/#person"
+            }
           },
           {
             "@type": "Person",
@@ -52,8 +54,24 @@
             "name": "Michias Tegegne",
             "jobTitle": "Inhaber und Gründer von HEAV",
             "url": "https://heav.ch/michias-tegegne/",
-            "worksFor": { "@id": "https://heav.ch/#organization" },
-            "founder": { "@id": "https://heav.ch/#organization" }
+            "worksFor": {
+              "@id": "https://heav.ch/#organization"
+            }
+          },
+          {
+            "@type": "ProfilePage",
+            "@id": "https://heav.ch/michias-tegegne/#profile",
+            "url": "https://heav.ch/michias-tegegne/",
+            "name": "Michias Tegegne – Inhaber und Gründer von HEAV",
+            "mainEntity": {
+              "@id": "https://heav.ch/michias-tegegne/#person"
+            },
+            "about": {
+              "@id": "https://heav.ch/michias-tegegne/#person"
+            },
+            "isPartOf": {
+              "@id": "https://heav.ch/#website"
+            }
           },
           {
             "@type": "BreadcrumbList",
@@ -96,7 +114,14 @@
         Menü
       </button>
     </header>
-    <aside class="mobile-menu" id="mobile-menu" aria-hidden="true">
+    <aside
+      class="mobile-menu"
+      id="mobile-menu"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Hauptmenü"
+      aria-hidden="true"
+    >
       <nav aria-label="Mobile Navigation">
         <a href="/leistungen/"><span>01</span>Leistungen</a
         ><a href="/arbeiten/"><span>02</span>Arbeiten</a

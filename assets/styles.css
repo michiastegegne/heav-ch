@@ -223,11 +223,14 @@ svg {
   visibility: hidden;
   transition:
     transform 0.7s var(--ease),
-    visibility 0.7s;
+    visibility 0s 0.7s;
 }
 .mobile-menu.open {
   transform: none;
   visibility: visible;
+  transition:
+    transform 0.7s var(--ease),
+    visibility 0s;
 }
 .mobile-menu nav {
   display: flex;
@@ -256,6 +259,9 @@ svg {
   min-height: 44px;
   display: flex;
   align-items: center;
+}
+.opener-seen .home-opener {
+  display: none;
 }
 .home-opener {
   height: 145svh;
