@@ -65,6 +65,54 @@ button {
   font: inherit;
   color: inherit;
 }
+.icon {
+  --icon-size: 0.85rem;
+  --icon-rotation: 0deg;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  position: relative;
+  display: inline-block;
+  flex: 0 0 auto;
+  margin-left: 0.55rem;
+  transform: rotate(var(--icon-rotation));
+  transition: transform 0.35s var(--ease);
+}
+.icon:before {
+  content: "";
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 52%;
+  height: 52%;
+  border-top: 1.5px solid currentColor;
+  border-right: 1.5px solid currentColor;
+}
+.icon:after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: calc(100% - 2px);
+  height: 1.5px;
+  background: currentColor;
+  transform: rotate(-45deg);
+  transform-origin: right center;
+}
+.icon-down-right {
+  --icon-rotation: 90deg;
+}
+.icon-down {
+  --icon-rotation: 135deg;
+}
+a:hover .icon-up-right {
+  transform: translate(2px, -2px) rotate(var(--icon-rotation));
+}
+a:hover .icon-down-right {
+  transform: translate(2px, 2px) rotate(var(--icon-rotation));
+}
+a:hover .icon-down {
+  transform: translateY(3px) rotate(var(--icon-rotation));
+}
 img,
 svg {
   display: block;
@@ -194,6 +242,10 @@ svg {
   justify-self: end;
   border-bottom: 1px solid;
   padding-bottom: 0.25rem;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
 }
 .menu-toggle {
   display: none;
@@ -446,9 +498,19 @@ main {
   border-color: var(--acid);
   color: var(--night);
 }
+.hero-button.primary {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+    0 0.75rem 2.5rem rgba(215, 255, 56, 0.08);
+}
 .hero-button.primary:hover {
   background: var(--paper);
   border-color: var(--paper);
+}
+.hero-button:active,
+.button-link:active,
+.menu-toggle:active {
+  transform: scale(0.98);
 }
 .hero-art {
   min-height: 30rem;
@@ -515,6 +577,10 @@ main {
   display: grid;
   place-items: center;
   transition: 0.3s;
+}
+.round-arrow .icon {
+  --icon-size: 0.72rem;
+  margin: 0;
 }
 .round-arrow:hover {
   background: var(--acid);
@@ -664,12 +730,12 @@ main {
 .link-row:hover p {
   color: inherit;
 }
-.link-row .arrow {
-  font-size: 1.4rem;
-  transition: transform 0.3s;
+.link-row .icon {
+  --icon-size: 1rem;
+  margin-left: 0;
 }
-.link-row:hover .arrow {
-  transform: translate(4px, -4px);
+.link-row:hover .icon-up-right {
+  transform: translate(4px, -4px) rotate(var(--icon-rotation));
 }
 .split {
   display: grid;
@@ -894,6 +960,10 @@ main {
   font: 500 clamp(1.05rem, 2vw, 1.8rem)/1 "Syne";
   transition: padding 0.3s;
 }
+.mail-link .icon {
+  --icon-size: 1rem;
+  margin-left: 2rem;
+}
 .mail-link:hover {
   padding-inline: 1rem;
 }
@@ -909,6 +979,7 @@ main {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   transition: 0.3s;
+  gap: 0.05rem;
 }
 .button-link:hover {
   background: var(--acid);
