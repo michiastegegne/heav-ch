@@ -130,6 +130,124 @@
           </p>
         </div>
       </section>
+      <section class="section paper contact-form-section" id="anfrage">
+        <div class="contact-form-layout">
+          <div class="contact-form-intro">
+            <span class="caps">Projektanfrage</span>
+            <h2>Erzähl uns,<br /><em>was entstehen soll.</em></h2>
+            <p>
+              Ein paar Eckpunkte reichen. Michias meldet sich persönlich mit den
+              passenden nächsten Schritten.
+            </p>
+          </div>
+          <form
+            class="project-form"
+            action="https://formsubmit.co/hello@heav.ch"
+            method="post"
+            accept-charset="UTF-8"
+          >
+            <input
+              type="hidden"
+              name="_subject"
+              value="Neue Projektanfrage über heav.ch"
+            />
+            <input
+              type="hidden"
+              name="_next"
+              value="https://heav.ch/kontakt/?gesendet=1#anfrage"
+            />
+            <input type="hidden" name="_template" value="table" />
+            <input type="hidden" name="_captcha" value="false" />
+            <label class="form-honeypot" aria-hidden="true">
+              Webseite
+              <input
+                type="text"
+                name="_honey"
+                tabindex="-1"
+                autocomplete="off"
+              />
+            </label>
+            <div
+              class="form-success"
+              data-form-success
+              role="status"
+              tabindex="-1"
+              hidden
+            >
+              <strong>Danke für deine Anfrage.</strong>
+              <span>Michias meldet sich persönlich bei dir.</span>
+            </div>
+            <div class="form-grid">
+              <label class="form-field">
+                <span>Name *</span>
+                <input type="text" name="Name" autocomplete="name" required />
+              </label>
+              <label class="form-field">
+                <span>Firma</span>
+                <input type="text" name="Firma" autocomplete="organization" />
+              </label>
+              <label class="form-field">
+                <span>E-Mail *</span>
+                <input
+                  type="email"
+                  name="E-Mail"
+                  autocomplete="email"
+                  inputmode="email"
+                  required
+                />
+              </label>
+              <label class="form-field">
+                <span>Telefon</span>
+                <input
+                  type="tel"
+                  name="Telefon"
+                  autocomplete="tel"
+                  inputmode="tel"
+                />
+              </label>
+              <label class="form-field">
+                <span>Projektart</span>
+                <select name="Projektart">
+                  <option value="">Bitte auswählen</option>
+                  <option>Brand Film / Imagefilm</option>
+                  <option>Campaign Content</option>
+                  <option>Content Creation</option>
+                  <option>Andere Anfrage</option>
+                </select>
+              </label>
+              <label class="form-field">
+                <span>Gewünschter Zeitraum</span>
+                <input
+                  type="text"
+                  name="Zeitraum"
+                  placeholder="z. B. Herbst 2026"
+                />
+              </label>
+              <label class="form-field form-field-wide">
+                <span>Worum geht es? *</span>
+                <textarea
+                  name="Projektbeschreibung"
+                  rows="5"
+                  required
+                ></textarea>
+              </label>
+            </div>
+            <label class="form-consent">
+              <input type="checkbox" name="Einwilligung" required />
+              <span>
+                Ich bin einverstanden, dass HEAV meine Angaben zur Bearbeitung
+                der Anfrage verwendet. Der Versand erfolgt über FormSubmit.
+              </span>
+            </label>
+            <button class="form-submit" type="submit">
+              Anfrage senden<span
+                class="icon icon-up-right"
+                aria-hidden="true"
+              ></span>
+            </button>
+          </form>
+        </div>
+      </section>
       <section class="section acid cta-panel">
         <div class="contact-details">
           <span class="caps">Direkter Kontakt</span>

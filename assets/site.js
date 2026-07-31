@@ -86,6 +86,16 @@
     (element) => (element.textContent = new Date().getFullYear()),
   );
 
+  const formSuccess = $("[data-form-success]");
+  if (
+    formSuccess &&
+    new URLSearchParams(location.search).get("gesendet") === "1"
+  ) {
+    formSuccess.hidden = false;
+    history.replaceState(null, "", `${location.pathname}#anfrage`);
+    requestAnimationFrame(() => formSuccess.focus({ preventScroll: true }));
+  }
+
   const enableGrain = () => document.body.classList.add("grain-ready");
   const scheduleGrain = () => {
     if ("requestIdleCallback" in window) {
@@ -105,46 +115,6 @@
   const precisePointer = matchMedia(
     "(hover: hover) and (pointer: fine)",
   ).matches;
-
-  if (!reducedMotion && precisePointer) {
-    const cursorRing = document.createElement("span");
-    cursorRing.className = "cursor-ring";
-    cursorRing.setAttribute("aria-hidden", "true");
-    document.body.append(cursorRing);
-
-    let cursorFrame = 0;
-    let cursorEvent;
-    const updateCursor = () => {
-      const { clientX: x, clientY: y, target } = cursorEvent;
-      cursorRing.style.transform = `translate3d(${x}px,${y}px,0)`;
-      cursorRing.classList.toggle(
-        "is-interactive",
-        Boolean(
-          target.closest("a, button, [role='button'], input, textarea, select"),
-        ),
-      );
-      cursorFrame = 0;
-    };
-    addEventListener("pointermove", (event) => {
-      cursorEvent = event;
-      cursorRing.classList.add("is-visible");
-      if (!cursorFrame) cursorFrame = requestAnimationFrame(updateCursor);
-    });
-    document.documentElement.addEventListener("pointerleave", () =>
-      cursorRing.classList.remove("is-visible", "is-interactive", "is-pressed"),
-    );
-    addEventListener("pointerdown", () =>
-      cursorRing.classList.add("is-pressed"),
-    );
-    addEventListener("pointerup", () =>
-      cursorRing.classList.remove("is-pressed"),
-    );
-    addEventListener(
-      "scroll",
-      () => cursorRing.classList.remove("is-interactive", "is-pressed"),
-      { passive: true },
-    );
-  }
 
   if (!reducedMotion && precisePointer && "IntersectionObserver" in window) {
     const motionTargets = $$(
