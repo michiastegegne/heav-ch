@@ -1161,6 +1161,9 @@ main {
   :root {
     --header: 4.5rem;
   }
+  .noise {
+    display: none;
+  }
   .site-header {
     grid-template-columns: 1fr auto;
     padding-top: env(safe-area-inset-top);
@@ -1194,7 +1197,7 @@ main {
   }
   .display {
     font-size: clamp(3.65rem, 18vw, 6.7rem);
-    line-height: 0.8;
+    line-height: 0.84;
   }
   .home-hero .lead {
     margin: 1.6rem 0 0 8vw;
@@ -1285,10 +1288,11 @@ main {
     grid-template-columns: 1fr;
   }
   .cta-panel {
-    min-height: 72svh;
+    min-height: max(32rem, 64svh);
   }
   .cta-panel h2 {
     font-size: 17vw;
+    line-height: 0.82;
   }
   .cta-panel h2 em {
     margin-left: 6vw;
@@ -1310,6 +1314,22 @@ main {
   }
 }
 @media (min-width: 640px) and (max-width: 800px) {
+  .display {
+    font-size: clamp(5.5rem, 12vw, 6.25rem);
+  }
+  .section {
+    padding-block: clamp(5rem, 12vw, 6rem);
+  }
+  .section-head h2 {
+    font-size: clamp(4rem, 8vw, 4.6rem);
+  }
+  .cta-panel h2 {
+    font-size: clamp(5.5rem, 13vw, 6.5rem);
+  }
+  .mobile-menu nav a {
+    font-size: clamp(3.2rem, 8vw, 3.8rem);
+    padding-block: 0.1em;
+  }
   .owner-section .split {
     grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.95fr);
     gap: clamp(2rem, 5vw, 3rem);
@@ -1337,6 +1357,12 @@ main {
   }
   .caps {
     font-size: 0.59rem;
+  }
+  .home-hero .lead,
+  .hero-actions,
+  .page-hero .intro-grid p {
+    max-width: calc(100% - 4vw);
+    margin-left: 4vw;
   }
   .site-footer {
     gap: 1.4rem;
