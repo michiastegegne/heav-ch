@@ -66,9 +66,21 @@
     }
   });
 
-  const onScroll = () => header?.classList.toggle("scrolled", scrollY > 24);
-  addEventListener("scroll", onScroll, { passive: true });
-  onScroll();
+  const updateHeader = () => {
+    if (!header) return;
+    header.classList.toggle("scrolled", scrollY > 24);
+    const scrollRange = Math.max(
+      1,
+      document.documentElement.scrollHeight - innerHeight,
+    );
+    header.style.setProperty(
+      "--scroll-progress",
+      Math.min(1, Math.max(0, scrollY / scrollRange)).toFixed(4),
+    );
+  };
+  addEventListener("scroll", updateHeader, { passive: true });
+  addEventListener("resize", updateHeader);
+  updateHeader();
 
   $$("[data-year]").forEach(
     (element) => (element.textContent = new Date().getFullYear()),
@@ -76,6 +88,41 @@
 
   const opener = $(".home-opener");
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const precisePointer = matchMedia(
+    "(hover: hover) and (pointer: fine)",
+  ).matches;
+
+  if (!reducedMotion && precisePointer) {
+    $$(".hero-art, .work-feature-art").forEach((surface) => {
+      let frame = 0;
+      let latestEvent;
+      surface.addEventListener("pointermove", (event) => {
+        latestEvent = event;
+        if (frame) return;
+        frame = requestAnimationFrame(() => {
+          const rect = surface.getBoundingClientRect();
+          const x = (
+            42 +
+            ((latestEvent.clientX - rect.left) / rect.width) * 28
+          ).toFixed(2);
+          const y = (
+            22 +
+            ((latestEvent.clientY - rect.top) / rect.height) * 28
+          ).toFixed(2);
+          surface.style.setProperty("--mx", `${x}%`);
+          surface.style.setProperty("--my", `${y}%`);
+          frame = 0;
+        });
+      });
+      surface.addEventListener("pointerleave", () => {
+        if (frame) cancelAnimationFrame(frame);
+        frame = 0;
+        surface.style.removeProperty("--mx");
+        surface.style.removeProperty("--my");
+      });
+    });
+  }
+
   let openerSeen = false;
   try {
     openerSeen = sessionStorage.getItem("heav-opener-seen") === "1";
