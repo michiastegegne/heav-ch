@@ -93,6 +93,149 @@
   ).matches;
 
   if (!reducedMotion && precisePointer) {
+    const cursorDot = document.createElement("span");
+    const cursorRing = document.createElement("span");
+    cursorDot.className = "cursor-dot";
+    cursorRing.className = "cursor-ring";
+    cursorDot.setAttribute("aria-hidden", "true");
+    cursorRing.setAttribute("aria-hidden", "true");
+    document.body.append(cursorRing, cursorDot);
+    document.body.classList.add("has-custom-cursor");
+
+    let cursorFrame = 0;
+    let cursorEvent;
+    const updateCursor = () => {
+      const { clientX: x, clientY: y, target } = cursorEvent;
+      cursorDot.style.transform = `translate3d(${x}px,${y}px,0)`;
+      cursorRing.style.transform = `translate3d(${x}px,${y}px,0)`;
+      const interactive = target.closest(
+        "a, button, [role='button'], input, textarea, select",
+      );
+      cursorRing.classList.toggle("is-interactive", Boolean(interactive));
+      cursorFrame = 0;
+    };
+    addEventListener("pointermove", (event) => {
+      cursorEvent = event;
+      cursorDot.classList.add("is-visible");
+      cursorRing.classList.add("is-visible");
+      if (!cursorFrame) cursorFrame = requestAnimationFrame(updateCursor);
+    });
+    document.documentElement.addEventListener("pointerleave", () => {
+      cursorDot.classList.remove("is-visible");
+      cursorRing.classList.remove("is-visible");
+    });
+    addEventListener("pointerdown", () =>
+      cursorRing.classList.add("is-pressed"),
+    );
+    addEventListener("pointerup", () =>
+      cursorRing.classList.remove("is-pressed"),
+    );
+
+    const magneticControls = $$(
+      ".hero-button.primary, .header-cta, .button-link, .round-arrow, .mail-link",
+    );
+    magneticControls.forEach((control) => {
+      control.classList.add("magnetic");
+      control.addEventListener("pointermove", (event) => {
+        const rect = control.getBoundingClientRect();
+        const x = ((event.clientX - rect.left) / rect.width - 0.5) * 10;
+        const y = ((event.clientY - rect.top) / rect.height - 0.5) * 8;
+        control.style.setProperty("--mag-x", `${x.toFixed(2)}px`);
+        control.style.setProperty("--mag-y", `${y.toFixed(2)}px`);
+      });
+      control.addEventListener("pointerleave", () => {
+        control.style.removeProperty("--mag-x");
+        control.style.removeProperty("--mag-y");
+      });
+    });
+    addEventListener(
+      "scroll",
+      () => {
+        cursorRing.classList.remove("is-interactive", "is-pressed");
+        magneticControls.forEach((control) => {
+          control.style.removeProperty("--mag-x");
+          control.style.removeProperty("--mag-y");
+        });
+      },
+      { passive: true },
+    );
+  }
+
+  if (!reducedMotion && "IntersectionObserver" in window) {
+    const motionTargets = $$(
+      "main .section-head, main .section-copy, main .link-row, main .split > *, main .work-feature > *, main .portfolio-panel, main .meta-item, main .step, main .prose > h2, main .prose > p, main .cta-panel > *",
+    );
+    const motionObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          const element = entry.target;
+          const siblings = motionTargets.filter(
+            (candidate) => candidate.parentElement === element.parentElement,
+          );
+          const delay = Math.min(
+            Math.max(0, siblings.indexOf(element)) * 65,
+            195,
+          );
+          element.animate(
+            [
+              {
+                opacity: 0.22,
+                transform: "translate3d(0, 2rem, 0)",
+                clipPath: "inset(0 0 12% 0)",
+              },
+              {
+                opacity: 1,
+                transform: "translate3d(0, 0, 0)",
+                clipPath: "inset(0 0 0 0)",
+              },
+            ],
+            {
+              duration: 820,
+              delay,
+              easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+              fill: "both",
+            },
+          );
+          element.classList.add("motion-entered");
+          motionObserver.unobserve(element);
+        });
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -7% 0px" },
+    );
+    motionTargets.forEach((element) => motionObserver.observe(element));
+  }
+
+  if (!reducedMotion && innerWidth > 800) {
+    const depthSurfaces = $$(
+      ".hero-art, .film-surface, .portrait-surface, .work-feature-art",
+    );
+    let depthFrame = 0;
+    const updateDepth = () => {
+      depthSurfaces.forEach((surface) => {
+        const rect = surface.getBoundingClientRect();
+        if (rect.bottom < -200 || rect.top > innerHeight + 200) return;
+        const center = rect.top + rect.height / 2;
+        const progress = Math.max(
+          -1,
+          Math.min(1, (center - innerHeight / 2) / innerHeight),
+        );
+        surface.style.setProperty(
+          "--depth-y",
+          `${(-progress * 14).toFixed(2)}px`,
+        );
+      });
+      depthFrame = 0;
+    };
+    const requestDepth = () => {
+      if (!depthFrame) depthFrame = requestAnimationFrame(updateDepth);
+    };
+    addEventListener("scroll", requestDepth, { passive: true });
+    addEventListener("resize", requestDepth);
+    updateDepth();
+  }
+
+  if (!reducedMotion && precisePointer) {
     $$(".hero-art, .work-feature-art").forEach((surface) => {
       let frame = 0;
       let latestEvent;

@@ -1081,6 +1081,70 @@ main {
 .footer-owner {
   color: var(--paper);
 }
+.cursor-dot,
+.cursor-ring {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1000;
+  pointer-events: none;
+  translate: -50% -50%;
+  opacity: 0;
+}
+.cursor-dot {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 50%;
+  background: var(--acid);
+  box-shadow: 0 0 1rem rgba(215, 255, 56, 0.45);
+}
+.cursor-ring {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgba(215, 255, 56, 0.75);
+  border-radius: 50%;
+  mix-blend-mode: difference;
+  transition:
+    width 0.3s var(--ease),
+    height 0.3s var(--ease),
+    background-color 0.3s var(--ease),
+    border-color 0.3s var(--ease),
+    opacity 0.2s ease,
+    transform 0.11s linear;
+}
+.cursor-dot.is-visible,
+.cursor-ring.is-visible {
+  opacity: 1;
+}
+.cursor-ring.is-interactive {
+  width: 3rem;
+  height: 3rem;
+  background: transparent;
+  border-color: var(--acid);
+  box-shadow: 0 0 0 0.35rem rgba(215, 255, 56, 0.08);
+}
+.cursor-ring.is-pressed {
+  width: 1.45rem;
+  height: 1.45rem;
+}
+.magnetic {
+  transform: translate3d(var(--mag-x, 0), var(--mag-y, 0), 0);
+  transition:
+    transform 0.45s var(--ease),
+    color 0.3s var(--ease),
+    background-color 0.3s var(--ease),
+    border-color 0.3s var(--ease);
+}
+.portrait-surface:after,
+.work-feature-art:after {
+  transform: translate3d(0, var(--depth-y, 0), 0);
+}
+@media (hover: hover) and (pointer: fine) {
+  body.has-custom-cursor,
+  body.has-custom-cursor * {
+    cursor: none !important;
+  }
+}
 .reveal {
   opacity: 1;
   transform: none;
@@ -1090,8 +1154,11 @@ main {
   transform: none;
 }
 @keyframes drift {
+  from {
+    transform: translate3d(0, var(--depth-y, 0), 0) scale(1.02);
+  }
   to {
-    transform: scale(1.12) translate3d(-2%, 2%, 0);
+    transform: translate3d(-2%, calc(2% + var(--depth-y, 0px)), 0) scale(1.12);
   }
 }
 @keyframes pulse {
