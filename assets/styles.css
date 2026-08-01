@@ -1068,29 +1068,35 @@ main {
   border-right: 1px solid rgba(9, 10, 8, 0.2);
   border-bottom: 1px solid rgba(9, 10, 8, 0.28);
 }
-.client-logos li:nth-child(4) {
-  border-right: 0;
-}
-.client-logos li:nth-child(n + 5) {
-  grid-column: span 4;
-}
-.client-logos li:last-child {
+.client-logos li:nth-child(4n) {
   border-right: 0;
 }
 .client-logos img {
   display: block;
-  max-width: min(100%, 10rem);
-  max-height: 4.2rem;
+  max-width: min(100%, var(--client-logo-width, 10.5rem));
+  max-height: var(--client-logo-height, 4.8rem);
   width: auto;
   height: auto;
   object-fit: contain;
-  filter: grayscale(1) contrast(1.12);
-  opacity: 0.78;
+  opacity: 1;
 }
-.client-logos img[src$="cewe.png"],
-.client-logos img[src$="praisecamp.png"] {
-  filter: invert(1) grayscale(1) contrast(1.12);
-  opacity: 0.72;
+.client-logo--shield {
+  --client-logo-width: 4.7rem;
+  --client-logo-height: 5.7rem;
+}
+.client-logo--square {
+  --client-logo-width: 7.2rem;
+  --client-logo-height: 5.4rem;
+}
+.client-logo--cewe {
+  --client-logo-width: 7.4rem;
+}
+.client-logo--wide {
+  --client-logo-width: 11.5rem;
+}
+.client-logo--compact {
+  --client-logo-width: 6.4rem;
+  --client-logo-height: 5.2rem;
 }
 .contact-form-layout {
   display: grid;
@@ -1551,10 +1557,6 @@ main {
     border-right: 1px solid rgba(9, 10, 8, 0.2);
   }
   .client-logos li:nth-child(even) {
-    border-right: 0;
-  }
-  .client-logos li:last-child {
-    grid-column: 1 / -1;
     border-right: 0;
   }
   .contact-form-layout {
