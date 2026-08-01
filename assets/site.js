@@ -28,6 +28,7 @@
     toggle.setAttribute("aria-expanded", String(open));
     toggle.textContent = open ? "Schliessen" : "Menü";
     menu.setAttribute("aria-hidden", String(!open));
+    menu.toggleAttribute("inert", !open);
     backgroundRegions.forEach((region) =>
       region.toggleAttribute("inert", open),
     );

@@ -1717,7 +1717,9 @@ main {
   ::view-transition-new(root) {
     animation: none;
   }
-  * {
+  *,
+  *::before,
+  *::after {
     animation: none !important;
     transition-duration: 0.01ms !important;
   }
