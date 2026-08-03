@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="de-CH">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="robots" content="noindex,nofollow,noarchive" />
+    <meta name="theme-color" content="#090a08" />
+    <title>Login – HEAV Studio</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/login/assets/login.css" />
+  </head>
+  <body>
+    <main class="login-shell">
+      <a class="brand" href="/" aria-label="Zur HEAV Website">HEAV</a>
+      <section class="login-card" aria-labelledby="login-title">
+        <div class="login-copy">
+          <span class="eyebrow">HEAV STUDIO · INTERN</span>
+          <h1 id="login-title">Welcome<br /><em>back.</em></h1>
+          <p>Kunden, Projekte und Rechnungen an einem Ort.</p>
+        </div>
+        <form id="login-form" novalidate>
+          <label>
+            <span>E-Mail</span>
+            <input name="email" type="email" autocomplete="username" required />
+          </label>
+          <label>
+            <span>Passwort</span>
+            <input name="password" type="password" autocomplete="current-password" minlength="8" required />
+          </label>
+          <p class="form-message" id="login-message" role="status" aria-live="polite"></p>
+          <button type="submit">Sicher anmelden <span aria-hidden="true">↗</span></button>
+          <a class="preview-link" href="/admin/?preview=1">Vorschau öffnen</a>
+        </form>
+      </section>
+      <p class="legal">Geschützter Bereich · HEAV Filmproduktion Schweiz</p>
+    </main>
+    <script type="module" src="/login/assets/login.js"></script>
+  </body>
+</html>

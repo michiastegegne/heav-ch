@@ -1,0 +1,14 @@
+{
+  "name": "heav-admin",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "test:browser": "playwright test tests/browser",
+    "check": "node --check admin/assets/app.js && node --check admin/assets/domain.js && node --check login/assets/login.js"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.3.14",
+    "@playwright/test": "^1.62.1"
+  }
+}

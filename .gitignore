@@ -1,4 +1,11 @@
 dns-*.png
 hostpoint-*.png
 qa/
+test-results/
+playwright-report/
+node_modules/
+.env
+.env.*
+!.env.example
+.supabase/
 .DS_Store

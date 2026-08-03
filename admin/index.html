@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="de-CH">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="robots" content="noindex,nofollow,noarchive" />
+    <meta name="theme-color" content="#090a08" />
+    <title>Studio – HEAV</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/admin/assets/admin.css" />
+  </head>
+  <body>
+    <div class="loading-screen" id="loading-screen" aria-live="polite">
+      <strong>HEAV</strong><span>Studio wird geladen …</span>
+    </div>
+    <div class="admin-shell" id="admin-shell" hidden>
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-head">
+          <a class="brand" href="/" aria-label="Zur HEAV Website">HEAV</a>
+          <button class="nav-close icon-button" type="button" aria-label="Menü schliessen" data-close-nav>×</button>
+        </div>
+        <nav class="main-nav" aria-label="Studio Navigation">
+          <button class="nav-link is-active" data-view="dashboard"><span>01</span>Übersicht</button>
+          <button class="nav-link" data-view="customers"><span>02</span>Kunden</button>
+          <button class="nav-link" data-view="projects"><span>03</span>Projekte</button>
+          <button class="nav-link" data-view="invoices"><span>04</span>Rechnungen</button>
+          <button class="nav-link" data-view="settings"><span>05</span>Einstellungen</button>
+        </nav>
+        <div class="sidebar-foot">
+          <span class="connection-dot" aria-hidden="true"></span>
+          <span id="connection-label">Sicher verbunden</span>
+          <button id="logout-button" type="button">Abmelden</button>
+        </div>
+      </aside>
+      <div class="nav-scrim" data-close-nav></div>
+      <section class="workspace">
+        <header class="topbar">
+          <button class="menu-button icon-button" type="button" aria-label="Menü öffnen" data-open-nav>Menü</button>
+          <div>
+            <span class="kicker">HEAV STUDIO</span>
+            <h1 id="view-title">Übersicht</h1>
+          </div>
+          <button class="primary-action" type="button" data-create="invoice">Neue Rechnung <span aria-hidden="true">+</span></button>
+        </header>
+        <main id="app-content" tabindex="-1"></main>
+      </section>
+    </div>
+
+    <dialog class="editor-dialog" id="editor-dialog" aria-labelledby="dialog-title">
+      <form method="dialog" class="dialog-shell" id="editor-form">
+        <header>
+          <div><span class="kicker" id="dialog-kicker">NEU</span><h2 id="dialog-title">Eintrag</h2></div>
+          <button class="icon-button" value="cancel" type="submit" aria-label="Dialog schliessen">×</button>
+        </header>
+        <div class="dialog-body" id="dialog-body"></div>
+        <footer>
+          <p class="form-error" id="form-error" role="alert"></p>
+          <button class="secondary-button" value="cancel" type="submit">Abbrechen</button>
+          <button class="primary-action" value="save" type="submit">Speichern</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+    <script type="module" src="/admin/assets/app.js"></script>
+  </body>
+</html>
