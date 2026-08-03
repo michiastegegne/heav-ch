@@ -6,7 +6,7 @@ const button = form.querySelector("button");
 
 if (!isBackendConfigured()) {
   message.textContent = "Der sichere Backend-Zugang wird gerade eingerichtet.";
-  form.querySelectorAll("input, button").forEach((element) => {
+  form.querySelectorAll('input, button[type="submit"]').forEach((element) => {
     element.disabled = true;
   });
 } else {
