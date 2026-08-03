@@ -21,8 +21,28 @@ window.addEventListener("beforeinstallprompt", (event) => {
   if (nativeInstallButton) nativeInstallButton.hidden = false;
 });
 
-installButton?.addEventListener("click", () => {
+const showInstallHelp = () => {
   if (typeof installDialog?.showModal === "function") installDialog.showModal();
+};
+
+const requestNativeInstall = async () => {
+  if (!installPrompt) return false;
+  const promptEvent = installPrompt;
+  installPrompt = null;
+  if (nativeInstallButton) nativeInstallButton.hidden = true;
+  try {
+    await promptEvent.prompt();
+    const { outcome } = await promptEvent.userChoice;
+    if (outcome === "accepted" && installDialog?.open) installDialog.close();
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+installButton?.addEventListener("click", async () => {
+  if (await requestNativeInstall()) return;
+  showInstallHelp();
 });
 
 closeButton?.addEventListener("click", () => installDialog.close());
@@ -30,14 +50,7 @@ installDialog?.addEventListener("click", (event) => {
   if (event.target === installDialog) installDialog.close();
 });
 
-nativeInstallButton?.addEventListener("click", async () => {
-  if (!installPrompt) return;
-  await installPrompt.prompt();
-  const { outcome } = await installPrompt.userChoice;
-  installPrompt = null;
-  nativeInstallButton.hidden = true;
-  if (outcome === "accepted") installDialog.close();
-});
+nativeInstallButton?.addEventListener("click", requestNativeInstall);
 
 window.addEventListener("appinstalled", () => {
   installPrompt = null;

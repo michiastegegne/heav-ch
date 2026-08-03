@@ -2,6 +2,29 @@ import { test, expect } from "@playwright/test";
 
 const base = "http://127.0.0.1:4179";
 
+test("Chrome/Android: Hauptknopf öffnet den nativen Installationsprompt direkt", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await page.addInitScript(() => {
+    window.__installPromptCalls = 0;
+    window.__installPromptHadUserActivation = false;
+    window.addEventListener("DOMContentLoaded", () => {
+      const event = new Event("beforeinstallprompt", { cancelable: true });
+      event.prompt = async () => {
+        window.__installPromptCalls += 1;
+        window.__installPromptHadUserActivation = navigator.userActivation.isActive;
+      };
+      event.userChoice = Promise.resolve({ outcome: "accepted" });
+      window.dispatchEvent(event);
+    });
+  });
+  await page.goto(`${base}/login/`);
+  await page.getByRole("button", { name: "HEAV App installieren" }).click();
+  await expect.poll(() => page.evaluate(() => window.__installPromptCalls)).toBe(1);
+  expect(await page.evaluate(() => window.__installPromptHadUserActivation)).toBe(true);
+  await expect(page.getByRole("dialog", { name: "HEAV installieren" })).not.toBeVisible();
+  await page.close();
+});
+
 test("Mac/Desktop: Installation ist direkt auffindbar und erklärt", async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   await page.goto(`${base}/login/`);
