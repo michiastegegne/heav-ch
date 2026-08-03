@@ -20,6 +20,17 @@ Official multi-page website for [heav.ch](https://heav.ch), including the privat
 
 The public pages and admin client are static and deploy through GitHub Pages. Sensitive data and operations never live in GitHub Pages: Supabase provides Auth/Postgres/RLS and the Edge Function keeps the Resend key server-side.
 
+### Installable app for Mac and mobile
+
+HEAV Studio is a Progressive Web App. Open `/login/` and choose **HEAV App installieren**:
+
+- macOS Safari: **File → Add to Dock**
+- iPhone/iPad Safari: **Share → Add to Home Screen**
+- Android Chrome: **Menu → Install app**
+- Chromium desktop browsers show a native **Install now** action when available
+
+The installed Studio launches in a standalone window and supports mobile safe areas. The fictional `/admin/?preview=1` design preview and sample invoice are cached for offline use. Real authentication and business data still require a network connection.
+
 ### Local verification
 
 ```bash
