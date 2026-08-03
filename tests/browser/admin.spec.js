@@ -62,8 +62,13 @@ test("Mobile: echte 390px-Ansicht, Navigation und Rechnungsdialog", async ({ bro
   await expect(page.locator("#admin-shell")).toHaveClass(/nav-open/);
   await expect(page.locator("#sidebar")).toBeVisible();
   await page.locator('.nav-link[data-view="invoices"]').click();
-  await expect(page.getByRole("heading", { name: "Rechnungen" })).toBeVisible();
-  await page.locator('[data-create="invoice"]').first().click();
+  await expect(page.locator("#view-title")).toHaveText("Rechnungen");
+  const filterMetrics = await page.locator(".filter-tabs").evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+  }));
+  expect(filterMetrics.scrollWidth).toBeLessThanOrEqual(filterMetrics.clientWidth);
+  await page.locator("[data-create=invoice]").first().click();
   await expect(page.getByRole("heading", { name: "Rechnung erstellen" })).toBeVisible();
   await assertHealthy(page, errors);
   await page.screenshot({ path: "qa/admin-mobile-invoice.png", fullPage: true });
