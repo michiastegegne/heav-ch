@@ -20,27 +20,12 @@ const viewNames = {
   invoices: "Rechnungen",
   settings: "Einstellungen",
 };
-const state = { view: "dashboard", query: "", filter: "all", data: null, supabase: null, demo: false };
+const state = { view: "dashboard", query: "", filter: "all", data: null, supabase: null };
 const esc = (value = "") => String(value).replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
 const formatDate = (value) => value ? new Intl.DateTimeFormat("de-CH").format(new Date(`${value}T12:00:00`)) : "–";
 const today = () => new Date().toISOString().slice(0, 10);
 const plusDays = (date, days) => { const result = new Date(`${date}T12:00:00`); result.setDate(result.getDate() + days); return result.toISOString().slice(0, 10); };
 
-const DEMO = {
-  customers: [
-    { id: "c1", company: "Nordlicht AG", contact_name: "Anna Keller", email: "anna@nordlicht.example", phone: "+41 79 555 12 12", city: "Basel", postal_code: "4051", address_line1: "Musterstrasse 12", country: "Schweiz" },
-    { id: "c2", company: "Atelier Morgen", contact_name: "Noah Frei", email: "noah@morgen.example", phone: "", city: "Zürich", postal_code: "8004", address_line1: "Beispielweg 4", country: "Schweiz" },
-  ],
-  projects: [
-    { id: "p1", customer_id: "c1", title: "Brand Film 2026", status: "active", budget_rappen: 1850000, start_date: "2026-07-15", due_date: "2026-09-18", description: "Brand Film und Social Cutdowns" },
-    { id: "p2", customer_id: "c2", title: "Campaign Content", status: "planning", budget_rappen: 920000, start_date: "2026-08-20", due_date: "2026-10-02", description: "Campaign Content für Digital" },
-  ],
-  invoices: [
-    { id: "i1", customer_id: "c1", project_id: "p1", invoice_number: "HEAV-2026-004", issue_date: "2026-07-28", due_date: "2026-08-27", status: "sent", subtotal_rappen: 850000, tax_rappen: 68850, total_rappen: 918850, tax_rate: 8.1, notes: "", items: [{ description: "Konzeption & Preproduction", quantity: 1, unit_price_rappen: 850000 }] },
-    { id: "i2", customer_id: "c2", project_id: "p2", invoice_number: "HEAV-2026-005", issue_date: "2026-08-01", due_date: "2026-08-31", status: "draft", subtotal_rappen: 460000, tax_rappen: 37260, total_rappen: 497260, tax_rate: 8.1, notes: "", items: [{ description: "Akontozahlung 50 %", quantity: 1, unit_price_rappen: 460000 }] },
-  ],
-  settings: { company_name: "HEAV", owner_name: "Michias Tegegne", email: "hello@heav.ch", address_line1: "[Adresse ergänzen]", postal_code: "", city: "", iban: "[IBAN ergänzen]", default_tax_rate: 8.1, default_due_days: 30 },
-};
 
 function showToast(message, tone = "default") {
   toast.textContent = message;
@@ -59,31 +44,6 @@ function joinedData(data) {
   };
 }
 
-function createDemoAdapter() {
-  const store = structuredClone(DEMO);
-  return {
-    async loadAll() { return joinedData(store); },
-    async saveCustomer(payload) { store.customers.push({ id: crypto.randomUUID(), ...payload }); },
-    async saveProject(payload) { store.projects.push({ id: crypto.randomUUID(), ...payload }); },
-    async saveInvoice(payload) {
-      const amounts = calculateInvoice(payload.items.map((item) => ({ ...item, unitPrice: item.unit_price_rappen / 100 })), payload.tax_rate);
-      store.invoices.push({ id: crypto.randomUUID(), status: "draft", ...payload, subtotal_rappen: amounts.subtotalRappen, tax_rappen: amounts.taxRappen, total_rappen: amounts.totalRappen });
-    },
-    async saveSettings(payload) { Object.assign(store.settings, payload); },
-    async invoiceAction(id, action) {
-      const invoice = store.invoices.find((item) => item.id === id);
-      if (action === "send") invoice.status = "sent";
-      if (action === "mark_paid") invoice.status = "paid";
-      if (action === "download") {
-        const response = await fetch("/admin/assets/HEAV-Musterrechnung.pdf", { cache: "no-store" });
-        if (!response.ok) throw new Error("Musterrechnung konnte nicht geladen werden.");
-        return response.blob();
-      }
-      return { ok: true, preview: true };
-    },
-    async logout() {},
-  };
-}
 
 function createSupabaseAdapter(supabase, session) {
   const ownerId = session.user.id;
@@ -185,7 +145,7 @@ function renderInvoices() {
 
 function renderSettings() {
   const settings = state.data.settings || {};
-  return `<section class="view"><div class="hero-row"><h2>Business,<br><em>set clearly.</em></h2><p>Diese Angaben erscheinen auf deinen Rechnungen. Ergänze vor dem ersten Versand insbesondere Adresse, IBAN und MWST-Status.</p></div><div class="settings-grid"><article class="settings-card"><h3>Rechnungsabsender</h3><p>Rechtliche und finanzielle Angaben für alle PDF-Rechnungen.</p><div class="settings-list"><div><span>Firma</span><strong>${esc(settings.company_name || "HEAV")}</strong></div><div><span>Inhaber</span><strong>${esc(settings.owner_name || "Michias Tegegne")}</strong></div><div><span>E-Mail</span><strong>${esc(settings.email || "hello@heav.ch")}</strong></div><div><span>IBAN</span><strong>${esc(settings.iban || "Noch offen")}</strong></div></div><button class="primary-action" data-create="settings" style="margin-top:24px">Angaben bearbeiten</button></article><article class="settings-card"><h3>Systemstatus</h3><p>Der Adminbereich nutzt einen getrennten, geschützten Backend-Zugang.</p><div class="settings-list"><div><span>Modus</span><strong>${state.demo ? "Lokale Vorschau" : "Produktion"}</strong></div><div><span>Datenbank</span><strong>${state.demo ? "Demo-Daten" : "Supabase RLS"}</strong></div><div><span>Rechnungsversand</span><strong>${state.demo ? "Simuliert" : "Resend API"}</strong></div><div><span>Website</span><strong>heav.ch</strong></div></div></article></div></section>`;
+  return `<section class="view"><div class="hero-row"><h2>Business,<br><em>set clearly.</em></h2><p>Diese Angaben erscheinen auf deinen Rechnungen. Ergänze vor dem ersten Versand insbesondere Adresse, IBAN und MWST-Status.</p></div><div class="settings-grid"><article class="settings-card"><h3>Rechnungsabsender</h3><p>Rechtliche und finanzielle Angaben für alle PDF-Rechnungen.</p><div class="settings-list"><div><span>Firma</span><strong>${esc(settings.company_name || "HEAV")}</strong></div><div><span>Inhaber</span><strong>${esc(settings.owner_name || "Michias Tegegne")}</strong></div><div><span>E-Mail</span><strong>${esc(settings.email || "hello@heav.ch")}</strong></div><div><span>IBAN</span><strong>${esc(settings.iban || "Noch offen")}</strong></div></div><button class="primary-action" data-create="settings" style="margin-top:24px">Angaben bearbeiten</button></article><article class="settings-card"><h3>Systemstatus</h3><p>Der Adminbereich nutzt einen getrennten, geschützten Backend-Zugang.</p><div class="settings-list"><div><span>Modus</span><strong>Produktion</strong></div><div><span>Datenbank</span><strong>Supabase RLS</strong></div><div><span>Rechnungsversand</span><strong>Resend API</strong></div><div><span>Website</span><strong>heav.ch</strong></div></div></article></div></section>`;
 }
 
 const renderers = { dashboard: renderDashboard, customers: renderCustomers, projects: renderProjects, invoices: renderInvoices, settings: renderSettings };
@@ -280,20 +240,12 @@ document.querySelector("#logout-button").addEventListener("click", async () => {
 
 async function boot() {
   try {
-    const localHost = ["localhost", "127.0.0.1"].includes(location.hostname);
-    const params = new URLSearchParams(location.search);
-    state.demo = params.get("preview") === "1" || (localHost && params.get("demo") === "1");
-    if (state.demo) {
-      adapter = createDemoAdapter();
-      document.querySelector("#connection-label").textContent = location.hostname === "heav.ch" || location.hostname === "www.heav.ch" ? "Design-Vorschau" : "Lokale Vorschau";
-    } else {
-      if (!isBackendConfigured()) throw new Error("Backend ist noch nicht konfiguriert.");
-      const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm");
-      state.supabase = createClient(HEAV_ADMIN_CONFIG.supabaseUrl, HEAV_ADMIN_CONFIG.supabaseAnonKey);
-      const { data, error } = await state.supabase.auth.getSession();
-      if (error || !data.session) { window.location.replace("/login/"); return; }
-      adapter = createSupabaseAdapter(state.supabase, data.session);
-    }
+    if (!isBackendConfigured()) throw new Error("Backend ist noch nicht konfiguriert.");
+    const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm");
+    state.supabase = createClient(HEAV_ADMIN_CONFIG.supabaseUrl, HEAV_ADMIN_CONFIG.supabaseAnonKey);
+    const { data, error } = await state.supabase.auth.getSession();
+    if (error || !data.session) { window.location.replace("/login/"); return; }
+    adapter = createSupabaseAdapter(state.supabase, data.session);
     state.data = await adapter.loadAll();
     loading.remove(); shell.hidden = false; render();
   } catch (error) {
