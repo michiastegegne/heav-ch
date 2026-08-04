@@ -11,7 +11,7 @@ if (!isBackendConfigured()) {
   });
 } else {
   const { createClient } = await import(
-    "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm"
+    "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm"
   );
   const supabase = createClient(
     HEAV_ADMIN_CONFIG.supabaseUrl,
@@ -27,17 +27,20 @@ if (!isBackendConfigured()) {
     if (!form.reportValidity()) return;
     button.disabled = true;
     const values = new FormData(form);
-    const { error } = await supabase.auth.signInWithPassword({
-      email: values.get("email").trim(),
-      password: values.get("password"),
+    const email = values.get("email").trim();
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/login/`,
+        shouldCreateUser: false,
+      },
     });
     if (error) {
-      message.textContent = "Anmeldung fehlgeschlagen. Bitte Angaben prüfen.";
+      message.textContent = "Anmeldung konnte nicht gestartet werden. Bitte später erneut versuchen.";
       button.disabled = false;
       return;
     }
     message.classList.add("success");
-    message.textContent = "Angemeldet. Studio wird geöffnet …";
-    window.location.replace("/admin/");
+    message.textContent = "Anmeldelink wurde gesendet. Bitte E-Mail öffnen.";
   });
 }

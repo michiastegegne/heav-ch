@@ -13,7 +13,7 @@ Official multi-page website for [heav.ch](https://heav.ch), including the privat
 
 ## HEAV Studio
 
-- `/login/` — password-protected sign-in
+- `/login/` — passwordless owner sign-in by one-time email link
 - `/admin/` — customers, projects, invoices and company settings
 - `supabase/migrations/` — Postgres schema, constraints and owner-only RLS policies
 - `supabase/functions/invoice-document/` — branded PDF generation and Resend delivery
@@ -45,12 +45,14 @@ The local browser suite uses `/admin/?demo=1`. The public `/admin/?preview=1` ro
 
 ### Production configuration
 
-1. Create a Supabase project in the Swiss or nearest available EU region.
-2. Run `supabase/migrations/20260803_heav_admin.sql`.
-3. Create the single HEAV owner in Supabase Auth; public sign-up stays disabled.
-4. Replace the two placeholders in `admin/config.js` with the project URL and public anon key. The anon key is safe for the browser because all tables are protected by RLS; never place the service-role key in this repository.
-5. Configure Edge Function secrets: `RESEND_API_KEY` and `RESEND_FROM_EMAIL`.
-6. Deploy `invoice-document` and verify the `heav.ch` sender domain in Resend.
+Production Auth and Function settings are versioned in `supabase/config.toml`; the local project link itself stays in the ignored `supabase/.temp/` directory. Browser code contains only the public project URL and publishable key; the service-role key must never enter this repository.
+
+1. On a fresh checkout, link the target once with `npx --yes supabase@latest link --project-ref <project-ref>`.
+2. Apply database changes with `npx --yes supabase@latest db push --linked`.
+3. Push the Auth configuration with `npx --yes supabase@latest config push --project-ref <project-ref>`. Public and anonymous sign-up remain disabled; only existing users can request a magic link. Allowed redirects are limited to the HEAV login routes.
+4. Deploy `invoice-document` with `npx --yes supabase@latest functions deploy invoice-document --project-ref <project-ref> --no-verify-jwt`. The function performs its own bearer-token validation with Supabase Auth before reading any invoice.
+5. TOTP enrollment and verification are enabled in Auth. Enroll the owner account before using real business data.
+6. For email delivery, configure the server-only Edge Function secrets `RESEND_API_KEY` and `RESEND_FROM_EMAIL`, then verify the `heav.ch` sender domain in Resend.
 7. In HEAV Studio settings, complete the legal address, IBAN, VAT number/status, default tax and payment term before sending the first real invoice.
 
 Customer and invoice data is personal/business data. Confirm the applicable Supabase/Resend data-processing terms and HEAV privacy notice before production use.
