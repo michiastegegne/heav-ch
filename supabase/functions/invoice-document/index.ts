@@ -192,15 +192,14 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
   const fontRoot = new URL("../_shared/fonts/", import.meta.url);
-  const [dmBytes, serifBytes, italicBytes, syneBytes] = await Promise.all([
+  const [dmBytes, serifBytes, syneBytes] = await Promise.all([
     Deno.readFile(new URL("dm-sans.ttf", fontRoot)),
     Deno.readFile(new URL("instrument-serif.ttf", fontRoot)),
-    Deno.readFile(new URL("instrument-serif-italic.ttf", fontRoot)),
     Deno.readFile(new URL("syne.ttf", fontRoot)),
   ]);
-  const [dm, serif, italic, syne] = await Promise.all([
+  const [dm, serif, syne] = await Promise.all([
     pdf.embedFont(dmBytes, { subset: true }), pdf.embedFont(serifBytes, { subset: true }),
-    pdf.embedFont(italicBytes, { subset: true }), pdf.embedFont(syneBytes, { subset: true }),
+    pdf.embedFont(syneBytes, { subset: true }),
   ]);
   const page = pdf.addPage([595.28, 841.89]);
   const { width, height } = page.getSize();
