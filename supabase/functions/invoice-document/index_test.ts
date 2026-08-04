@@ -1,12 +1,85 @@
 import { assert, assertEquals, assertGreater } from "jsr:@std/assert@1";
 import { PDFDocument } from "npm:pdf-lib@1.17.1";
-import { createInvoicePdf, escapeHtml } from "./index.ts";
+import { buildSwissQrPayload, createInvoicePdf, escapeHtml } from "./index.ts";
 
 Deno.test("escapeHtml neutralisiert Kundendaten im E-Mail-HTML", () => {
   assertEquals(
     escapeHtml(`<img src=x onerror="alert('x')"> & Firma`),
     "&lt;img src=x onerror=&quot;alert(&#39;x&#39;)&quot;&gt; &amp; Firma",
   );
+});
+
+Deno.test("buildSwissQrPayload erzeugt einen vollständigen Swiss-QR-Payload", () => {
+  const payload = buildSwissQrPayload({
+    iban: "CH82 0076 9420 6757 9200 2",
+    creditorName: "HEAV · Michias Tegegne",
+    creditorStreet: "Oskar-Bider-Strass",
+    creditorHouseNumber: "25",
+    creditorPostalCode: "4410",
+    creditorCity: "Liestal",
+    debtorName: "Wizdomblend",
+    debtorStreet: "Musterweg",
+    debtorHouseNumber: "8",
+    debtorPostalCode: "8000",
+    debtorCity: "Zürich",
+    amountRappen: 135882,
+    message: "HEAV-2026-002 · Shortform Content Produktion",
+  });
+  const lines = payload.split("\n");
+  assertEquals(lines.length, 34);
+  assertEquals(lines.slice(0, 4), [
+    "SPC",
+    "0200",
+    "1",
+    "CH8200769420675792002",
+  ]);
+  assertEquals(lines.slice(4, 11), [
+    "S",
+    "HEAV · Michias Tegegne",
+    "Oskar-Bider-Strass",
+    "25",
+    "4410",
+    "Liestal",
+    "CH",
+  ]);
+  assertEquals(lines[18], "1358.82");
+  assertEquals(lines[19], "CHF");
+  assertEquals(lines.slice(20, 27), [
+    "S",
+    "Wizdomblend",
+    "Musterweg",
+    "8",
+    "8000",
+    "Zürich",
+    "CH",
+  ]);
+  assertEquals(lines[27], "NON");
+  assertEquals(lines[29], "HEAV-2026-002 · Shortform Content Produktion");
+  assertEquals(lines[30], "EPD");
+});
+
+Deno.test("buildSwissQrPayload lehnt ungültige IBANs und Beträge ab", () => {
+  for (
+    const patch of [{ iban: "CH00 0000 0000 0000 0000 0" }, { amountRappen: 0 }]
+  ) {
+    let failed = false;
+    try {
+      buildSwissQrPayload({
+        iban: "CH82 0076 9420 6757 9200 2",
+        creditorName: "HEAV",
+        creditorStreet: "Oskar-Bider-Strass",
+        creditorHouseNumber: "25",
+        creditorPostalCode: "4410",
+        creditorCity: "Liestal",
+        amountRappen: 100,
+        message: "Test",
+        ...patch,
+      });
+    } catch {
+      failed = true;
+    }
+    assert(failed);
+  }
 });
 
 Deno.test("createInvoicePdf erzeugt eine valide einseitige HEAV-Rechnung", async () => {
@@ -32,8 +105,18 @@ Deno.test("createInvoicePdf erzeugt eine valide einseitige HEAV-Rechnung", async
       country: "Schweiz",
     },
     invoice_items: [
-      { position: 1, description: "Konzeption", quantity: 1, unit_price_rappen: 100000 },
-      { position: 2, description: "Postproduktion", quantity: 2, unit_price_rappen: 25000 },
+      {
+        position: 1,
+        description: "Konzeption",
+        quantity: 1,
+        unit_price_rappen: 100000,
+      },
+      {
+        position: 2,
+        description: "Postproduktion",
+        quantity: 2,
+        unit_price_rappen: 25000,
+      },
     ],
   }, {
     company_name: "HEAV",
@@ -44,7 +127,7 @@ Deno.test("createInvoicePdf erzeugt eine valide einseitige HEAV-Rechnung", async
     postal_code: "4051",
     city: "Basel",
     country: "Schweiz",
-    iban: "CH00 0000 0000 0000 0000 0",
+    iban: "CH36 0000 0000 0000 0000 0",
     vat_number: "CHE-000.000.000 MWST",
   });
 
@@ -54,5 +137,6 @@ Deno.test("createInvoicePdf erzeugt eine valide einseitige HEAV-Rechnung", async
   assertEquals(pdf.getPageCount(), 1);
   assertEquals(pdf.getTitle(), "HEAV-2026-TEST – HEAV");
   assert(pdf.getAuthor()?.includes("Michias Tegegne"));
+  assertEquals(pdf.getSubject(), "Rechnung mit Swiss QR-Zahlteil");
   await Deno.writeFile("/tmp/heav-edge-invoice-test.pdf", bytes);
 });
