@@ -26,8 +26,8 @@
         </div>
         <div class="auth-panel">
           <div class="auth-switch" aria-label="Zugangsart">
-            <button class="auth-switch-button active" id="show-login" type="button" aria-pressed="true">Anmelden</button>
-            <button class="auth-switch-button" id="show-signup" type="button" aria-pressed="false">Konto erstellen</button>
+            <button class="auth-switch-button active" id="show-login" type="button" aria-pressed="true" aria-controls="login-form">Anmelden</button>
+            <button class="auth-switch-button" id="show-signup" type="button" aria-pressed="false" aria-controls="signup-form">Konto erstellen</button>
           </div>
 
           <form id="login-form" novalidate>
@@ -37,11 +37,12 @@
             </label>
             <label>
               <span>Passwort</span>
-              <input name="password" type="password" autocomplete="current-password" required />
+              <input name="password" type="password" autocomplete="current-password" aria-describedby="login-security login-message" required />
             </label>
-            <p class="login-security">Safari und die HEAV App können dieses Konto sicher in Apple Passwörter speichern und automatisch ausfüllen.</p>
+            <p class="login-security" id="login-security">Safari und die HEAV App können dieses Konto sicher in Apple Passwörter speichern und automatisch ausfüllen.</p>
             <p class="form-message" id="login-message" role="status" aria-live="polite"></p>
             <button type="submit">Anmelden <span aria-hidden="true">↗</span></button>
+            <button class="text-button" id="show-recovery" type="button">Passwort vergessen oder erstmals festlegen?</button>
           </form>
 
           <form id="signup-form" novalidate hidden>
@@ -51,13 +52,13 @@
             </label>
             <label>
               <span>Neues Passwort</span>
-              <input name="password" type="password" autocomplete="new-password" minlength="12" required />
+              <input name="password" type="password" autocomplete="new-password" minlength="12" aria-describedby="signup-help signup-message" required />
             </label>
             <label>
               <span>Passwort wiederholen</span>
               <input name="password_confirmation" type="password" autocomplete="new-password" minlength="12" required />
             </label>
-            <p class="field-help">Nur eine E-Mail-Adresse auf <strong>@heav.ch</strong> kann ein Konto erstellen. Mindestens 12 Zeichen mit Gross- und Kleinbuchstaben, Zahl und Sonderzeichen. Danach erhältst du einen 8-stelligen Code per E-Mail.</p>
+            <p class="field-help" id="signup-help">Nur eine E-Mail-Adresse auf <strong>@heav.ch</strong> kann ein Konto erstellen. Mindestens 12 Zeichen mit Gross- und Kleinbuchstaben, Zahl und Sonderzeichen. Danach erhältst du einen 8-stelligen Code per E-Mail.</p>
             <p class="form-message" id="signup-message" role="status" aria-live="polite"></p>
             <button type="submit">Bestätigungscode senden <span aria-hidden="true">↗</span></button>
           </form>
@@ -75,6 +76,45 @@
             <p class="form-message" id="verify-message" role="status" aria-live="polite"></p>
             <button type="submit">Konto bestätigen <span aria-hidden="true">↗</span></button>
             <button class="text-button" id="back-to-signup" type="button">E-Mail oder Passwort ändern</button>
+          </form>
+
+          <form id="recovery-form" novalidate hidden>
+            <div class="code-intro">
+              <span class="eyebrow">SICHERER ZUGANG</span>
+              <strong>Passwort festlegen</strong>
+              <p>Auch für bestehende Konten, die bisher nur einen Magic Link verwendet haben.</p>
+            </div>
+            <label>
+              <span>E-Mail für Wiederherstellung</span>
+              <input name="email" type="email" autocomplete="username" autocapitalize="none" spellcheck="false" required />
+            </label>
+            <p class="form-message" id="recovery-message" role="status" aria-live="polite"></p>
+            <button type="submit">Wiederherstellungscode senden <span aria-hidden="true">↗</span></button>
+            <button class="text-button back-to-login" type="button">Zurück zur Anmeldung</button>
+          </form>
+
+          <form id="recovery-verify-form" novalidate hidden>
+            <div class="code-intro">
+              <span class="eyebrow">PASSWORT WIEDERHERSTELLEN</span>
+              <strong>Code und neues Passwort</strong>
+              <p>Der Code wurde an <b id="recovery-email"></b> gesendet.</p>
+            </div>
+            <label>
+              <span>Wiederherstellungscode</span>
+              <input name="token" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{8}" minlength="8" maxlength="8" required />
+            </label>
+            <label>
+              <span>Neues Passwort für das Konto</span>
+              <input name="password" type="password" autocomplete="new-password" minlength="12" aria-describedby="recovery-help recovery-verify-message" required />
+            </label>
+            <label>
+              <span>Neues Passwort wiederholen</span>
+              <input name="password_confirmation" type="password" autocomplete="new-password" minlength="12" required />
+            </label>
+            <p class="field-help" id="recovery-help">Mindestens 12 Zeichen mit Gross- und Kleinbuchstaben, Zahl und Sonderzeichen.</p>
+            <p class="form-message" id="recovery-verify-message" role="status" aria-live="polite"></p>
+            <button type="submit">Passwort speichern <span aria-hidden="true">↗</span></button>
+            <button class="text-button back-to-login" type="button">Abbrechen</button>
           </form>
 
           <div class="login-secondary">

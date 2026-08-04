@@ -93,12 +93,21 @@ async function mockLoginSupabase(page) {
           },
           signUp: async (payload) => {
             localStorage.setItem("__heavSignupPayload", JSON.stringify(payload));
+            if (localStorage.getItem("__heavDelaySignup")) await new Promise((resolve) => setTimeout(resolve, 150));
             return { data: { user: { identities: [{ id: "test" }] }, session: null }, error: null };
+          },
+          resetPasswordForEmail: async (email, options) => {
+            localStorage.setItem("__heavRecoveryRequest", JSON.stringify({ email, options }));
+            return { data: {}, error: null };
           },
           verifyOtp: async (payload) => {
             localStorage.setItem("__heavVerifyPayload", JSON.stringify(payload));
             localStorage.setItem("__heavMockSession", "1");
             return { data: { session: { access_token: "test" } }, error: null };
+          },
+          updateUser: async (payload) => {
+            localStorage.setItem("__heavUpdateUserPayload", JSON.stringify(payload));
+            return { data: { user: { id: "test" } }, error: null };
           }
         } };
       }`,
@@ -128,10 +137,10 @@ test("Registrierung: sendet einen E-Mail-Code und bestätigt das neue Konto", as
   await page.goto(`${base}/login/`);
   await page.getByRole("button", { name: "Konto erstellen" }).click();
   await expect(page.getByLabel("Neues Passwort", { exact: true })).toHaveAttribute("autocomplete", "new-password");
-  await expect(page.getByLabel("Passwort wiederholen")).toHaveAttribute("autocomplete", "new-password");
+  await expect(page.getByLabel("Passwort wiederholen", { exact: true })).toHaveAttribute("autocomplete", "new-password");
   await page.getByLabel("E-Mail für neues Konto").fill("admin@heav.ch");
   await page.getByLabel("Neues Passwort", { exact: true }).fill("Starkes-Passwort-2026!");
-  await page.getByLabel("Passwort wiederholen").fill("Starkes-Passwort-2026!");
+  await page.getByLabel("Passwort wiederholen", { exact: true }).fill("Starkes-Passwort-2026!");
   await page.getByRole("button", { name: /Bestätigungscode senden/ }).click();
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("__heavSignupPayload")))).toEqual({
     email: "admin@heav.ch",
@@ -147,4 +156,47 @@ test("Registrierung: sendet einen E-Mail-Code und bestätigt das neue Konto", as
     type: "signup",
   });
   await expect(page).toHaveURL(`${base}/admin/`);
+});
+
+test("Passwort-Wiederherstellung: bestätigt den Code und speichert ein neues Apple-Passwörter-Passwort", async ({ page }) => {
+  await mockLoginSupabase(page);
+  await page.goto(`${base}/login/`);
+  await page.getByRole("button", { name: /Passwort vergessen/ }).click();
+  await page.getByLabel("E-Mail für Wiederherstellung").fill("admin@heav.ch");
+  await page.getByRole("button", { name: /Wiederherstellungscode senden/ }).click();
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("__heavRecoveryRequest")))).toEqual({
+    email: "admin@heav.ch",
+    options: { redirectTo: "http://127.0.0.1:4179/login/" },
+  });
+  await expect(page.getByLabel("Wiederherstellungscode")).toHaveAttribute("autocomplete", "one-time-code");
+  await expect(page.getByLabel("Neues Passwort für das Konto")).toHaveAttribute("autocomplete", "new-password");
+  await page.getByLabel("Wiederherstellungscode").fill("87654321");
+  await page.getByLabel("Neues Passwort für das Konto").fill("Neues-Passwort-2026!");
+  await page.getByLabel("Neues Passwort wiederholen").fill("Neues-Passwort-2026!");
+  await page.getByRole("button", { name: /Passwort speichern/ }).click();
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("__heavVerifyPayload")))).toEqual({
+    email: "admin@heav.ch",
+    token: "87654321",
+    type: "recovery",
+  });
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("__heavUpdateUserPayload")))).toEqual({
+    password: "Neues-Passwort-2026!",
+  });
+  await expect(page).toHaveURL(`${base}/admin/`);
+});
+
+test("Auth-Zustand: sperrt Moduswechsel während einer laufenden Registrierung", async ({ page }) => {
+  await mockLoginSupabase(page);
+  await page.goto(`${base}/login/`);
+  await page.evaluate(() => localStorage.setItem("__heavDelaySignup", "1"));
+  await page.locator("#show-signup").click();
+  await page.getByLabel("E-Mail für neues Konto").fill("admin@heav.ch");
+  await page.getByLabel("Neues Passwort", { exact: true }).fill("Starkes-Passwort-2026!");
+  await page.getByLabel("Passwort wiederholen", { exact: true }).fill("Starkes-Passwort-2026!");
+  await page.getByRole("button", { name: /Bestätigungscode senden/ }).click();
+  await expect(page.locator("#show-login")).toBeDisabled();
+  await expect(page.locator("#show-signup")).toBeDisabled();
+  await expect(page.locator("#verify-form")).toBeVisible();
+  await expect(page.locator("#login-form")).toBeHidden();
+  await expect(page.locator("#signup-form")).toBeHidden();
 });
