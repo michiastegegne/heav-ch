@@ -13,7 +13,7 @@ Official multi-page website for [heav.ch](https://heav.ch), including the privat
 
 ## HEAV Studio
 
-- `/login/` — passwordless owner sign-in by one-time email link
+- `/login/` — confirmed email/password accounts with an 8-digit email code
 - `/admin/` — customers, projects, invoices and company settings
 - `supabase/migrations/` — Postgres schema, constraints and owner-only RLS policies
 - `supabase/functions/invoice-document/` — branded PDF generation and Resend delivery
@@ -49,7 +49,7 @@ Production Auth and Function settings are versioned in `supabase/config.toml`; t
 
 1. On a fresh checkout, link the target once with `npx --yes supabase@latest link --project-ref <project-ref>`.
 2. Apply database changes with `npx --yes supabase@latest db push --linked`.
-3. Push the Auth configuration with `npx --yes supabase@latest config push --project-ref <project-ref>`. Public and anonymous sign-up remain disabled; only existing users can request a magic link. Allowed redirects are limited to the HEAV login routes.
+3. Push the Auth configuration with `npx --yes supabase@latest config push --project-ref <project-ref> --yes`. Email/password registration is limited by a server-side before-user-created hook to confirmed `@heav.ch` mailboxes and requires an 8-digit confirmation code; anonymous sign-in remains disabled and allowed redirects are limited to the HEAV login routes. Custom code templates require a configured SMTP provider on Supabase hosted projects. Login and registration fields use the standard `username`, `current-password`, `new-password`, and `one-time-code` autocomplete values so Safari and Apple Passwords can save and fill the account.
 4. Deploy `invoice-document` with `npx --yes supabase@latest functions deploy invoice-document --project-ref <project-ref> --no-verify-jwt`. The function performs its own bearer-token validation with Supabase Auth before reading any invoice.
 5. TOTP enrollment and verification are enabled in Auth. Enroll the owner account before using real business data.
 6. For email delivery, configure the server-only Edge Function secrets `RESEND_API_KEY` and `RESEND_FROM_EMAIL`, then verify the `heav.ch` sender domain in Resend.

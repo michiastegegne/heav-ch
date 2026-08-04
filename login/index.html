@@ -20,23 +20,68 @@
       <a class="brand" href="/" aria-label="Zur HEAV Website">HEAV</a>
       <section class="login-card" aria-labelledby="login-title">
         <div class="login-copy">
-          <span class="eyebrow">HEAV STUDIO · INTERN</span>
-          <h1 id="login-title">Welcome<br /><em>back.</em></h1>
-          <p>Kunden, Projekte und Rechnungen an einem Ort.</p>
+          <span class="eyebrow">HEAV STUDIO · SICHER</span>
+          <h1 id="login-title">Your work.<br /><em>Your account.</em></h1>
+          <p>Kunden, Projekte und echte Rechnungen an einem geschützten Ort.</p>
         </div>
-        <form id="login-form" novalidate>
-          <label>
-            <span>E-Mail</span>
-            <input name="email" type="email" autocomplete="username" required />
-          </label>
-          <p class="login-security">Kein Passwort nötig. Du erhältst einen einmaligen, sicheren Anmeldelink per E-Mail.</p>
-          <p class="form-message" id="login-message" role="status" aria-live="polite"></p>
-          <button type="submit">Anmeldelink senden <span aria-hidden="true">↗</span></button>
-          <a class="preview-link" href="/admin/?preview=1">Vorschau öffnen</a>
-          <button class="install-trigger" id="pwa-install-button" type="button">
-            HEAV App installieren <span aria-hidden="true">↓</span>
-          </button>
-        </form>
+        <div class="auth-panel">
+          <div class="auth-switch" aria-label="Zugangsart">
+            <button class="auth-switch-button active" id="show-login" type="button" aria-pressed="true">Anmelden</button>
+            <button class="auth-switch-button" id="show-signup" type="button" aria-pressed="false">Konto erstellen</button>
+          </div>
+
+          <form id="login-form" novalidate>
+            <label>
+              <span>E-Mail</span>
+              <input name="email" type="email" autocomplete="username" autocapitalize="none" spellcheck="false" required />
+            </label>
+            <label>
+              <span>Passwort</span>
+              <input name="password" type="password" autocomplete="current-password" required />
+            </label>
+            <p class="login-security">Safari und die HEAV App können dieses Konto sicher in Apple Passwörter speichern und automatisch ausfüllen.</p>
+            <p class="form-message" id="login-message" role="status" aria-live="polite"></p>
+            <button type="submit">Anmelden <span aria-hidden="true">↗</span></button>
+          </form>
+
+          <form id="signup-form" novalidate hidden>
+            <label>
+              <span>E-Mail für neues Konto</span>
+              <input name="email" type="email" autocomplete="username" autocapitalize="none" spellcheck="false" required />
+            </label>
+            <label>
+              <span>Neues Passwort</span>
+              <input name="password" type="password" autocomplete="new-password" minlength="12" required />
+            </label>
+            <label>
+              <span>Passwort wiederholen</span>
+              <input name="password_confirmation" type="password" autocomplete="new-password" minlength="12" required />
+            </label>
+            <p class="field-help">Nur eine E-Mail-Adresse auf <strong>@heav.ch</strong> kann ein Konto erstellen. Mindestens 12 Zeichen mit Gross- und Kleinbuchstaben, Zahl und Sonderzeichen. Danach erhältst du einen 8-stelligen Code per E-Mail.</p>
+            <p class="form-message" id="signup-message" role="status" aria-live="polite"></p>
+            <button type="submit">Bestätigungscode senden <span aria-hidden="true">↗</span></button>
+          </form>
+
+          <form id="verify-form" novalidate hidden>
+            <div class="code-intro">
+              <span class="eyebrow">E-MAIL BESTÄTIGEN</span>
+              <strong>Code eingeben</strong>
+              <p>Wir haben den Bestätigungscode an <b id="verify-email"></b> gesendet.</p>
+            </div>
+            <label>
+              <span>8-stelliger Code</span>
+              <input name="token" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{8}" minlength="8" maxlength="8" required />
+            </label>
+            <p class="form-message" id="verify-message" role="status" aria-live="polite"></p>
+            <button type="submit">Konto bestätigen <span aria-hidden="true">↗</span></button>
+            <button class="text-button" id="back-to-signup" type="button">E-Mail oder Passwort ändern</button>
+          </form>
+
+          <div class="login-secondary">
+            <a class="preview-link" href="/admin/?preview=1">Nur Musterrechnung ansehen</a>
+            <button class="install-trigger" id="pwa-install-button" type="button">HEAV App installieren <span aria-hidden="true">↓</span></button>
+          </div>
+        </div>
       </section>
       <p class="legal">Geschützter Bereich · HEAV Filmproduktion Schweiz</p>
     </main>

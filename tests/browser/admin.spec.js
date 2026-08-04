@@ -79,31 +79,72 @@ test("Mobile: echte 390px-Ansicht, Navigation und Rechnungsdialog", async ({ bro
   await page.close();
 });
 
-test("Login: sendet einen echten Magic-Link nur für bestehende Benutzer", async ({ page }) => {
+async function mockLoginSupabase(page) {
   await page.route("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm", async (route) => {
     await route.fulfill({
       contentType: "application/javascript",
       body: `export function createClient() {
         return { auth: {
-          getSession: async () => ({ data: { session: null } }),
-          signInWithOtp: async (payload) => {
-            window.__heavOtpPayload = payload;
-            return { error: null };
+          getSession: async () => ({ data: { session: localStorage.getItem("__heavMockSession") ? { access_token: "test" } : null } }),
+          signInWithPassword: async (payload) => {
+            localStorage.setItem("__heavPasswordPayload", JSON.stringify(payload));
+            localStorage.setItem("__heavMockSession", "1");
+            return { data: { session: { access_token: "test" } }, error: null };
+          },
+          signUp: async (payload) => {
+            localStorage.setItem("__heavSignupPayload", JSON.stringify(payload));
+            return { data: { user: { identities: [{ id: "test" }] }, session: null }, error: null };
+          },
+          verifyOtp: async (payload) => {
+            localStorage.setItem("__heavVerifyPayload", JSON.stringify(payload));
+            localStorage.setItem("__heavMockSession", "1");
+            return { data: { session: { access_token: "test" } }, error: null };
           }
         } };
       }`,
     });
   });
+}
+
+test("Login: meldet ein gespeichertes Apple-Passwörter-Konto an", async ({ page }) => {
+  await mockLoginSupabase(page);
   await page.goto(`${base}/login/`);
   await expect(page).toHaveTitle("Login – HEAV Studio");
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
-  await expect(page.locator('input[type="password"]')).toHaveCount(0);
-  await page.getByLabel("E-Mail").fill("admin@heav.ch");
-  await page.getByRole("button", { name: /Anmeldelink senden/ }).click();
-  await expect.poll(() => page.evaluate(() => window.__heavOtpPayload)).toEqual({
+  await expect(page.getByLabel("E-Mail", { exact: true })).toHaveAttribute("autocomplete", "username");
+  await expect(page.getByLabel("Passwort", { exact: true })).toHaveAttribute("autocomplete", "current-password");
+  await page.getByLabel("E-Mail", { exact: true }).fill("admin@heav.ch");
+  await page.getByLabel("Passwort", { exact: true }).fill("Starkes-Passwort-2026!");
+  await page.locator("#login-form").getByRole("button", { name: /Anmelden/ }).click();
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("__heavPasswordPayload")))).toEqual({
     email: "admin@heav.ch",
-    options: { emailRedirectTo: "http://127.0.0.1:4179/login/", shouldCreateUser: false },
+    password: "Starkes-Passwort-2026!",
   });
-  await expect(page.getByText(/Anmeldelink wurde gesendet/)).toBeVisible();
-  await expect(page.getByRole("link", { name: "Vorschau öffnen" })).toHaveAttribute("href", "/admin/?preview=1");
+  await expect(page).toHaveURL(`${base}/admin/`);
+});
+
+test("Registrierung: sendet einen E-Mail-Code und bestätigt das neue Konto", async ({ page }) => {
+  await mockLoginSupabase(page);
+  await page.goto(`${base}/login/`);
+  await page.getByRole("button", { name: "Konto erstellen" }).click();
+  await expect(page.getByLabel("Neues Passwort", { exact: true })).toHaveAttribute("autocomplete", "new-password");
+  await expect(page.getByLabel("Passwort wiederholen")).toHaveAttribute("autocomplete", "new-password");
+  await page.getByLabel("E-Mail für neues Konto").fill("admin@heav.ch");
+  await page.getByLabel("Neues Passwort", { exact: true }).fill("Starkes-Passwort-2026!");
+  await page.getByLabel("Passwort wiederholen").fill("Starkes-Passwort-2026!");
+  await page.getByRole("button", { name: /Bestätigungscode senden/ }).click();
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("__heavSignupPayload")))).toEqual({
+    email: "admin@heav.ch",
+    password: "Starkes-Passwort-2026!",
+    options: { emailRedirectTo: "http://127.0.0.1:4179/login/" },
+  });
+  await expect(page.getByLabel("8-stelliger Code")).toHaveAttribute("autocomplete", "one-time-code");
+  await page.getByLabel("8-stelliger Code").fill("12345678");
+  await page.getByRole("button", { name: /Konto bestätigen/ }).click();
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("__heavVerifyPayload")))).toEqual({
+    email: "admin@heav.ch",
+    token: "12345678",
+    type: "signup",
+  });
+  await expect(page).toHaveURL(`${base}/admin/`);
 });
