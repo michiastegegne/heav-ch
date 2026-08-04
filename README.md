@@ -20,16 +20,9 @@ Official multi-page website for [heav.ch](https://heav.ch), including the privat
 
 The public pages and admin client are static and deploy through GitHub Pages. Sensitive data and operations never live in GitHub Pages: Supabase provides Auth/Postgres/RLS and the Edge Function keeps the Resend key server-side.
 
-### Installable app for Mac and mobile
+### Private access
 
-HEAV Studio is a Progressive Web App. Open `/login/` and choose **HEAV App installieren**:
-
-- macOS Safari: **File → Add to Dock**
-- iPhone/iPad Safari: **Share → Add to Home Screen**
-- Android Chrome: **Menu → Install app**
-- Chromium desktop browsers show a native **Install now** action when available
-
-The installed Studio launches in a standalone window and supports mobile safe areas. The fictional `/admin/?preview=1` design preview and sample invoice are cached for offline use. Real authentication and business data still require a network connection.
+HEAV Studio has no public preview, sample invoice or app-installation flow. Every `/admin/` URL, including URLs with arbitrary query parameters, requires a valid Supabase session. Invoice PDFs remain available only inside an authenticated Studio session.
 
 ### Local verification
 
@@ -41,7 +34,7 @@ python3 -m http.server 4179 --bind 127.0.0.1
 npm run test:browser
 ```
 
-The local browser suite uses `/admin/?demo=1`. The public `/admin/?preview=1` route is an explicit design preview with hardcoded fictional data; it never initializes Supabase and changes disappear on reload.
+The browser suite replaces Supabase with an isolated test adapter. Production code contains no demo adapter or public fixture data.
 
 ### Production configuration
 

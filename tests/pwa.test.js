@@ -10,11 +10,18 @@ const assertMissing = async (path) => {
 };
 
 test("Login bietet ausschliesslich den authentifizierten Zugang", async () => {
-  const html = await read("login/index.html");
+  const [html, css] = await Promise.all([read("login/index.html"), read("login/assets/login.css")]);
   assert.doesNotMatch(html, /preview|Musterrechnung|installieren|pwa-install/i);
   assert.doesNotMatch(html, /rel="manifest"|apple-touch-icon|assets\/pwa\.js/i);
+  assert.doesNotMatch(css, /preview-link|install-trigger|install-dialog|install-panel|native-install/);
   assert.match(html, /id="login-form"/);
   assert.match(html, /Anmeldelink senden/);
+});
+
+test("Dokumentation beschreibt ausschliesslich den privaten Zugang", async () => {
+  const readme = await read("README.md");
+  assert.doesNotMatch(readme, /Progressive Web App|preview=1|demo=1|Musterrechnung|App installieren/i);
+  assert.match(readme, /requires a valid Supabase session/);
 });
 
 test("Admin enthält weder öffentlichen Demo-Modus noch Musterrechnung", async () => {
