@@ -79,12 +79,31 @@ test("Mobile: echte 390px-Ansicht, Navigation und Rechnungsdialog", async ({ bro
   await page.close();
 });
 
-test("Login: keine Indexierung und sicherer Offline-Zustand", async ({ page }) => {
+test("Login: sendet einen echten Magic-Link nur für bestehende Benutzer", async ({ page }) => {
+  await page.route("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm", async (route) => {
+    await route.fulfill({
+      contentType: "application/javascript",
+      body: `export function createClient() {
+        return { auth: {
+          getSession: async () => ({ data: { session: null } }),
+          signInWithOtp: async (payload) => {
+            window.__heavOtpPayload = payload;
+            return { error: null };
+          }
+        } };
+      }`,
+    });
+  });
   await page.goto(`${base}/login/`);
   await expect(page).toHaveTitle("Login – HEAV Studio");
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
-  await expect(page.getByRole("button", { name: /Sicher anmelden/ })).toBeDisabled();
-  await expect(page.getByText(/Backend-Zugang/)).toBeVisible();
+  await expect(page.locator('input[type="password"]')).toHaveCount(0);
+  await page.getByLabel("E-Mail").fill("admin@heav.ch");
+  await page.getByRole("button", { name: /Anmeldelink senden/ }).click();
+  await expect.poll(() => page.evaluate(() => window.__heavOtpPayload)).toEqual({
+    email: "admin@heav.ch",
+    options: { emailRedirectTo: "http://127.0.0.1:4179/login/", shouldCreateUser: false },
+  });
+  await expect(page.getByText(/Anmeldelink wurde gesendet/)).toBeVisible();
   await expect(page.getByRole("link", { name: "Vorschau öffnen" })).toHaveAttribute("href", "/admin/?preview=1");
-  await page.screenshot({ path: "qa/login-desktop.png", fullPage: true });
 });

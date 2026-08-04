@@ -288,7 +288,7 @@ async function boot() {
       document.querySelector("#connection-label").textContent = location.hostname === "heav.ch" || location.hostname === "www.heav.ch" ? "Design-Vorschau" : "Lokale Vorschau";
     } else {
       if (!isBackendConfigured()) throw new Error("Backend ist noch nicht konfiguriert.");
-      const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
+      const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm");
       state.supabase = createClient(HEAV_ADMIN_CONFIG.supabaseUrl, HEAV_ADMIN_CONFIG.supabaseAnonKey);
       const { data, error } = await state.supabase.auth.getSession();
       if (error || !data.session) { window.location.replace("/login/"); return; }
