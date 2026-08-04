@@ -22,6 +22,7 @@ test("Dokumentation beschreibt ausschliesslich den privaten Zugang", async () =>
   const readme = await read("README.md");
   assert.doesNotMatch(readme, /Progressive Web App|preview=1|demo=1|Musterrechnung|App installieren/i);
   assert.match(readme, /requires a valid Supabase session/);
+  assert.match(readme, /http\.server 4180/);
 });
 
 test("Admin enthält weder öffentlichen Demo-Modus noch Musterrechnung", async () => {

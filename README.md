@@ -30,7 +30,7 @@ HEAV Studio has no public preview, sample invoice or app-installation flow. Ever
 npm install
 npm test
 npm run check
-python3 -m http.server 4179 --bind 127.0.0.1
+python3 -m http.server 4180 --bind 127.0.0.1
 npm run test:browser
 ```
 
