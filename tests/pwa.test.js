@@ -5,52 +5,42 @@ import { readFile, stat } from "node:fs/promises";
 const root = new URL("../", import.meta.url);
 const read = (path) => readFile(new URL(path, root), "utf8");
 
-test("PWA-Manifest beschreibt eine installierbare HEAV Studio App", async () => {
-  const manifest = JSON.parse(await read("manifest.webmanifest"));
-  assert.equal(manifest.name, "HEAV Studio");
-  assert.equal(manifest.short_name, "HEAV");
-  assert.equal(manifest.id, "/admin/");
-  assert.equal(manifest.start_url, "/login/?source=pwa");
-  assert.equal(manifest.scope, "/");
-  assert.equal(manifest.display, "standalone");
-  assert.equal(manifest.theme_color, "#090a08");
-  assert.equal(manifest.background_color, "#090a08");
-  assert.ok(manifest.icons.some((icon) => icon.sizes === "192x192" && icon.purpose.includes("any")));
-  assert.ok(manifest.icons.some((icon) => icon.sizes === "512x512" && icon.purpose.includes("maskable")));
+const assertMissing = async (path) => {
+  await assert.rejects(stat(new URL(path, root)), (error) => error?.code === "ENOENT");
+};
+
+test("Login bietet ausschliesslich den authentifizierten Zugang", async () => {
+  const html = await read("login/index.html");
+  assert.doesNotMatch(html, /preview|Musterrechnung|installieren|pwa-install/i);
+  assert.doesNotMatch(html, /rel="manifest"|apple-touch-icon|assets\/pwa\.js/i);
+  assert.match(html, /id="login-form"/);
+  assert.match(html, /Anmeldelink senden/);
 });
 
-test("PWA-Icons sind echte, nicht-leere PNG-Dateien", async () => {
-  for (const path of ["assets/app-icons/icon-180.png", "assets/app-icons/icon-192.png", "assets/app-icons/icon-512.png", "assets/app-icons/icon-maskable-512.png"]) {
-    const bytes = await readFile(new URL(path, root));
-    assert.deepEqual([...bytes.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
-    assert.ok((await stat(new URL(path, root))).size > 1000, `${path} ist zu klein`);
-  }
+test("Admin enthält weder öffentlichen Demo-Modus noch Musterrechnung", async () => {
+  const [html, app] = await Promise.all([read("admin/index.html"), read("admin/assets/app.js")]);
+  assert.doesNotMatch(html, /rel="manifest"|apple-touch-icon|assets\/pwa\.js/i);
+  assert.doesNotMatch(app, /\bDEMO\b|createDemoAdapter|preview=1|params\.get\("preview"\)|params\.get\("demo"\)|HEAV-Musterrechnung/);
+  assert.match(app, /getSession\(\)/);
+  assert.match(app, /window\.location\.replace\("\/login\/"\)/);
 });
 
-test("Login und Admin verknüpfen Manifest, Apple-Icon und PWA-Registrierung", async () => {
-  for (const path of ["login/index.html", "admin/index.html"]) {
-    const html = await read(path);
-    assert.match(html, /rel="manifest" href="\/manifest\.webmanifest"/);
-    assert.match(html, /rel="apple-touch-icon" href="\/assets\/app-icons\/icon-180\.png"/);
-    assert.match(html, /apple-mobile-web-app-capable" content="yes"/);
-    assert.match(html, /src="\/assets\/pwa\.js"/);
-  }
+test("Installationsartefakte und öffentliches Muster-PDF sind entfernt", async () => {
+  for (const path of [
+    "manifest.webmanifest",
+    "assets/pwa.js",
+    "admin/assets/HEAV-Musterrechnung.pdf",
+    "assets/app-icons/icon-180.png",
+    "assets/app-icons/icon-192.png",
+    "assets/app-icons/icon-512.png",
+    "assets/app-icons/icon-maskable-512.png",
+  ]) await assertMissing(path);
 });
 
-test("Standalone-Layouts berücksichtigen mobile Safe Areas", async () => {
-  const loginCss = await read("login/assets/login.css");
-  const adminCss = await read("admin/assets/admin.css");
-  for (const css of [loginCss, adminCss]) {
-    assert.match(css, /safe-area-inset-top/);
-    assert.match(css, /safe-area-inset-bottom/);
-  }
-});
-
-test("Service Worker enthält App-Shell und Offline-Vorschau", async () => {
+test("Service Worker entfernt nur alte HEAV-App-Caches und registriert keine Offline-Vorschau", async () => {
   const worker = await read("service-worker.js");
-  for (const asset of ["/login/", "/admin/?preview=1", "/admin/assets/app.js", "/admin/assets/HEAV-Musterrechnung.pdf"]) {
-    assert.ok(worker.includes(JSON.stringify(asset)), `${asset} fehlt im App-Shell-Cache`);
-  }
-  assert.match(worker, /request\.mode === "navigate"/);
-  assert.match(worker, /event\.respondWith/);
+  assert.match(worker, /heav-studio-/);
+  assert.match(worker, /caches\.delete/);
+  assert.match(worker, /registration\.unregister/);
+  assert.doesNotMatch(worker, /admin\/\?preview=1|HEAV-Musterrechnung|APP_SHELL|addAll|fetch/);
 });
