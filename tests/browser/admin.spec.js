@@ -13,12 +13,67 @@ async function assertHealthy(page, errors) {
   expect(errors).toEqual([]);
 }
 
+async function mockStudioSupabase(page) {
+  await page.addInitScript(() => localStorage.setItem("__heavStudioSession", "1"));
+  await page.route("https://bkazlpqjvbuhwmjcwexn.supabase.co/functions/v1/invoice-document", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/pdf", body: "%PDF-1.4\n% HEAV test PDF\n%%EOF" });
+  });
+  await page.route("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm", async (route) => {
+    await route.fulfill({
+      contentType: "application/javascript",
+      body: `const store = {
+        customers: [
+          { id: "c1", company: "Nordlicht AG", contact_name: "Anna Keller", email: "anna@nordlicht.example", phone: "", city: "Basel", postal_code: "4051", address_line1: "Teststrasse 1", country: "Schweiz" },
+          { id: "c2", company: "Atelier Morgen", contact_name: "Noah Frei", email: "noah@morgen.example", phone: "", city: "Zürich", postal_code: "8004", address_line1: "Testweg 2", country: "Schweiz" }
+        ],
+        projects: [
+          { id: "p1", customer_id: "c1", title: "Brand Film 2026", status: "active", budget_rappen: 1850000, start_date: "2026-07-15", due_date: "2026-09-18", description: "Brand Film" },
+          { id: "p2", customer_id: "c2", title: "Campaign Content", status: "planning", budget_rappen: 920000, start_date: "2026-08-20", due_date: "2026-10-02", description: "Campaign" }
+        ],
+        invoices: [
+          { id: "i1", customer_id: "c1", project_id: "p1", invoice_number: "HEAV-2026-001", issue_date: "2026-07-28", due_date: "2026-08-27", status: "sent", subtotal_rappen: 850000, tax_rappen: 68850, total_rappen: 918850, tax_rate: 8.1, invoice_items: [] },
+          { id: "i2", customer_id: "c2", project_id: "p2", invoice_number: "HEAV-2026-002", issue_date: "2026-08-01", due_date: "2026-08-31", status: "draft", subtotal_rappen: 460000, tax_rappen: 37260, total_rappen: 497260, tax_rate: 8.1, invoice_items: [] }
+        ],
+        company_settings: [{ company_name: "HEAV", owner_name: "Michias Tegegne", email: "hello@heav.ch", iban: "", default_tax_rate: 8.1, default_due_days: 30 }]
+      };
+      const result = (data) => ({ data, error: null });
+      export function createClient() {
+        return {
+          auth: {
+            getSession: async () => ({ data: { session: { access_token: "test", user: { id: "owner-test" } } }, error: null }),
+            signOut: async () => ({ error: null })
+          },
+          from(table) {
+            const builder = {
+              select() { return builder; },
+              order: async () => result(store[table]),
+              maybeSingle: async () => result(store[table][0] || null),
+              insert: async (payload) => { store[table].push({ id: crypto.randomUUID(), ...payload }); return result(null); },
+              upsert: async (payload) => { store[table] = [{ ...store[table][0], ...payload }]; return result(null); }
+            };
+            return builder;
+          },
+          rpc: async (name, payload) => {
+            if (name === "create_invoice") {
+              const subtotal = payload.p_items.reduce((sum, item) => sum + Math.round(item.quantity * item.unit_price_rappen), 0);
+              const tax = Math.round(subtotal * payload.p_tax_rate / 100);
+              store.invoices.unshift({ id: crypto.randomUUID(), customer_id: payload.p_customer_id, project_id: payload.p_project_id, invoice_number: payload.p_invoice_number, issue_date: payload.p_issue_date, due_date: payload.p_due_date, status: "draft", subtotal_rappen: subtotal, tax_rappen: tax, total_rappen: subtotal + tax, tax_rate: payload.p_tax_rate, invoice_items: payload.p_items });
+            }
+            return result(null);
+          }
+        };
+      }`,
+    });
+  });
+}
+
 test("Desktop: Dashboard und vollständiger Erfassungsfluss", async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  await mockStudioSupabase(page);
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
-  await page.goto(`${base}/admin/?demo=1`);
+  await page.goto(`${base}/admin/`);
   await expect(page.getByRole("heading", { name: "Übersicht" })).toBeVisible();
   await expect(page.getByText("Good work.")).toBeVisible();
 
@@ -53,10 +108,11 @@ test("Desktop: Dashboard und vollständiger Erfassungsfluss", async ({ browser }
 
 test("Mobile: echte 390px-Ansicht, Navigation und Rechnungsdialog", async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await mockStudioSupabase(page);
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
-  await page.goto(`${base}/admin/?demo=1`);
+  await page.goto(`${base}/admin/`);
   await expect(page.getByRole("heading", { name: "Übersicht" })).toBeVisible();
   await page.getByRole("button", { name: "Menü öffnen" }).click();
   await expect(page.locator("#admin-shell")).toHaveClass(/nav-open/);

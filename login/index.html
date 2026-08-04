@@ -5,14 +5,10 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
     <meta name="robots" content="noindex,nofollow,noarchive" />
     <meta name="theme-color" content="#090a08" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="HEAV" />
+
     <title>Login – HEAV Studio</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="/assets/app-icons/icon-180.png" />
-    <link rel="manifest" href="/manifest.webmanifest" />
+
     <link rel="stylesheet" href="/login/assets/login.css" />
   </head>
   <body>
@@ -39,7 +35,7 @@
               <span>Passwort</span>
               <input name="password" type="password" autocomplete="current-password" aria-describedby="login-security login-message" required />
             </label>
-            <p class="login-security" id="login-security">Safari und die HEAV App können dieses Konto sicher in Apple Passwörter speichern und automatisch ausfüllen.</p>
+            <p class="login-security" id="login-security">Safari kann dieses Konto sicher in Apple Passwörter speichern und automatisch ausfüllen.</p>
             <p class="form-message" id="login-message" role="status" aria-live="polite"></p>
             <button type="submit">Anmelden <span aria-hidden="true">↗</span></button>
             <button class="text-button" id="show-recovery" type="button">Passwort vergessen oder erstmals festlegen?</button>
@@ -117,33 +113,10 @@
             <button class="text-button back-to-login" type="button">Abbrechen</button>
           </form>
 
-          <div class="login-secondary">
-            <a class="preview-link" href="/admin/?preview=1">Nur Musterrechnung ansehen</a>
-            <button class="install-trigger" id="pwa-install-button" type="button">HEAV App installieren <span aria-hidden="true">↓</span></button>
-          </div>
         </div>
       </section>
       <p class="legal">Geschützter Bereich · HEAV Filmproduktion Schweiz</p>
     </main>
-    <dialog class="install-dialog" id="pwa-install-dialog" aria-labelledby="pwa-install-title">
-      <div class="install-panel">
-        <header>
-          <div>
-            <span class="eyebrow">MAC · IPHONE · ANDROID</span>
-            <h2 id="pwa-install-title">HEAV installieren</h2>
-          </div>
-          <button class="install-close" type="button" aria-label="Installationshinweise schliessen">×</button>
-        </header>
-        <p class="install-intro">Das Studio öffnet sich danach wie eine eigene App – ohne Browserleiste und direkt vom Dock oder Home-Bildschirm.</p>
-        <div class="install-options">
-          <article><span>MAC</span><strong>Safari</strong><p>Im Menü <b>Ablage</b> auf <b>Zum Dock hinzufügen</b> klicken.</p></article>
-          <article><span>IPHONE · IPAD</span><strong>Safari</strong><p>Teilen öffnen und <b>Zum Home-Bildschirm</b> wählen.</p></article>
-          <article><span>ANDROID</span><strong>Chrome</strong><p>Browsermenü öffnen und <b>App installieren</b> wählen.</p></article>
-        </div>
-        <button class="native-install" id="pwa-native-install" type="button" hidden>Jetzt installieren <span aria-hidden="true">↗</span></button>
-      </div>
-    </dialog>
-    <script type="module" src="/assets/pwa.js"></script>
     <script type="module" src="/login/assets/login.js"></script>
   </body>
 </html>
