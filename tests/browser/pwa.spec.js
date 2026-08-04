@@ -1,120 +1,42 @@
 import { test, expect } from "@playwright/test";
 
-const base = "http://127.0.0.1:4179";
+const base = "http://127.0.0.1:4180";
 
-test("Chrome/Android: Hauptknopf öffnet den nativen Installationsprompt direkt", async ({ browser }) => {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
-  await page.addInitScript(() => {
-    window.__installPromptCalls = 0;
-    window.__installPromptHadUserActivation = false;
-    window.addEventListener("DOMContentLoaded", () => {
-      const event = new Event("beforeinstallprompt", { cancelable: true });
-      event.prompt = async () => {
-        window.__installPromptCalls += 1;
-        window.__installPromptHadUserActivation = navigator.userActivation.isActive;
-      };
-      event.userChoice = Promise.resolve({ outcome: "accepted" });
-      window.dispatchEvent(event);
-    });
+async function mockLoggedOutSupabase(page) {
+  await page.route("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm", async (route) => {
+    await route.fulfill({ contentType: "application/javascript", body: `export function createClient(){return {auth:{getSession:async()=>({data:{session:null},error:null})}}}` });
   });
+}
+
+test("Login zeigt nur den authentifizierten Zugang", async ({ page }) => {
+  await mockLoggedOutSupabase(page);
   await page.goto(`${base}/login/`);
-  await page.getByRole("button", { name: "HEAV App installieren" }).click();
-  await expect.poll(() => page.evaluate(() => window.__installPromptCalls)).toBe(1);
-  expect(await page.evaluate(() => window.__installPromptHadUserActivation)).toBe(true);
-  await expect(page.getByRole("dialog", { name: "HEAV installieren" })).not.toBeVisible();
-  await page.close();
+  await expect(page.getByRole("button", { name: /Anmeldelink senden/ })).toBeVisible();
+  await expect(page.getByText(/Vorschau|Musterrechnung/i)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /installieren/i })).toHaveCount(0);
+  await expect(page.locator('link[rel="manifest"]')).toHaveCount(0);
 });
 
-test("Mac/Desktop: Installation ist direkt auffindbar und erklärt", async ({ browser }) => {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-  await page.goto(`${base}/login/`);
-  const install = page.getByRole("button", { name: "HEAV App installieren" });
-  await expect(install).toBeVisible();
-  const box = await install.boundingBox();
-  expect(box.width).toBeGreaterThanOrEqual(44);
-  expect(box.height).toBeGreaterThanOrEqual(44);
-  await install.click();
-  const dialog = page.getByRole("dialog", { name: "HEAV installieren" });
-  await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText("Zum Dock hinzufügen");
-  await expect(dialog).toContainText("Zum Home-Bildschirm");
-  await page.getByRole("button", { name: "Installationshinweise schliessen" }).click();
-  await expect(dialog).not.toBeVisible();
-  await page.close();
+test("Öffentliche Preview- und Demo-Parameter führen ohne Sitzung zum Login", async ({ page }) => {
+  await mockLoggedOutSupabase(page);
+  for (const query of ["preview=1", "demo=1"]) {
+    await page.goto(`${base}/admin/?${query}`);
+    await expect(page).toHaveURL(`${base}/login/`);
+    await expect(page.getByRole("heading", { name: /Welcome/i })).toBeVisible();
+  }
 });
 
-test("Mobile: Installationsoberfläche passt in eine echte 390px-Ansicht", async ({ browser }) => {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
-  await page.goto(`${base}/login/`);
-  await page.getByRole("button", { name: "HEAV App installieren" }).click();
-  const dialog = page.getByRole("dialog", { name: "HEAV installieren" });
-  await expect(dialog).toBeVisible();
-  const dialogBox = await dialog.boundingBox();
-  expect(dialogBox).toEqual({ x: 0, y: 0, width: 390, height: 844 });
-  const metrics = await page.evaluate(() => ({
-    innerWidth,
-    clientWidth: document.documentElement.clientWidth,
-    scrollWidth: document.documentElement.scrollWidth,
-  }));
-  expect(metrics).toEqual({ innerWidth: 390, clientWidth: 390, scrollWidth: 390 });
-  await page.screenshot({ path: "qa/pwa-install-mobile.png" });
-  await page.close();
-});
-
-test("Service Worker speichert nur die feste öffentliche App-Shell", async ({ browser }) => {
+test("Cleanup-Service-Worker entfernt alte HEAV-Caches, aber keine fremden Caches", async ({ browser }) => {
   const context = await browser.newContext();
   const page = await context.newPage();
-  await page.goto(`${base}/`);
+  await page.goto(`${base}/login/`);
   await page.evaluate(async () => {
+    const old = await caches.open("heav-studio-v2");
+    await old.put("/admin/?preview=1", new Response("old preview"));
     const foreign = await caches.open("other-site-cache");
     await foreign.put("/unrelated-resource", new Response("keep"));
+    await navigator.serviceWorker.register("/service-worker.js", { scope: "/" });
   });
-
-  await page.goto(`${base}/login/`, { waitUntil: "networkidle" });
-  await page.evaluate(() => navigator.serviceWorker.ready);
-  if (!(await page.evaluate(() => Boolean(navigator.serviceWorker.controller)))) {
-    await page.reload({ waitUntil: "networkidle" });
-  }
-
-  await page.goto(`${base}/login/?code=never-cache-this`, { waitUntil: "domcontentloaded" });
-  await page.goto(`${base}/admin/?customer=never-cache-this`, { waitUntil: "domcontentloaded" });
-  await page.evaluate(() => fetch("/admin/assets/app.js?secret=never-cache-this"));
-  await page.waitForTimeout(100);
-
-  const inventory = await page.evaluate(async () => {
-    const names = await caches.keys();
-    const urls = [];
-    for (const name of names) {
-      const cache = await caches.open(name);
-      urls.push(...(await cache.keys()).map((request) => request.url));
-    }
-    return { names, urls };
-  });
-  expect(inventory.names).toContain("other-site-cache");
-  expect(inventory.urls.some((url) => url.includes("never-cache-this"))).toBe(false);
-  await context.close();
-});
-
-test("Offline: die installierte Designvorschau startet aus dem App-Shell-Cache", async ({ browser }) => {
-  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
-  const page = await context.newPage();
-  await page.goto(`${base}/admin/?preview=1`);
-  await page.evaluate(async () => {
-    await navigator.serviceWorker.ready;
-    if (!navigator.serviceWorker.controller) {
-      await new Promise((resolve) => navigator.serviceWorker.addEventListener("controllerchange", resolve, { once: true }));
-    }
-  });
-  await expect(page.getByRole("heading", { name: "Übersicht" })).toBeVisible();
-  await context.setOffline(true);
-  await page.reload({ waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("heading", { name: "Übersicht" })).toBeVisible();
-  await expect(page.locator("#connection-label")).toContainText("Vorschau");
-  await page.locator('.nav-link[data-view="invoices"]').click();
-  const downloadPromise = page.waitForEvent("download");
-  await page.locator('[data-invoice-action="download"]:visible').first().click();
-  const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe("HEAV-2026-004.pdf");
-  await context.setOffline(false);
+  await expect.poll(() => page.evaluate(async () => await caches.keys())).toEqual(["other-site-cache"]);
   await context.close();
 });
