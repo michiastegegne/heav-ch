@@ -748,6 +748,21 @@ main {
   letter-spacing: -0.09em;
   color: rgba(238, 234, 224, 0.12);
 }
+.portrait-photo {
+  margin: 0;
+  background: #111;
+}
+.portrait-photo img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center;
+  filter: grayscale(1) contrast(1.04);
+}
+.portrait-photo:after {
+  display: none;
+}
 .prose {
   max-width: 53rem;
   margin: 0 auto;
