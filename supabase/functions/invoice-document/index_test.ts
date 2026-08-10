@@ -1,11 +1,11 @@
 import { assert, assertEquals, assertGreater } from "jsr:@std/assert@1";
 import { PDFDocument } from "npm:pdf-lib@1.17.1";
 import {
-  buildInvoiceEmail,
   buildInvoiceText,
   buildSwissQrPayload,
   createInvoicePdf,
   escapeHtml,
+  formatDocumentReference,
   formatPaymentReference,
   validVatNumber,
 } from "./index.ts";
@@ -105,61 +105,19 @@ Deno.test("buildSwissQrPayload lehnt ungültige IBANs und Beträge ab", () => {
   }
 });
 
-Deno.test("Rechnungs-E-Mail zeigt Positionen, HEAV-Kontaktdaten und bleibt XSS-sicher", () => {
+Deno.test("PDF-Nachricht verwendet eine kurze #Dokumentreferenz und bleibt sicher", () => {
   const invoice = {
-    id: "invoice-email-test",
-    owner_id: "owner-test",
     invoice_number: "HEAV-2026-009",
-    payment_reference: "RF43HEAV2026002",
-    issue_date: "2026-08-10",
-    due_date: "2026-09-09",
-    status: "draft",
-    tax_rate: 0,
-    subtotal_rappen: 108100,
-    tax_rappen: 0,
-    total_rappen: 108100,
-    notes: "",
-    customers: {
-      company: "Test & Partner AG",
-      contact_name: `<script>alert("x")</script>`,
-      email: "rechnung@example.com",
-      address_line1: "Testweg 1",
-      postal_code: "4000",
-      city: "Basel",
-      country: "CH",
-    },
-    invoice_items: [{ description: "Filmproduktion & Schnitt", quantity: 1, unit_price_rappen: 108100, position: 1 }],
+    customers: { contact_name: "Mira\r\nBcc: fremd@example.com" },
   };
-  const settings = {
-    company_name: "HEAV",
-    owner_name: "Michias Tegegne",
-    email: "hello@heav.ch",
-    phone: "+41 79 000 00 00",
-    address_line1: "Teststrasse 2",
-    postal_code: "4051",
-    city: "Basel",
-    country: "CH",
-    iban: "CH82 0076 9420 6757 9200 2",
-    vat_number: "",
-    website_url: "https://heav.ch",
-    instagram_url: "https://instagram.com/heav",
-  };
-  const html = buildInvoiceEmail(invoice, settings);
-  assert(html.includes("RECHNUNG"));
-  assert(!html.includes("LEISTUNGEN&nbsp;&nbsp;&nbsp;"));
-  assert(!html.includes("Filmproduktion · Content · Postproduktion"));
-  assert(html.includes("EINZELPREIS"));
-  assert(html.includes("RF43 HEAV 2026 002"));
-  assert(html.includes("Filmproduktion &amp; Schnitt"));
-  assert(html.includes("Nicht MWST-pflichtig"));
-  assert(html.includes("CHF 1’081.00"));
-  assert(html.includes("Instagram"));
-  assert(!html.includes("<script>"));
-  assert(html.includes("&lt;script&gt;"));
-  const text = buildInvoiceText({ ...invoice, customers: { ...invoice.customers, contact_name: "Mira\r\nBcc: fremd@example.com" } }, settings);
-  assert(text.includes("RF43 HEAV 2026 002"));
-  assert(text.includes("Filmproduktion & Schnitt"));
+  const settings = { owner_name: "Michias Tegegne", company_name: "HEAV" };
+  assertEquals(formatDocumentReference("HEAV-2026-009"), "#00009");
+  assertEquals(formatDocumentReference("#01267"), "#01267");
+  const text = buildInvoiceText(invoice as never, settings as never);
+  assert(text.includes("#00009"));
+  assert(text.includes("PDF"));
   assert(!text.includes("\r"));
+  assert(!text.includes("Filmproduktion"));
 });
 
 Deno.test("createInvoicePdf erzeugt eine valide einseitige HEAV-Rechnung", async () => {
