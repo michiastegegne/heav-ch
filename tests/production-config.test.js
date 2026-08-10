@@ -5,6 +5,7 @@ import { HEAV_ADMIN_CONFIG, isBackendConfigured } from "../admin/config.js";
 
 const loginSource = await readFile(new URL("../login/assets/login.js", import.meta.url), "utf8");
 const adminSource = await readFile(new URL("../admin/assets/app.js", import.meta.url), "utf8");
+const contactSource = await readFile(new URL("../kontakt/index.html", import.meta.url), "utf8");
 
 test("Produktionsfrontend ist mit dem HEAV-Supabase-Projekt verbunden", () => {
   assert.equal(HEAV_ADMIN_CONFIG.supabaseUrl, "https://bkazlpqjvbuhwmjcwexn.supabase.co");
@@ -17,4 +18,12 @@ test("Supabase-Browserclient ist auf eine geprüfte Version fixiert", () => {
     assert.match(source, /@supabase\/supabase-js@2\.57\.4\/\+esm/);
     assert.doesNotMatch(source, /@supabase\/supabase-js@2\/\+esm/);
   }
+});
+
+test("Kontaktformular bestätigt Anfragen automatisch an die geprüfte Absenderadresse", () => {
+  assert.match(contactSource, /action="https:\/\/formsubmit\.co\/hello@heav\.ch"/);
+  assert.match(contactSource, /name="email"/);
+  assert.match(contactSource, /name="_autoresponse"/);
+  assert.match(contactSource, /Danke für deine Anfrage an HEAV/);
+  assert.doesNotMatch(contactSource, /name="_captcha"\s+value="false"/);
 });

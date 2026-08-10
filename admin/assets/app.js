@@ -20,11 +20,14 @@ const viewNames = {
   invoices: "Rechnungen",
   settings: "Einstellungen",
 };
-const state = { view: "dashboard", query: "", filter: "all", data: null, supabase: null };
+const state = { view: "dashboard", query: "", filter: "all", data: null, supabase: null, sendRequestKeys: new Map() };
 const esc = (value = "") => String(value).replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
 const formatDate = (value) => value ? new Intl.DateTimeFormat("de-CH").format(new Date(`${value}T12:00:00`)) : "–";
 const today = () => new Date().toISOString().slice(0, 10);
 const plusDays = (date, days) => { const result = new Date(`${date}T12:00:00`); result.setDate(result.getDate() + days); return result.toISOString().slice(0, 10); };
+const formatReference = (value = "") => String(value).replace(/\s+/g, "").replace(/(.{4})(?=.)/g, "$1 ");
+const normalizeVatNumber = (value = "") => String(value).trim().toUpperCase();
+const validVatNumber = (value = "") => /^CHE-\d{3}\.\d{3}\.\d{3} (MWST|TVA|IVA)$/.test(normalizeVatNumber(value));
 
 
 function showToast(message, tone = "default") {
@@ -40,7 +43,7 @@ function joinedData(data) {
   return {
     ...data,
     projects: data.projects.map((item) => ({ ...item, customer: customers.get(item.customer_id) })),
-    invoices: data.invoices.map((item) => ({ ...item, customer: customers.get(item.customer_id) })),
+    invoices: data.invoices.map((item) => ({ ...item, customer: item.customer_snapshot || customers.get(item.customer_id) })),
   };
 }
 
@@ -67,7 +70,6 @@ function createSupabaseAdapter(supabase, session) {
       const result = await supabase.rpc("create_invoice", {
         p_customer_id: payload.customer_id,
         p_project_id: payload.project_id,
-        p_invoice_number: payload.invoice_number,
         p_issue_date: payload.issue_date,
         p_due_date: payload.due_date,
         p_tax_rate: payload.tax_rate,
@@ -76,13 +78,19 @@ function createSupabaseAdapter(supabase, session) {
       });
       fail(result.error);
     },
+    async deleteRecord(type, id) {
+      const rpcNames = { customer: "delete_customer", project: "delete_project", invoice: "delete_draft_invoice" };
+      const parameterNames = { customer: "p_customer_id", project: "p_project_id", invoice: "p_invoice_id" };
+      const result = await supabase.rpc(rpcNames[type], { [parameterNames[type]]: id });
+      fail(result.error);
+    },
     async saveSettings(payload) { const result = await supabase.from("company_settings").upsert({ ...payload, owner_id: ownerId }, { onConflict: "owner_id" }); fail(result.error); },
-    async invoiceAction(id, action) {
+    async invoiceAction(id, action, requestKey = null) {
       const { data: sessionData } = await supabase.auth.getSession();
       const response = await fetch(`${HEAV_ADMIN_CONFIG.supabaseUrl}/functions/v1/invoice-document`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session.access_token}`, apikey: HEAV_ADMIN_CONFIG.supabaseAnonKey },
-        body: JSON.stringify({ invoiceId: id, action }),
+        body: JSON.stringify({ invoiceId: id, action, requestKey }),
       });
       if (!response.ok) { const error = await response.json().catch(() => ({})); throw new Error(error.error || "Rechnungsaktion fehlgeschlagen"); }
       return action === "download" ? response.blob() : response.json();
@@ -117,35 +125,37 @@ function toolbar(type, placeholder, filters = []) { return `<div class="toolbar"
 function renderCustomers() {
   const items = filtered(state.data.customers, ["company", "contact_name", "email", "city"]);
   if (!state.data.customers.length) return `<section class="view">${emptyState("Der erste Kontakt.", "Erfasse deinen ersten Kunden und verknüpfe danach Projekte und Rechnungen.", "customer")}</section>`;
-  const rows = items.map((item) => `<tr><td><strong>${esc(item.company)}</strong><small>${esc(item.contact_name)}</small></td><td>${esc(item.email)}</td><td>${esc(item.phone || "–")}</td><td>${esc([item.postal_code,item.city].filter(Boolean).join(" "))}</td></tr>`).join("");
-  const cards = items.map((item) => `<article class="mobile-card"><div><strong>${esc(item.company)}</strong><small>${esc(item.contact_name)} · ${esc(item.email)}</small></div><span>${esc(item.city || "")}</span></article>`).join("");
-  return `<section class="view">${toolbar("customer", "Kunden durchsuchen …")}<table class="data-table"><thead><tr><th>Kunde</th><th>E-Mail</th><th>Telefon</th><th>Ort</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list">${cards}</div></section>`;
+  const rows = items.map((item) => `<tr><td><strong>${esc(item.company)}</strong><small>${esc(item.contact_name)}</small></td><td>${esc(item.email)}</td><td>${esc(item.phone || "–")}</td><td>${esc([item.postal_code,item.city].filter(Boolean).join(" "))}</td><td><button class="danger-button" data-delete-record="customer" data-id="${esc(item.id)}" aria-label="Kunde löschen: ${esc(item.company)}">Löschen</button></td></tr>`).join("");
+  const cards = items.map((item) => `<article class="mobile-card"><div><strong>${esc(item.company)}</strong><small>${esc(item.contact_name)} · ${esc(item.email)}</small><button class="danger-button" data-delete-record="customer" data-id="${esc(item.id)}" aria-label="Kunde löschen: ${esc(item.company)}">Löschen</button></div><span>${esc(item.city || "")}</span></article>`).join("");
+  return `<section class="view">${toolbar("customer", "Kunden durchsuchen …")}<table class="data-table"><thead><tr><th>Kunde</th><th>E-Mail</th><th>Telefon</th><th>Ort</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list">${cards}</div></section>`;
 }
 
 function renderProjects() {
   const all = state.data.projects;
   const items = filtered(all.filter((item) => state.filter === "all" || item.status === state.filter), ["title", "description"]);
   if (!all.length) return `<section class="view">${emptyState("From idea to frame.", "Lege das erste Projekt an und halte Status, Kunde und Budget im Blick.", "project")}</section>`;
-  const rows = items.map((item) => `<tr><td><strong>${esc(item.title)}</strong><small>${esc(item.customer?.company || "Ohne Kunde")}</small></td><td><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></td><td>${formatDate(item.due_date)}</td><td>${formatCHF(item.budget_rappen || 0)}</td></tr>`).join("");
-  const cards = items.map((item) => `<article class="mobile-card"><div><strong>${esc(item.title)}</strong><small>${esc(item.customer?.company || "Ohne Kunde")} · ${formatDate(item.due_date)}</small></div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></article>`).join("");
-  return `<section class="view">${toolbar("project", "Projekte durchsuchen …", [["all","Alle"],["planning","Planung"],["active","Aktiv"],["completed","Abgeschlossen"]])}<table class="data-table"><thead><tr><th>Projekt</th><th>Status</th><th>Deadline</th><th>Budget</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list">${cards}</div></section>`;
+  const rows = items.map((item) => `<tr><td><strong>${esc(item.title)}</strong><small>${esc(item.customer?.company || "Ohne Kunde")}</small></td><td><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></td><td>${formatDate(item.due_date)}</td><td>${formatCHF(item.budget_rappen || 0)}</td><td><button class="danger-button" data-delete-record="project" data-id="${esc(item.id)}" aria-label="Projekt löschen: ${esc(item.title)}">Löschen</button></td></tr>`).join("");
+  const cards = items.map((item) => `<article class="mobile-card"><div><strong>${esc(item.title)}</strong><small>${esc(item.customer?.company || "Ohne Kunde")} · ${formatDate(item.due_date)}</small><button class="danger-button" data-delete-record="project" data-id="${esc(item.id)}" aria-label="Projekt löschen: ${esc(item.title)}">Löschen</button></div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></article>`).join("");
+  return `<section class="view">${toolbar("project", "Projekte durchsuchen …", [["all","Alle"],["planning","Planung"],["active","Aktiv"],["completed","Abgeschlossen"]])}<table class="data-table"><thead><tr><th>Projekt</th><th>Status</th><th>Deadline</th><th>Budget</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list">${cards}</div></section>`;
 }
 
 function invoiceActions(invoice) {
-  return `<div class="table-actions"><button class="text-button" data-invoice-action="download" data-id="${esc(invoice.id)}">PDF</button>${["draft","sent","overdue"].includes(invoice.status) ? `<button class="text-button" data-invoice-action="send" data-id="${esc(invoice.id)}">Senden</button>` : ""}${["sent","overdue"].includes(invoice.status) ? `<button class="text-button" data-invoice-action="mark_paid" data-id="${esc(invoice.id)}">Bezahlt</button>` : ""}</div>`;
+  if (invoice.is_legacy) return '<span class="muted-action">Archiv · kein neues PDF/Versand</span>';
+  if (invoice.status === "cancelled") return '<span class="muted-action">Keine Zahlungsaktion</span>';
+  return `<div class="table-actions"><button class="text-button" data-invoice-action="download" data-id="${esc(invoice.id)}">PDF</button>${["draft","sent","overdue"].includes(invoice.status) ? `<button class="text-button" data-invoice-action="send" data-id="${esc(invoice.id)}">Senden</button>` : ""}${["sent","overdue"].includes(invoice.status) ? `<button class="text-button" data-invoice-action="mark_paid" data-id="${esc(invoice.id)}">Bezahlt</button><button class="danger-button" data-invoice-action="cancel" data-id="${esc(invoice.id)}">Stornieren</button>` : ""}${invoice.status === "draft" ? `<button class="danger-button" data-delete-record="invoice" data-id="${esc(invoice.id)}" aria-label="Rechnung löschen">Löschen</button>` : ""}</div>`;
 }
 function renderInvoices() {
   const all = state.data.invoices;
   const items = filtered(all.filter((item) => state.filter === "all" || item.status === state.filter), ["invoice_number"]);
   if (!all.length) return `<section class="view">${emptyState("Ready to invoice.", "Erstelle deine erste HEAV-Rechnung als PDF und sende sie direkt an den Kunden.", "invoice")}</section>`;
-  const rows = items.map((item) => `<tr><td><strong>${esc(item.invoice_number)}</strong><small>${formatDate(item.issue_date)}</small></td><td>${esc(item.customer?.company || "Ohne Kunde")}</td><td><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></td><td><strong>${formatCHF(item.total_rappen)}</strong><small>fällig ${formatDate(item.due_date)}</small></td><td>${invoiceActions(item)}</td></tr>`).join("");
+  const rows = items.map((item) => `<tr><td><strong>${esc(item.invoice_number)}</strong><small>${formatDate(item.issue_date)} · ${item.is_legacy ? "Historisch archiviert" : esc(formatReference(item.payment_reference))}</small></td><td>${esc(item.customer?.company || "Ohne Kunde")}</td><td><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></td><td><strong>${formatCHF(item.total_rappen)}</strong><small>fällig ${formatDate(item.due_date)}</small></td><td>${invoiceActions(item)}</td></tr>`).join("");
   const cards = items.map((item) => `<article class="mobile-card"><div><strong>${esc(item.invoice_number)} · ${formatCHF(item.total_rappen)}</strong><small>${esc(item.customer?.company || "Ohne Kunde")} · fällig ${formatDate(item.due_date)}</small>${invoiceActions(item)}</div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></article>`).join("");
-  return `<section class="view">${toolbar("invoice", "Rechnungen durchsuchen …", [["all","Alle"],["draft","Entwürfe"],["sent","Versendet"],["paid","Bezahlt"],["overdue","Überfällig"]])}<table class="data-table"><thead><tr><th>Rechnung</th><th>Kunde</th><th>Status</th><th>Total</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list">${cards}</div></section>`;
+  return `<section class="view">${toolbar("invoice", "Rechnungen durchsuchen …", [["all","Alle"],["draft","Entwürfe"],["sent","Versendet"],["paid","Bezahlt"],["overdue","Überfällig"],["cancelled","Storniert"]])}<table class="data-table"><thead><tr><th>Rechnung</th><th>Kunde</th><th>Status</th><th>Total</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list">${cards}</div></section>`;
 }
 
 function renderSettings() {
   const settings = state.data.settings || {};
-  return `<section class="view"><div class="hero-row"><h2>Business,<br><em>set clearly.</em></h2><p>Diese Angaben erscheinen auf deinen Rechnungen. Ergänze vor dem ersten Versand insbesondere Adresse, IBAN und MWST-Status.</p></div><div class="settings-grid"><article class="settings-card"><h3>Rechnungsabsender</h3><p>Rechtliche und finanzielle Angaben für alle PDF-Rechnungen.</p><div class="settings-list"><div><span>Firma</span><strong>${esc(settings.company_name || "HEAV")}</strong></div><div><span>Inhaber</span><strong>${esc(settings.owner_name || "Michias Tegegne")}</strong></div><div><span>E-Mail</span><strong>${esc(settings.email || "hello@heav.ch")}</strong></div><div><span>IBAN</span><strong>${esc(settings.iban || "Noch offen")}</strong></div></div><button class="primary-action" data-create="settings" style="margin-top:24px">Angaben bearbeiten</button></article><article class="settings-card"><h3>Systemstatus</h3><p>Der Adminbereich nutzt einen getrennten, geschützten Backend-Zugang.</p><div class="settings-list"><div><span>Modus</span><strong>Produktion</strong></div><div><span>Datenbank</span><strong>Supabase RLS</strong></div><div><span>Rechnungsversand</span><strong>Resend API</strong></div><div><span>Website</span><strong>heav.ch</strong></div></div></article></div></section>`;
+  return `<section class="view"><div class="hero-row"><h2>Business,<br><em>set clearly.</em></h2><p>Diese Angaben erscheinen auf deinen Rechnungen und in den Rechnungs-E-Mails. Ohne MWST-Nummer berechnet das System automatisch keine MWST.</p></div><div class="settings-grid"><article class="settings-card"><h3>Rechnungsabsender</h3><p>Rechtliche und finanzielle Angaben für alle PDF-Rechnungen.</p><div class="settings-list"><div><span>Firma</span><strong>${esc(settings.company_name || "HEAV")}</strong></div><div><span>Inhaber</span><strong>${esc(settings.owner_name || "Michias Tegegne")}</strong></div><div><span>E-Mail</span><strong>${esc(settings.email || "hello@heav.ch")}</strong></div><div><span>MWST</span><strong>${esc(settings.vat_number || "Nicht MWST-pflichtig")}</strong></div><div><span>IBAN</span><strong>${esc(settings.iban || "Noch offen")}</strong></div></div><button class="primary-action" data-create="settings" style="margin-top:24px">Angaben bearbeiten</button></article><article class="settings-card"><h3>Systemstatus</h3><p>Der Adminbereich nutzt einen getrennten, geschützten Backend-Zugang.</p><div class="settings-list"><div><span>Modus</span><strong>Produktion</strong></div><div><span>Datenbank</span><strong>Supabase RLS</strong></div><div><span>Rechnungsversand</span><strong>billing@heav.ch</strong></div><div><span>Website</span><strong>heav.ch</strong></div></div></article></div></section>`;
 }
 
 const renderers = { dashboard: renderDashboard, customers: renderCustomers, projects: renderProjects, invoices: renderInvoices, settings: renderSettings };
@@ -154,7 +164,7 @@ async function refresh() { state.data = await adapter.loadAll(); render(); }
 function setView(view) { state.view = view; state.query = ""; state.filter = "all"; document.querySelectorAll(".nav-link").forEach((item) => item.classList.toggle("is-active", item.dataset.view === view)); shell.classList.remove("nav-open"); render(); }
 
 function customerOptions(selected = "") { return state.data.customers.map((item) => `<option value="${esc(item.id)}" ${item.id === selected ? "selected" : ""}>${esc(item.company)}</option>`).join(""); }
-function projectOptions(selected = "") { return state.data.projects.map((item) => `<option value="${esc(item.id)}" ${item.id === selected ? "selected" : ""}>${esc(item.title)}</option>`).join(""); }
+function projectOptions(customerId = "", selected = "") { return state.data.projects.filter((item) => item.customer_id === customerId).map((item) => `<option value="${esc(item.id)}" ${item.id === selected ? "selected" : ""}>${esc(item.title)}</option>`).join(""); }
 function field(label, name, type = "text", value = "", wide = false, extra = "") { return `<label class="form-field ${wide ? "wide" : ""}"><span>${esc(label)}</span><input type="${type}" name="${name}" value="${esc(value)}" ${extra}></label>`; }
 function openEditor(type) {
   formError.textContent = "";
@@ -169,15 +179,15 @@ function openEditor(type) {
     dialogBody.innerHTML = `<div class="form-grid"><label class="form-field wide"><span>Kunde *</span><select name="customer_id" required><option value="">Bitte wählen</option>${customerOptions()}</select></label>${field("Projekttitel *","title","text","",true,"required")}<label class="form-field"><span>Status</span><select name="status"><option value="planning">Planung</option><option value="active">Aktiv</option><option value="completed">Abgeschlossen</option><option value="on_hold">Pausiert</option></select></label>${field("Budget CHF","budget","number","","",'min="0" step="0.05"')}${field("Start","start_date","date",today())}${field("Deadline","due_date","date")}<label class="form-field wide"><span>Beschreibung</span><textarea name="description"></textarea></label></div>`;
   } else if (type === "invoice") {
     if (!state.data.customers.length) { showToast("Bitte zuerst einen Kunden erfassen.", "error"); setView("customers"); return; }
-    const number = `HEAV-${new Date().getFullYear()}-${String(state.data.invoices.length + 1).padStart(3,"0")}`;
     dialogTitle.textContent = "Rechnung erstellen";
-    dialogBody.innerHTML = `<div class="form-grid"><label class="form-field"><span>Kunde *</span><select name="customer_id" required><option value="">Bitte wählen</option>${customerOptions()}</select></label><label class="form-field"><span>Projekt</span><select name="project_id"><option value="">Kein Projekt</option>${projectOptions()}</select></label>${field("Rechnungsnummer *","invoice_number","text",number,false,"required")}${field("MWST %","tax_rate","number",state.data.settings?.default_tax_rate ?? 8.1,false,'min="0" step="0.1"')}${field("Rechnungsdatum *","issue_date","date",today(),false,"required")}${field("Fällig am *","due_date","date",plusDays(today(),state.data.settings?.default_due_days || 30),false,"required")}<div class="invoice-items"><span class="items-label">Positionen *</span><div id="invoice-item-list"></div><button class="secondary-button" type="button" data-add-item>Position hinzufügen</button></div><label class="form-field wide"><span>Hinweis auf Rechnung</span><textarea name="notes" placeholder="Optional"></textarea></label><div class="invoice-total" id="invoice-total">TOTAL&nbsp;&nbsp; CHF 0.00</div></div>`;
+    const vatRegistered = validVatNumber(state.data.settings?.vat_number);
+    dialogBody.innerHTML = `<div class="form-grid"><label class="form-field"><span>Kunde *</span><select name="customer_id" required><option value="">Bitte wählen</option>${customerOptions()}</select></label><label class="form-field"><span>Projekt</span><select name="project_id"><option value="">Kein Projekt</option></select></label><div class="sequence-note wide"><strong>Automatische Referenz</strong><span>Die Zahlungsreferenz wird beim Speichern fortlaufend und buchhaltungssicher vergeben.</span></div>${field(vatRegistered ? "MWST %" : "MWST % · nicht registriert","tax_rate","number",vatRegistered ? (state.data.settings?.default_tax_rate ?? 0) : 0,false,vatRegistered ? 'min="0" step="0.1"' : 'readonly aria-readonly="true"')}${field("Rechnungsdatum *","issue_date","date",today(),false,"required")}${field("Fällig am *","due_date","date",plusDays(today(),state.data.settings?.default_due_days || 30),false,"required")}<div class="invoice-items"><span class="items-label">Positionen *</span><div id="invoice-item-list"></div><button class="secondary-button" type="button" data-add-item>Position hinzufügen</button></div><label class="form-field wide"><span>Hinweis auf Rechnung</span><textarea name="notes" placeholder="Optional"></textarea></label><div class="invoice-total" id="invoice-total">TOTAL&nbsp;&nbsp; CHF 0.00</div></div>`;
     addInvoiceItem();
   } else {
     const settings = state.data.settings || {};
     dialogKicker.textContent = "EINSTELLUNGEN";
     dialogTitle.textContent = "Rechnungsabsender";
-    dialogBody.innerHTML = `<div class="form-grid">${field("Firma *","company_name","text",settings.company_name || "HEAV",false,"required")}${field("Inhaber *","owner_name","text",settings.owner_name || "Michias Tegegne",false,"required")}${field("E-Mail *","email","email",settings.email || "hello@heav.ch",false,"required")}${field("Telefon","phone","tel",settings.phone || "")}${field("Strasse / Nr. *","address_line1","text",settings.address_line1 || "",true,"required")}${field("PLZ *","postal_code","text",settings.postal_code || "",false,"required")}${field("Ort *","city","text",settings.city || "",false,"required")}${field("IBAN *","iban","text",settings.iban || "",true,"required")}${field("MWST-Nr.","vat_number","text",settings.vat_number || "")}${field("Standard-MWST %","default_tax_rate","number",settings.default_tax_rate ?? 8.1,false,'min="0" step="0.1"')}${field("Standard-Zahlungsfrist (Tage)","default_due_days","number",settings.default_due_days || 30,false,'min="1" step="1"')}</div>`;
+    dialogBody.innerHTML = `<div class="form-grid">${field("Firma *","company_name","text",settings.company_name || "HEAV",false,"required")}${field("Inhaber *","owner_name","text",settings.owner_name || "Michias Tegegne",false,"required")}${field("E-Mail *","email","email",settings.email || "hello@heav.ch",false,"required")}${field("Telefon","phone","tel",settings.phone || "")}${field("Website","website_url","url",settings.website_url || "https://heav.ch")}${field("Instagram URL","instagram_url","url",settings.instagram_url || "")}${field("Strasse / Nr. *","address_line1","text",settings.address_line1 || "",true,"required")}${field("PLZ *","postal_code","text",settings.postal_code || "",false,"required")}${field("Ort *","city","text",settings.city || "",false,"required")}${field("IBAN *","iban","text",settings.iban || "",true,"required")}${field("MWST-Nr. · leer lassen, wenn nicht registriert","vat_number","text",settings.vat_number || "",true)}${field("Standard-MWST %","default_tax_rate","number",settings.vat_number ? (settings.default_tax_rate ?? 0) : 0,false,'min="0" step="0.1"')}${field("Standard-Zahlungsfrist (Tage)","default_due_days","number",settings.default_due_days || 30,false,'min="1" step="1"')}</div>`;
   }
   dialog.showModal();
 }
@@ -208,21 +218,53 @@ async function saveEditor(type) {
     const items = rows.map((row) => ({ description: row.querySelector('[name="item_description"]').value.trim(), quantity: Number(row.querySelector('[name="item_quantity"]').value), unit_price_rappen: Math.round(Number(row.querySelector('[name="item_price"]').value) * 100) }));
     const payload = { customerId: data.customer_id, issueDate: data.issue_date, dueDate: data.due_date, items: items.map((item) => ({ description: item.description, quantity: item.quantity, unitPrice: item.unit_price_rappen / 100 })) };
     const errors = validateInvoice(payload); if (Object.keys(errors).length) { formError.textContent = Object.values(errors)[0]; return false; }
-    await adapter.saveInvoice({ customer_id: data.customer_id, project_id: data.project_id || null, invoice_number: data.invoice_number.trim(), issue_date: data.issue_date, due_date: data.due_date, tax_rate: Number(data.tax_rate || 0), notes: data.notes.trim(), items });
+    await adapter.saveInvoice({ customer_id: data.customer_id, project_id: data.project_id || null, issue_date: data.issue_date, due_date: data.due_date, tax_rate: Number(data.tax_rate || 0), notes: data.notes.trim(), items });
   }
-  if (type === "settings") await adapter.saveSettings({ company_name: data.company_name.trim(), owner_name: data.owner_name.trim(), email: data.email.trim(), phone: data.phone.trim(), address_line1: data.address_line1.trim(), postal_code: data.postal_code.trim(), city: data.city.trim(), iban: data.iban.trim(), vat_number: data.vat_number.trim(), default_tax_rate: Number(data.default_tax_rate || 0), default_due_days: Number(data.default_due_days || 30) });
+  if (type === "settings") {
+    const vatNumber = normalizeVatNumber(data.vat_number);
+    if (vatNumber && !validVatNumber(vatNumber)) {
+      formError.textContent = "MWST-Nummer im Format CHE-123.456.789 MWST eingeben oder leer lassen.";
+      return false;
+    }
+    await adapter.saveSettings({ company_name: data.company_name.trim(), owner_name: data.owner_name.trim(), email: data.email.trim(), phone: data.phone.trim(), website_url: data.website_url.trim() || "https://heav.ch", instagram_url: data.instagram_url.trim(), address_line1: data.address_line1.trim(), postal_code: data.postal_code.trim(), city: data.city.trim(), iban: data.iban.trim(), vat_number: vatNumber, default_tax_rate: vatNumber ? Number(data.default_tax_rate || 0) : 0, default_due_days: Number(data.default_due_days || 30) });
+  }
   return true;
 }
 
 async function invoiceAction(id, action, button) {
+  const current = state.data.invoices.find((item) => item.id === id);
+  if (action === "send") {
+    const recipient = current?.customer?.email || "unbekannte Adresse";
+    const total = formatCHF(current?.total_rappen || 0);
+    if (!window.confirm(`Rechnung ${current?.invoice_number || ""} über ${total} jetzt an ${recipient} senden?`)) return;
+  }
+  if (action === "cancel" && !window.confirm(`Rechnung ${current?.invoice_number || ""} wirklich stornieren? Danach sind Versand und Zahlungs-PDF gesperrt.`)) return;
   button.disabled = true;
   try {
-    const result = await adapter.invoiceAction(id, action);
+    const requestKey = action === "send" ? (state.sendRequestKeys.get(id) || crypto.randomUUID()) : null;
+    if (requestKey) state.sendRequestKeys.set(id, requestKey);
+    const result = await adapter.invoiceAction(id, action, requestKey);
+    if (action === "send") state.sendRequestKeys.delete(id);
     if (action === "download") {
       const url = URL.createObjectURL(result); const link = document.createElement("a"); link.href = url; link.download = `${state.data.invoices.find((item) => item.id === id)?.invoice_number || "HEAV-Rechnung"}.pdf`; link.click(); URL.revokeObjectURL(url); showToast("PDF wurde erstellt.");
-    } else { showToast(action === "send" ? "Rechnung wurde versendet." : "Rechnung als bezahlt markiert."); await refresh(); }
+    } else { showToast(action === "send" ? "Rechnung wurde versendet." : action === "cancel" ? "Rechnung wurde storniert." : "Rechnung als bezahlt markiert."); await refresh(); }
   } catch (error) { showToast(error.message || "Aktion fehlgeschlagen.", "error"); }
   finally { button.disabled = false; }
+}
+
+async function deleteRecord(type, id, button) {
+  const labels = { customer: "diesen Kunden", project: "dieses Projekt", invoice: "diesen Rechnungsentwurf" };
+  if (!window.confirm(`Willst du ${labels[type]} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`)) return;
+  button.disabled = true;
+  try {
+    await adapter.deleteRecord(type, id);
+    await refresh();
+    showToast("Gelöscht.");
+  } catch (error) {
+    showToast(error.message || "Löschen fehlgeschlagen.", "error");
+  } finally {
+    button.disabled = false;
+  }
 }
 
 content.addEventListener("click", (event) => {
@@ -230,10 +272,12 @@ content.addEventListener("click", (event) => {
   const view = event.target.closest("[data-view]"); if (view) setView(view.dataset.view);
   const filter = event.target.closest("[data-filter]"); if (filter) { state.filter = filter.dataset.filter; render(); }
   const action = event.target.closest("[data-invoice-action]"); if (action) invoiceAction(action.dataset.id, action.dataset.invoiceAction, action);
+  const remove = event.target.closest("[data-delete-record]"); if (remove) deleteRecord(remove.dataset.deleteRecord, remove.dataset.id, remove);
 });
 content.addEventListener("input", (event) => { if (event.target.matches("[data-search]")) { state.query = event.target.value; const position = event.target.selectionStart; render(); const next = document.querySelector("[data-search]"); next.focus(); next.setSelectionRange(position, position); } });
 dialogBody.addEventListener("click", (event) => { if (event.target.closest("[data-add-item]")) addInvoiceItem(); if (event.target.closest("[data-remove-item]")) { if (document.querySelectorAll(".invoice-item").length > 1) event.target.closest(".invoice-item").remove(); updateInvoiceTotal(); } });
 dialogBody.addEventListener("input", (event) => { if (event.target.matches('[name="item_quantity"],[name="item_price"],[name="tax_rate"]')) updateInvoiceTotal(); });
+dialogBody.addEventListener("change", (event) => { if (event.target.matches('[name="customer_id"]') && dialogForm.dataset.type === "invoice") { const projects = dialogForm.elements.project_id; projects.innerHTML = `<option value="">Kein Projekt</option>${projectOptions(event.target.value)}`; } });
 dialogForm.addEventListener("submit", async (event) => { const submitter = event.submitter; if (submitter?.value !== "save") return; event.preventDefault(); submitter.disabled = true; formError.textContent = ""; try { if (await saveEditor(dialogForm.dataset.type)) { dialog.close(); await refresh(); showToast("Gespeichert."); } } catch (error) { formError.textContent = error.message || "Speichern fehlgeschlagen."; } finally { submitter.disabled = false; } });
 document.addEventListener("click", (event) => { const nav = event.target.closest(".nav-link"); if (nav) setView(nav.dataset.view); if (event.target.closest("[data-open-nav]")) shell.classList.add("nav-open"); if (event.target.closest("[data-close-nav]")) shell.classList.remove("nav-open"); const create = event.target.closest("[data-create]"); if (create && !content.contains(create)) openEditor(create.dataset.create); });
 document.querySelector("#logout-button").addEventListener("click", async () => { await adapter.logout(); window.location.replace("/login/"); });

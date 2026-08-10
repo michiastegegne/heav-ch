@@ -31,8 +31,8 @@ async function mockStudioSupabase(page) {
           { id: "p2", customer_id: "c2", title: "Campaign Content", status: "planning", budget_rappen: 920000, start_date: "2026-08-20", due_date: "2026-10-02", description: "Campaign" }
         ],
         invoices: [
-          { id: "i1", customer_id: "c1", project_id: "p1", invoice_number: "HEAV-2026-001", issue_date: "2026-07-28", due_date: "2026-08-27", status: "sent", subtotal_rappen: 850000, tax_rappen: 68850, total_rappen: 918850, tax_rate: 8.1, invoice_items: [] },
-          { id: "i2", customer_id: "c2", project_id: "p2", invoice_number: "HEAV-2026-002", issue_date: "2026-08-01", due_date: "2026-08-31", status: "draft", subtotal_rappen: 460000, tax_rappen: 37260, total_rappen: 497260, tax_rate: 8.1, invoice_items: [] }
+          { id: "i1", customer_id: "c1", project_id: "p1", invoice_number: "HEAV-2026-001", payment_reference: "RF51HEAV2026000001", issue_date: "2026-07-28", due_date: "2026-08-27", status: "sent", subtotal_rappen: 850000, tax_rappen: 68850, total_rappen: 918850, tax_rate: 8.1, invoice_items: [] },
+          { id: "i2", customer_id: "c2", project_id: "p2", invoice_number: "HEAV-2026-002", payment_reference: "RF24HEAV2026000002", issue_date: "2026-08-01", due_date: "2026-08-31", status: "draft", subtotal_rappen: 460000, tax_rappen: 37260, total_rappen: 497260, tax_rate: 8.1, invoice_items: [] }
         ],
         company_settings: [{ company_name: "HEAV", owner_name: "Michias Tegegne", email: "hello@heav.ch", iban: "", default_tax_rate: 8.1, default_due_days: 30 }]
       };
@@ -57,7 +57,16 @@ async function mockStudioSupabase(page) {
             if (name === "create_invoice") {
               const subtotal = payload.p_items.reduce((sum, item) => sum + Math.round(item.quantity * item.unit_price_rappen), 0);
               const tax = Math.round(subtotal * payload.p_tax_rate / 100);
-              store.invoices.unshift({ id: crypto.randomUUID(), customer_id: payload.p_customer_id, project_id: payload.p_project_id, invoice_number: payload.p_invoice_number, issue_date: payload.p_issue_date, due_date: payload.p_due_date, status: "draft", subtotal_rappen: subtotal, tax_rappen: tax, total_rappen: subtotal + tax, tax_rate: payload.p_tax_rate, invoice_items: payload.p_items });
+              store.invoices.unshift({ id: crypto.randomUUID(), customer_id: payload.p_customer_id, project_id: payload.p_project_id, invoice_number: "HEAV-2026-003", payment_reference: "RF94HEAV2026000003", issue_date: payload.p_issue_date, due_date: payload.p_due_date, status: "draft", subtotal_rappen: subtotal, tax_rappen: tax, total_rappen: subtotal + tax, tax_rate: payload.p_tax_rate, invoice_items: payload.p_items });
+            }
+            if (name === "delete_draft_invoice") {
+              store.invoices = store.invoices.filter((item) => item.id !== payload.p_invoice_id);
+            }
+            if (name === "delete_project") {
+              store.projects = store.projects.filter((item) => item.id !== payload.p_project_id);
+            }
+            if (name === "delete_customer") {
+              store.customers = store.customers.filter((item) => item.id !== payload.p_customer_id);
             }
             return result(null);
           }
@@ -79,6 +88,10 @@ test("Desktop: Dashboard und vollständiger Erfassungsfluss", async ({ browser }
 
   await page.locator('.nav-link[data-view="customers"]').click();
   await page.locator('[data-create="customer"]').first().click();
+  await page.getByRole("button", { name: "Abbrechen" }).click();
+  await expect(page.locator("#editor-dialog")).not.toBeVisible();
+
+  await page.locator('[data-create="customer"]').first().click();
   await page.locator('[name="company"]').fill("Testkunde AG");
   await page.locator('[name="contact_name"]').fill("Mira Muster");
   await page.locator('[name="email"]').fill("mira@example.com");
@@ -91,9 +104,10 @@ test("Desktop: Dashboard und vollständiger Erfassungsfluss", async ({ browser }
   await page.locator('.nav-link[data-view="invoices"]').click();
   await page.locator('[data-create="invoice"]').first().click();
   await page.locator('[name="customer_id"]').selectOption({ label: "Testkunde AG" });
+  await expect(page.locator('[name="project_id"] option')).toHaveCount(1);
   await page.locator('[name="item_description"]').fill("Brand Film Konzeption");
   await page.locator('[name="item_price"]').fill("1200");
-  await expect(page.locator("#invoice-total")).toContainText("CHF 1’297.20");
+  await expect(page.locator("#invoice-total")).toContainText("CHF 1’200.00");
   await page.getByRole("button", { name: "Speichern" }).click();
   await expect(page.locator(".data-table").getByText("HEAV-2026-003", { exact: true })).toBeVisible();
   const newInvoiceRow = page.locator(".data-table tbody tr").filter({ hasText: "HEAV-2026-003" });
@@ -101,6 +115,24 @@ test("Desktop: Dashboard und vollständiger Erfassungsfluss", async ({ browser }
   await newInvoiceRow.getByRole("button", { name: "PDF", exact: true }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe("HEAV-2026-003.pdf");
+  await expect(newInvoiceRow).toContainText("RF94 HEAV 2026 0000 03");
+
+  page.once("dialog", (prompt) => prompt.accept());
+  await newInvoiceRow.getByRole("button", { name: /Rechnung löschen/ }).click();
+  await expect(newInvoiceRow).toHaveCount(0);
+
+  await page.locator('.nav-link[data-view="projects"]').click();
+  const projectRow = page.locator(".data-table tbody tr").filter({ hasText: "Campaign Content" });
+  page.once("dialog", (prompt) => prompt.accept());
+  await projectRow.getByRole("button", { name: /Projekt löschen/ }).click();
+  await expect(projectRow).toHaveCount(0);
+
+  await page.locator('.nav-link[data-view="customers"]').click();
+  const customerRow = page.locator(".data-table tbody tr").filter({ hasText: "Testkunde AG" });
+  page.once("dialog", (prompt) => prompt.accept());
+  await customerRow.getByRole("button", { name: /Kunde löschen/ }).click();
+  await expect(customerRow).toHaveCount(0);
+
   await assertHealthy(page, errors);
   await page.screenshot({ path: "qa/admin-desktop.png", fullPage: true });
   await page.close();
