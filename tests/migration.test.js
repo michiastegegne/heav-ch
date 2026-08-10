@@ -5,6 +5,7 @@ import { PGlite } from "@electric-sql/pglite";
 
 const migrationPath = new URL("../supabase/migrations/20260803_heav_admin.sql", import.meta.url);
 const reliabilityMigrationPath = new URL("../supabase/migrations/20260810_portal_reliability.sql", import.meta.url);
+const shortReferenceMigrationPath = new URL("../supabase/migrations/20260811_short_invoice_reference.sql", import.meta.url);
 
 async function createMigrationDatabase() {
   const db = new PGlite();
@@ -103,6 +104,8 @@ test("Rechnungsnummer und QR-Referenz werden atomar fortlaufend vergeben und nie
   const reliabilityMigration = await readFile(reliabilityMigrationPath, "utf8");
   await db.exec(reliabilityMigration);
 
+  await db.exec(await readFile(shortReferenceMigrationPath, "utf8"));
+
   const first = await db.query(`
     select * from public.create_invoice(
       '${customer}', null, '2026-08-10', '2026-09-09', 8.1, '',
@@ -110,7 +113,8 @@ test("Rechnungsnummer und QR-Referenz werden atomar fortlaufend vergeben und nie
     )
   `);
   assert.equal(first.rows[0].invoice_number, "HEAV-2026-008");
-  assert.match(first.rows[0].payment_reference, /^RF\d{2}HEAV2026000008$/);
+  assert.equal(first.rows[0].payment_reference, "RF75HEAV2026008");
+  assert.equal(first.rows[0].payment_reference.length, 15);
   assert.equal(creditorReferenceIsValid(first.rows[0].payment_reference), true);
 
   await db.query(`select public.delete_draft_invoice('${first.rows[0].invoice_id}')`);

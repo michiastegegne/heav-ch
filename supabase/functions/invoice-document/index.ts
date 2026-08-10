@@ -53,6 +53,12 @@ const formatCHF = (rappen: number) => {
   return `CHF ${whole.replace(/\B(?=(\d{3})+(?!\d))/g, "’")}.${decimals}`;
 };
 const formatDate = (date: string) => date.split("-").reverse().join(".");
+export const formatPaymentReference = (value: string) =>
+  String(value ?? "")
+    .replace(/\s+/g, "")
+    .toUpperCase()
+    .replace(/(.{4})/g, "$1 ")
+    .trim();
 const compactText = (value: unknown, maxLength: number) =>
   String(value ?? "").replace(/[\r\n]+/g, " ").trim().slice(0, maxLength);
 const normalizedVatNumber = (value: unknown) => String(value ?? "").trim().toUpperCase();
@@ -75,7 +81,7 @@ const safePublicUrl = (value: unknown, fallback = "") => {
 
 export function buildInvoiceEmail(invoice: Invoice, settings: Settings) {
   const greeting = escapeHtml(invoice.customers.contact_name || invoice.customers.company);
-  const reference = escapeHtml(invoice.payment_reference.replace(/(.{4})/g, "$1 ").trim());
+  const reference = escapeHtml(formatPaymentReference(invoice.payment_reference));
   const amount = escapeHtml(formatCHF(invoice.total_rappen));
   const dueDate = escapeHtml(formatDate(invoice.due_date));
   const issueDate = escapeHtml(formatDate(invoice.issue_date));
@@ -96,12 +102,12 @@ export function buildInvoiceEmail(invoice: Invoice, settings: Settings) {
     `<a href="${escapeHtml(website)}" style="color:#eeeae0">heav.ch</a>`,
     instagram ? `<a href="${escapeHtml(instagram)}" style="color:#eeeae0">Instagram</a>` : "",
   ].filter(Boolean).join(" &nbsp;·&nbsp; ");
-  return `<!doctype html><html><body style="margin:0;background:#eeeae0;color:#090a08;font-family:Arial,sans-serif"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#eeeae0"><tr><td align="center" style="padding:24px 12px"><table role="presentation" width="600" cellspacing="0" cellpadding="0" style="width:100%;max-width:600px;background:#fff;border-collapse:collapse"><tr><td style="padding:30px 34px;background:#090a08;color:#eeeae0"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td style="font-size:38px;line-height:1;font-weight:bold;letter-spacing:1px">HEAV<span style="color:#d7ff38">.</span></td><td align="right" style="color:#aaa89f;font-size:11px;letter-spacing:1.2px">FILMPRODUKTION · SCHWEIZ</td></tr><tr><td colspan="2" style="padding-top:22px;border-top:1px solid #343531"><strong style="font-size:20px;letter-spacing:.5px">STORIES IN MOTION.</strong><br><span style="color:#bec6b7;font-size:13px">Filmproduktion · Content · Postproduktion</span></td></tr></table></td></tr><tr><td style="padding:34px 34px 18px"><p style="margin:0 0 8px;color:#686761;font-size:12px;letter-spacing:1.6px;font-weight:bold">RECHNUNG · ${reference}</p><h1 style="margin:0;font-size:34px;line-height:1.05">Gute Arbeit.<br><em style="font-family:Georgia,serif;font-weight:normal">Klare Zahlen.</em></h1></td></tr><tr><td style="padding:0 34px 26px;font-size:16px;line-height:1.65"><p>Hallo ${greeting}</p><p>Vielen Dank für die Zusammenarbeit. Im Anhang findest du die vollständige Rechnung als PDF mit Swiss-QR-Zahlteil.</p><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:24px 0;background:#090a08;color:#eeeae0"><tr><td style="padding:18px"><span style="color:#aaa89f;font-size:11px;letter-spacing:1.2px">REFERENZNUMMER</span><br><strong>${reference}</strong></td><td align="right" style="padding:18px"><span style="color:#aaa89f;font-size:11px;letter-spacing:1.2px">TOTAL</span><br><strong style="font-size:22px">${amount}</strong></td></tr><tr><td style="padding:0 18px 18px">Rechnungsdatum: ${issueDate}</td><td align="right" style="padding:0 18px 18px">Zahlbar bis: <strong>${dueDate}</strong></td></tr></table><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse"><thead><tr><th align="left" style="padding:9px 0;border-bottom:2px solid #090a08;font-size:12px">LEISTUNG</th><th style="padding:9px 8px;border-bottom:2px solid #090a08;font-size:12px">MENGE</th><th align="right" style="padding:9px 5px;border-bottom:2px solid #090a08;font-size:12px">EINZELPREIS</th><th align="right" style="padding:9px 0;border-bottom:2px solid #090a08;font-size:12px">BETRAG</th></tr></thead><tbody>${itemRows}</tbody></table><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:16px 0 24px"><tr><td align="right" style="padding:4px 0;color:#686761">Zwischensumme</td><td align="right" width="145" style="padding:4px 0">${escapeHtml(formatCHF(invoice.subtotal_rappen))}</td></tr><tr><td align="right" style="padding:4px 0;color:#686761">${taxLabel}</td><td align="right" style="padding:4px 0">${invoice.tax_rappen ? escapeHtml(formatCHF(invoice.tax_rappen)) : ""}</td></tr><tr><td align="right" style="padding:12px 0 4px;border-top:2px solid #090a08"><strong>TOTAL</strong></td><td align="right" style="padding:12px 0 4px;border-top:2px solid #090a08"><strong>${amount}</strong></td></tr></table><p>Bitte verwende bei der Zahlung die Referenznummer <strong>${reference}</strong>. Sie stimmt mit dem Swiss-QR-Code im PDF überein.</p><p>Freundliche Grüsse<br>${owner}<br><strong>${company}</strong></p></td></tr><tr><td style="padding:24px 34px;background:#090a08;color:#eeeae0;font-size:13px;line-height:1.7"><strong>${company}</strong><br>${escapeHtml(settings.address_line1)} · ${escapeHtml(settings.postal_code)} ${escapeHtml(settings.city)}<br>${contactLinks}</td></tr><tr><td style="height:10px;background:#d7ff38;font-size:0">&nbsp;</td></tr></table></td></tr></table></body></html>`;
+  return `<!doctype html><html><body style="margin:0;background:#eeeae0;color:#090a08;font-family:Arial,sans-serif"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#eeeae0"><tr><td align="center" style="padding:24px 12px"><table role="presentation" width="600" cellspacing="0" cellpadding="0" style="width:100%;max-width:600px;background:#fff;border-collapse:collapse"><tr><td style="padding:30px 34px;background:#090a08;color:#eeeae0"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td style="font-size:38px;line-height:1;font-weight:bold;letter-spacing:1px">HEAV<span style="color:#d7ff38">.</span></td><td align="right" style="color:#aaa89f;font-size:11px;letter-spacing:1.2px">FILMPRODUKTION · SCHWEIZ</td></tr><tr><td colspan="2" style="padding-top:22px;border-top:1px solid #343531"><strong style="font-size:20px;letter-spacing:.5px">STORIES IN MOTION.</strong></td></tr></table></td></tr><tr><td style="padding:34px 34px 18px"><p style="margin:0 0 8px;color:#686761;font-size:12px;letter-spacing:1.6px;font-weight:bold">RECHNUNG · ${reference}</p><h1 style="margin:0;font-size:34px;line-height:1.05">Gute Arbeit.<br><em style="font-family:Georgia,serif;font-weight:normal">Klare Zahlen.</em></h1></td></tr><tr><td style="padding:0 34px 26px;font-size:16px;line-height:1.65"><p>Hallo ${greeting}</p><p>Vielen Dank für die Zusammenarbeit. Im Anhang findest du die vollständige Rechnung als PDF mit Swiss-QR-Zahlteil.</p><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:24px 0;background:#090a08;color:#eeeae0"><tr><td style="padding:18px"><span style="color:#aaa89f;font-size:11px;letter-spacing:1.2px">REFERENZNUMMER</span><br><strong>${reference}</strong></td><td align="right" style="padding:18px"><span style="color:#aaa89f;font-size:11px;letter-spacing:1.2px">TOTAL</span><br><strong style="font-size:22px">${amount}</strong></td></tr><tr><td style="padding:0 18px 18px">Rechnungsdatum: ${issueDate}</td><td align="right" style="padding:0 18px 18px">Zahlbar bis: <strong>${dueDate}</strong></td></tr></table><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse"><thead><tr><th align="left" style="padding:9px 0;border-bottom:2px solid #090a08;font-size:12px">LEISTUNG</th><th style="padding:9px 8px;border-bottom:2px solid #090a08;font-size:12px">MENGE</th><th align="right" style="padding:9px 5px;border-bottom:2px solid #090a08;font-size:12px">EINZELPREIS</th><th align="right" style="padding:9px 0;border-bottom:2px solid #090a08;font-size:12px">BETRAG</th></tr></thead><tbody>${itemRows}</tbody></table><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:16px 0 24px"><tr><td align="right" style="padding:4px 0;color:#686761">Zwischensumme</td><td align="right" width="145" style="padding:4px 0">${escapeHtml(formatCHF(invoice.subtotal_rappen))}</td></tr><tr><td align="right" style="padding:4px 0;color:#686761">${taxLabel}</td><td align="right" style="padding:4px 0">${invoice.tax_rappen ? escapeHtml(formatCHF(invoice.tax_rappen)) : ""}</td></tr><tr><td align="right" style="padding:12px 0 4px;border-top:2px solid #090a08"><strong>TOTAL</strong></td><td align="right" style="padding:12px 0 4px;border-top:2px solid #090a08"><strong>${amount}</strong></td></tr></table><p>Bitte verwende bei der Zahlung die Referenznummer <strong>${reference}</strong>. Sie stimmt mit dem Swiss-QR-Code im PDF überein.</p><p>Freundliche Grüsse<br>${owner}<br><strong>${company}</strong></p></td></tr><tr><td style="padding:24px 34px;background:#090a08;color:#eeeae0;font-size:13px;line-height:1.7"><strong>${company}</strong><br>${escapeHtml(settings.address_line1)} · ${escapeHtml(settings.postal_code)} ${escapeHtml(settings.city)}<br>${contactLinks}</td></tr><tr><td style="height:10px;background:#d7ff38;font-size:0">&nbsp;</td></tr></table></td></tr></table></body></html>`;
 }
 
 export function buildInvoiceText(invoice: Invoice, settings: Settings) {
   const greeting = compactText(invoice.customers.contact_name || invoice.customers.company, 160);
-  const reference = invoice.payment_reference.replace(/(.{4})/g, "$1 ").trim();
+  const reference = formatPaymentReference(invoice.payment_reference);
   const lines = [...invoice.invoice_items].sort((a, b) => a.position - b.position).map((item) =>
     `- ${compactText(item.description, 160)} · ${Number(item.quantity)} × ${formatCHF(item.unit_price_rappen)} = ${formatCHF(Math.round(Number(item.quantity) * item.unit_price_rappen))}`
   ).join("\n");
@@ -401,14 +407,7 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
   );
   line(height - 62, margin, right, rgb(.2, .2, .19));
   draw("RECHNUNG", margin, height - 106, 34, serif, colors.paper);
-  draw(
-    "FILMPRODUKTION · CONTENT · POSTPRODUKTION",
-    margin + 2,
-    height - 129,
-    6.5,
-    syne,
-    colors.acid,
-  );
+
   page.drawLine({
     start: { x: 348, y: height - 132 },
     end: { x: 348, y: height - 82 },
@@ -416,15 +415,16 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
     thickness: .7,
   });
   draw("REFERENZNUMMER", 366, height - 88, 5.8, syne, colors.muted);
+  const visibleReference = formatPaymentReference(invoice.payment_reference);
   const numberSize = fittedSize(
-    invoice.payment_reference,
+    visibleReference,
     syne,
     13,
     right - 366,
     8,
   );
   draw(
-    invoice.payment_reference,
+    visibleReference,
     366,
     height - 110,
     numberSize,
@@ -456,7 +456,7 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
   const invoiceDetails = [["Rechnungsdatum", formatDate(invoice.issue_date)], [
     "Fällig am",
     formatDate(invoice.due_date),
-  ], ["Währung", "CHF"], ["QR-Referenz", invoice.payment_reference]];
+  ], ["Währung", "CHF"], ["QR-Referenz", visibleReference]];
   if (Number(invoice.tax_rate) > 0) invoiceDetails.push(["MWST-Nr.", normalizedVatNumber(settings.vat_number)]);
   invoiceDetails
     .forEach(([label, value], index) => {
@@ -614,7 +614,7 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
       pdraw(entry, 14, sectionTop - 66 - index * 9, 8, paymentRegular)
     );
     pdraw("Referenz", 14, sectionTop - 101, 6, paymentBold);
-    pdraw(invoice.payment_reference.replace(/(.{4})/g, "$1 ").trim(), 14, sectionTop - 113, 8, paymentRegular);
+    pdraw(formatPaymentReference(invoice.payment_reference), 14, sectionTop - 113, 8, paymentRegular);
     pdraw("Zahlbar durch", 14, sectionTop - 135, 6, paymentBold);
     debtorLines.forEach((entry, index) =>
       pdraw(entry, 14, sectionTop - 147 - index * 9, 8, paymentRegular)
@@ -704,7 +704,7 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
       pdraw(entry, infoX, sectionTop - 67 - index * 9, 8, paymentRegular)
     );
     pdraw("Referenz", infoX, sectionTop - 105, 6, paymentBold);
-    pdraw(invoice.payment_reference.replace(/(.{4})/g, "$1 ").trim(), infoX, sectionTop - 117, 8, paymentRegular);
+    pdraw(formatPaymentReference(invoice.payment_reference), infoX, sectionTop - 117, 8, paymentRegular);
     pdraw("Zusätzliche Informationen", infoX, sectionTop - 139, 6, paymentBold);
     drawWrapped(
       target,

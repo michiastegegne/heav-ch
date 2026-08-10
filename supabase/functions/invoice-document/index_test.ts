@@ -6,6 +6,7 @@ import {
   buildSwissQrPayload,
   createInvoicePdf,
   escapeHtml,
+  formatPaymentReference,
   validVatNumber,
 } from "./index.ts";
 
@@ -14,6 +15,11 @@ Deno.test("escapeHtml neutralisiert Kundendaten im E-Mail-HTML", () => {
     escapeHtml(`<img src=x onerror="alert('x')"> & Firma`),
     "&lt;img src=x onerror=&quot;alert(&#39;x&#39;)&quot;&gt; &amp; Firma",
   );
+});
+
+Deno.test("Zahlungsreferenzen bleiben in ISO-11649-Vierergruppen lesbar", () => {
+  assertEquals(formatPaymentReference("RF43HEAV2026002"), "RF43 HEAV 2026 002");
+  assertEquals(formatPaymentReference("RF24HEAV2026000002"), "RF24 HEAV 2026 0000 02");
 });
 
 Deno.test("MWST-Nummern werden streng validiert und normalisiert", () => {
@@ -37,7 +43,7 @@ Deno.test("buildSwissQrPayload erzeugt einen vollständigen Swiss-QR-Payload", (
     debtorPostalCode: "8000",
     debtorCity: "Zürich",
     amountRappen: 135882,
-    reference: "RF24HEAV2026000002",
+    reference: "RF43HEAV2026002",
     message: "HEAV-2026-002 · Shortform Content Produktion",
   });
   const lines = payload.split("\n");
@@ -69,7 +75,7 @@ Deno.test("buildSwissQrPayload erzeugt einen vollständigen Swiss-QR-Payload", (
     "CH",
   ]);
   assertEquals(lines[27], "SCOR");
-  assertEquals(lines[28], "RF24HEAV2026000002");
+  assertEquals(lines[28], "RF43HEAV2026002");
   assertEquals(lines[29], "HEAV-2026-002 · Shortform Content Produktion");
   assertEquals(lines[30], "EPD");
 });
@@ -88,7 +94,7 @@ Deno.test("buildSwissQrPayload lehnt ungültige IBANs und Beträge ab", () => {
         creditorPostalCode: "4410",
         creditorCity: "Liestal",
         amountRappen: 100,
-        reference: "RF24HEAV2026000002",
+        reference: "RF43HEAV2026002",
         message: "Test",
         ...patch,
       });
@@ -104,7 +110,7 @@ Deno.test("Rechnungs-E-Mail zeigt Positionen, HEAV-Kontaktdaten und bleibt XSS-s
     id: "invoice-email-test",
     owner_id: "owner-test",
     invoice_number: "HEAV-2026-009",
-    payment_reference: "RF24HEAV2026000002",
+    payment_reference: "RF43HEAV2026002",
     issue_date: "2026-08-10",
     due_date: "2026-09-09",
     status: "draft",
@@ -140,9 +146,9 @@ Deno.test("Rechnungs-E-Mail zeigt Positionen, HEAV-Kontaktdaten und bleibt XSS-s
   };
   const html = buildInvoiceEmail(invoice, settings);
   assert(html.includes("STORIES IN MOTION."));
-  assert(html.includes("Filmproduktion · Content · Postproduktion"));
+  assert(!html.includes("Filmproduktion · Content · Postproduktion"));
   assert(html.includes("EINZELPREIS"));
-  assert(html.includes("RF24 HEAV 2026 0000 02"));
+  assert(html.includes("RF43 HEAV 2026 002"));
   assert(html.includes("Filmproduktion &amp; Schnitt"));
   assert(html.includes("Nicht MWST-pflichtig"));
   assert(html.includes("CHF 1’081.00"));
@@ -150,7 +156,7 @@ Deno.test("Rechnungs-E-Mail zeigt Positionen, HEAV-Kontaktdaten und bleibt XSS-s
   assert(!html.includes("<script>"));
   assert(html.includes("&lt;script&gt;"));
   const text = buildInvoiceText({ ...invoice, customers: { ...invoice.customers, contact_name: "Mira\r\nBcc: fremd@example.com" } }, settings);
-  assert(text.includes("RF24 HEAV 2026 0000 02"));
+  assert(text.includes("RF43 HEAV 2026 002"));
   assert(text.includes("Filmproduktion & Schnitt"));
   assert(!text.includes("\r"));
 });
@@ -160,7 +166,7 @@ Deno.test("createInvoicePdf erzeugt eine valide einseitige HEAV-Rechnung", async
     id: "invoice-test",
     owner_id: "owner-test",
     invoice_number: "HEAV-2026-TEST",
-    payment_reference: "RF24HEAV2026000002",
+    payment_reference: "RF43HEAV2026002",
     issue_date: "2026-08-03",
     due_date: "2026-09-02",
     status: "draft",
