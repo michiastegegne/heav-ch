@@ -10,6 +10,7 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 
     <link rel="stylesheet" href="/admin/assets/admin.css" />
+    <link rel="stylesheet" href="/admin/assets/admin-enhancements.css" />
   </head>
   <body>
     <div class="loading-screen" id="loading-screen" aria-live="polite">
@@ -52,12 +53,12 @@
       <form method="dialog" class="dialog-shell" id="editor-form">
         <header>
           <div><span class="kicker" id="dialog-kicker">NEU</span><h2 id="dialog-title">Eintrag</h2></div>
-          <button class="icon-button" value="cancel" type="submit" aria-label="Dialog schliessen">×</button>
+          <button class="icon-button" value="cancel" type="submit" formnovalidate aria-label="Dialog schliessen">×</button>
         </header>
         <div class="dialog-body" id="dialog-body"></div>
         <footer>
           <p class="form-error" id="form-error" role="alert"></p>
-          <button class="secondary-button" value="cancel" type="submit">Abbrechen</button>
+          <button class="secondary-button" value="cancel" type="submit" formnovalidate>Abbrechen</button>
           <button class="primary-action" value="save" type="submit">Speichern</button>
         </footer>
       </form>
