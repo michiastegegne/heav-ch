@@ -883,12 +883,56 @@ main {
   line-height: 1.7;
   margin: 0 0 2rem;
 }
+.image-portfolio {
+  background: #11130f;
+  color: var(--paper);
+}
+.image-portfolio .section-head h2 em {
+  color: var(--acid);
+}
+.still-grid {
+  display: grid;
+  grid-template-columns: 1.35fr 0.65fr;
+  gap: clamp(1rem, 2vw, 2rem);
+}
+.still-card {
+  min-width: 0;
+  margin: 0;
+}
+.still-card-wide {
+  grid-row: span 2;
+}
+.still-card img {
+  display: block;
+  width: 100%;
+  height: clamp(18rem, 32vw, 32rem);
+  object-fit: cover;
+  filter: saturate(0.88) contrast(1.04);
+}
+.still-card-wide img {
+  height: 100%;
+  min-height: clamp(28rem, 52vw, 44rem);
+}
+.still-card:nth-child(2) img {
+  object-position: center;
+}
+.still-card figcaption {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 0.8rem;
+  color: rgba(238, 234, 224, 0.78);
+  font-size: 0.86rem;
+}
+.still-card figcaption .caps {
+  color: var(--acid);
+}
 .video-portfolio {
   padding-top: clamp(4rem, 8vw, 8rem);
 }
 .video-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: clamp(1rem, 2vw, 2rem);
   border-top: 1px solid var(--line);
   padding-top: 1.25rem;
@@ -1523,6 +1567,22 @@ main {
   }
   .step p {
     grid-column: 2;
+  }
+  .still-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  .still-card-wide {
+    grid-row: auto;
+  }
+  .still-card img,
+  .still-card-wide img {
+    height: auto;
+    min-height: 0;
+    aspect-ratio: 16 / 10;
+  }
+  .still-card:nth-child(2) img {
+    aspect-ratio: 3 / 2;
   }
   .video-grid {
     grid-template-columns: 1fr;
