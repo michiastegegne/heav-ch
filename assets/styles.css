@@ -749,6 +749,7 @@ main {
   color: rgba(238, 234, 224, 0.12);
 }
 .portrait-photo {
+  width: min(100%, 28rem);
   margin: 0;
   background: #111;
 }
