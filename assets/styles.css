@@ -43,10 +43,12 @@
 }
 html {
   scroll-behavior: smooth;
+  overflow-x: clip;
   background: var(--night);
 }
 body {
   margin: 0;
+  overflow-x: clip;
   background: var(--night);
   color: var(--paper);
   font-family: "DM Sans", Arial, sans-serif;
@@ -753,15 +755,16 @@ main {
   margin: 0;
   position: relative;
   isolation: isolate;
-  background: radial-gradient(circle at 48% 58%, #503d40 0%, #34353d 48%, #25272d 100%);
+  overflow: visible;
+  background: transparent;
 }
 .portrait-photo:before {
   content: "";
   position: absolute;
-  inset: -12%;
+  inset: -28%;
   z-index: -1;
-  background: inherit;
-  filter: blur(32px);
+  background: radial-gradient(circle at 48% 58%, #503d40 0%, #34353d 48%, transparent 74%);
+  filter: blur(24px);
   opacity: 0.92;
 }
 .portrait-photo img {
@@ -770,11 +773,9 @@ main {
   display: block;
   object-fit: cover;
   object-position: center;
-  mix-blend-mode: screen;
-  opacity: 0.92;
-  filter: grayscale(1) contrast(1.12);
-  -webkit-mask-image: radial-gradient(ellipse at center, #000 52%, rgba(0,0,0,.92) 72%, transparent 100%);
-  mask-image: radial-gradient(ellipse at center, #000 52%, rgba(0,0,0,.92) 72%, transparent 100%);
+  mix-blend-mode: normal;
+  opacity: 1;
+  filter: grayscale(1) contrast(1.08);
 }
 .portrait-photo:after {
   display: none;
