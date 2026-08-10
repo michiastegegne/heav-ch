@@ -145,7 +145,8 @@ Deno.test("Rechnungs-E-Mail zeigt Positionen, HEAV-Kontaktdaten und bleibt XSS-s
     instagram_url: "https://instagram.com/heav",
   };
   const html = buildInvoiceEmail(invoice, settings);
-  assert(html.includes("STORIES IN MOTION."));
+  assert(html.includes("Gute Arbeit."));
+  assert(!html.includes("STORIES IN MOTION."));
   assert(!html.includes("Filmproduktion · Content · Postproduktion"));
   assert(html.includes("EINZELPREIS"));
   assert(html.includes("RF43 HEAV 2026 002"));
