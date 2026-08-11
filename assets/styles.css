@@ -853,6 +853,12 @@ main {
 .project-stills-grid figure:nth-child(2) { margin-top: clamp(3rem, 10vw, 10rem); }
 .project-stills-grid img { display: block; width: 100%; height: auto; }
 .project-stills-grid figcaption { display: flex; justify-content: space-between; padding-top: 0.8rem; color: var(--muted); }
+.rainshield-product-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(1rem, 2vw, 2rem); }
+.rainshield-product-grid figure { min-width: 0; margin: 0; }
+.rainshield-product-image { aspect-ratio: 2 / 3; overflow: hidden; }
+.rainshield-product-image img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.rainshield-product-grid figcaption { display: flex; justify-content: space-between; gap: 1rem; padding-top: 0.8rem; color: var(--muted); }
+.rainshield-product-grid figcaption .caps { color: var(--acid); }
 .project-video-stills { background: #11130f; color: var(--paper); }
 .project-video-stills .section-head h2 em { color: var(--acid); }
 .video-stills-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(1rem, 2vw, 2rem); }
@@ -1761,6 +1767,9 @@ main {
   }
   .project-stills-grid figure:nth-child(2) {
     margin-top: 1rem;
+  }
+  .rainshield-product-grid {
+    grid-template-columns: 1fr;
   }
   .video-stills-grid {
     grid-template-columns: 1fr;
