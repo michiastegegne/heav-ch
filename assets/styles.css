@@ -1023,8 +1023,11 @@ main {
   gap: clamp(1.5rem, 3vw, 3rem) clamp(1rem, 2vw, 2rem);
 }
 .still-card {
+  display: block;
   min-width: 0;
   margin: 0;
+  color: var(--paper);
+  text-decoration: none;
 }
 .still-card-image {
   aspect-ratio: 16 / 9;
@@ -1037,8 +1040,13 @@ main {
   height: 100%;
   object-fit: cover;
   filter: saturate(0.88) contrast(1.04);
+  transition: transform 0.7s var(--ease);
 }
-.still-card figcaption {
+.still-card:hover .still-card-image img,
+.still-card:focus-visible .still-card-image img {
+  transform: scale(1.025);
+}
+.still-card-caption {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
@@ -1047,7 +1055,7 @@ main {
   color: rgba(238, 234, 224, 0.78);
   font-size: clamp(0.9rem, 1.25vw, 1.1rem);
 }
-.still-card figcaption .caps {
+.still-card-caption .caps {
   flex: 0 0 auto;
   color: var(--acid);
   font-size: clamp(1rem, 1.5vw, 1.35rem);
@@ -1723,10 +1731,10 @@ main {
   .still-card-image {
     aspect-ratio: 16 / 9;
   }
-  .still-card figcaption {
+  .still-card-caption {
     font-size: 0.95rem;
   }
-  .still-card figcaption .caps {
+  .still-card-caption .caps {
     font-size: 1.15rem;
   }
   .video-grid {
