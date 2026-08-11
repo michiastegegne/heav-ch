@@ -853,7 +853,7 @@ main {
 .project-stills-grid figure:nth-child(2) { margin-top: clamp(3rem, 10vw, 10rem); }
 .project-stills-grid img { display: block; width: 100%; height: auto; }
 .project-stills-grid figcaption { display: flex; justify-content: space-between; padding-top: 0.8rem; color: var(--muted); }
-.rainshield-product-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(1rem, 2vw, 2rem); }
+.rainshield-product-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(1rem, 2vw, 2rem); }
 .rainshield-product-grid figure { min-width: 0; margin: 0; }
 .rainshield-product-image { aspect-ratio: 2 / 3; overflow: hidden; }
 .rainshield-product-image img { display: block; width: 100%; height: 100%; object-fit: cover; }
