@@ -859,6 +859,12 @@ main {
 .rainshield-product-image img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .rainshield-product-grid figcaption { display: flex; justify-content: space-between; gap: 1rem; padding-top: 0.8rem; color: var(--muted); }
 .rainshield-product-grid figcaption .caps { color: var(--acid); }
+.stills-gallery-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(1rem, 2vw, 2rem); }
+.stills-gallery-grid figure { min-width: 0; margin: 0; }
+.stills-gallery-grid img { display: block; width: 100%; aspect-ratio: 2 / 3; object-fit: cover; }
+.stills-gallery-grid figure:nth-child(3n + 1) img { aspect-ratio: 4 / 3; }
+.stills-gallery-grid figcaption { display: flex; justify-content: space-between; gap: 1rem; padding-top: .75rem; font-size: .78rem; }
+.stills-gallery-grid figcaption .caps { color: var(--acid); }
 .lawel-collection-stills { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(1rem, 2vw, 2rem); }
 .lawel-collection-stills figure { min-width: 0; margin: 0; }
 .lawel-collection-media { aspect-ratio: 4 / 5; overflow: hidden; background: #121310; }
@@ -1778,6 +1784,9 @@ main {
     grid-template-columns: 1fr;
   }
   .lawel-collection-stills {
+    grid-template-columns: 1fr;
+  }
+  .stills-gallery-grid {
     grid-template-columns: 1fr;
   }
   .video-stills-grid {
