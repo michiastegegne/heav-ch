@@ -1230,7 +1230,10 @@ main {
   color: #55534d;
   line-height: 1.55;
 }
-.section > .client-block { margin-top: clamp(4rem, 8vw, 8rem); }
+.section > .client-block { margin: clamp(4rem, 8vw, 8rem) calc(-1 * var(--gutter)) 0; padding: clamp(3.5rem, 7vw, 7rem) var(--gutter); background: var(--paper); color: #11120f; }
+.section > .client-block .client-block-head { color: #11120f; }
+.section > .client-block .client-block-head p { color: #65635d; }
+.section > .client-block .client-logos img { filter: grayscale(1) contrast(1000%); opacity: .72; }
 .client-block {
   margin-top: clamp(5rem, 9vw, 9rem);
 }
