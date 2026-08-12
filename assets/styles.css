@@ -859,6 +859,20 @@ main {
 .rainshield-product-image img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .rainshield-product-grid figcaption { display: flex; justify-content: space-between; gap: 1rem; padding-top: 0.8rem; color: var(--muted); }
 .rainshield-product-grid figcaption .caps { color: var(--acid); }
+.instagram-profile-section { padding-top: 0; }
+.instagram-profile-banner { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: clamp(1rem, 2vw, 2.5rem); padding: clamp(1.25rem, 2.5vw, 2.5rem); background: #171916; color: var(--paper); text-decoration: none; transition: background .2s ease, transform .2s ease; }
+.instagram-profile-banner:hover { background: #22251f; transform: translateY(-2px); }
+.instagram-profile-avatar { display: block; width: clamp(4.5rem, 8vw, 6.5rem); height: clamp(4.5rem, 8vw, 6.5rem); border: 2px solid var(--acid); border-radius: 50%; object-fit: cover; }
+.instagram-profile-copy { display: grid; gap: .22rem; min-width: 0; }
+.instagram-profile-copy .caps { color: var(--acid); }
+.instagram-profile-copy strong { display: flex; align-items: center; gap: .35rem; font-size: clamp(1.1rem, 2vw, 1.5rem); line-height: 1.1; }
+.instagram-profile-handle { color: #b9bdb5; }
+.instagram-verified { display: inline-grid; width: 1.15em; height: 1.15em; place-items: center; color: #269bff; }
+.instagram-verified svg { display: block; width: 100%; height: 100%; fill: currentColor; }
+.instagram-profile-stats { display: flex; flex-wrap: wrap; gap: clamp(.75rem, 2vw, 1.5rem); color: #b9bdb5; font-size: .88rem; }
+.instagram-profile-stats span { display: grid; gap: .1rem; white-space: nowrap; }
+.instagram-profile-stats strong { color: var(--paper); font-size: 1.06rem; }
+.instagram-profile-arrow { color: var(--acid); font-size: 1.5rem; }
 .stills-gallery-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(1rem, 2vw, 2rem); }
 .stills-gallery-grid figure { display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0; aspect-ratio: 4 / 5; margin: 0; overflow: hidden; background: #121310; }
 .stills-gallery-grid img { display: block; width: 100%; height: 100%; min-height: 0; object-fit: cover; }
@@ -1788,6 +1802,8 @@ main {
   .stills-gallery-grid {
     grid-template-columns: 1fr;
   }
+  .instagram-profile-banner { grid-template-columns: auto minmax(0, 1fr) auto; gap: 1rem; }
+  .instagram-profile-stats { grid-column: 1 / -1; padding-top: .2rem; }
   .video-stills-grid {
     grid-template-columns: 1fr;
   }
