@@ -869,8 +869,8 @@ main {
 .instagram-profile-copy .caps { color: var(--acid); }
 .instagram-profile-copy strong { display: flex; align-items: center; gap: .35rem; font-size: clamp(1.1rem, 2vw, 1.5rem); line-height: 1.1; }
 .instagram-profile-handle { color: #b9bdb5; }
-.instagram-verified { display: inline-grid; width: 1.15em; height: 1.15em; place-items: center; color: #269bff; }
-.instagram-verified svg { display: block; width: 100%; height: 100%; fill: currentColor; }
+.instagram-verified { display: inline-flex; width: .9em; height: .9em; flex: 0 0 .9em; align-items: center; justify-content: center; vertical-align: -.08em; }
+.instagram-verified img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .instagram-profile-stats { display: flex; flex-wrap: wrap; gap: clamp(.75rem, 2vw, 1.5rem); color: #b9bdb5; font-size: .88rem; }
 .instagram-profile-stats span { display: grid; gap: .1rem; white-space: nowrap; }
 .instagram-profile-stats strong { color: var(--paper); font-size: 1.06rem; }
