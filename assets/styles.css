@@ -944,10 +944,12 @@ main {
 .home-project-card-caption .caps {
   flex: 0 0 auto;
   color: var(--acid);
-  font-size: clamp(.8rem, 1.05vw, .95rem);
-  font-weight: 600;
-  letter-spacing: .08em;
-  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: clamp(.65rem, .8vw, .75rem);
+  font-weight: 500;
+  letter-spacing: .035em;
+  font-variant-numeric: slashed-zero tabular-nums;
+  font-feature-settings: "zero" 1, "tnum" 1;
 }
 .home-photography-promo { display: block; margin-top: clamp(4rem, 8vw, 9rem); color: var(--paper); text-decoration: none; }
 .home-photography-promo-image { aspect-ratio: 16 / 7; overflow: hidden; background: #10110e; }
@@ -1114,10 +1116,12 @@ main {
 .still-card-caption .caps {
   flex: 0 0 auto;
   color: var(--acid);
-  font-size: clamp(.8rem, 1.05vw, .95rem);
-  font-weight: 600;
-  letter-spacing: .08em;
-  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: clamp(.65rem, .8vw, .75rem);
+  font-weight: 500;
+  letter-spacing: .035em;
+  font-variant-numeric: slashed-zero tabular-nums;
+  font-feature-settings: "zero" 1, "tnum" 1;
 }
 .video-portfolio {
   padding-top: clamp(4rem, 8vw, 8rem);
@@ -1793,7 +1797,7 @@ main {
     font-size: 0.95rem;
   }
   .still-card-caption .caps {
-    font-size: 1.15rem;
+    font-size: .7rem;
   }
   .video-grid {
     grid-template-columns: 1fr;
@@ -1854,7 +1858,7 @@ main {
     font-size: 0.95rem;
   }
   .home-project-card-caption .caps {
-    font-size: 1.15rem;
+    font-size: .7rem;
   }
   .selected-work-feature {
     grid-template-columns: 1fr;
