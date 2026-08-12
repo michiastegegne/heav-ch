@@ -495,7 +495,14 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
     height: 154,
     color: colors.night,
   });
-  draw("HEAV.", margin, height - 46, 19, syne, colors.paper);
+  draw("HEAV", margin, height - 46, 19, syne, colors.paper);
+  const logoWordWidth = syne.widthOfTextAtSize("HEAV", 19);
+  page.drawCircle({
+    x: margin + logoWordWidth + 5.5,
+    y: height - 39.2,
+    size: 4.1,
+    color: colors.acid,
+  });
   drawRight(
     "FILMPRODUKTION · SCHWEIZ",
     right,
@@ -529,7 +536,7 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
     height - 110,
     numberSize,
     syne,
-    colors.acid,
+    colors.paper,
   );
 
   const customer = invoice.customers;
