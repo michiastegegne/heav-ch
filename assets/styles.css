@@ -944,9 +944,21 @@ main {
 .home-project-card-caption .caps {
   flex: 0 0 auto;
   color: var(--acid);
-  font-size: clamp(1rem, 1.5vw, 1.35rem);
+  font-size: clamp(.8rem, 1.05vw, .95rem);
   font-weight: 600;
+  letter-spacing: .08em;
+  font-variant-numeric: tabular-nums;
 }
+.home-photography-promo { display: block; margin-top: clamp(4rem, 8vw, 9rem); color: var(--paper); text-decoration: none; }
+.home-photography-promo-image { aspect-ratio: 16 / 7; overflow: hidden; background: #10110e; }
+.home-photography-promo-image img { display: block; width: 100%; height: 100%; object-fit: cover; filter: saturate(.88) contrast(1.04); transition: transform .7s var(--ease); }
+.home-photography-promo-copy { display: flex; justify-content: space-between; align-items: flex-end; gap: 2rem; padding-top: 1.2rem; }
+.home-photography-promo-copy > span:first-child { display: grid; gap: .45rem; }
+.home-photography-promo-copy .caps { color: var(--acid); }
+.home-photography-promo-copy strong { font: 500 clamp(1.8rem, 3.2vw, 3.6rem)/.95 "Syne"; letter-spacing: -.05em; }
+.home-photography-promo .button-link { flex: 0 0 auto; min-height: 3.25rem; }
+.home-photography-promo:hover .home-photography-promo-image img,
+.home-photography-promo:focus-visible .home-photography-promo-image img { transform: scale(1.025); }
 .selected-work-feature {
   display: grid;
   grid-template-columns: minmax(0, 1.55fr) minmax(18rem, 0.75fr);
@@ -1102,8 +1114,10 @@ main {
 .still-card-caption .caps {
   flex: 0 0 auto;
   color: var(--acid);
-  font-size: clamp(1rem, 1.5vw, 1.35rem);
+  font-size: clamp(.8rem, 1.05vw, .95rem);
   font-weight: 600;
+  letter-spacing: .08em;
+  font-variant-numeric: tabular-nums;
 }
 .video-portfolio {
   padding-top: clamp(4rem, 8vw, 8rem);
@@ -1146,16 +1160,31 @@ main {
 .video-channel-link {
   margin-top: 2rem;
 }
+.selected-photography-cta { display: flex; justify-content: flex-end; padding-top: clamp(1.5rem, 3vw, 3rem); }
+.selected-photography-cta .button-link { min-height: 3.25rem; }
 .selected-photography-intro { display: grid; grid-template-columns: minmax(0, 1fr) minmax(18rem, .72fr); gap: clamp(2rem, 8vw, 10rem); align-items: end; padding: clamp(5rem, 10vw, 10rem) var(--gutter) clamp(2.5rem, 5vw, 5rem); background: #171916; color: var(--paper); }
 .selected-photography-intro .caps { color: var(--acid); }
 .selected-photography-intro h2 { margin: 1.25rem 0 0; font: 500 clamp(3.5rem, 7vw, 8rem)/.86 "Syne"; letter-spacing: -.065em; }
 .selected-photography-intro h2 em { font-family: "Instrument Serif", serif; font-weight: 400; color: var(--acid); }
 .selected-photography-intro p { max-width: 30rem; margin: 0; color: #c7cbc1; font-size: clamp(1rem, 1.4vw, 1.25rem); line-height: 1.65; }
 .selected-photography-gallery { padding: 0 var(--gutter) clamp(5rem, 10vw, 10rem); background: #171916; }
-.selected-photography-grid { display: grid; gap: clamp(.55rem, 1vw, 1rem); }
-.selected-photography-row { display: flex; gap: clamp(.55rem, 1vw, 1rem); align-items: stretch; }
-.selected-photography-row figure { flex: var(--ratio) 1 0; min-width: 0; height: clamp(14rem, 20vw, 22rem); margin: 0; background: #10110e; }
-.selected-photography-row img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.selected-photography-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: clamp(.55rem, 1vw, 1rem); grid-auto-flow: row dense; }
+.selected-photography-row { display: contents; }
+.selected-photography-row figure { min-width: 0; height: auto; margin: 0; overflow: hidden; background: #10110e; }
+.selected-photography-row img { display: block; width: 100%; height: 100%; object-fit: cover; }
+/* Return to the compact mixed-format raster, with the duplicate B&W still omitted. */
+.selected-photography-row:nth-child(1) figure:nth-child(1) { grid-column: span 5; aspect-ratio: 3 / 2; }
+.selected-photography-row:nth-child(1) figure:nth-child(2) { grid-column: span 2; aspect-ratio: 3 / 4; }
+.selected-photography-row:nth-child(1) figure:nth-child(3) { grid-column: span 3; aspect-ratio: 3 / 4; }
+.selected-photography-row:nth-child(1) figure:nth-child(4) { grid-column: span 2; aspect-ratio: 3 / 4; }
+.selected-photography-row:nth-child(2) figure:nth-child(1) { grid-column: span 4; aspect-ratio: 3 / 2; }
+.selected-photography-row:nth-child(2) figure:nth-child(2) { grid-column: span 4; aspect-ratio: 3 / 2; }
+.selected-photography-row:nth-child(2) figure:nth-child(3) { grid-column: span 2; aspect-ratio: 3 / 4; }
+.selected-photography-row:nth-child(2) figure:nth-child(4) { grid-column: span 2; aspect-ratio: 3 / 4; }
+.selected-photography-row:nth-child(3) figure:nth-child(1) { grid-column: span 4; aspect-ratio: 3 / 2; }
+.selected-photography-row:nth-child(3) figure:nth-child(2) { grid-column: span 3; aspect-ratio: 3 / 4; }
+.selected-photography-row:nth-child(3) figure:nth-child(3) { grid-column: span 2; aspect-ratio: 3 / 4; }
+.selected-photography-row:nth-child(3) figure:nth-child(4) { grid-column: span 3; aspect-ratio: 3 / 4; }
 .portfolio-panel {
   display: grid;
   grid-template-columns: 1fr 3fr;
@@ -1808,11 +1837,18 @@ main {
   .stills-gallery-grid {
     grid-template-columns: 1fr;
   }
+  .home-photography-promo { margin-top: 3.5rem; }
+  .home-photography-promo-image { aspect-ratio: 4 / 3; }
+  .home-photography-promo-copy { align-items: flex-start; flex-direction: column; gap: 1.15rem; }
+  .home-photography-promo .button-link { width: 100%; }
   .selected-photography-intro { grid-template-columns: 1fr; gap: 1.5rem; padding-top: 4.5rem; padding-bottom: 2rem; }
-  .selected-photography-grid, .selected-photography-row { gap: 4px; }
-  .selected-photography-row { display: flex; }
-  .selected-photography-row figure { height: clamp(9rem, 40vw, 14rem); aspect-ratio: auto; }
-  .selected-photography-grid figure:nth-child(n) { grid-column: auto; }
+  .selected-photography-cta { justify-content: flex-start; padding-top: 1.5rem; }
+  .selected-photography-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+  .selected-photography-row { display: contents; }
+  .selected-photography-row figure { height: auto; }
+  .selected-photography-row:nth-child(1) figure:nth-child(1), .selected-photography-row:nth-child(2) figure:nth-child(1), .selected-photography-row:nth-child(3) figure:nth-child(1) { grid-column: span 6; aspect-ratio: 3 / 2; }
+  .selected-photography-row:nth-child(1) figure:nth-child(2), .selected-photography-row:nth-child(1) figure:nth-child(3), .selected-photography-row:nth-child(1) figure:nth-child(4), .selected-photography-row:nth-child(2) figure:nth-child(2), .selected-photography-row:nth-child(2) figure:nth-child(4), .selected-photography-row:nth-child(3) figure:nth-child(2), .selected-photography-row:nth-child(3) figure:nth-child(3), .selected-photography-row:nth-child(3) figure:nth-child(4) { grid-column: span 3; aspect-ratio: 3 / 4; }
+  .selected-photography-row:nth-child(2) figure:nth-child(3) { grid-column: span 2; aspect-ratio: 3 / 4; }
   .instagram-profile-banner { grid-template-columns: auto minmax(0, 1fr); gap: 1rem; }
   .instagram-profile-copy strong { flex-wrap: nowrap; white-space: nowrap; font-size: clamp(.76rem, 3.45vw, .9rem); letter-spacing: -.025em; gap: .28rem; }
   .instagram-verified { width: 1em; height: 1em; flex-basis: 1em; }
