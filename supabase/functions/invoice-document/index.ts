@@ -59,6 +59,7 @@ type Invoice = {
   owner_id: string;
   invoice_number: string;
   payment_reference: string;
+  project_title_snapshot?: string | null;
   is_legacy?: boolean;
   issue_date: string;
   due_date: string;
@@ -495,12 +496,16 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
     height: 154,
     color: colors.night,
   });
-  draw("HEAV", margin, height - 46, 19, syne, colors.paper);
-  const logoWordWidth = syne.widthOfTextAtSize("HEAV", 19);
+  // Match the web wordmark exactly: Syne 700, then a 0.4em lime dot
+  // separated by 0.12em (see assets/styles.css .brand and .brand:after).
+  const logoSize = 22.72; // Website: 1.42rem at the 16px root size.
+  draw("HEAV", margin, height - 49, logoSize, syne, colors.paper);
+  const logoWordWidth = syne.widthOfTextAtSize("HEAV", logoSize);
+  const logoDotRadius = logoSize * 0.2;
   page.drawCircle({
-    x: margin + logoWordWidth + 5.5,
-    y: height - 39.2,
-    size: 4.1,
+    x: margin + logoWordWidth + logoSize * 0.12 + logoDotRadius,
+    y: height - 41.3,
+    size: logoDotRadius,
     color: colors.acid,
   });
   drawRight(
@@ -568,13 +573,24 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
     ["Währung", "CHF"],
     ["QR-Referenz", qrReference],
   ];
+  const projectTitle = compactText(invoice.project_title_snapshot, 120);
+  if (projectTitle) {
+    invoiceDetails.splice(2, 0, ["Projekt", projectTitle]);
+  }
   if (Number(invoice.tax_rate) > 0) {
     invoiceDetails.push(["MWST-Nr.", normalizedVatNumber(settings.vat_number)]);
   }
   invoiceDetails
     .forEach(([label, value], index) => {
       draw(label, 337, height - 216 - index * 17, 7.5, dm, colors.muted);
-      drawRight(value, right, height - 216 - index * 17, 8, dm);
+      const detailValue = String(value);
+      drawRight(
+        detailValue,
+        right,
+        height - 216 - index * 17,
+        fittedSize(detailValue, dm, 8, right - 405, 6),
+        dm,
+      );
     });
 
   let y = height - 318;

@@ -19,7 +19,10 @@ Deno.test("escapeHtml neutralisiert Kundendaten im E-Mail-HTML", () => {
 
 Deno.test("Zahlungsreferenzen bleiben in ISO-11649-Vierergruppen lesbar", () => {
   assertEquals(formatPaymentReference("RF43HEAV2026002"), "RF43 HEAV 2026 002");
-  assertEquals(formatPaymentReference("RF24HEAV2026000002"), "RF24 HEAV 2026 0000 02");
+  assertEquals(
+    formatPaymentReference("RF24HEAV2026000002"),
+    "RF24 HEAV 2026 0000 02",
+  );
 });
 
 Deno.test("MWST-Nummern werden streng validiert und normalisiert", () => {
@@ -82,7 +85,14 @@ Deno.test("buildSwissQrPayload erzeugt einen vollständigen Swiss-QR-Payload", (
 
 Deno.test("buildSwissQrPayload lehnt ungültige IBANs und Beträge ab", () => {
   for (
-    const patch of [{ iban: "CH00 0000 0000 0000 0000 0" }, { iban: "CH44 3199 9123 0008 8901 2" }, { amountRappen: 0 }, { creditorCountry: "Österreichisch" }, { creditorName: "HEAV 😀" }, { message: "Test\u0001" }]
+    const patch of [
+      { iban: "CH00 0000 0000 0000 0000 0" },
+      { iban: "CH44 3199 9123 0008 8901 2" },
+      { amountRappen: 0 },
+      { creditorCountry: "Österreichisch" },
+      { creditorName: "HEAV 😀" },
+      { message: "Test\u0001" },
+    ]
   ) {
     let failed = false;
     try {
@@ -126,6 +136,7 @@ Deno.test("createInvoicePdf erzeugt eine valide einseitige HEAV-Rechnung", async
     owner_id: "owner-test",
     invoice_number: "HEAV-2026-TEST",
     payment_reference: "RF43HEAV2026002",
+    project_title_snapshot: "Launchfilm – HEAV Studio",
     issue_date: "2026-08-03",
     due_date: "2026-09-02",
     status: "draft",

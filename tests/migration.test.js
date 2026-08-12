@@ -6,6 +6,7 @@ import { PGlite } from "@electric-sql/pglite";
 const migrationPath = new URL("../supabase/migrations/20260803_heav_admin.sql", import.meta.url);
 const reliabilityMigrationPath = new URL("../supabase/migrations/20260810_portal_reliability.sql", import.meta.url);
 const shortReferenceMigrationPath = new URL("../supabase/migrations/20260811_short_invoice_reference.sql", import.meta.url);
+const projectSnapshotMigrationPath = new URL("../supabase/migrations/20260812_invoice_project_snapshot.sql", import.meta.url);
 
 async function createMigrationDatabase() {
   const db = new PGlite();
@@ -257,6 +258,34 @@ test("Kunden und Projekte können sicher gelöscht werden, historische Rechnunge
     '${customer}', null, '2026-08-10', '2026-09-09', 0, '',
     '[{"description":"Gratis","quantity":1,"unit_price_rappen":0}]'::jsonb
   )`), /invoice total must be positive/);
+  await db.close();
+});
+
+test("Projekt-Titel wird beim Erstellen als unveränderlicher Rechnungswert gespeichert", async () => {
+  const db = await createMigrationDatabase();
+  await db.exec(await readFile(reliabilityMigrationPath, "utf8"));
+  await db.exec(await readFile(projectSnapshotMigrationPath, "utf8"));
+  const owner = "10000000-0000-4000-8000-000000000040";
+  const customer = "20000000-0000-4000-8000-000000000040";
+  const project = "30000000-0000-4000-8000-000000000040";
+  await db.exec(`
+    insert into auth.users(id) values ('${owner}');
+    select set_config('request.jwt.claim.sub', '${owner}', false);
+    insert into public.customers(id, owner_id, company, email, address_line1, postal_code, city)
+    values ('${customer}', '${owner}', 'Projektkunde AG', 'projekt@test.example', 'Testweg 1', '8000', 'Zürich');
+    insert into public.projects(id, owner_id, customer_id, title)
+    values ('${project}', '${owner}', '${customer}', 'Launchfilm Herbst 2026');
+    insert into public.company_settings(owner_id, company_name, owner_name, email, address_line1, postal_code, city, iban, vat_number)
+    values ('${owner}', 'HEAV', 'Michias Tegegne', 'hello@heav.ch', 'Teststrasse 2', '4051', 'Basel', 'CH8200769420675792002', '');
+  `);
+  const created = await db.query(`select * from public.create_invoice(
+    '${customer}', '${project}', '2026-08-12', '2026-09-11', 0, '',
+    '[{"description":"Produktion","quantity":1,"unit_price_rappen":100000}]'::jsonb
+  )`);
+  const invoiceId = created.rows[0].invoice_id;
+  await db.query(`update public.projects set title = 'Nachträglich geändert' where id = '${project}'`);
+  const stored = await db.query(`select project_title_snapshot from public.invoices where id = '${invoiceId}'`);
+  assert.equal(stored.rows[0].project_title_snapshot, "Launchfilm Herbst 2026");
   await db.close();
 });
 
