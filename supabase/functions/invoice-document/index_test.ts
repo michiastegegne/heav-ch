@@ -125,14 +125,16 @@ Deno.test("E-Mail-Text nennt das Projekt und bleibt gegen Header-Injection gesch
   };
   const settings = { owner_name: "Michias Tegegne", company_name: "HEAV" };
   const text = buildInvoiceText(invoice as never, settings as never);
-  assert(text.includes("Hallo Yoyo Bcc: fremd@example.com"));
-  assert(text.includes("Rechnung für «Post Production des Yousty Videos»"));
+  assert(text.includes("Hello Yoyo Bcc: fremd@example.com"));
+  assert(text.includes("invoice for “Post Production des Yousty Videos”"));
+  assert(
+    text.includes("Thank you for the opportunity and the great collaboration."),
+  );
   assert(
     text.includes(
-      "Vielen Dank für den Auftrag und die angenehme Zusammenarbeit.",
+      "If you have any questions, please feel free to get in touch.",
     ),
   );
-  assert(text.includes("Bei Fragen kannst du dich gerne bei mir melden."));
   assert(!text.includes("Swiss-QR"));
   assert(!text.includes("\r"));
 });
@@ -143,7 +145,7 @@ Deno.test("E-Mail-Text bleibt ohne Projekt klar und professionell", () => {
     invoice as never,
     { owner_name: "Michias Tegegne", company_name: "HEAV" } as never,
   );
-  assert(text.includes("Anbei sende ich dir die Rechnung als PDF."));
+  assert(text.includes("Please find the invoice attached as a PDF."));
 });
 
 Deno.test("E-Mail-Banner enthält Portrait, Kontaktdaten und sichere Projekttexte", () => {
@@ -159,12 +161,13 @@ Deno.test("E-Mail-Banner enthält Portrait, Kontaktdaten und sichere Projekttext
     website_url: "https://heav.ch",
   };
   const html = buildInvoiceEmailHtml(invoice as never, settings as never);
-  assert(html.includes("michias-instagram-profile.webp"));
+  assert(html.includes("michias-email-portrait.jpg"));
   assert(html.includes("border-radius:50%"));
-  assert(html.includes("Inhaber &amp; Gründer | HEAV"));
+  assert(html.includes("Founder &amp; Owner | HEAV"));
   assert(html.includes("mailto:hello@heav.ch"));
   assert(html.includes("tel:+41774510592"));
   assert(html.includes("&lt;Yousty Video&gt;"));
+  assert(html.includes("Please find attached the invoice"));
   assert(!html.includes("<script>"));
 });
 

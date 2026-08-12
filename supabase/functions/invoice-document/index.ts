@@ -171,14 +171,14 @@ function invoiceGreetingAndProject(invoice: Invoice) {
   );
   const projectTitle = compactText(invoice.project_title_snapshot, 160);
   const projectLine = projectTitle
-    ? `Anbei sende ich dir die Rechnung für «${projectTitle}».`
-    : "Anbei sende ich dir die Rechnung als PDF.";
+    ? `Please find attached the invoice for “${projectTitle}”.`
+    : "Please find the invoice attached as a PDF.";
   return { greeting, projectLine };
 }
 
 export function buildInvoiceText(invoice: Invoice, settings: Settings) {
   const { greeting, projectLine } = invoiceGreetingAndProject(invoice);
-  return `Hallo ${greeting}\n\n${projectLine}\n\nVielen Dank für den Auftrag und die angenehme Zusammenarbeit.\n\nBei Fragen kannst du dich gerne bei mir melden.\n\nFreundliche Grüsse\n${
+  return `Hello ${greeting}\n\n${projectLine}\n\nThank you for the opportunity and the great collaboration.\n\nIf you have any questions, please feel free to get in touch.\n\nKind regards\n${
     compactText(settings.owner_name, 160)
   }\n${compactText(settings.company_name, 160)}`;
 }
@@ -191,17 +191,17 @@ export function buildInvoiceEmailHtml(invoice: Invoice, settings: Settings) {
   const email = compactText(settings.email, 160);
   const website = safePublicUrl(settings.website_url, "https://heav.ch");
   const profileImage =
-    "https://heav.ch/assets/images/michias-instagram-profile.webp";
+    "https://heav.ch/assets/images/michias-email-portrait.jpg";
   const phoneRow = phone
     ? `<br><a href="tel:${
       escapeHtml(phone.replace(/[^+0-9]/g, ""))
     }" style="color:#777777;text-decoration:none;">${escapeHtml(phone)}</a>`
     : "";
   return `<div style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;color:#151515;font-size:16px;line-height:1.55;">
-  <p style="margin:0 0 20px;">Hallo ${escapeHtml(greeting)}</p>
+  <p style="margin:0 0 20px;">Hello ${escapeHtml(greeting)}</p>
   <p style="margin:0 0 20px;">${escapeHtml(projectLine)}</p>
-  <p style="margin:0 0 20px;">Vielen Dank für den Auftrag und die angenehme Zusammenarbeit.</p>
-  <p style="margin:0 0 26px;">Bei Fragen kannst du dich gerne bei mir melden.</p>
+  <p style="margin:0 0 20px;">Thank you for the opportunity and the great collaboration.</p>
+  <p style="margin:0 0 26px;">If you have any questions, please feel free to get in touch.</p>
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin:0;padding:0;">
     <tr>
       <td valign="middle" style="padding:0 18px 0 0;">
@@ -209,7 +209,7 @@ export function buildInvoiceEmailHtml(invoice: Invoice, settings: Settings) {
       </td>
       <td valign="middle" style="padding:0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.45;">
         <strong style="display:block;color:#111111;font-size:18px;line-height:1.2;">${name}</strong>
-        <span style="display:block;margin:3px 0 7px;color:#777777;">Inhaber &amp; Gründer | ${company}</span>
+        <span style="display:block;margin:3px 0 7px;color:#777777;">Founder &amp; Owner | ${company}</span>
         <a href="mailto:${
     escapeHtml(email)
   }" style="color:#111111;text-decoration:underline;text-underline-offset:2px;">${
@@ -571,8 +571,11 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
   // its left edge is perfectly shared with the RECHNUNG heading and rule.
   const wordmarkWidth = 104;
   const wordmarkVisibleHeight = wordmarkWidth * (30 / 151);
+  // The serif R visibly overhangs its drawing coordinate. Offset the logo by
+  // the same measured overhang so the H and R start on the identical visual x.
+  const headerLogoX = margin - 14;
   page.drawImage(wordmark, {
-    x: margin,
+    x: headerLogoX,
     y: height - 52,
     width: wordmarkWidth,
     height: wordmarkVisibleHeight,
