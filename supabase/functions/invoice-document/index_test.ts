@@ -1,6 +1,7 @@
 import { assert, assertEquals, assertGreater } from "jsr:@std/assert@1";
 import { PDFDocument } from "npm:pdf-lib@1.17.1";
 import {
+  buildInvoiceEmailHtml,
   buildInvoiceText,
   buildSwissQrPayload,
   createInvoicePdf,
@@ -143,6 +144,28 @@ Deno.test("E-Mail-Text bleibt ohne Projekt klar und professionell", () => {
     { owner_name: "Michias Tegegne", company_name: "HEAV" } as never,
   );
   assert(text.includes("Anbei sende ich dir die Rechnung als PDF."));
+});
+
+Deno.test("E-Mail-Banner enthält Portrait, Kontaktdaten und sichere Projekttexte", () => {
+  const invoice = {
+    project_title_snapshot: "<Yousty Video>",
+    customers: { contact_name: "Yoyo <script>" },
+  };
+  const settings = {
+    owner_name: "Michias Tegegne",
+    company_name: "HEAV",
+    email: "hello@heav.ch",
+    phone: "+41 77 451 05 92",
+    website_url: "https://heav.ch",
+  };
+  const html = buildInvoiceEmailHtml(invoice as never, settings as never);
+  assert(html.includes("michias-instagram-profile.webp"));
+  assert(html.includes("border-radius:50%"));
+  assert(html.includes("Inhaber &amp; Gründer | HEAV"));
+  assert(html.includes("mailto:hello@heav.ch"));
+  assert(html.includes("tel:+41774510592"));
+  assert(html.includes("&lt;Yousty Video&gt;"));
+  assert(!html.includes("<script>"));
 });
 
 Deno.test("PDF-Dateiname verwendet zuerst den Projekt-Titel und sonst den Kunden", () => {
