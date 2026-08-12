@@ -1809,6 +1809,8 @@ main {
     grid-template-columns: 1fr;
   }
   .instagram-profile-banner { grid-template-columns: auto minmax(0, 1fr); gap: 1rem; }
+  .instagram-profile-copy strong { flex-wrap: nowrap; white-space: nowrap; font-size: clamp(.76rem, 3.45vw, .9rem); letter-spacing: -.025em; gap: .28rem; }
+  .instagram-verified { width: 1em; height: 1em; flex-basis: 1em; }
   .instagram-profile-stats { grid-column: 1 / -1; padding-top: .2rem; }
   .instagram-profile-open { grid-column: 1 / -1; width: 100%; }
   .video-stills-grid {
