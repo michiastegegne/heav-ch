@@ -5,32 +5,85 @@ import fontkit from "npm:@pdf-lib/fontkit@1.1.1";
 import QRCode from "npm:qrcode@1.5.4";
 
 const corsHeaders = {
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-const allowedOrigins = new Set(["https://heav.ch", "https://www.heav.ch", "http://localhost:4179", "http://127.0.0.1:4179"]);
+const allowedOrigins = new Set([
+  "https://heav.ch",
+  "https://www.heav.ch",
+  "http://localhost:4179",
+  "http://127.0.0.1:4179",
+]);
 const colors = {
   night: rgb(9 / 255, 10 / 255, 8 / 255),
   paper: rgb(238 / 255, 234 / 255, 224 / 255),
   acid: rgb(215 / 255, 255 / 255, 56 / 255),
   sage: rgb(190 / 255, 198 / 255, 183 / 255),
+  totalSage: rgb(220 / 255, 225 / 255, 215 / 255),
   muted: rgb(112 / 255, 111 / 255, 105 / 255),
   line: rgb(200 / 255, 196 / 255, 186 / 255),
 };
 
-type InvoiceItem = { description: string; quantity: number; unit_price_rappen: number; position: number };
-type Customer = { company: string; contact_name: string; email: string; address_line1: string; postal_code: string; city: string; country: string };
-type Settings = { company_name: string; owner_name: string; email: string; phone: string; address_line1: string; postal_code: string; city: string; country: string; iban: string; vat_number: string; website_url?: string; instagram_url?: string };
-type Invoice = { id: string; owner_id: string; invoice_number: string; payment_reference: string; is_legacy?: boolean; issue_date: string; due_date: string; sent_at?: string | null; status: string; tax_rate: number; subtotal_rappen: number; tax_rappen: number; total_rappen: number; notes: string; customers: Customer; customer_snapshot?: Customer; issuer_snapshot?: Settings; invoice_items: InvoiceItem[] };
+type InvoiceItem = {
+  description: string;
+  quantity: number;
+  unit_price_rappen: number;
+  position: number;
+};
+type Customer = {
+  company: string;
+  contact_name: string;
+  email: string;
+  address_line1: string;
+  postal_code: string;
+  city: string;
+  country: string;
+};
+type Settings = {
+  company_name: string;
+  owner_name: string;
+  email: string;
+  phone: string;
+  address_line1: string;
+  postal_code: string;
+  city: string;
+  country: string;
+  iban: string;
+  vat_number: string;
+  website_url?: string;
+  instagram_url?: string;
+};
+type Invoice = {
+  id: string;
+  owner_id: string;
+  invoice_number: string;
+  payment_reference: string;
+  is_legacy?: boolean;
+  issue_date: string;
+  due_date: string;
+  sent_at?: string | null;
+  status: string;
+  tax_rate: number;
+  subtotal_rappen: number;
+  tax_rappen: number;
+  total_rappen: number;
+  notes: string;
+  customers: Customer;
+  customer_snapshot?: Customer;
+  issuer_snapshot?: Settings;
+  invoice_items: InvoiceItem[];
+};
 
 export function escapeHtml(value: unknown) {
-  return String(value ?? "").replace(/[&<>"']/g, (character) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;",
-  })[character] as string);
+  return String(value ?? "").replace(/[&<>"']/g, (character) =>
+    ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    })[character] as string);
 }
 
 function safeHeader(value: unknown) {
@@ -38,14 +91,19 @@ function safeHeader(value: unknown) {
 }
 
 function safeFilename(value: unknown) {
-  const cleaned = String(value ?? "invoice").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+  const cleaned = String(value ?? "invoice").replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
   return (cleaned || "invoice").slice(0, 100);
 }
 
 async function responsePayload(response: Response) {
   const text = await response.text();
   if (!text) return {};
-  try { return JSON.parse(text); } catch { return { message: text.slice(0, 500) }; }
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: text.slice(0, 500) };
+  }
 }
 
 const formatCHF = (rappen: number) => {
@@ -66,8 +124,10 @@ export const formatDocumentReference = (value: string) => {
 };
 const compactText = (value: unknown, maxLength: number) =>
   String(value ?? "").replace(/[\r\n]+/g, " ").trim().slice(0, maxLength);
-const normalizedVatNumber = (value: unknown) => String(value ?? "").trim().toUpperCase();
-export const validVatNumber = (value: unknown) => /^CHE-\d{3}\.\d{3}\.\d{3} (MWST|TVA|IVA)$/.test(normalizedVatNumber(value));
+const normalizedVatNumber = (value: unknown) =>
+  String(value ?? "").trim().toUpperCase();
+export const validVatNumber = (value: unknown) =>
+  /^CHE-\d{3}\.\d{3}\.\d{3} (MWST|TVA|IVA)$/.test(normalizedVatNumber(value));
 const validMailbox = (value: unknown, allowDisplayName = false) => {
   const raw = String(value ?? "");
   if (/[\r\n]/.test(raw)) return false;
@@ -80,22 +140,45 @@ const validMailbox = (value: unknown, allowDisplayName = false) => {
 const safePublicUrl = (value: unknown, fallback = "") => {
   try {
     const url = new URL(String(value || fallback));
-    return ["http:", "https:"].includes(url.protocol) ? url.toString() : fallback;
-  } catch { return fallback; }
+    return ["http:", "https:"].includes(url.protocol)
+      ? url.toString()
+      : fallback;
+  } catch {
+    return fallback;
+  }
 };
 
 export function buildInvoiceText(invoice: Invoice, settings: Settings) {
-  const greeting = compactText(invoice.customers.contact_name || invoice.customers.company, 160);
+  const greeting = compactText(
+    invoice.customers.contact_name || invoice.customers.company,
+    160,
+  );
   const documentReference = formatDocumentReference(invoice.invoice_number);
-  return `Hallo ${greeting}\n\nAnbei findest du die Rechnung ${documentReference} als PDF. Die PDF enthält alle Rechnungsdetails und den Swiss-QR-Zahlteil.\n\nBitte verwende bei der Zahlung die im PDF angegebene QR-Referenz.\n\nFreundliche Grüsse\n${compactText(settings.owner_name, 160)}\n${compactText(settings.company_name, 160)}`;
+  return `Hallo ${greeting}\n\nAnbei findest du die Rechnung ${documentReference} als PDF. Die PDF enthält alle Rechnungsdetails und den Swiss-QR-Zahlteil.\n\nBitte verwende bei der Zahlung die im PDF angegebene QR-Referenz.\n\nFreundliche Grüsse\n${
+    compactText(settings.owner_name, 160)
+  }\n${compactText(settings.company_name, 160)}`;
 }
 
-const isoCountryCodes = new Set("AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW".split(" "));
+const isoCountryCodes = new Set(
+  "AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW"
+    .split(" "),
+);
 const countryAliases = new Map([
-  ["schweiz", "CH"], ["switzerland", "CH"], ["suisse", "CH"], ["svizzera", "CH"],
-  ["liechtenstein", "LI"], ["deutschland", "DE"], ["germany", "DE"],
-  ["österreich", "AT"], ["austria", "AT"], ["frankreich", "FR"], ["france", "FR"],
-  ["italien", "IT"], ["italy", "IT"], ["vereinigtes königreich", "GB"], ["united kingdom", "GB"],
+  ["schweiz", "CH"],
+  ["switzerland", "CH"],
+  ["suisse", "CH"],
+  ["svizzera", "CH"],
+  ["liechtenstein", "LI"],
+  ["deutschland", "DE"],
+  ["germany", "DE"],
+  ["österreich", "AT"],
+  ["austria", "AT"],
+  ["frankreich", "FR"],
+  ["france", "FR"],
+  ["italien", "IT"],
+  ["italy", "IT"],
+  ["vereinigtes königreich", "GB"],
+  ["united kingdom", "GB"],
 ]);
 const countryCode = (value: unknown) => {
   const raw = String(value ?? "").trim();
@@ -103,7 +186,11 @@ const countryCode = (value: unknown) => {
   const alias = countryAliases.get(raw.toLocaleLowerCase("de-CH"));
   const code = alias || raw.toUpperCase();
   if (!/^[A-Z]{2}$/.test(code) || !isoCountryCodes.has(code)) {
-    throw new Error(`Ungültiges Rechnungsland: ${compactText(raw, 80)}. Bitte ISO-Ländercode verwenden.`);
+    throw new Error(
+      `Ungültiges Rechnungsland: ${
+        compactText(raw, 80)
+      }. Bitte ISO-Ländercode verwenden.`,
+    );
   }
   return code;
 };
@@ -155,14 +242,19 @@ function validCreditorReference(value: string) {
     (letter) => String(letter.charCodeAt(0) - 55),
   );
   let remainder = 0;
-  for (const digit of expanded) remainder = (remainder * 10 + Number(digit)) % 97;
+  for (const digit of expanded) {
+    remainder = (remainder * 10 + Number(digit)) % 97;
+  }
   return remainder === 1;
 }
 
 const swissQrText = (value: unknown, maxLength: number, field: string) => {
-  const text = String(value ?? "").normalize("NFC").replace(/[\r\n\t]+/g, " ").trim().slice(0, maxLength);
+  const text = String(value ?? "").normalize("NFC").replace(/[\r\n\t]+/g, " ")
+    .trim().slice(0, maxLength);
   if (!/^[\u0020-\u007E\u00A0-\u017F\u20AC]*$/u.test(text)) {
-    throw new Error(`${field} enthält Zeichen, die im Swiss QR Code nicht zulässig sind.`);
+    throw new Error(
+      `${field} enthält Zeichen, die im Swiss QR Code nicht zulässig sind.`,
+    );
   }
   return text;
 };
@@ -175,7 +267,9 @@ export function buildSwissQrPayload(input: SwissQrPayload) {
     );
   }
   if (isQrIban(iban)) {
-    throw new Error("Eine QR-IBAN ist nur mit einer numerischen QRR-Referenz zulässig. Für die HEAV-SCOR-Referenz ist eine normale IBAN erforderlich.");
+    throw new Error(
+      "Eine QR-IBAN ist nur mit einer numerischen QRR-Referenz zulässig. Für die HEAV-SCOR-Referenz ist eine normale IBAN erforderlich.",
+    );
   }
   if (
     !Number.isInteger(input.amountRappen) || input.amountRappen <= 0 ||
@@ -228,8 +322,16 @@ export function buildSwissQrPayload(input: SwissQrPayload) {
         "S",
         swissQrText(input.debtorName, 70, "Zahlungspflichtiger Name"),
         swissQrText(input.debtorStreet, 70, "Zahlungspflichtiger Strasse"),
-        swissQrText(input.debtorHouseNumber, 16, "Zahlungspflichtiger Hausnummer"),
-        swissQrText(input.debtorPostalCode, 16, "Zahlungspflichtiger Postleitzahl"),
+        swissQrText(
+          input.debtorHouseNumber,
+          16,
+          "Zahlungspflichtiger Hausnummer",
+        ),
+        swissQrText(
+          input.debtorPostalCode,
+          16,
+          "Zahlungspflichtiger Postleitzahl",
+        ),
         swissQrText(input.debtorCity, 35, "Zahlungspflichtiger Ort"),
         countryCode(input.debtorCountry || "CH"),
       ]
@@ -254,30 +356,53 @@ function splitStreet(value: string) {
 const base64 = (bytes: Uint8Array) => {
   let binary = "";
   const chunk = 0x8000;
-  for (let index = 0; index < bytes.length; index += chunk) binary += String.fromCharCode(...bytes.subarray(index, index + chunk));
+  for (let index = 0; index < bytes.length; index += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunk));
+  }
   return btoa(binary);
 };
 
 export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
-  if (!invoice.invoice_items?.length) throw new Error("Die Rechnung enthält keine Positionen.");
-  if (invoice.invoice_items.length > 10) throw new Error("Maximal 10 Rechnungspositionen pro Dokument werden unterstützt.");
+  if (!invoice.invoice_items?.length) {
+    throw new Error("Die Rechnung enthält keine Positionen.");
+  }
+  if (invoice.invoice_items.length > 10) {
+    throw new Error(
+      "Maximal 10 Rechnungspositionen pro Dokument werden unterstützt.",
+    );
+  }
   if (Number(invoice.tax_rate) > 0 && !validVatNumber(settings.vat_number)) {
-    throw new Error("Für MWST ist eine gültige Schweizer MWST-Nummer erforderlich.");
+    throw new Error(
+      "Für MWST ist eine gültige Schweizer MWST-Nummer erforderlich.",
+    );
   }
   const computedSubtotal = invoice.invoice_items.reduce(
-    (sum, item) => sum + Math.round(Number(item.quantity) * item.unit_price_rappen),
+    (sum, item) =>
+      sum + Math.round(Number(item.quantity) * item.unit_price_rappen),
     0,
   );
-  const computedTax = Math.round(computedSubtotal * Number(invoice.tax_rate) / 100);
+  const computedTax = Math.round(
+    computedSubtotal * Number(invoice.tax_rate) / 100,
+  );
   if (
     computedSubtotal !== invoice.subtotal_rappen ||
     computedTax !== invoice.tax_rappen ||
     computedSubtotal + computedTax !== invoice.total_rappen
-  ) throw new Error("Die Rechnungsbeträge sind inkonsistent. Bitte Rechnung neu erstellen.");
+  ) {
+    throw new Error(
+      "Die Rechnungsbeträge sind inkonsistent. Bitte Rechnung neu erstellen.",
+    );
+  }
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
   const fontRoot = new URL("../_shared/fonts/", import.meta.url);
-  const [dmBytes, serifBytes, syneBytes, paymentRegularBytes, paymentBoldBytes] = await Promise.all([
+  const [
+    dmBytes,
+    serifBytes,
+    syneBytes,
+    paymentRegularBytes,
+    paymentBoldBytes,
+  ] = await Promise.all([
     Deno.readFile(new URL("dm-sans.ttf", fontRoot)),
     Deno.readFile(new URL("instrument-serif.ttf", fontRoot)),
     Deno.readFile(new URL("syne.ttf", fontRoot)),
@@ -285,7 +410,8 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
     Deno.readFile(new URL("liberation-sans-bold.ttf", fontRoot)),
   ]);
   const [dm, serif, syne] = await Promise.all([
-    pdf.embedFont(dmBytes, { subset: true }), pdf.embedFont(serifBytes, { subset: true }),
+    pdf.embedFont(dmBytes, { subset: true }),
+    pdf.embedFont(serifBytes, { subset: true }),
     pdf.embedFont(syneBytes, { subset: true }),
   ]);
   const [paymentRegular, paymentBold] = await Promise.all([
@@ -405,7 +531,21 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
     syne,
     colors.paper,
   );
-
+  page.drawRectangle({
+    x: margin,
+    y: height - 142,
+    width: 3,
+    height: 3,
+    color: colors.acid,
+  });
+  draw(
+    "PRODUKTION · BILDER · BEARBEITUNG",
+    margin + 8,
+    height - 143,
+    5.8,
+    syne,
+    colors.acid,
+  );
 
   const customer = invoice.customers;
   draw("RECHNUNG AN", margin, height - 192, 6, syne, colors.muted);
@@ -427,11 +567,18 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
       )
     );
   draw("RECHNUNGSDETAILS", 337, height - 192, 6, syne, colors.muted);
-  const invoiceDetails = [["Rechnungsdatum", formatDate(invoice.issue_date)], [
-    "Fällig am",
-    formatDate(invoice.due_date),
-  ], ["Währung", "CHF"], ["QR-Referenz", qrReference]];
-  if (Number(invoice.tax_rate) > 0) invoiceDetails.push(["MWST-Nr.", normalizedVatNumber(settings.vat_number)]);
+  const invoiceDetails = [
+    ["Rechnungsdatum", formatDate(invoice.issue_date)],
+    [
+      "Fällig am",
+      formatDate(invoice.due_date),
+    ],
+    ["Währung", "CHF"],
+    ["QR-Referenz", qrReference],
+  ];
+  if (Number(invoice.tax_rate) > 0) {
+    invoiceDetails.push(["MWST-Nr.", normalizedVatNumber(settings.vat_number)]);
+  }
   invoiceDetails
     .forEach(([label, value], index) => {
       draw(label, 337, height - 216 - index * 17, 7.5, dm, colors.muted);
@@ -482,31 +629,97 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
   }
 
   const totalY = Math.max(invoice.invoice_items.length > 6 ? 86 : 334, y - 19);
-  draw("Zwischensumme", 355, totalY, 7.5, dm, colors.muted);
-  drawRight(formatCHF(invoice.subtotal_rappen), right, totalY, 8, dm);
-  if (Number(invoice.tax_rate) > 0) {
-    draw(`MWST ${Number(invoice.tax_rate).toFixed(1)} %`, 355, totalY - 17, 7.5, dm, colors.muted);
-    drawRight(formatCHF(invoice.tax_rappen), right, totalY - 17, 8, dm);
+  const totalX = 342;
+  const totalWidth = right - totalX;
+  const totalPanelFits = totalY >= 370;
+  if (totalPanelFits) {
+    page.drawRectangle({
+      x: totalX,
+      y: totalY - 61,
+      width: totalWidth,
+      height: 61,
+      color: colors.totalSage,
+    });
+    page.drawRectangle({
+      x: totalX,
+      y: totalY - 3,
+      width: totalWidth,
+      height: 3,
+      color: colors.acid,
+    });
+    draw("Zwischensumme", totalX + 12, totalY - 18, 7.2, dm, colors.muted);
+    drawRight(
+      formatCHF(invoice.subtotal_rappen),
+      right - 12,
+      totalY - 18,
+      8,
+      dm,
+    );
+    const taxLabel = Number(invoice.tax_rate) > 0
+      ? `MWST ${Number(invoice.tax_rate).toFixed(1)} %`
+      : "Nicht MWST-pflichtig";
+    const taxAmount = Number(invoice.tax_rate) > 0
+      ? formatCHF(invoice.tax_rappen)
+      : "";
+    draw(taxLabel, totalX + 12, totalY - 34, 7.2, dm, colors.muted);
+    drawRight(taxAmount, right - 12, totalY - 34, 8, dm);
+    line(totalY - 43, totalX + 12, right - 12, colors.night, .75);
+    draw("TOTAL", totalX + 12, totalY - 57, 8.5, syne);
+    drawRight(
+      formatCHF(invoice.total_rappen),
+      right - 12,
+      totalY - 58,
+      11.5,
+      syne,
+    );
   } else {
-    draw("Nicht MWST-pflichtig", 355, totalY - 17, 7.5, dm, colors.muted);
+    draw("Zwischensumme", 355, totalY, 7.5, dm, colors.muted);
+    drawRight(formatCHF(invoice.subtotal_rappen), right, totalY, 8, dm);
+    if (Number(invoice.tax_rate) > 0) {
+      draw(
+        `MWST ${Number(invoice.tax_rate).toFixed(1)} %`,
+        355,
+        totalY - 17,
+        7.5,
+        dm,
+        colors.muted,
+      );
+      drawRight(formatCHF(invoice.tax_rappen), right, totalY - 17, 8, dm);
+    } else {
+      draw("Nicht MWST-pflichtig", 355, totalY - 17, 7.5, dm, colors.muted);
+    }
+    line(totalY - 28, 355, right, colors.night, 1);
+    draw("TOTAL", 355, totalY - 49, 8.5, syne);
+    drawRight(formatCHF(invoice.total_rappen), right, totalY - 51, 12, syne);
   }
-  line(totalY - 28, 355, right, colors.night, 1);
-  draw("TOTAL", 355, totalY - 49, 8.5, syne);
-  drawRight(formatCHF(invoice.total_rappen), right, totalY - 51, 12, syne);
 
   const rawCreditorAddress = splitStreet(settings.address_line1);
   const rawDebtorAddress = splitStreet(customer.address_line1);
-  const creditorName = compactText(`${settings.company_name} · ${settings.owner_name}`, 70);
-  const creditorAddress = { street: compactText(rawCreditorAddress.street, 70), houseNumber: compactText(rawCreditorAddress.houseNumber, 16) };
+  const creditorName = compactText(
+    `${settings.company_name} · ${settings.owner_name}`,
+    70,
+  );
+  const creditorAddress = {
+    street: compactText(rawCreditorAddress.street, 70),
+    houseNumber: compactText(rawCreditorAddress.houseNumber, 16),
+  };
   const creditorPostalCode = compactText(settings.postal_code, 16);
   const creditorCity = compactText(settings.city, 35);
   const creditorCountry = countryCode(settings.country || "CH");
   const debtorName = compactText(customer.company || customer.contact_name, 70);
-  const debtorAddress = { street: compactText(rawDebtorAddress.street, 70), houseNumber: compactText(rawDebtorAddress.houseNumber, 16) };
+  const debtorAddress = {
+    street: compactText(rawDebtorAddress.street, 70),
+    houseNumber: compactText(rawDebtorAddress.houseNumber, 16),
+  };
   const debtorPostalCode = compactText(customer.postal_code, 16);
   const debtorCity = compactText(customer.city, 35);
   const debtorCountry = countryCode(customer.country || "CH");
-  const paymentMessage = compactText(`${invoice.invoice_number} · ${invoice.invoice_items[0]?.description || "Rechnung"}`, 140);
+  const paymentMessage = compactText(
+    `${invoice.invoice_number} · ${
+      invoice.invoice_items[0]?.description || "Rechnung"
+    }`,
+    140,
+  );
   const qrPayload = buildSwissQrPayload({
     iban: settings.iban,
     creditorName,
@@ -543,9 +756,28 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
       thickness: .55,
       dashArray: [3, 2],
     });
-    target.drawText("Vor der Einzahlung abzutrennen", { x: width - 137, y: sectionTop + 4, size: 6, font: paymentRegular, color: colors.night });
-    target.drawText("Vor der Einzahlung abzutrennen", { x: receiptWidth - 4, y: 8, size: 6, font: paymentRegular, color: colors.night, rotate: degrees(90) });
-    const pdraw = (text: string, x: number, y: number, size = 6.2, font = paymentRegular) =>
+    target.drawText("Vor der Einzahlung abzutrennen", {
+      x: width - 137,
+      y: sectionTop + 4,
+      size: 6,
+      font: paymentRegular,
+      color: colors.night,
+    });
+    target.drawText("Vor der Einzahlung abzutrennen", {
+      x: receiptWidth - 4,
+      y: 8,
+      size: 6,
+      font: paymentRegular,
+      color: colors.night,
+      rotate: degrees(90),
+    });
+    const pdraw = (
+      text: string,
+      x: number,
+      y: number,
+      size = 6.2,
+      font = paymentRegular,
+    ) =>
       target.drawText(String(text || ""), {
         x,
         y,
@@ -571,8 +803,14 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
       `${debtorPostalCode} ${debtorCity} ${debtorCountry}`,
     ];
     const receiptLineWidth = receiptWidth - 28;
-    if ([...creditorLines, ...debtorLines].some((entry) => paymentRegular.widthOfTextAtSize(entry, 8) > receiptLineWidth)) {
-      throw new Error("Eine Adresse ist für den Empfangsschein zu lang. Bitte Namen oder Adresszeilen kürzen.");
+    if (
+      [...creditorLines, ...debtorLines].some((entry) =>
+        paymentRegular.widthOfTextAtSize(entry, 8) > receiptLineWidth
+      )
+    ) {
+      throw new Error(
+        "Eine Adresse ist für den Empfangsschein zu lang. Bitte Namen oder Adresszeilen kürzen.",
+      );
     }
 
     pdraw("Empfangsschein", 14, sectionTop - 22, 11, paymentBold);
@@ -588,7 +826,13 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
       pdraw(entry, 14, sectionTop - 66 - index * 9, 8, paymentRegular)
     );
     pdraw("Referenz", 14, sectionTop - 101, 6, paymentBold);
-    pdraw(formatPaymentReference(invoice.payment_reference), 14, sectionTop - 113, 8, paymentRegular);
+    pdraw(
+      formatPaymentReference(invoice.payment_reference),
+      14,
+      sectionTop - 113,
+      8,
+      paymentRegular,
+    );
     pdraw("Zahlbar durch", 14, sectionTop - 135, 6, paymentBold);
     debtorLines.forEach((entry, index) =>
       pdraw(entry, 14, sectionTop - 147 - index * 9, 8, paymentRegular)
@@ -663,7 +907,13 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
     pdraw("Währung", paymentX, 31, 6, paymentBold);
     pdraw("Betrag", paymentX + 49, 31, 6, paymentBold);
     pdraw("CHF", paymentX, 17, 8, paymentBold);
-    pdraw((invoice.total_rappen / 100).toFixed(2), paymentX + 49, 17, 8, paymentBold);
+    pdraw(
+      (invoice.total_rappen / 100).toFixed(2),
+      paymentX + 49,
+      17,
+      8,
+      paymentBold,
+    );
 
     const infoX = 356;
     pdraw("Konto / Zahlbar an", infoX, sectionTop - 43, 6, paymentBold);
@@ -678,7 +928,13 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
       pdraw(entry, infoX, sectionTop - 67 - index * 9, 8, paymentRegular)
     );
     pdraw("Referenz", infoX, sectionTop - 105, 6, paymentBold);
-    pdraw(formatPaymentReference(invoice.payment_reference), infoX, sectionTop - 117, 8, paymentRegular);
+    pdraw(
+      formatPaymentReference(invoice.payment_reference),
+      infoX,
+      sectionTop - 117,
+      8,
+      paymentRegular,
+    );
     pdraw("Zusätzliche Informationen", infoX, sectionTop - 139, 6, paymentBold);
     drawWrapped(
       target,
@@ -724,120 +980,226 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
   return pdf.save();
 }
 
-if (import.meta.main) Deno.serve(async (request) => {
-  const origin = request.headers.get("origin") || "";
-  const responseCors = { ...corsHeaders, "Access-Control-Allow-Origin": allowedOrigins.has(origin) ? origin : "https://heav.ch", Vary: "Origin" };
-  if (request.method === "OPTIONS") return new Response("ok", { headers: responseCors });
-  if (request.method !== "POST") return Response.json({ error: "Method not allowed" }, { status: 405, headers: responseCors });
-  if (origin && !allowedOrigins.has(origin)) return Response.json({ error: "Origin not allowed" }, { status: 403, headers: responseCors });
-  try {
-    const authorization = request.headers.get("Authorization");
-    if (!authorization) throw new Error("Nicht angemeldet.");
-    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authorization } } });
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    if (userError || !userData.user) throw new Error("Sitzung ungültig.");
-    const { invoiceId, action, requestKey } = await request.json();
-    if (!invoiceId || !["download", "send", "mark_paid", "cancel"].includes(action)) throw new Error("Ungültige Rechnungsaktion.");
-    if (action === "send" && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(requestKey || ""))) {
-      throw new Error("Ungültige Versandanforderung.");
+if (import.meta.main) {
+  Deno.serve(async (request) => {
+    const origin = request.headers.get("origin") || "";
+    const responseCors = {
+      ...corsHeaders,
+      "Access-Control-Allow-Origin": allowedOrigins.has(origin)
+        ? origin
+        : "https://heav.ch",
+      Vary: "Origin",
+    };
+    if (request.method === "OPTIONS") {
+      return new Response("ok", { headers: responseCors });
     }
-    if (["mark_paid", "cancel"].includes(action)) {
-      const { error } = await supabase.rpc("record_invoice_action", {
-        p_invoice_id: invoiceId,
-        p_action: action === "mark_paid" ? "paid" : "cancelled",
-        p_recipient: null,
-        p_details: {},
+    if (request.method !== "POST") {
+      return Response.json({ error: "Method not allowed" }, {
+        status: 405,
+        headers: responseCors,
       });
-      if (error) throw error;
-      return Response.json({ ok: true }, { headers: responseCors });
     }
-    const { data: storedInvoice, error: invoiceError } = await supabase
-      .from("invoices")
-      .select("*, invoice_items(*)")
-      .eq("id", invoiceId)
-      .single();
-    if (invoiceError || !storedInvoice) throw invoiceError || new Error("Rechnung nicht gefunden.");
-    if (storedInvoice.is_legacy) {
-      throw new Error("Diese historische Rechnung wurde vor der unveränderlichen Archivierung erstellt und kann nicht neu als Zahlungsdokument erzeugt oder versendet werden.");
-    }
-    if (!storedInvoice.customer_snapshot || !storedInvoice.issuer_snapshot) {
-      throw new Error("Die Rechnung besitzt keinen unveränderlichen Datenstand.");
-    }
-    const settings = storedInvoice.issuer_snapshot as Settings;
-    const invoice = { ...storedInvoice, customers: storedInvoice.customer_snapshot } as Invoice;
-    if (invoice.status === "cancelled") throw new Error("Stornierte Rechnungen können nicht mehr als Zahlungsdokument geöffnet oder versendet werden.");
-    const pdfBytes = await createInvoicePdf(invoice, settings);
-    if (action === "download") {
-      const { error: eventError } = await supabase.rpc("record_invoice_action", {
-        p_invoice_id: invoiceId,
-        p_action: "downloaded",
-        p_recipient: null,
-        p_details: {},
+    if (origin && !allowedOrigins.has(origin)) {
+      return Response.json({ error: "Origin not allowed" }, {
+        status: 403,
+        headers: responseCors,
       });
-      if (eventError) throw eventError;
-      const pdfBody = new ArrayBuffer(pdfBytes.byteLength);
-      new Uint8Array(pdfBody).set(pdfBytes);
-      return new Response(pdfBody, { headers: { ...responseCors, "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename="${safeFilename(invoice.invoice_number)}.pdf"`, "Cache-Control": "no-store" } });
     }
-    const resendKey = Deno.env.get("RESEND_API_KEY");
-    const fromEmail = Deno.env.get("RESEND_FROM_EMAIL");
-    if (!resendKey || !fromEmail) throw new Error("E-Mail-Versand ist noch nicht konfiguriert.");
-    if (!validMailbox(fromEmail, true)) throw new Error("Der konfigurierte Rechnungsabsender ist ungültig.");
-    if (!validMailbox(settings.email)) throw new Error("Die Antwortadresse des Rechnungsabsenders ist ungültig.");
-    const customer = invoice.customers as Customer;
-    if (!["draft", "sent", "overdue"].includes(invoice.status)) throw new Error("Diese Rechnung kann nicht versendet werden.");
-    if (!validMailbox(customer.email)) throw new Error("Die Kunden-E-Mail ist ungültig.");
-    const { data: reservations, error: reservationError } = await supabase.rpc("reserve_invoice_send", { p_invoice_id: invoiceId, p_request_key: requestKey });
-    if (reservationError) throw reservationError;
-    const reservation = Array.isArray(reservations) ? reservations[0] : reservations;
-    if (!reservation?.attempt_id || !reservation?.idempotency_key) throw new Error("E-Mail-Versand konnte nicht reserviert werden.");
-    const idempotencyKey = safeHeader(reservation.idempotency_key).replace(/[^a-zA-Z0-9._-]/g, "-");
-    let emailResponse: Response;
-    let emailData: { id?: string; message?: string; [key: string]: unknown };
     try {
-      emailResponse = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${resendKey}`,
-          "Content-Type": "application/json",
-          "Idempotency-Key": idempotencyKey,
+      const authorization = request.headers.get("Authorization");
+      if (!authorization) throw new Error("Nicht angemeldet.");
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: authorization } } },
+      );
+      const { data: userData, error: userError } = await supabase.auth
+        .getUser();
+      if (userError || !userData.user) throw new Error("Sitzung ungültig.");
+      const { invoiceId, action, requestKey } = await request.json();
+      if (
+        !invoiceId ||
+        !["download", "send", "mark_paid", "cancel"].includes(action)
+      ) throw new Error("Ungültige Rechnungsaktion.");
+      if (
+        action === "send" &&
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+          .test(String(requestKey || ""))
+      ) {
+        throw new Error("Ungültige Versandanforderung.");
+      }
+      if (["mark_paid", "cancel"].includes(action)) {
+        const { error } = await supabase.rpc("record_invoice_action", {
+          p_invoice_id: invoiceId,
+          p_action: action === "mark_paid" ? "paid" : "cancelled",
+          p_recipient: null,
+          p_details: {},
+        });
+        if (error) throw error;
+        return Response.json({ ok: true }, { headers: responseCors });
+      }
+      const { data: storedInvoice, error: invoiceError } = await supabase
+        .from("invoices")
+        .select("*, invoice_items(*)")
+        .eq("id", invoiceId)
+        .single();
+      if (invoiceError || !storedInvoice) {
+        throw invoiceError || new Error("Rechnung nicht gefunden.");
+      }
+      if (storedInvoice.is_legacy) {
+        throw new Error(
+          "Diese historische Rechnung wurde vor der unveränderlichen Archivierung erstellt und kann nicht neu als Zahlungsdokument erzeugt oder versendet werden.",
+        );
+      }
+      if (!storedInvoice.customer_snapshot || !storedInvoice.issuer_snapshot) {
+        throw new Error(
+          "Die Rechnung besitzt keinen unveränderlichen Datenstand.",
+        );
+      }
+      const settings = storedInvoice.issuer_snapshot as Settings;
+      const invoice = {
+        ...storedInvoice,
+        customers: storedInvoice.customer_snapshot,
+      } as Invoice;
+      if (invoice.status === "cancelled") {
+        throw new Error(
+          "Stornierte Rechnungen können nicht mehr als Zahlungsdokument geöffnet oder versendet werden.",
+        );
+      }
+      const pdfBytes = await createInvoicePdf(invoice, settings);
+      if (action === "download") {
+        const { error: eventError } = await supabase.rpc(
+          "record_invoice_action",
+          {
+            p_invoice_id: invoiceId,
+            p_action: "downloaded",
+            p_recipient: null,
+            p_details: {},
+          },
+        );
+        if (eventError) throw eventError;
+        const pdfBody = new ArrayBuffer(pdfBytes.byteLength);
+        new Uint8Array(pdfBody).set(pdfBytes);
+        return new Response(pdfBody, {
+          headers: {
+            ...responseCors,
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `attachment; filename="${
+              safeFilename(invoice.invoice_number)
+            }.pdf"`,
+            "Cache-Control": "no-store",
+          },
+        });
+      }
+      const resendKey = Deno.env.get("RESEND_API_KEY");
+      const fromEmail = Deno.env.get("RESEND_FROM_EMAIL");
+      if (!resendKey || !fromEmail) {
+        throw new Error("E-Mail-Versand ist noch nicht konfiguriert.");
+      }
+      if (!validMailbox(fromEmail, true)) {
+        throw new Error("Der konfigurierte Rechnungsabsender ist ungültig.");
+      }
+      if (!validMailbox(settings.email)) {
+        throw new Error(
+          "Die Antwortadresse des Rechnungsabsenders ist ungültig.",
+        );
+      }
+      const customer = invoice.customers as Customer;
+      if (
+        !["draft", "sent", "overdue"].includes(invoice.status)
+      ) throw new Error("Diese Rechnung kann nicht versendet werden.");
+      if (!validMailbox(customer.email)) {
+        throw new Error("Die Kunden-E-Mail ist ungültig.");
+      }
+      const { data: reservations, error: reservationError } = await supabase
+        .rpc("reserve_invoice_send", {
+          p_invoice_id: invoiceId,
+          p_request_key: requestKey,
+        });
+      if (reservationError) throw reservationError;
+      const reservation = Array.isArray(reservations)
+        ? reservations[0]
+        : reservations;
+      if (
+        !reservation?.attempt_id || !reservation?.idempotency_key
+      ) throw new Error("E-Mail-Versand konnte nicht reserviert werden.");
+      const idempotencyKey = safeHeader(reservation.idempotency_key).replace(
+        /[^a-zA-Z0-9._-]/g,
+        "-",
+      );
+      let emailResponse: Response;
+      let emailData: { id?: string; message?: string; [key: string]: unknown };
+      try {
+        emailResponse = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${resendKey}`,
+            "Content-Type": "application/json",
+            "Idempotency-Key": idempotencyKey,
+          },
+          body: JSON.stringify({
+            from: fromEmail,
+            to: [customer.email],
+            reply_to: settings.email,
+            subject: safeHeader(
+              `Rechnung ${
+                formatDocumentReference(invoice.invoice_number)
+              } von ${settings.company_name}`,
+            ),
+            text: buildInvoiceText(invoice, settings),
+            attachments: [{
+              filename: `${safeFilename(invoice.invoice_number)}.pdf`,
+              content: base64(pdfBytes),
+            }],
+          }),
+        });
+        emailData = await responsePayload(emailResponse);
+      } catch (sendError) {
+        // The provider may have accepted the request even when the response was lost.
+        // Keep the durable reservation pending: a retry reuses the same idempotency key
+        // and cancellation/deletion remain blocked until the outcome is resolved.
+        throw sendError;
+      }
+      if (!emailResponse.ok) {
+        const { error: completionError } = await supabase.rpc(
+          "complete_invoice_send",
+          {
+            p_attempt_id: reservation.attempt_id,
+            p_success: false,
+            p_recipient: customer.email,
+            p_details: emailData,
+          },
+        );
+        if (completionError) {
+          console.error("send failure completion failed", completionError);
+        }
+        throw new Error(
+          emailData.message || "E-Mail konnte nicht gesendet werden.",
+        );
+      }
+      const { error: completionError } = await supabase.rpc(
+        "complete_invoice_send",
+        {
+          p_attempt_id: reservation.attempt_id,
+          p_success: true,
+          p_recipient: customer.email,
+          p_details: {
+            resend_id: emailData.id,
+            idempotency_key: idempotencyKey,
+          },
         },
-        body: JSON.stringify({
-          from: fromEmail,
-          to: [customer.email],
-          reply_to: settings.email,
-          subject: safeHeader(`Rechnung ${formatDocumentReference(invoice.invoice_number)} von ${settings.company_name}`),
-          text: buildInvoiceText(invoice, settings),
-          attachments: [{ filename: `${safeFilename(invoice.invoice_number)}.pdf`, content: base64(pdfBytes) }],
-        }),
+      );
+      if (completionError) {
+        throw completionError;
+      }
+      return Response.json({ ok: true, emailId: emailData.id }, {
+        headers: responseCors,
       });
-      emailData = await responsePayload(emailResponse);
-    } catch (sendError) {
-      // The provider may have accepted the request even when the response was lost.
-      // Keep the durable reservation pending: a retry reuses the same idempotency key
-      // and cancellation/deletion remain blocked until the outcome is resolved.
-      throw sendError;
+    } catch (error) {
+      console.error(error);
+      return Response.json({
+        error: error instanceof Error ? error.message : "Unbekannter Fehler",
+      }, { status: 400, headers: responseCors });
     }
-    if (!emailResponse.ok) {
-      const { error: completionError } = await supabase.rpc("complete_invoice_send", {
-        p_attempt_id: reservation.attempt_id,
-        p_success: false,
-        p_recipient: customer.email,
-        p_details: emailData,
-      });
-      if (completionError) console.error("send failure completion failed", completionError);
-      throw new Error(emailData.message || "E-Mail konnte nicht gesendet werden.");
-    }
-    const { error: completionError } = await supabase.rpc("complete_invoice_send", {
-      p_attempt_id: reservation.attempt_id,
-      p_success: true,
-      p_recipient: customer.email,
-      p_details: { resend_id: emailData.id, idempotency_key: idempotencyKey },
-    });
-    if (completionError) throw completionError;
-    return Response.json({ ok: true, emailId: emailData.id }, { headers: responseCors });
-  } catch (error) {
-    console.error(error);
-    return Response.json({ error: error instanceof Error ? error.message : "Unbekannter Fehler" }, { status: 400, headers: responseCors });
-  }
-});
+  });
+}
