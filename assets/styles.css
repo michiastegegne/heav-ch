@@ -20,6 +20,13 @@
   src: url("/assets/fonts/instrument-serif-italic.woff2") format("woff2");
 }
 @font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/assets/fonts/ibm-plex-mono-regular.ttf") format("truetype");
+}
+@font-face {
   font-family: "Syne";
   font-style: normal;
   font-weight: 500 700;
@@ -944,16 +951,13 @@ main {
 .home-project-card-caption .caps {
   flex: 0 0 auto;
   color: var(--acid);
-  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   font-size: clamp(.65rem, .8vw, .75rem);
   font-weight: 500;
   letter-spacing: .035em;
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum" 1;
+  font-variant-numeric: slashed-zero tabular-nums;
+  font-feature-settings: "zero" 1, "tnum" 1;
 }
-.project-zero { display: inline-block; width: .67em; height: 1em; margin: 0 -.01em; vertical-align: -.115em; overflow: visible; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
-.project-zero ellipse { stroke-width: 2.15; }
-.project-zero path { stroke-width: 1.55; }
 .home-photography-promo { display: block; margin-top: clamp(4rem, 8vw, 9rem); color: var(--paper); text-decoration: none; }
 .home-photography-promo-image { aspect-ratio: 16 / 7; overflow: hidden; background: #10110e; }
 .home-photography-promo-image img { display: block; width: 100%; height: 100%; object-fit: cover; filter: saturate(.88) contrast(1.04); transition: transform .7s var(--ease); }
@@ -1119,12 +1123,12 @@ main {
 .still-card-caption .caps {
   flex: 0 0 auto;
   color: var(--acid);
-  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   font-size: clamp(.65rem, .8vw, .75rem);
   font-weight: 500;
   letter-spacing: .035em;
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum" 1;
+  font-variant-numeric: slashed-zero tabular-nums;
+  font-feature-settings: "zero" 1, "tnum" 1;
 }
 .video-portfolio {
   padding-top: clamp(4rem, 8vw, 8rem);
