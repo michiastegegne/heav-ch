@@ -575,10 +575,10 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
     height: 154,
     color: colors.night,
   });
-  // Exact supplied HEAV wordmark, trimmed to its visible 151×30px bounds so
-  // its left edge is perfectly shared with the RECHNUNG heading and rule.
-  const wordmarkWidth = 104;
-  const wordmarkVisibleHeight = wordmarkWidth * (30 / 151);
+  // Exact supplied HEAV wordmark, cropped to its visible bounds with a small
+  // right-side safety margin so the lime dot cannot be clipped in the PDF.
+  const wordmarkWidth = 92;
+  const wordmarkVisibleHeight = wordmarkWidth * (30 / 162);
   // The raster wordmark has been trimmed to its true visible bounds. Its H
   // must share the identical document margin as the visible R in RECHNUNG.
   const headerLogoX = margin;
