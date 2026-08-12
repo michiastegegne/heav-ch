@@ -862,7 +862,7 @@ main {
 .rainshield-product-grid figcaption { display: flex; justify-content: space-between; gap: 1rem; padding-top: 0.8rem; color: var(--muted); }
 .rainshield-product-grid figcaption .caps { color: var(--acid); }
 .portrait-stack { display: grid; gap: clamp(1rem, 2vw, 1.5rem); min-width: 0; align-content: start; }
-.instagram-profile-section { padding-top: 0; }
+.instagram-profile-section { margin-top: clamp(2rem, 5vw, 4rem); padding-top: 0; }
 .instagram-profile-banner { display: grid; grid-template-columns: auto minmax(15rem, 1fr) auto; align-items: center; gap: clamp(1rem, 2vw, 2.5rem); padding: clamp(1.25rem, 2.5vw, 2.5rem); background: #171916; color: var(--paper); text-decoration: none; transition: background .2s ease, transform .2s ease; }
 .instagram-profile-banner:hover { background: #22251f; transform: translateY(-2px); }
 .instagram-profile-banner:focus-visible { outline: 3px solid var(--acid); outline-offset: 4px; }
