@@ -161,6 +161,9 @@ Deno.test("E-Mail-Banner enthält Portrait, Kontaktdaten und sichere Projekttext
     website_url: "https://heav.ch",
   };
   const html = buildInvoiceEmailHtml(invoice as never, settings as never);
+  assert(html.includes("heav-email-wordmark.png"));
+  assert(html.includes("background:#080909"));
+  assert(html.includes('width="154" height="35"'));
   assert(html.includes("michias-email-portrait.jpg"));
   assert(html.includes("border-radius:50%"));
   assert(html.includes("Founder &amp; Owner | HEAV"));
