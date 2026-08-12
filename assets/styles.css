@@ -378,6 +378,10 @@ body.grain-ready .noise {
 main {
   display: block;
 }
+.temporary-home-hidden { display: none !important; }
+.temporary-home-logo { min-height: min(72svh, 50rem); display: grid; place-items: center; padding: calc(var(--header) + 3rem) var(--gutter) 5rem; background: var(--night); }
+.temporary-home-logo-mark { color: var(--paper); font: 700 clamp(7rem, 28vw, 28rem)/.72 "Syne", sans-serif; letter-spacing: -.105em; text-decoration: none; transition: color .25s var(--ease); }
+.temporary-home-logo-mark:hover, .temporary-home-logo-mark:focus-visible { color: var(--acid); }
 .home-hero,
 .page-hero {
   padding: calc(var(--header) + clamp(3rem, 7vw, 7rem)) var(--gutter)
@@ -1226,6 +1230,7 @@ main {
   color: #55534d;
   line-height: 1.55;
 }
+.section > .client-block { margin-top: clamp(4rem, 8vw, 8rem); }
 .client-block {
   margin-top: clamp(5rem, 9vw, 9rem);
 }
@@ -1580,6 +1585,8 @@ main {
     font-size: 0.61rem;
     letter-spacing: 0.1em;
   }
+  .temporary-home-logo { min-height: 56svh; padding-top: calc(var(--header) + 2rem); padding-bottom: 3rem; }
+  .temporary-home-logo-mark { font-size: clamp(6rem, 31vw, 9.5rem); }
   .home-hero {
     grid-template-columns: minmax(0, 1.08fr) minmax(17rem, 0.92fr);
   }
