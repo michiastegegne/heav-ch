@@ -949,9 +949,9 @@ main {
   flex: 0 0 auto;
   color: var(--acid);
   font-family: "DM Sans", Arial, sans-serif;
-  font-size: clamp(.65rem, .8vw, .75rem);
-  font-weight: 500;
-  letter-spacing: .035em;
+  font-size: clamp(.72rem, .9vw, .84rem);
+  font-weight: 600;
+  letter-spacing: .04em;
   font-variant-numeric: tabular-nums;
 }
 .home-photography-promo { display: block; margin-top: clamp(4rem, 8vw, 9rem); color: var(--paper); text-decoration: none; }
@@ -1120,9 +1120,9 @@ main {
   flex: 0 0 auto;
   color: var(--acid);
   font-family: "DM Sans", Arial, sans-serif;
-  font-size: clamp(.65rem, .8vw, .75rem);
-  font-weight: 500;
-  letter-spacing: .035em;
+  font-size: clamp(.72rem, .9vw, .84rem);
+  font-weight: 600;
+  letter-spacing: .04em;
   font-variant-numeric: tabular-nums;
 }
 .video-portfolio {
@@ -1751,16 +1751,16 @@ main {
   }
   .client-logos {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 2.25rem 2rem;
+    gap: 1.6rem;
     padding: 0;
   }
   .client-logos li:nth-child(n) {
-    min-height: 6.5rem;
+    min-height: 5.75rem;
     padding: 0;
   }
   .client-logos img {
-    max-width: min(100%, calc(var(--client-logo-width, 10.5rem) * 0.88));
-    max-height: calc(var(--client-logo-height, 4.8rem) * 0.88);
+    max-width: min(100%, calc(var(--client-logo-width, 10.5rem) * 0.76));
+    max-height: calc(var(--client-logo-height, 4.8rem) * 0.76);
   }
   .contact-form-layout {
     grid-template-columns: 1fr;
@@ -1802,7 +1802,7 @@ main {
     font-size: 0.95rem;
   }
   .still-card-caption .caps {
-    font-size: .7rem;
+    font-size: .76rem;
   }
   .video-grid {
     grid-template-columns: 1fr;
@@ -1864,7 +1864,7 @@ main {
     font-size: 0.95rem;
   }
   .home-project-card-caption .caps {
-    font-size: .7rem;
+    font-size: .76rem;
   }
   .selected-work-feature {
     grid-template-columns: 1fr;
