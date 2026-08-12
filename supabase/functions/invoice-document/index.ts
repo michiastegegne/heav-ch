@@ -477,7 +477,7 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
     Deno.readFile(new URL("liberation-sans.ttf", fontRoot)),
     Deno.readFile(new URL("liberation-sans-bold.ttf", fontRoot)),
     Deno.readFile(
-      new URL("../_shared/assets/heav-wordmark.png", import.meta.url),
+      new URL("../_shared/assets/heav-wordmark-aligned.png", import.meta.url),
     ),
   ]);
   const [dm, serif, syne] = await Promise.all([
@@ -567,13 +567,15 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
     height: 154,
     color: colors.night,
   });
-  // Exact supplied HEAV wordmark asset, retained at its original 208:60 ratio.
+  // Exact supplied HEAV wordmark, trimmed to its visible 151×30px bounds so
+  // its left edge is perfectly shared with the RECHNUNG heading and rule.
   const wordmarkWidth = 104;
+  const wordmarkVisibleHeight = wordmarkWidth * (30 / 151);
   page.drawImage(wordmark, {
     x: margin,
-    y: height - 62,
+    y: height - 52,
     width: wordmarkWidth,
-    height: wordmarkWidth * (60 / 208),
+    height: wordmarkVisibleHeight,
   });
   drawRight(
     "FILMPRODUKTION · SCHWEIZ",
