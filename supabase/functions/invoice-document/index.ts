@@ -571,9 +571,9 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
   // its left edge is perfectly shared with the RECHNUNG heading and rule.
   const wordmarkWidth = 104;
   const wordmarkVisibleHeight = wordmarkWidth * (30 / 151);
-  // The serif R visibly overhangs its drawing coordinate. Offset the logo by
-  // the same measured overhang so the H and R start on the identical visual x.
-  const headerLogoX = margin - 14;
+  // The raster wordmark has been trimmed to its true visible bounds. Its H
+  // must share the identical document margin as the visible R in RECHNUNG.
+  const headerLogoX = margin;
   page.drawImage(wordmark, {
     x: headerLogoX,
     y: height - 52,
