@@ -1761,9 +1761,11 @@ main {
     min-height: 5.75rem;
     padding: 0;
   }
-  .client-logos img {
+  .section > .client-block .client-logos img {
     max-width: min(100%, calc(var(--client-logo-width, 10.5rem) * 0.76));
     max-height: calc(var(--client-logo-height, 4.8rem) * 0.76);
+    filter: grayscale(1) contrast(2.4);
+    opacity: .55;
   }
   .contact-form-layout {
     grid-template-columns: 1fr;
