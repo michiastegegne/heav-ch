@@ -1,6 +1,6 @@
 -- Keep the project title as part of the immutable invoice record.
 alter table public.invoices
-  add column project_title_snapshot text;
+  add column if not exists project_title_snapshot text;
 
 -- Existing invoices cannot truthfully reconstruct a historical project title.
 -- New invoices receive it atomically from the selected owner-scoped project.
