@@ -7,6 +7,7 @@ import {
   escapeHtml,
   formatDocumentReference,
   formatPaymentReference,
+  invoiceFilename,
   validVatNumber,
 } from "./index.ts";
 
@@ -128,6 +129,23 @@ Deno.test("PDF-Nachricht verwendet eine kurze #Dokumentreferenz und bleibt siche
   assert(text.includes("PDF"));
   assert(!text.includes("\r"));
   assert(!text.includes("Filmproduktion"));
+});
+
+Deno.test("PDF-Dateiname verwendet zuerst den Projekt-Titel und sonst den Kunden", () => {
+  const base = {
+    invoice_number: "HEAV-2026-009",
+    customers: { company: "Kunde & Partner AG", contact_name: "" },
+  };
+  assertEquals(
+    invoiceFilename(
+      { ...base, project_title_snapshot: "Launchfilm Herbst 2026" } as never,
+    ),
+    "HEAV-Rechnung-Launchfilm-Herbst-2026-00009.pdf",
+  );
+  assertEquals(
+    invoiceFilename(base as never),
+    "HEAV-Rechnung-Kunde-Partner-AG-00009.pdf",
+  );
 });
 
 Deno.test("createInvoicePdf erzeugt eine valide einseitige HEAV-Rechnung", async () => {

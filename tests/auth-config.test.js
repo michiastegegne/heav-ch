@@ -15,5 +15,5 @@ test("Produktiv-Auth erlaubt nur bestehende Benutzer und HEAV-Rücksprungziele",
   assert.match(config, /\[auth\][\s\S]*?enable_signup\s*=\s*false/);
   assert.match(config, /\[auth\.email\][\s\S]*?enable_signup\s*=\s*true/);
   assert.match(config, /\[functions\.invoice-document\][\s\S]*?verify_jwt\s*=\s*false/);
-  assert.match(config, /\[functions\.invoice-document\][\s\S]*?static_files\s*=\s*\["\.\/functions\/_shared\/fonts\/\*\.ttf"\]/);
+  assert.match(config, /\[functions\.invoice-document\][\s\S]*?static_files\s*=\s*\["\.\/functions\/_shared\/fonts\/\*\.ttf", "\.\/functions\/_shared\/assets\/\*\.png"\]/);
 });

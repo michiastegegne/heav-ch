@@ -25,4 +25,4 @@ verify_enabled = true
 
 [functions.invoice-document]
 verify_jwt = false
-static_files = ["./functions/_shared/fonts/*.ttf"]
+static_files = ["./functions/_shared/fonts/*.ttf", "./functions/_shared/assets/*.png"]

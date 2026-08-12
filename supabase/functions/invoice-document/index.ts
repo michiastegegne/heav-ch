@@ -93,8 +93,23 @@ function safeHeader(value: unknown) {
 
 function safeFilename(value: unknown) {
   const cleaned = String(value ?? "invoice").replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
     .replace(/^-+|-+$/g, "");
   return (cleaned || "invoice").slice(0, 100);
+}
+
+export function invoiceFilename(invoice: Invoice) {
+  const subject = compactText(
+    invoice.project_title_snapshot || invoice.customers?.company ||
+      invoice.customers?.contact_name,
+    90,
+  );
+  const parts = [
+    "HEAV-Rechnung",
+    subject,
+    formatDocumentReference(invoice.invoice_number),
+  ];
+  return `${safeFilename(parts.filter(Boolean).join("-"))}.pdf`;
 }
 
 async function responsePayload(response: Response) {
@@ -403,12 +418,16 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
     syneBytes,
     paymentRegularBytes,
     paymentBoldBytes,
+    wordmarkBytes,
   ] = await Promise.all([
     Deno.readFile(new URL("dm-sans.ttf", fontRoot)),
     Deno.readFile(new URL("instrument-serif.ttf", fontRoot)),
     Deno.readFile(new URL("syne.ttf", fontRoot)),
     Deno.readFile(new URL("liberation-sans.ttf", fontRoot)),
     Deno.readFile(new URL("liberation-sans-bold.ttf", fontRoot)),
+    Deno.readFile(
+      new URL("../_shared/assets/heav-wordmark.png", import.meta.url),
+    ),
   ]);
   const [dm, serif, syne] = await Promise.all([
     pdf.embedFont(dmBytes, { subset: true }),
@@ -419,6 +438,7 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
     pdf.embedFont(paymentRegularBytes, { subset: true }),
     pdf.embedFont(paymentBoldBytes, { subset: true }),
   ]);
+  const wordmark = await pdf.embedPng(wordmarkBytes);
   const page = pdf.addPage([595.28, 841.89]);
   const { width, height } = page.getSize();
   const margin = 42.52;
@@ -496,17 +516,13 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
     height: 154,
     color: colors.night,
   });
-  // Match the web wordmark exactly: Syne 700, then a 0.4em lime dot
-  // separated by 0.12em (see assets/styles.css .brand and .brand:after).
-  const logoSize = 22.72; // Website: 1.42rem at the 16px root size.
-  draw("HEAV", margin, height - 49, logoSize, syne, colors.paper);
-  const logoWordWidth = syne.widthOfTextAtSize("HEAV", logoSize);
-  const logoDotRadius = logoSize * 0.2;
-  page.drawCircle({
-    x: margin + logoWordWidth + logoSize * 0.12 + logoDotRadius,
-    y: height - 41.3,
-    size: logoDotRadius,
-    color: colors.acid,
+  // Exact supplied HEAV wordmark asset, retained at its original 208:60 ratio.
+  const wordmarkWidth = 104;
+  page.drawImage(wordmark, {
+    x: margin,
+    y: height - 62,
+    width: wordmarkWidth,
+    height: wordmarkWidth * (60 / 208),
   });
   drawRight(
     "FILMPRODUKTION · SCHWEIZ",
@@ -921,12 +937,11 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
   else {
     draw("Zahlteil auf der Folgeseite", margin, 29, 6.5, syne, colors.muted);
     const paymentPage = pdf.addPage([595.28, 841.89]);
-    paymentPage.drawText("HEAV", {
+    paymentPage.drawImage(wordmark, {
       x: margin,
-      y: height - 46,
-      size: 19,
-      font: syne,
-      color: colors.night,
+      y: height - 62,
+      width: wordmarkWidth,
+      height: wordmarkWidth * (60 / 208),
     });
     paymentPage.drawText(`${invoice.invoice_number} · Zahlungsseite`, {
       x: margin,
@@ -1048,8 +1063,8 @@ if (import.meta.main) {
             ...responseCors,
             "Content-Type": "application/pdf",
             "Content-Disposition": `attachment; filename="${
-              safeFilename(invoice.invoice_number)
-            }.pdf"`,
+              invoiceFilename(invoice)
+            }"`,
             "Cache-Control": "no-store",
           },
         });
@@ -1111,7 +1126,7 @@ if (import.meta.main) {
             ),
             text: buildInvoiceText(invoice, settings),
             attachments: [{
-              filename: `${safeFilename(invoice.invoice_number)}.pdf`,
+              filename: invoiceFilename(invoice),
               content: base64(pdfBytes),
             }],
           }),
