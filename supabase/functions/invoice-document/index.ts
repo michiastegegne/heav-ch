@@ -538,14 +538,7 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
     height: 3,
     color: colors.acid,
   });
-  draw(
-    "PRODUKTION · BILDER · BEARBEITUNG",
-    margin + 8,
-    height - 143,
-    5.8,
-    syne,
-    colors.acid,
-  );
+  draw("MEDIA PRODUCTION", margin + 8, height - 143, 5.8, syne, colors.acid);
 
   const customer = invoice.customers;
   draw("RECHNUNG AN", margin, height - 192, 6, syne, colors.muted);
@@ -628,50 +621,39 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
     line(y, margin, right);
   }
 
+  const paymentSectionTop = 297.64; // 105 mm Swiss payment-part height.
   const totalY = Math.max(invoice.invoice_items.length > 6 ? 86 : 334, y - 19);
-  const totalX = 342;
-  const totalWidth = right - totalX;
-  const totalPanelFits = totalY >= 370;
+  const totalPanelFits = totalY >= paymentSectionTop + 38;
   if (totalPanelFits) {
+    // A continuous, pale sage closing band: edge-to-edge until the Swiss QR tear line.
     page.drawRectangle({
-      x: totalX,
-      y: totalY - 61,
-      width: totalWidth,
-      height: 61,
+      x: 0,
+      y: paymentSectionTop,
+      width,
+      height: totalY - paymentSectionTop,
       color: colors.totalSage,
     });
     page.drawRectangle({
-      x: totalX,
+      x: 0,
       y: totalY - 3,
-      width: totalWidth,
+      width,
       height: 3,
       color: colors.acid,
     });
-    draw("Zwischensumme", totalX + 12, totalY - 18, 7.2, dm, colors.muted);
-    drawRight(
-      formatCHF(invoice.subtotal_rappen),
-      right - 12,
-      totalY - 18,
-      8,
-      dm,
-    );
+    const totalX = 342;
+    draw("Zwischensumme", totalX, totalY - 18, 7.2, dm, colors.muted);
+    drawRight(formatCHF(invoice.subtotal_rappen), right, totalY - 18, 8, dm);
     const taxLabel = Number(invoice.tax_rate) > 0
       ? `MWST ${Number(invoice.tax_rate).toFixed(1)} %`
       : "Nicht MWST-pflichtig";
     const taxAmount = Number(invoice.tax_rate) > 0
       ? formatCHF(invoice.tax_rappen)
       : "";
-    draw(taxLabel, totalX + 12, totalY - 34, 7.2, dm, colors.muted);
-    drawRight(taxAmount, right - 12, totalY - 34, 8, dm);
-    line(totalY - 43, totalX + 12, right - 12, colors.night, .75);
-    draw("TOTAL", totalX + 12, totalY - 57, 8.5, syne);
-    drawRight(
-      formatCHF(invoice.total_rappen),
-      right - 12,
-      totalY - 58,
-      11.5,
-      syne,
-    );
+    draw(taxLabel, totalX, totalY - 34, 7.2, dm, colors.muted);
+    drawRight(taxAmount, right, totalY - 34, 8, dm);
+    line(totalY - 43, totalX, right, colors.night, .75);
+    draw("TOTAL", totalX, totalY - 57, 8.5, syne);
+    drawRight(formatCHF(invoice.total_rappen), right, totalY - 58, 11.5, syne);
   } else {
     draw("Zwischensumme", 355, totalY, 7.5, dm, colors.muted);
     drawRight(formatCHF(invoice.subtotal_rappen), right, totalY, 8, dm);
