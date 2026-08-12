@@ -34,7 +34,9 @@
   --sage: #bec6b7;
   --muted: #aaa89f;
   --line: rgba(238, 234, 224, 0.19);
-  --gutter: max(clamp(1.15rem, 4vw, 4.75rem), calc((100vw - 100rem) / 2));
+  /* Keep header and media aligned to one fluid edge at every width.
+     This avoids the previous oversized centred margins on large screens. */
+  --gutter: clamp(1.15rem, 3.35vw, 5rem);
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --header: 5rem;
 }
@@ -859,6 +861,7 @@ main {
 .rainshield-product-image img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .rainshield-product-grid figcaption { display: flex; justify-content: space-between; gap: 1rem; padding-top: 0.8rem; color: var(--muted); }
 .rainshield-product-grid figcaption .caps { color: var(--acid); }
+.portrait-stack { display: grid; gap: clamp(1rem, 2vw, 1.5rem); min-width: 0; align-content: start; }
 .instagram-profile-section { padding-top: 0; }
 .instagram-profile-banner { display: grid; grid-template-columns: auto minmax(15rem, 1fr) auto; align-items: center; gap: clamp(1rem, 2vw, 2.5rem); padding: clamp(1.25rem, 2.5vw, 2.5rem); background: #171916; color: var(--paper); text-decoration: none; transition: background .2s ease, transform .2s ease; }
 .instagram-profile-banner:hover { background: #22251f; transform: translateY(-2px); }
