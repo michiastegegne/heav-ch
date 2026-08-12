@@ -12,6 +12,7 @@ const colors = {
   paper: rgb(238 / 255, 234 / 255, 224 / 255),
   acid: rgb(215 / 255, 255 / 255, 56 / 255),
   sage: rgb(190 / 255, 198 / 255, 183 / 255),
+  totalSage: rgb(220 / 255, 225 / 255, 215 / 255),
   muted: rgb(112 / 255, 111 / 255, 105 / 255),
   line: rgb(200 / 255, 196 / 255, 186 / 255),
 };
@@ -100,6 +101,8 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
   draw("Clear work.", margin, height - 164, 39, serif, colors.paper);
   draw("Clear numbers.", margin + 177, height - 164, 39, italic, colors.acid);
   draw("Strategy, story & craft. In one frame.", margin, height - 190, 8, dm, colors.muted);
+  page.drawRectangle({ x: margin, y: height - 232, width: 4, height: 3, color: colors.acid });
+  draw("PRODUKTION · BILDER · BEARBEITUNG", margin + 10, height - 235, 6.5, syne, colors.acid);
   draw("RECHNUNGSNUMMER", 407, height - 111, 6.5, dm, colors.muted);
   draw(invoice.invoice_number, 407, height - 137, 13, syne, colors.paper);
   page.drawRectangle({ x: 407, y: height - 183, width: 98, height: 25, color: colors.acid });
@@ -127,10 +130,14 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
   }
 
   const totalY = Math.max(185, y - 24);
-  draw("Zwischensumme", 360, totalY, 8, dm, colors.muted); drawRight(formatCHF(invoice.subtotal_rappen), right, totalY, 8.5, dm);
-  draw(`MWST ${Number(invoice.tax_rate).toFixed(1)} %`, 360, totalY - 20, 8, dm, colors.muted); drawRight(formatCHF(invoice.tax_rappen), right, totalY - 20, 8.5, dm);
-  line(totalY - 33, 360, right, colors.night, 1);
-  draw("TOTAL", 360, totalY - 56, 10, syne); drawRight(formatCHF(invoice.total_rappen), right, totalY - 58, 13, syne);
+  const totalX = 337;
+  const totalWidth = right - totalX;
+  page.drawRectangle({ x: totalX, y: totalY - 67, width: totalWidth, height: 67, color: colors.totalSage });
+  page.drawRectangle({ x: totalX, y: totalY - 3, width: totalWidth, height: 3, color: colors.acid });
+  draw("Zwischensumme", totalX + 13, totalY - 19, 7.5, dm, colors.muted); drawRight(formatCHF(invoice.subtotal_rappen), right - 13, totalY - 19, 8.5, dm);
+  draw(`MWST ${Number(invoice.tax_rate).toFixed(1)} %`, totalX + 13, totalY - 37, 7.5, dm, colors.muted); drawRight(formatCHF(invoice.tax_rappen), right - 13, totalY - 37, 8.5, dm);
+  line(totalY - 46, totalX + 13, right - 13, colors.night, 0.8);
+  draw("TOTAL", totalX + 13, totalY - 61, 9, syne); drawRight(formatCHF(invoice.total_rappen), right - 13, totalY - 62, 12, syne);
 
   page.drawRectangle({ x: 0, y: 0, width, height: 118, color: colors.sage });
   draw("ZAHLUNGSINFORMATIONEN", margin, 87, 6.5, syne);
