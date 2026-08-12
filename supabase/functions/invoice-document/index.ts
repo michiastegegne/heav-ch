@@ -495,14 +495,14 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
     height: 154,
     color: colors.night,
   });
-  draw("HEAV", margin, height - 46, 19, syne, colors.paper);
+  draw("HEAV.", margin, height - 46, 19, syne, colors.paper);
   drawRight(
     "FILMPRODUKTION · SCHWEIZ",
     right,
     height - 43,
     6.5,
     dm,
-    colors.muted,
+    colors.acid,
   );
   line(height - 62, margin, right, rgb(.2, .2, .19));
   draw("RECHNUNG", margin, height - 106, 34, serif, colors.paper);
@@ -513,7 +513,7 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
     color: rgb(.24, .24, .22),
     thickness: .7,
   });
-  draw("REFERENZNUMMER", 366, height - 88, 5.8, syne, colors.muted);
+  draw("REFERENZNUMMER", 366, height - 88, 5.8, syne, colors.acid);
   const visibleReference = formatDocumentReference(invoice.invoice_number);
   const qrReference = formatPaymentReference(invoice.payment_reference);
   const numberSize = fittedSize(
@@ -529,16 +529,8 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
     height - 110,
     numberSize,
     syne,
-    colors.paper,
+    colors.acid,
   );
-  page.drawRectangle({
-    x: margin,
-    y: height - 142,
-    width: 3,
-    height: 3,
-    color: colors.acid,
-  });
-  draw("MEDIA PRODUCTION", margin + 8, height - 143, 5.8, syne, colors.acid);
 
   const customer = invoice.customers;
   draw("RECHNUNG AN", margin, height - 192, 6, syne, colors.muted);
@@ -621,59 +613,25 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
     line(y, margin, right);
   }
 
-  const paymentSectionTop = 297.64; // 105 mm Swiss payment-part height.
   const totalY = Math.max(invoice.invoice_items.length > 6 ? 86 : 334, y - 19);
-  const totalPanelFits = totalY >= paymentSectionTop + 38;
-  if (totalPanelFits) {
-    // A continuous, pale sage closing band: edge-to-edge until the Swiss QR tear line.
-    page.drawRectangle({
-      x: 0,
-      y: paymentSectionTop,
-      width,
-      height: totalY - paymentSectionTop,
-      color: colors.totalSage,
-    });
-    page.drawRectangle({
-      x: 0,
-      y: totalY - 3,
-      width,
-      height: 3,
-      color: colors.acid,
-    });
-    const totalX = 342;
-    draw("Zwischensumme", totalX, totalY - 18, 7.2, dm, colors.muted);
-    drawRight(formatCHF(invoice.subtotal_rappen), right, totalY - 18, 8, dm);
-    const taxLabel = Number(invoice.tax_rate) > 0
-      ? `MWST ${Number(invoice.tax_rate).toFixed(1)} %`
-      : "Nicht MWST-pflichtig";
-    const taxAmount = Number(invoice.tax_rate) > 0
-      ? formatCHF(invoice.tax_rappen)
-      : "";
-    draw(taxLabel, totalX, totalY - 34, 7.2, dm, colors.muted);
-    drawRight(taxAmount, right, totalY - 34, 8, dm);
-    line(totalY - 43, totalX, right, colors.night, .75);
-    draw("TOTAL", totalX, totalY - 57, 8.5, syne);
-    drawRight(formatCHF(invoice.total_rappen), right, totalY - 58, 11.5, syne);
+  draw("Zwischensumme", 355, totalY, 7.5, dm, colors.muted);
+  drawRight(formatCHF(invoice.subtotal_rappen), right, totalY, 8, dm);
+  if (Number(invoice.tax_rate) > 0) {
+    draw(
+      `MWST ${Number(invoice.tax_rate).toFixed(1)} %`,
+      355,
+      totalY - 17,
+      7.5,
+      dm,
+      colors.muted,
+    );
+    drawRight(formatCHF(invoice.tax_rappen), right, totalY - 17, 8, dm);
   } else {
-    draw("Zwischensumme", 355, totalY, 7.5, dm, colors.muted);
-    drawRight(formatCHF(invoice.subtotal_rappen), right, totalY, 8, dm);
-    if (Number(invoice.tax_rate) > 0) {
-      draw(
-        `MWST ${Number(invoice.tax_rate).toFixed(1)} %`,
-        355,
-        totalY - 17,
-        7.5,
-        dm,
-        colors.muted,
-      );
-      drawRight(formatCHF(invoice.tax_rappen), right, totalY - 17, 8, dm);
-    } else {
-      draw("Nicht MWST-pflichtig", 355, totalY - 17, 7.5, dm, colors.muted);
-    }
-    line(totalY - 28, 355, right, colors.night, 1);
-    draw("TOTAL", 355, totalY - 49, 8.5, syne);
-    drawRight(formatCHF(invoice.total_rappen), right, totalY - 51, 12, syne);
+    draw("Nicht MWST-pflichtig", 355, totalY - 17, 7.5, dm, colors.muted);
   }
+  line(totalY - 28, 355, right, colors.night, 1);
+  draw("TOTAL", 355, totalY - 49, 8.5, syne);
+  drawRight(formatCHF(invoice.total_rappen), right, totalY - 51, 12, syne);
 
   const rawCreditorAddress = splitStreet(settings.address_line1);
   const rawDebtorAddress = splitStreet(customer.address_line1);
