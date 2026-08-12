@@ -1217,8 +1217,7 @@ main {
   justify-content: space-between;
   gap: 2rem;
   align-items: end;
-  padding-bottom: 1.25rem;
-  border-bottom: 1px solid rgba(9, 10, 8, 0.45);
+  padding-bottom: clamp(2.5rem, 5vw, 5rem);
 }
 .client-block-head p {
   margin: 0;
@@ -1229,20 +1228,15 @@ main {
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(2.5rem, 6vw, 7rem) clamp(2rem, 5vw, 6rem);
 }
 .client-logos li {
-  grid-column: span 3;
-  min-height: clamp(8rem, 12vw, 12rem);
+  min-height: clamp(7rem, 10vw, 10rem);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: clamp(1.5rem, 3vw, 2.8rem);
-  border-right: 1px solid rgba(9, 10, 8, 0.2);
-  border-bottom: 1px solid rgba(9, 10, 8, 0.28);
-}
-.client-logos li:nth-child(4n) {
-  border-right: 0;
+  padding: 0;
 }
 .client-logos img {
   display: block;
@@ -1733,16 +1727,12 @@ main {
   }
   .client-logos {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.65rem 1.25rem;
-    padding: 1.4rem 0;
-    border-top: 1px solid rgba(9, 10, 8, 0.22);
-    border-bottom: 1px solid rgba(9, 10, 8, 0.22);
+    gap: 2.25rem 2rem;
+    padding: 0;
   }
   .client-logos li:nth-child(n) {
-    grid-column: span 1;
-    min-height: 7rem;
-    padding: 1rem 0.75rem;
-    border: 0;
+    min-height: 6.5rem;
+    padding: 0;
   }
   .client-logos img {
     max-width: min(100%, calc(var(--client-logo-width, 10.5rem) * 0.88));
