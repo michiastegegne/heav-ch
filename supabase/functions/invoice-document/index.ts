@@ -169,8 +169,11 @@ export function buildInvoiceText(invoice: Invoice, settings: Settings) {
     invoice.customers.contact_name || invoice.customers.company,
     160,
   );
-  const documentReference = formatDocumentReference(invoice.invoice_number);
-  return `Hallo ${greeting}\n\nAnbei findest du die Rechnung ${documentReference} als PDF. Die PDF enthält alle Rechnungsdetails und den Swiss-QR-Zahlteil.\n\nBitte verwende bei der Zahlung die im PDF angegebene QR-Referenz.\n\nFreundliche Grüsse\n${
+  const projectTitle = compactText(invoice.project_title_snapshot, 160);
+  const projectLine = projectTitle
+    ? `Anbei sende ich dir die Rechnung für «${projectTitle}».`
+    : "Anbei sende ich dir die Rechnung als PDF.";
+  return `Hallo ${greeting}\n\n${projectLine}\n\nVielen Dank für den Auftrag und die angenehme Zusammenarbeit.\n\nBei Fragen kannst du dich gerne bei mir melden.\n\nFreundliche Grüsse\n${
     compactText(settings.owner_name, 160)
   }\n${compactText(settings.company_name, 160)}`;
 }

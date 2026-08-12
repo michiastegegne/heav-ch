@@ -116,19 +116,33 @@ Deno.test("buildSwissQrPayload lehnt ungültige IBANs und Beträge ab", () => {
   }
 });
 
-Deno.test("PDF-Nachricht verwendet eine kurze #Dokumentreferenz und bleibt sicher", () => {
+Deno.test("E-Mail-Text nennt das Projekt und bleibt gegen Header-Injection geschützt", () => {
   const invoice = {
     invoice_number: "HEAV-2026-009",
-    customers: { contact_name: "Mira\r\nBcc: fremd@example.com" },
+    project_title_snapshot: "Post Production des Yousty Videos",
+    customers: { contact_name: "Yoyo\r\nBcc: fremd@example.com" },
   };
   const settings = { owner_name: "Michias Tegegne", company_name: "HEAV" };
-  assertEquals(formatDocumentReference("HEAV-2026-009"), "#00009");
-  assertEquals(formatDocumentReference("#01267"), "#01267");
   const text = buildInvoiceText(invoice as never, settings as never);
-  assert(text.includes("#00009"));
-  assert(text.includes("PDF"));
+  assert(text.includes("Hallo Yoyo Bcc: fremd@example.com"));
+  assert(text.includes("Rechnung für «Post Production des Yousty Videos»"));
+  assert(
+    text.includes(
+      "Vielen Dank für den Auftrag und die angenehme Zusammenarbeit.",
+    ),
+  );
+  assert(text.includes("Bei Fragen kannst du dich gerne bei mir melden."));
+  assert(!text.includes("Swiss-QR"));
   assert(!text.includes("\r"));
-  assert(!text.includes("Filmproduktion"));
+});
+
+Deno.test("E-Mail-Text bleibt ohne Projekt klar und professionell", () => {
+  const invoice = { customers: { contact_name: "Yoyo" } };
+  const text = buildInvoiceText(
+    invoice as never,
+    { owner_name: "Michias Tegegne", company_name: "HEAV" } as never,
+  );
+  assert(text.includes("Anbei sende ich dir die Rechnung als PDF."));
 });
 
 Deno.test("PDF-Dateiname verwendet zuerst den Projekt-Titel und sonst den Kunden", () => {
