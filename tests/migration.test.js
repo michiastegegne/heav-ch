@@ -7,6 +7,7 @@ const migrationPath = new URL("../supabase/migrations/20260803_heav_admin.sql", 
 const reliabilityMigrationPath = new URL("../supabase/migrations/20260810_portal_reliability.sql", import.meta.url);
 const shortReferenceMigrationPath = new URL("../supabase/migrations/20260811_short_invoice_reference.sql", import.meta.url);
 const projectSnapshotMigrationPath = new URL("../supabase/migrations/20260812_invoice_project_snapshot.sql", import.meta.url);
+const editableRecordsMigrationPath = new URL("../supabase/migrations/20260812_editable_portal_records.sql", import.meta.url);
 
 async function createMigrationDatabase() {
   const db = new PGlite();
@@ -286,6 +287,36 @@ test("Projekt-Titel wird beim Erstellen als unveränderlicher Rechnungswert gesp
   await db.query(`update public.projects set title = 'Nachträglich geändert' where id = '${project}'`);
   const stored = await db.query(`select project_title_snapshot from public.invoices where id = '${invoiceId}'`);
   assert.equal(stored.rows[0].project_title_snapshot, "Launchfilm Herbst 2026");
+  await db.close();
+});
+
+test("Owner kann Kunden, Projekte, Rechnungspositionen und Status kontrolliert nachträglich bearbeiten", async () => {
+  const db = await createMigrationDatabase();
+  await db.exec(await readFile(reliabilityMigrationPath, "utf8"));
+  await db.exec(await readFile(projectSnapshotMigrationPath, "utf8"));
+  await db.exec(await readFile(editableRecordsMigrationPath, "utf8"));
+  const owner = "10000000-0000-4000-8000-000000000050";
+  const customer = "20000000-0000-4000-8000-000000000050";
+  const project = "30000000-0000-4000-8000-000000000050";
+  await db.exec(`
+    insert into auth.users(id) values ('${owner}');
+    select set_config('request.jwt.claim.sub', '${owner}', false);
+    insert into public.customers(id, owner_id, company, email, address_line1, postal_code, city)
+    values ('${customer}', '${owner}', 'Alt AG', 'alt@test.example', 'Altweg 1', '8000', 'Zürich');
+    insert into public.projects(id, owner_id, customer_id, title)
+    values ('${project}', '${owner}', '${customer}', 'Altprojekt');
+    insert into public.company_settings(owner_id, company_name, owner_name, email, address_line1, postal_code, city, iban, vat_number)
+    values ('${owner}', 'HEAV', 'Michias Tegegne', 'hello@heav.ch', 'Teststrasse 2', '4051', 'Basel', 'CH8200769420675792002', '');
+  `);
+  const created = await db.query(`select * from public.create_invoice('${customer}', '${project}', '2026-08-12', '2026-09-11', 0, '', '[{"description":"Altleistung","quantity":1,"unit_price_rappen":100000}]'::jsonb)`);
+  const invoiceId = created.rows[0].invoice_id;
+  const originalNumber = created.rows[0].invoice_number;
+  await db.query(`select public.update_customer('${customer}', 'Neu AG', 'Nina Neu', 'neu@test.example', '123', 'Neuweg 2', '4000', 'Basel', 'Schweiz')`);
+  await db.query(`select public.update_project('${project}', '${customer}', 'Neuprojekt', 'Aktualisiert', 'active', 200000, '2026-08-01', '2026-09-01')`);
+  await db.query(`select public.update_invoice('${invoiceId}', '${customer}', '${project}', '2026-08-13', '2026-09-12', 'sent', 0, 'Manuell versendet', '[{"description":"Neue Leistung","quantity":2,"unit_price_rappen":75000}]'::jsonb)`);
+  const updated = await db.query(`select invoice_number, status, total_rappen, notes, project_title_snapshot, customer_snapshot->>'company' as customer from public.invoices where id = '${invoiceId}'`);
+  assert.deepEqual(updated.rows[0], { invoice_number: originalNumber, status: 'sent', total_rappen: 150000, notes: 'Manuell versendet', project_title_snapshot: 'Neuprojekt', customer: 'Neu AG' });
+  assert.equal((await db.query(`select count(*)::int as count from public.invoice_items where invoice_id = '${invoiceId}'`)).rows[0].count, 1);
   await db.close();
 });
 

@@ -64,7 +64,9 @@ function createSupabaseAdapter(supabase, session) {
       return joinedData({ customers: customers.data, projects: projects.data, invoices: normalizedInvoices, settings: settings.data || {} });
     },
     async saveCustomer(payload) { const result = await supabase.from("customers").insert({ ...payload, owner_id: ownerId }); fail(result.error); },
+    async updateCustomer(id, payload) { const result = await supabase.rpc("update_customer", { p_customer_id: id, p_company: payload.company, p_contact_name: payload.contact_name, p_email: payload.email, p_phone: payload.phone, p_address_line1: payload.address_line1, p_postal_code: payload.postal_code, p_city: payload.city, p_country: payload.country }); fail(result.error); },
     async saveProject(payload) { const result = await supabase.from("projects").insert({ ...payload, owner_id: ownerId }); fail(result.error); },
+    async updateProject(id, payload) { const result = await supabase.rpc("update_project", { p_project_id: id, p_customer_id: payload.customer_id, p_title: payload.title, p_description: payload.description, p_status: payload.status, p_budget_rappen: payload.budget_rappen, p_start_date: payload.start_date, p_due_date: payload.due_date }); fail(result.error); },
     async saveInvoice(payload) {
       const items = payload.items;
       const result = await supabase.rpc("create_invoice", {
@@ -76,6 +78,10 @@ function createSupabaseAdapter(supabase, session) {
         p_notes: payload.notes,
         p_items: items,
       });
+      fail(result.error);
+    },
+    async updateInvoice(id, payload) {
+      const result = await supabase.rpc("update_invoice", { p_invoice_id: id, p_customer_id: payload.customer_id, p_project_id: payload.project_id, p_issue_date: payload.issue_date, p_due_date: payload.due_date, p_status: payload.status, p_tax_rate: payload.tax_rate, p_notes: payload.notes, p_items: payload.items });
       fail(result.error);
     },
     async deleteRecord(type, id) {
@@ -125,8 +131,8 @@ function toolbar(type, placeholder, filters = []) { return `<div class="toolbar"
 function renderCustomers() {
   const items = filtered(state.data.customers, ["company", "contact_name", "email", "city"]);
   if (!state.data.customers.length) return `<section class="view">${emptyState("Der erste Kontakt.", "Erfasse deinen ersten Kunden und verknüpfe danach Projekte und Rechnungen.", "customer")}</section>`;
-  const rows = items.map((item) => `<tr><td><strong>${esc(item.company)}</strong><small>${esc(item.contact_name)}</small></td><td>${esc(item.email)}</td><td>${esc(item.phone || "–")}</td><td>${esc([item.postal_code,item.city].filter(Boolean).join(" "))}</td><td><button class="danger-button" data-delete-record="customer" data-id="${esc(item.id)}" aria-label="Kunde löschen: ${esc(item.company)}">Löschen</button></td></tr>`).join("");
-  const cards = items.map((item) => `<article class="mobile-card"><div><strong>${esc(item.company)}</strong><small>${esc(item.contact_name)} · ${esc(item.email)}</small><button class="danger-button" data-delete-record="customer" data-id="${esc(item.id)}" aria-label="Kunde löschen: ${esc(item.company)}">Löschen</button></div><span>${esc(item.city || "")}</span></article>`).join("");
+  const rows = items.map((item) => `<tr><td><strong>${esc(item.company)}</strong><small>${esc(item.contact_name)}</small></td><td>${esc(item.email)}</td><td>${esc(item.phone || "–")}</td><td>${esc([item.postal_code,item.city].filter(Boolean).join(" "))}</td><td><button class="text-button" data-edit="customer" data-id="${esc(item.id)}">Bearbeiten</button><button class="danger-button" data-delete-record="customer" data-id="${esc(item.id)}" aria-label="Kunde löschen: ${esc(item.company)}">Löschen</button></td></tr>`).join("");
+  const cards = items.map((item) => `<article class="mobile-card"><div><strong>${esc(item.company)}</strong><small>${esc(item.contact_name)} · ${esc(item.email)}</small><button class="text-button" data-edit="customer" data-id="${esc(item.id)}">Bearbeiten</button><button class="danger-button" data-delete-record="customer" data-id="${esc(item.id)}" aria-label="Kunde löschen: ${esc(item.company)}">Löschen</button></div><span>${esc(item.city || "")}</span></article>`).join("");
   return `<section class="view">${toolbar("customer", "Kunden durchsuchen …")}<table class="data-table"><thead><tr><th>Kunde</th><th>E-Mail</th><th>Telefon</th><th>Ort</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list">${cards}</div></section>`;
 }
 
@@ -134,15 +140,15 @@ function renderProjects() {
   const all = state.data.projects;
   const items = filtered(all.filter((item) => state.filter === "all" || item.status === state.filter), ["title", "description"]);
   if (!all.length) return `<section class="view">${emptyState("From idea to frame.", "Lege das erste Projekt an und halte Status, Kunde und Budget im Blick.", "project")}</section>`;
-  const rows = items.map((item) => `<tr><td><strong>${esc(item.title)}</strong><small>${esc(item.customer?.company || "Ohne Kunde")}</small></td><td><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></td><td>${formatDate(item.due_date)}</td><td>${formatCHF(item.budget_rappen || 0)}</td><td><button class="danger-button" data-delete-record="project" data-id="${esc(item.id)}" aria-label="Projekt löschen: ${esc(item.title)}">Löschen</button></td></tr>`).join("");
-  const cards = items.map((item) => `<article class="mobile-card"><div><strong>${esc(item.title)}</strong><small>${esc(item.customer?.company || "Ohne Kunde")} · ${formatDate(item.due_date)}</small><button class="danger-button" data-delete-record="project" data-id="${esc(item.id)}" aria-label="Projekt löschen: ${esc(item.title)}">Löschen</button></div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></article>`).join("");
+  const rows = items.map((item) => `<tr><td><strong>${esc(item.title)}</strong><small>${esc(item.customer?.company || "Ohne Kunde")}</small></td><td><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></td><td>${formatDate(item.due_date)}</td><td>${formatCHF(item.budget_rappen || 0)}</td><td><button class="text-button" data-edit="project" data-id="${esc(item.id)}">Bearbeiten</button><button class="danger-button" data-delete-record="project" data-id="${esc(item.id)}" aria-label="Projekt löschen: ${esc(item.title)}">Löschen</button></td></tr>`).join("");
+  const cards = items.map((item) => `<article class="mobile-card"><div><strong>${esc(item.title)}</strong><small>${esc(item.customer?.company || "Ohne Kunde")} · ${formatDate(item.due_date)}</small><button class="text-button" data-edit="project" data-id="${esc(item.id)}">Bearbeiten</button><button class="danger-button" data-delete-record="project" data-id="${esc(item.id)}" aria-label="Projekt löschen: ${esc(item.title)}">Löschen</button></div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></article>`).join("");
   return `<section class="view">${toolbar("project", "Projekte durchsuchen …", [["all","Alle"],["planning","Planung"],["active","Aktiv"],["completed","Abgeschlossen"]])}<table class="data-table"><thead><tr><th>Projekt</th><th>Status</th><th>Deadline</th><th>Budget</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list">${cards}</div></section>`;
 }
 
 function invoiceActions(invoice) {
   if (invoice.is_legacy) return '<span class="muted-action">Archiv · kein neues PDF/Versand</span>';
-  if (invoice.status === "cancelled") return '<span class="muted-action">Keine Zahlungsaktion</span>';
-  return `<div class="table-actions"><button class="text-button" data-invoice-action="download" data-id="${esc(invoice.id)}">PDF</button>${["draft","sent","overdue"].includes(invoice.status) ? `<button class="text-button" data-invoice-action="send" data-id="${esc(invoice.id)}">Senden</button>` : ""}${["sent","overdue"].includes(invoice.status) ? `<button class="text-button" data-invoice-action="mark_paid" data-id="${esc(invoice.id)}">Bezahlt</button><button class="danger-button" data-invoice-action="cancel" data-id="${esc(invoice.id)}">Stornieren</button>` : ""}${invoice.status === "draft" ? `<button class="danger-button" data-delete-record="invoice" data-id="${esc(invoice.id)}" aria-label="Rechnung löschen">Löschen</button>` : ""}</div>`;
+  if (invoice.status === "cancelled") return `<div class="table-actions"><button class="text-button" data-edit="invoice" data-id="${esc(invoice.id)}">Bearbeiten</button><span class="muted-action">Keine Zahlungsaktion</span></div>`;
+  return `<div class="table-actions"><button class="text-button" data-edit="invoice" data-id="${esc(invoice.id)}">Bearbeiten</button><button class="text-button" data-invoice-action="download" data-id="${esc(invoice.id)}">PDF</button>${["draft","sent","overdue"].includes(invoice.status) ? `<button class="text-button" data-invoice-action="send" data-id="${esc(invoice.id)}">Senden</button>` : ""}${["sent","overdue"].includes(invoice.status) ? `<button class="text-button" data-invoice-action="mark_paid" data-id="${esc(invoice.id)}">Bezahlt</button><button class="danger-button" data-invoice-action="cancel" data-id="${esc(invoice.id)}">Stornieren</button>` : ""}${invoice.status === "draft" ? `<button class="danger-button" data-delete-record="invoice" data-id="${esc(invoice.id)}" aria-label="Rechnung löschen">Löschen</button>` : ""}</div>`;
 }
 function renderInvoices() {
   const all = state.data.invoices;
@@ -166,37 +172,40 @@ function setView(view) { state.view = view; state.query = ""; state.filter = "al
 function customerOptions(selected = "") { return state.data.customers.map((item) => `<option value="${esc(item.id)}" ${item.id === selected ? "selected" : ""}>${esc(item.company)}</option>`).join(""); }
 function projectOptions(customerId = "", selected = "") { return state.data.projects.filter((item) => item.customer_id === customerId).map((item) => `<option value="${esc(item.id)}" ${item.id === selected ? "selected" : ""}>${esc(item.title)}</option>`).join(""); }
 function field(label, name, type = "text", value = "", wide = false, extra = "") { return `<label class="form-field ${wide ? "wide" : ""}"><span>${esc(label)}</span><input type="${type}" name="${name}" value="${esc(value)}" ${extra}></label>`; }
-function openEditor(type) {
+function openEditor(type, existing = null) {
   formError.textContent = "";
   dialogForm.dataset.type = type;
-  dialogKicker.textContent = "NEU";
+  dialogForm.dataset.editId = existing?.id || "";
+  dialogKicker.textContent = existing ? "BEARBEITEN" : "NEU";
   if (type === "customer") {
-    dialogTitle.textContent = "Kunde erfassen";
-    dialogBody.innerHTML = `<div class="form-grid">${field("Firma *","company","text","",false,"required")}${field("Kontaktperson","contact_name")}${field("E-Mail *","email","email","",false,"required")}${field("Telefon","phone","tel")}${field("Strasse / Nr. *","address_line1","text","",true,"required")}${field("PLZ *","postal_code","text","",false,"required")}${field("Ort *","city","text","",false,"required")}${field("Land","country","text","Schweiz",true)}</div>`;
+    const item = existing || {};
+    dialogTitle.textContent = existing ? "Kunde bearbeiten" : "Kunde erfassen";
+    dialogBody.innerHTML = `<div class="form-grid">${field("Firma *","company","text",item.company || "",false,"required")}${field("Kontaktperson","contact_name","text",item.contact_name || "")}${field("E-Mail *","email","email",item.email || "",false,"required")}${field("Telefon","phone","tel",item.phone || "")}${field("Strasse / Nr. *","address_line1","text",item.address_line1 || "",true,"required")}${field("PLZ *","postal_code","text",item.postal_code || "",false,"required")}${field("Ort *","city","text",item.city || "",false,"required")}${field("Land","country","text",item.country || "Schweiz",true)}</div>`;
   } else if (type === "project") {
     if (!state.data.customers.length) { showToast("Bitte zuerst einen Kunden erfassen.", "error"); setView("customers"); return; }
-    dialogTitle.textContent = "Projekt anlegen";
-    dialogBody.innerHTML = `<div class="form-grid"><label class="form-field wide"><span>Kunde *</span><select name="customer_id" required><option value="">Bitte wählen</option>${customerOptions()}</select></label>${field("Projekttitel *","title","text","",true,"required")}<label class="form-field"><span>Status</span><select name="status"><option value="planning">Planung</option><option value="active">Aktiv</option><option value="completed">Abgeschlossen</option><option value="on_hold">Pausiert</option></select></label>${field("Budget CHF","budget","number","","",'min="0" step="0.05"')}${field("Start","start_date","date",today())}${field("Deadline","due_date","date")}<label class="form-field wide"><span>Beschreibung</span><textarea name="description"></textarea></label></div>`;
+    const item = existing || {};
+    dialogTitle.textContent = existing ? "Projekt bearbeiten" : "Projekt anlegen";
+    dialogBody.innerHTML = `<div class="form-grid"><label class="form-field wide"><span>Kunde *</span><select name="customer_id" required><option value="">Bitte wählen</option>${customerOptions(item.customer_id)}</select></label>${field("Projekttitel *","title","text",item.title || "",true,"required")}<label class="form-field"><span>Status</span><select name="status">${[["planning","Planung"],["active","Aktiv"],["completed","Abgeschlossen"],["on_hold","Pausiert"]].map(([v,l]) => `<option value="${v}" ${item.status === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>${field("Budget CHF","budget","number",item.budget_rappen != null ? item.budget_rappen / 100 : "",false,'min="0" step="0.05"')}${field("Start","start_date","date",item.start_date || "")}${field("Deadline","due_date","date",item.due_date || "")}<label class="form-field wide"><span>Beschreibung</span><textarea name="description">${esc(item.description || "")}</textarea></label></div>`;
   } else if (type === "invoice") {
     if (!state.data.customers.length) { showToast("Bitte zuerst einen Kunden erfassen.", "error"); setView("customers"); return; }
-    dialogTitle.textContent = "Rechnung erstellen";
+    const item = existing || {};
+    dialogTitle.textContent = existing ? `Rechnung bearbeiten · ${item.invoice_number}` : "Rechnung erstellen";
     const vatRegistered = validVatNumber(state.data.settings?.vat_number);
-    dialogBody.innerHTML = `<div class="form-grid"><label class="form-field"><span>Kunde *</span><select name="customer_id" required><option value="">Bitte wählen</option>${customerOptions()}</select></label><label class="form-field"><span>Projekt</span><select name="project_id"><option value="">Kein Projekt</option></select></label><div class="sequence-note wide"><strong>Automatische Referenz</strong><span>Die Zahlungsreferenz wird beim Speichern fortlaufend und buchhaltungssicher vergeben.</span></div>${field(vatRegistered ? "MWST %" : "MWST % · nicht registriert","tax_rate","number",vatRegistered ? (state.data.settings?.default_tax_rate ?? 0) : 0,false,vatRegistered ? 'min="0" step="0.1"' : 'readonly aria-readonly="true"')}${field("Rechnungsdatum *","issue_date","date",today(),false,"required")}${field("Fällig am *","due_date","date",plusDays(today(),state.data.settings?.default_due_days || 30),false,"required")}<div class="invoice-items"><span class="items-label">Positionen *</span><div id="invoice-item-list"></div><button class="secondary-button" type="button" data-add-item>Position hinzufügen</button></div><label class="form-field wide"><span>Hinweis auf Rechnung</span><textarea name="notes" placeholder="Optional"></textarea></label><div class="invoice-total" id="invoice-total">TOTAL&nbsp;&nbsp; CHF 0.00</div></div>`;
-    addInvoiceItem();
+    const customerId = item.customer_id || "";
+    dialogBody.innerHTML = `<div class="form-grid"><label class="form-field"><span>Kunde *</span><select name="customer_id" required><option value="">Bitte wählen</option>${customerOptions(customerId)}</select></label><label class="form-field"><span>Projekt</span><select name="project_id"><option value="">Kein Projekt</option>${projectOptions(customerId,item.project_id || "")}</select></label>${existing ? `<label class="form-field wide"><span>Status · auch für manuell versandte PDFs</span><select name="status">${[["draft","Entwurf"],["sent","Versendet"],["paid","Bezahlt"],["overdue","Überfällig"],["cancelled","Storniert"]].map(([v,l]) => `<option value="${v}" ${item.status === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>` : ""}${!existing ? `<div class="sequence-note wide"><strong>Automatische Referenz</strong><span>Die Zahlungsreferenz wird beim Speichern fortlaufend und buchhaltungssicher vergeben.</span></div>` : ""}${field(vatRegistered ? "MWST %" : "MWST % · nicht registriert","tax_rate","number",item.tax_rate ?? (vatRegistered ? (state.data.settings?.default_tax_rate ?? 0) : 0),false,vatRegistered ? 'min="0" step="0.1"' : 'readonly aria-readonly="true"')}${field("Rechnungsdatum *","issue_date","date",item.issue_date || today(),false,"required")}${field("Fällig am *","due_date","date",item.due_date || plusDays(today(),state.data.settings?.default_due_days || 30),false,"required")}<div class="invoice-items"><span class="items-label">Positionen *</span><div id="invoice-item-list"></div><button class="secondary-button" type="button" data-add-item>Position hinzufügen</button></div><label class="form-field wide"><span>Hinweis auf Rechnung</span><textarea name="notes">${esc(item.notes || "")}</textarea></label><div class="invoice-total" id="invoice-total">TOTAL&nbsp;&nbsp; CHF 0.00</div></div>`;
+    (existing ? item.items : [null]).forEach((invoiceItem) => addInvoiceItem(invoiceItem));
   } else {
     const settings = state.data.settings || {};
-    dialogKicker.textContent = "EINSTELLUNGEN";
-    dialogTitle.textContent = "Rechnungsabsender";
+    dialogKicker.textContent = "EINSTELLUNGEN"; dialogTitle.textContent = "Rechnungsabsender";
     dialogBody.innerHTML = `<div class="form-grid">${field("Firma *","company_name","text",settings.company_name || "HEAV",false,"required")}${field("Inhaber *","owner_name","text",settings.owner_name || "Michias Tegegne",false,"required")}${field("E-Mail *","email","email",settings.email || "hello@heav.ch",false,"required")}${field("Telefon","phone","tel",settings.phone || "")}${field("Website","website_url","url",settings.website_url || "https://heav.ch")}${field("Instagram URL","instagram_url","url",settings.instagram_url || "")}${field("Strasse / Nr. *","address_line1","text",settings.address_line1 || "",true,"required")}${field("PLZ *","postal_code","text",settings.postal_code || "",false,"required")}${field("Ort *","city","text",settings.city || "",false,"required")}${field("IBAN *","iban","text",settings.iban || "",true,"required")}${field("MWST-Nr. · leer lassen, wenn nicht registriert","vat_number","text",settings.vat_number || "",true)}${field("Standard-MWST %","default_tax_rate","number",settings.vat_number ? (settings.default_tax_rate ?? 0) : 0,false,'min="0" step="0.1"')}${field("Standard-Zahlungsfrist (Tage)","default_due_days","number",settings.default_due_days || 30,false,'min="1" step="1"')}</div>`;
   }
   dialog.showModal();
 }
-
-function addInvoiceItem() {
+function addInvoiceItem(item = null) {
   const list = document.querySelector("#invoice-item-list");
   const row = document.createElement("div");
   row.className = "invoice-item";
-  row.innerHTML = `<input name="item_description" placeholder="Leistung" aria-label="Leistung" required><input name="item_quantity" type="number" value="1" min="0.01" step="0.01" aria-label="Menge" required><input name="item_price" type="number" min="0" step="0.05" placeholder="CHF" aria-label="Einzelpreis in CHF" required><button class="remove-item" type="button" data-remove-item aria-label="Position entfernen">×</button>`;
+  row.innerHTML = `<input name="item_description" placeholder="Leistung" aria-label="Leistung" value="${esc(item?.description || "")}" required><input name="item_quantity" type="number" value="${item?.quantity ?? 1}" min="0.01" step="0.01" aria-label="Menge" required><input name="item_price" type="number" min="0" step="0.05" placeholder="CHF" value="${item ? item.unit_price_rappen / 100 : ""}" aria-label="Einzelpreis in CHF" required><button class="remove-item" type="button" data-remove-item aria-label="Position entfernen">×</button>`;
   list.append(row);
   updateInvoiceTotal();
 }
@@ -211,14 +220,14 @@ function updateInvoiceTotal() {
 async function saveEditor(type) {
   if (!dialogForm.reportValidity()) return false;
   const data = Object.fromEntries(new FormData(dialogForm));
-  if (type === "customer") await adapter.saveCustomer({ company: data.company.trim(), contact_name: data.contact_name.trim(), email: data.email.trim(), phone: data.phone.trim(), address_line1: data.address_line1.trim(), postal_code: data.postal_code.trim(), city: data.city.trim(), country: data.country.trim() || "Schweiz" });
-  if (type === "project") await adapter.saveProject({ customer_id: data.customer_id, title: data.title.trim(), status: data.status, budget_rappen: Math.round(Number(data.budget || 0) * 100), start_date: data.start_date || null, due_date: data.due_date || null, description: data.description.trim() });
+  if (type === "customer") { const payload = { company: data.company.trim(), contact_name: data.contact_name.trim(), email: data.email.trim(), phone: data.phone.trim(), address_line1: data.address_line1.trim(), postal_code: data.postal_code.trim(), city: data.city.trim(), country: data.country.trim() || "Schweiz" }; if (dialogForm.dataset.editId) await adapter.updateCustomer(dialogForm.dataset.editId, payload); else await adapter.saveCustomer(payload); }
+  if (type === "project") { const payload = { customer_id: data.customer_id, title: data.title.trim(), status: data.status, budget_rappen: Math.round(Number(data.budget || 0) * 100), start_date: data.start_date || null, due_date: data.due_date || null, description: data.description.trim() }; if (dialogForm.dataset.editId) await adapter.updateProject(dialogForm.dataset.editId, payload); else await adapter.saveProject(payload); }
   if (type === "invoice") {
     const rows = [...document.querySelectorAll(".invoice-item")];
     const items = rows.map((row) => ({ description: row.querySelector('[name="item_description"]').value.trim(), quantity: Number(row.querySelector('[name="item_quantity"]').value), unit_price_rappen: Math.round(Number(row.querySelector('[name="item_price"]').value) * 100) }));
     const payload = { customerId: data.customer_id, issueDate: data.issue_date, dueDate: data.due_date, items: items.map((item) => ({ description: item.description, quantity: item.quantity, unitPrice: item.unit_price_rappen / 100 })) };
     const errors = validateInvoice(payload); if (Object.keys(errors).length) { formError.textContent = Object.values(errors)[0]; return false; }
-    await adapter.saveInvoice({ customer_id: data.customer_id, project_id: data.project_id || null, issue_date: data.issue_date, due_date: data.due_date, tax_rate: Number(data.tax_rate || 0), notes: data.notes.trim(), items });
+    const invoicePayload = { customer_id: data.customer_id, project_id: data.project_id || null, issue_date: data.issue_date, due_date: data.due_date, status: data.status || "draft", tax_rate: Number(data.tax_rate || 0), notes: data.notes.trim(), items }; if (dialogForm.dataset.editId) await adapter.updateInvoice(dialogForm.dataset.editId, invoicePayload); else await adapter.saveInvoice(invoicePayload);
   }
   if (type === "settings") {
     const vatNumber = normalizeVatNumber(data.vat_number);
@@ -271,6 +280,7 @@ content.addEventListener("click", (event) => {
   const create = event.target.closest("[data-create]"); if (create) openEditor(create.dataset.create);
   const view = event.target.closest("[data-view]"); if (view) setView(view.dataset.view);
   const filter = event.target.closest("[data-filter]"); if (filter) { state.filter = filter.dataset.filter; render(); }
+  const edit = event.target.closest("[data-edit]"); if (edit) { const collections = { customer: state.data.customers, project: state.data.projects, invoice: state.data.invoices }; openEditor(edit.dataset.edit, collections[edit.dataset.edit].find((item) => item.id === edit.dataset.id)); }
   const action = event.target.closest("[data-invoice-action]"); if (action) invoiceAction(action.dataset.id, action.dataset.invoiceAction, action);
   const remove = event.target.closest("[data-delete-record]"); if (remove) deleteRecord(remove.dataset.deleteRecord, remove.dataset.id, remove);
 });
