@@ -7,7 +7,7 @@ const migrationPath = new URL("../supabase/migrations/20260803_heav_admin.sql", 
 const reliabilityMigrationPath = new URL("../supabase/migrations/20260810_portal_reliability.sql", import.meta.url);
 const shortReferenceMigrationPath = new URL("../supabase/migrations/20260811_short_invoice_reference.sql", import.meta.url);
 const projectSnapshotMigrationPath = new URL("../supabase/migrations/20260812_invoice_project_snapshot.sql", import.meta.url);
-const editableRecordsMigrationPath = new URL("../supabase/migrations/20260812_editable_portal_records.sql", import.meta.url);
+const editableRecordsMigrationPath = new URL("../supabase/migrations/20260813_editable_portal_records.sql", import.meta.url);
 
 async function createMigrationDatabase() {
   const db = new PGlite();
