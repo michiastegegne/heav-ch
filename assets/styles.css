@@ -1165,11 +1165,11 @@ main {
 .selected-photography-intro h2 { margin: 1.25rem 0 0; font: 500 clamp(3.5rem, 7vw, 8rem)/.86 "Syne"; letter-spacing: -.065em; }
 .selected-photography-intro h2 em { font-family: "Instrument Serif", serif; font-weight: 400; color: var(--acid); }
 .selected-photography-intro p { max-width: 30rem; margin: 0; color: #c7cbc1; font-size: clamp(1rem, 1.4vw, 1.25rem); line-height: 1.65; }
-.selected-photography-gallery { padding: 0 var(--gutter) clamp(5rem, 10vw, 10rem); background: #171916; }
+.selected-photography-gallery { container-type: inline-size; padding: 0 var(--gutter) clamp(5rem, 10vw, 10rem); background: #171916; }
 .selected-photography-grid { display: grid; gap: 4px; }
-.selected-photography-row { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 4px; height: clamp(15rem, 24vw, 26rem); }
-.selected-photography-row figure { min-width: 0; height: 100%; margin: 0; overflow: hidden; background: #10110e; }
-.selected-photography-row img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.selected-photography-row { display: flex; gap: 4px; height: calc((100cqw - 8px) / var(--row-sum)); align-items: stretch; }
+.selected-photography-row figure { flex: 0 0 auto; width: auto; min-width: 0; height: 100%; aspect-ratio: var(--ratio); margin: 0; overflow: hidden; background: #10110e; }
+.selected-photography-row img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .portfolio-panel {
   display: grid;
   grid-template-columns: 1fr 3fr;
@@ -1828,8 +1828,8 @@ main {
   .home-photography-promo .button-link { width: 100%; }
   .selected-photography-intro { grid-template-columns: 1fr; gap: 1.5rem; padding-top: 4.5rem; padding-bottom: 2rem; }
   .selected-photography-grid { gap: 2px; }
-  .selected-photography-row { grid-template-columns: 2fr 1fr 1fr; gap: 2px; height: clamp(9rem, 38vw, 12rem); }
-  .selected-photography-row figure { height: 100%; }
+  .selected-photography-row { display: flex; gap: 2px; height: calc((100cqw - 4px) / var(--row-sum)); }
+  .selected-photography-row figure { flex: 0 0 auto; height: 100%; }
   .instagram-profile-banner { grid-template-columns: auto minmax(0, 1fr); gap: 1rem; }
   .instagram-profile-copy strong { flex-wrap: nowrap; white-space: nowrap; font-size: clamp(.76rem, 3.45vw, .9rem); letter-spacing: -.025em; gap: .28rem; }
   .instagram-verified { width: 1em; height: 1em; flex-basis: 1em; }
