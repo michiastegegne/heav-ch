@@ -881,8 +881,6 @@ main {
 .instagram-profile-stats { display: flex; flex-wrap: wrap; gap: clamp(.75rem, 2vw, 1.5rem); color: #b9bdb5; font-size: .88rem; }
 .instagram-profile-stats span { display: grid; gap: .1rem; white-space: nowrap; }
 .instagram-profile-stats strong { color: var(--paper); font-size: 1.06rem; }
-.instagram-profile-live { flex-basis: 100%; color: var(--acid); font-size: .62rem; letter-spacing: .12em; text-transform: uppercase; }
-.instagram-profile-stats[aria-busy="true"] .instagram-profile-live { color: #b9bdb5; }
 .instagram-profile-open { display: inline-flex; align-items: center; justify-content: center; gap: .6rem; min-height: 2.75rem; padding: .7rem 1rem; border: 1px solid rgba(239, 242, 232, .3); color: var(--paper); font-size: .78rem; white-space: nowrap; }
 .instagram-profile-open .icon { color: var(--acid); }
 .stills-gallery-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(1rem, 2vw, 2rem); }

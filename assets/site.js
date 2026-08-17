@@ -86,44 +86,6 @@
     (element) => (element.textContent = new Date().getFullYear()),
   );
 
-  const instagramStats = $("[data-instagram-stats]");
-  if (instagramStats) {
-    const endpoint = instagramStats.dataset.instagramStatsUrl;
-    const liveStatus = $("[data-instagram-live]", instagramStats);
-    const setStat = (name, value) => {
-      const field = $(`[data-instagram-stat="${name}"]`, instagramStats);
-      if (field) field.textContent = new Intl.NumberFormat("en-US").format(value);
-    };
-
-    if (endpoint) {
-      const url = new URL(endpoint, location.href);
-      if (url.origin === location.origin) {
-        url.searchParams.set("v", String(Math.floor(Date.now() / 300000)));
-      }
-      fetch(url, { headers: { Accept: "application/json" } })
-        .then(async (response) => {
-          if (!response.ok) throw new Error(`Instagram stats: ${response.status}`);
-          return response.json();
-        })
-        .then((stats) => {
-          for (const name of ["followers", "posts", "following"]) {
-            if (!Number.isSafeInteger(stats[name]) || stats[name] < 0) {
-              throw new Error(`Invalid Instagram ${name} statistic`);
-            }
-            setStat(name, stats[name]);
-          }
-          instagramStats.setAttribute("aria-busy", "false");
-          if (liveStatus) liveStatus.textContent = "Auto-updated from Instagram";
-        })
-        .catch(() => {
-          instagramStats.setAttribute("aria-busy", "false");
-          if (liveStatus) {
-            liveStatus.textContent = "Instagram update temporarily unavailable";
-          }
-        });
-    }
-  }
-
   const formSuccess = $("[data-form-success]");
   if (
     formSuccess &&
