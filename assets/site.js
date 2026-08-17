@@ -66,17 +66,13 @@
     }
   });
 
+  let headerIsScrolled;
   const updateHeader = () => {
     if (!header) return;
-    header.classList.toggle("scrolled", scrollY > 24);
-    const scrollRange = Math.max(
-      1,
-      document.documentElement.scrollHeight - innerHeight,
-    );
-    header.style.setProperty(
-      "--scroll-progress",
-      Math.min(1, Math.max(0, scrollY / scrollRange)).toFixed(4),
-    );
+    const nextState = scrollY > 24;
+    if (nextState === headerIsScrolled) return;
+    headerIsScrolled = nextState;
+    header.classList.toggle("scrolled", nextState);
   };
   addEventListener("scroll", updateHeader, { passive: true });
   addEventListener("resize", updateHeader);
@@ -168,63 +164,10 @@
     });
   }
 
-  const enableGrain = () => document.body.classList.add("grain-ready");
-  const scheduleGrain = () => {
-    if ("requestIdleCallback" in window) {
-      requestIdleCallback(enableGrain, { timeout: 1400 });
-    } else {
-      setTimeout(enableGrain, 700);
-    }
-  };
-  if (document.readyState === "complete") {
-    scheduleGrain();
-  } else {
-    addEventListener("load", scheduleGrain, { once: true });
-  }
-
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const precisePointer = matchMedia(
     "(hover: hover) and (pointer: fine)",
   ).matches;
-
-  if (!reducedMotion && precisePointer && "IntersectionObserver" in window) {
-    const motionTargets = $$(
-      "main .section-head, main .section-copy, main .link-row, main .split > *, main .work-feature > *, main .meta-item, main .step, main .prose > h2, main .prose > p, main .cta-panel > *",
-    );
-    const motionObserver = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return;
-          const element = entry.target;
-          const siblings = motionTargets.filter(
-            (candidate) => candidate.parentElement === element.parentElement,
-          );
-          const delay = Math.min(
-            Math.max(0, siblings.indexOf(element)) * 45,
-            135,
-          );
-          const animation = element.animate(
-            [
-              { opacity: 0.72, transform: "translate3d(0, 1rem, 0)" },
-              { opacity: 1, transform: "translate3d(0, 0, 0)" },
-            ],
-            {
-              duration: 620,
-              delay,
-              easing: "cubic-bezier(0.22, 1, 0.36, 1)",
-            },
-          );
-          animation.addEventListener("finish", () => animation.cancel(), {
-            once: true,
-          });
-          element.classList.add("motion-entered");
-          motionObserver.unobserve(element);
-        });
-      },
-      { threshold: 0.12, rootMargin: "0px 0px -7% 0px" },
-    );
-    motionTargets.forEach((element) => motionObserver.observe(element));
-  }
 
   if (!reducedMotion && precisePointer) {
     $$(".hero-art, .work-feature-art").forEach((surface) => {

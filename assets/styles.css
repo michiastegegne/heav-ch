@@ -44,7 +44,6 @@
   box-sizing: border-box;
 }
 html {
-  scroll-behavior: smooth;
   background: var(--night);
 }
 body {
@@ -154,20 +153,7 @@ svg {
   top: 1rem;
 }
 .noise {
-  position: fixed;
-  inset: 0;
-  z-index: 90;
-  pointer-events: none;
-  opacity: 0;
-  background-position: 0 0;
-  background-size: 288px 288px;
-  background-repeat: repeat;
-  mix-blend-mode: soft-light;
-  transition: opacity 1s ease;
-}
-body.grain-ready .noise {
-  opacity: 0.3;
-  background-image: url("/assets/grain.webp");
+  display: none;
 }
 .serif {
   font-family: "Instrument Serif", Georgia, serif;
@@ -192,7 +178,6 @@ body.grain-ready .noise {
   background: currentColor;
 }
 .site-header {
-  --scroll-progress: 0;
   position: fixed;
   inset: 0 0 auto;
   z-index: 100;
@@ -206,26 +191,11 @@ body.grain-ready .noise {
     rgba(9, 10, 8, 0.92),
     rgba(9, 10, 8, 0)
   );
-  transition:
-    background 0.3s,
-    transform 0.3s;
+  transition: background 0.18s ease;
 }
 .site-header.scrolled {
-  background: rgba(9, 10, 8, 0.88);
-  backdrop-filter: blur(16px);
+  background: rgba(9, 10, 8, 0.97);
   border-bottom: 1px solid var(--line);
-}
-.site-header:after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -1px;
-  height: 1px;
-  background: var(--acid);
-  transform: scaleX(var(--scroll-progress));
-  transform-origin: left;
-  pointer-events: none;
 }
 .brand {
   font:
@@ -492,7 +462,6 @@ main {
     ),
     radial-gradient(circle at 60% 45%, #393a2d, transparent 35%),
     linear-gradient(150deg, #111 15%, #2e3325 52%, #090909);
-  animation: drift 14s var(--ease) infinite alternate;
 }
 .hero-art:after {
   content: "HEAV / FRAME 001";
@@ -519,7 +488,6 @@ main {
   background: var(--acid);
   margin-right: 0.55rem;
   box-shadow: 0 0 0 0 rgba(215, 255, 56, 0.6);
-  animation: pulse 2s infinite;
 }
 .round-arrow {
   width: 3rem;
@@ -1584,16 +1552,6 @@ main {
   opacity: 1;
   transform: none;
 }
-@keyframes drift {
-  to {
-    transform: scale(1.1) translate3d(-1.5%, 1.5%, 0);
-  }
-}
-@keyframes pulse {
-  70% {
-    box-shadow: 0 0 0 10px transparent;
-  }
-}
 @keyframes page-in {
   from {
     opacity: 0;
@@ -1679,12 +1637,6 @@ main {
 @media (max-width: 800px) {
   :root {
     --header: 4.5rem;
-  }
-  .noise {
-    display: block;
-  }
-  body.grain-ready .noise {
-    opacity: 0.2;
   }
   .site-header {
     grid-template-columns: 1fr auto;
