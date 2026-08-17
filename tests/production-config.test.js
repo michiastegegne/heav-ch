@@ -5,7 +5,7 @@ import { HEAV_ADMIN_CONFIG, isBackendConfigured } from "../admin/config.js";
 
 const loginSource = await readFile(new URL("../login/assets/login.js", import.meta.url), "utf8");
 const adminSource = await readFile(new URL("../admin/assets/app.js", import.meta.url), "utf8");
-const contactSource = await readFile(new URL("../kontakt/index.html", import.meta.url), "utf8");
+const contactSource = await readFile(new URL("../contact/index.html", import.meta.url), "utf8");
 const adminHtml = await readFile(new URL("../admin/index.html", import.meta.url), "utf8");
 const invoiceDocumentSource = await readFile(new URL("../supabase/functions/invoice-document/index.ts", import.meta.url), "utf8");
 

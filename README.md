@@ -5,11 +5,11 @@ Official multi-page website for [heav.ch](https://heav.ch), including the privat
 ## Public structure
 
 - `/` — Home
-- `/leistungen/` — Film production services
-- `/arbeiten/` — Selected work and visual studies
-- `/ueber-uns/` — About HEAV
+- `/services/` — Film production services
+- `/work/` — Selected work and visual studies
+- `/about/` — About HEAV
 - `/michias-tegegne/` — Founder and owner profile
-- `/kontakt/` — Contact
+- `/contact/` — Contact
 
 ## HEAV Studio
 
