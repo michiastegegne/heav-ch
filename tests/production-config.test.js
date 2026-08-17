@@ -26,7 +26,7 @@ test("Kontaktformular bestätigt Anfragen automatisch an die geprüfte Absendera
   assert.match(contactSource, /action="https:\/\/formsubmit\.co\/hello@heav\.ch"/);
   assert.match(contactSource, /name="email"/);
   assert.match(contactSource, /name="_autoresponse"/);
-  assert.match(contactSource, /Danke für deine Anfrage an HEAV/);
+  assert.match(contactSource, /Thank you for contacting HEAV/);
   assert.doesNotMatch(contactSource, /name="_captcha"\s+value="false"/);
 });
 

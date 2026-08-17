@@ -5,7 +5,7 @@ const message = document.querySelector("#login-message");
 const button = form.querySelector("button");
 
 if (!isBackendConfigured()) {
-  message.textContent = "Der sichere Backend-Zugang wird gerade eingerichtet.";
+  message.textContent = "Secure backend access is currently being configured.";
   form.querySelectorAll('input, button[type="submit"]').forEach((element) => {
     element.disabled = true;
   });
@@ -36,11 +36,11 @@ if (!isBackendConfigured()) {
       },
     });
     if (error) {
-      message.textContent = "Anmeldung konnte nicht gestartet werden. Bitte später erneut versuchen.";
+      message.textContent = "Sign-in could not be started. Please try again later.";
       button.disabled = false;
       return;
     }
     message.classList.add("success");
-    message.textContent = "Anmeldelink wurde gesendet. Bitte E-Mail öffnen.";
+    message.textContent = "Sign-in link sent. Please check your email.";
   });
 }

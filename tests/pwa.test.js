@@ -15,7 +15,7 @@ test("Login bietet ausschliesslich den authentifizierten Zugang", async () => {
   assert.doesNotMatch(html, /rel="manifest"|apple-touch-icon|assets\/pwa\.js/i);
   assert.doesNotMatch(css, /preview-link|install-trigger|install-dialog|install-panel|native-install/);
   assert.match(html, /id="login-form"/);
-  assert.match(html, /Anmeldelink senden/);
+  assert.match(html, /Send sign-in link/);
 });
 
 test("Dokumentation beschreibt ausschliesslich den privaten Zugang", async () => {

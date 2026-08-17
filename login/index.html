@@ -1,37 +1,36 @@
 <!doctype html>
-<html lang="de-CH">
+<html lang="en-CH">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
     <meta name="robots" content="noindex,nofollow,noarchive" />
     <meta name="theme-color" content="#090a08" />
 
-    <title>Login – HEAV Studio</title>
+    <title>Sign in – HEAV Studio</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 
     <link rel="stylesheet" href="/login/assets/login.css" />
   </head>
   <body>
     <main class="login-shell">
-      <a class="brand" href="/" aria-label="Zur HEAV Website">HEAV</a>
+      <a class="brand" href="/" aria-label="Go to the HEAV website">HEAV</a>
       <section class="login-card" aria-labelledby="login-title">
         <div class="login-copy">
-          <span class="eyebrow">HEAV STUDIO · INTERN</span>
+          <span class="eyebrow">HEAV STUDIO · INTERNAL</span>
           <h1 id="login-title">Welcome<br /><em>back.</em></h1>
-          <p>Kunden, Projekte und Rechnungen an einem Ort.</p>
+          <p>Clients, projects and invoices in one place.</p>
         </div>
         <form id="login-form" novalidate>
           <label>
-            <span>E-Mail</span>
+            <span>Email</span>
             <input name="email" type="email" autocomplete="username" required />
           </label>
-          <p class="login-security">Kein Passwort nötig. Du erhältst einen einmaligen, sicheren Anmeldelink per E-Mail.</p>
+          <p class="login-security">No password needed. You will receive a one-time secure sign-in link by email.</p>
           <p class="form-message" id="login-message" role="status" aria-live="polite"></p>
-          <button type="submit">Anmeldelink senden <span aria-hidden="true">↗</span></button>
-
+          <button type="submit">Send sign-in link <span aria-hidden="true">↗</span></button>
         </form>
       </section>
-      <p class="legal">Geschützter Bereich · HEAV Filmproduktion Schweiz</p>
+      <p class="legal">Protected area · HEAV Swiss film production</p>
     </main>
     <script type="module" src="/login/assets/login.js"></script>
   </body>
