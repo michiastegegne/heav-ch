@@ -1,5 +1,5 @@
 import { HEAV_ADMIN_CONFIG, isBackendConfigured } from "/admin/config.js";
-import { calculateInvoice, formatCHF, validateInvoice } from "/admin/assets/domain.js";
+import { calculateInvoice, formatCHF, validateCustomer, validateInvoice } from "/admin/assets/domain.js";
 
 const shell = document.querySelector("#admin-shell");
 const loading = document.querySelector("#loading-screen");
@@ -47,6 +47,10 @@ function joinedData(data) {
   };
 }
 
+
+function customerLabel(customer) {
+  return customer?.company || customer?.contact_name || "Ohne Namen";
+}
 
 function createSupabaseAdapter(supabase, session) {
   const ownerId = session.user.id;
@@ -131,8 +135,8 @@ function toolbar(type, placeholder, filters = []) { return `<div class="toolbar"
 function renderCustomers() {
   const items = filtered(state.data.customers, ["company", "contact_name", "email", "city"]);
   if (!state.data.customers.length) return `<section class="view">${emptyState("Der erste Kontakt.", "Erfasse deinen ersten Kunden und verknüpfe danach Projekte und Rechnungen.", "customer")}</section>`;
-  const rows = items.map((item) => `<tr><td><strong>${esc(item.company)}</strong><small>${esc(item.contact_name)}</small></td><td>${esc(item.email)}</td><td>${esc(item.phone || "–")}</td><td>${esc([item.postal_code,item.city].filter(Boolean).join(" "))}</td><td><button class="text-button" data-edit="customer" data-id="${esc(item.id)}">Bearbeiten</button><button class="danger-button" data-delete-record="customer" data-id="${esc(item.id)}" aria-label="Kunde löschen: ${esc(item.company)}">Löschen</button></td></tr>`).join("");
-  const cards = items.map((item) => `<article class="mobile-card"><div><strong>${esc(item.company)}</strong><small>${esc(item.contact_name)} · ${esc(item.email)}</small><button class="text-button" data-edit="customer" data-id="${esc(item.id)}">Bearbeiten</button><button class="danger-button" data-delete-record="customer" data-id="${esc(item.id)}" aria-label="Kunde löschen: ${esc(item.company)}">Löschen</button></div><span>${esc(item.city || "")}</span></article>`).join("");
+  const rows = items.map((item) => `<tr><td><strong>${esc(customerLabel(item))}</strong><small>${esc(item.company && item.contact_name ? item.contact_name : item.company ? "" : "Privatkunde")}</small></td><td>${esc(item.email || "–")}</td><td>${esc(item.phone || "–")}</td><td>${esc([item.postal_code,item.city].filter(Boolean).join(" ") || "–")}</td><td><button class="text-button" data-edit="customer" data-id="${esc(item.id)}">Bearbeiten</button><button class="danger-button" data-delete-record="customer" data-id="${esc(item.id)}" aria-label="Kunde löschen: ${esc(customerLabel(item))}">Löschen</button></td></tr>`).join("");
+  const cards = items.map((item) => `<article class="mobile-card"><div><strong>${esc(customerLabel(item))}</strong><small>${esc(item.company && item.contact_name ? item.contact_name : item.company ? "" : "Privatkunde")} · ${esc(item.email || "Keine E-Mail")}</small><button class="text-button" data-edit="customer" data-id="${esc(item.id)}">Bearbeiten</button><button class="danger-button" data-delete-record="customer" data-id="${esc(item.id)}" aria-label="Kunde löschen: ${esc(customerLabel(item))}">Löschen</button></div><span>${esc(item.city || "")}</span></article>`).join("");
   return `<section class="view">${toolbar("customer", "Kunden durchsuchen …")}<table class="data-table"><thead><tr><th>Kunde</th><th>E-Mail</th><th>Telefon</th><th>Ort</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list">${cards}</div></section>`;
 }
 
@@ -167,7 +171,7 @@ function render() { title.textContent = viewNames[state.view]; content.innerHTML
 async function refresh() { state.data = await adapter.loadAll(); render(); }
 function setView(view) { state.view = view; state.query = ""; state.filter = "all"; document.querySelectorAll(".nav-link").forEach((item) => item.classList.toggle("is-active", item.dataset.view === view)); shell.classList.remove("nav-open"); render(); }
 
-function customerOptions(selected = "") { return state.data.customers.map((item) => `<option value="${esc(item.id)}" ${item.id === selected ? "selected" : ""}>${esc(item.company)}</option>`).join(""); }
+function customerOptions(selected = "") { return state.data.customers.map((item) => `<option value="${esc(item.id)}" ${item.id === selected ? "selected" : ""}>${esc(customerLabel(item))}</option>`).join(""); }
 function projectOptions(customerId = "", selected = "") { return state.data.projects.filter((item) => item.customer_id === customerId).map((item) => `<option value="${esc(item.id)}" ${item.id === selected ? "selected" : ""}>${esc(item.title)}</option>`).join(""); }
 function field(label, name, type = "text", value = "", wide = false, extra = "") { return `<label class="form-field ${wide ? "wide" : ""}"><span>${esc(label)}</span><input type="${type}" name="${name}" value="${esc(value)}" ${extra}></label>`; }
 function openEditor(type, existing = null) {
@@ -178,7 +182,7 @@ function openEditor(type, existing = null) {
   if (type === "customer") {
     const item = existing || {};
     dialogTitle.textContent = existing ? "Kunde bearbeiten" : "Kunde erfassen";
-    dialogBody.innerHTML = `<div class="form-grid">${field("Firma *","company","text",item.company || "",false,"required")}${field("Kontaktperson","contact_name","text",item.contact_name || "")}${field("E-Mail *","email","email",item.email || "",false,"required")}${field("Telefon","phone","tel",item.phone || "")}${field("Strasse / Nr. *","address_line1","text",item.address_line1 || "",true,"required")}${field("PLZ *","postal_code","text",item.postal_code || "",false,"required")}${field("Ort *","city","text",item.city || "",false,"required")}${field("Land","country","text",item.country || "Schweiz",true)}</div>`;
+    dialogBody.innerHTML = `<p class="form-hint">Firma oder Kontaktperson genügt. Adresse, E-Mail und Telefon kannst du später ergänzen.</p><div class="form-grid">${field("Firma","company","text",item.company || "")}${field("Kontaktperson","contact_name","text",item.contact_name || "")}${field("E-Mail","email","email",item.email || "")}${field("Telefon","phone","tel",item.phone || "")}${field("Strasse / Nr.","address_line1","text",item.address_line1 || "",true)}${field("PLZ","postal_code","text",item.postal_code || "")}${field("Ort","city","text",item.city || "")}${field("Land","country","text",item.country || "Schweiz",true)}</div>`;
   } else if (type === "project") {
     if (!state.data.customers.length) { showToast("Bitte zuerst einen Kunden erfassen.", "error"); setView("customers"); return; }
     const item = existing || {};
@@ -218,7 +222,12 @@ function updateInvoiceTotal() {
 async function saveEditor(type) {
   if (!dialogForm.reportValidity()) return false;
   const data = Object.fromEntries(new FormData(dialogForm));
-  if (type === "customer") { const payload = { company: data.company.trim(), contact_name: data.contact_name.trim(), email: data.email.trim(), phone: data.phone.trim(), address_line1: data.address_line1.trim(), postal_code: data.postal_code.trim(), city: data.city.trim(), country: data.country.trim() || "Schweiz" }; if (dialogForm.dataset.editId) await adapter.updateCustomer(dialogForm.dataset.editId, payload); else await adapter.saveCustomer(payload); }
+  if (type === "customer") {
+    const payload = { company: data.company.trim(), contact_name: data.contact_name.trim(), email: data.email.trim(), phone: data.phone.trim(), address_line1: data.address_line1.trim(), postal_code: data.postal_code.trim(), city: data.city.trim(), country: data.country.trim() || "Schweiz" };
+    const errors = validateCustomer({ company: payload.company, contactName: payload.contact_name, email: payload.email });
+    if (Object.keys(errors).length) { formError.textContent = Object.values(errors)[0]; return false; }
+    if (dialogForm.dataset.editId) await adapter.updateCustomer(dialogForm.dataset.editId, payload); else await adapter.saveCustomer(payload);
+  }
   if (type === "project") { const payload = { customer_id: data.customer_id, title: data.title.trim(), status: data.status, budget_rappen: Math.round(Number(data.budget || 0) * 100), start_date: data.start_date || null, due_date: data.due_date || null, description: data.description.trim() }; if (dialogForm.dataset.editId) await adapter.updateProject(dialogForm.dataset.editId, payload); else await adapter.saveProject(payload); }
   if (type === "invoice") {
     const rows = [...document.querySelectorAll(".invoice-item")];

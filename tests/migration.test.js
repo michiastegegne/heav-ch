@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
 
 const migrationPath = new URL("../supabase/migrations/20260803_heav_admin.sql", import.meta.url);
+const optionalCustomerMigrationPath = new URL("../supabase/migrations/20260806_optional_customer_details.sql", import.meta.url);
 const reliabilityMigrationPath = new URL("../supabase/migrations/20260810_portal_reliability.sql", import.meta.url);
 const shortReferenceMigrationPath = new URL("../supabase/migrations/20260811_short_invoice_reference.sql", import.meta.url);
 const projectSnapshotMigrationPath = new URL("../supabase/migrations/20260812_invoice_project_snapshot.sql", import.meta.url);
@@ -46,7 +47,8 @@ test("Supabase-Migration läuft semantisch und erstellt Rechnungen atomar", asyn
     $$;
   `);
   const migration = (await readFile(migrationPath, "utf8")).replace("create extension if not exists pgcrypto;", "");
-  await db.exec(migration);
+  const optionalCustomerMigration = await readFile(optionalCustomerMigrationPath, "utf8");
+  await db.exec(migration + String.fromCharCode(10) + optionalCustomerMigration);
 
   const owner = "10000000-0000-4000-8000-000000000001";
   const customer = "20000000-0000-4000-8000-000000000001";
@@ -55,6 +57,18 @@ test("Supabase-Migration läuft semantisch und erstellt Rechnungen atomar", asyn
     select set_config('request.jwt.claim.sub', '${owner}', false);
     insert into public.customers(id, owner_id, company, email, address_line1, postal_code, city)
     values ('${customer}', '${owner}', 'Testkunde AG', 'mail@test.example', 'Testweg 1', '8000', 'Zürich');
+  `);
+
+  const existingStyleCustomer = "20000000-0000-4000-8000-000000000002";
+  await db.exec(`
+    insert into public.customers(id, owner_id, company, email, address_line1, postal_code, city)
+    values ('${existingStyleCustomer}', '${owner}', 'Greenlight Vision', 'john.doe@greenlightvision.ch', '', '', '');
+  `);
+
+  const privateCustomer = "20000000-0000-4000-8000-000000000003";
+  await db.exec(`
+    insert into public.customers(id, owner_id, contact_name)
+    values ('${privateCustomer}', '${owner}', 'Noah Frei');
   `);
 
   await assert.rejects(
