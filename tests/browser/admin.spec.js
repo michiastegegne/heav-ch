@@ -135,6 +135,20 @@ test("Mobile: echte 390px-Ansicht, Navigation und Rechnungsdialog", async ({ bro
   await page.close();
 });
 
+test("Kunde: Privatkunde ohne Firma und Kontaktdaten speichern", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/admin/`);
+  await page.locator('.nav-link[data-view="customers"]').click();
+  await page.locator('[data-create="customer"]').first().click();
+  await page.locator('[name="contact_name"]').fill("Noah Frei");
+  await page.getByRole("button", { name: "Speichern" }).click();
+  const privateCustomerRow = page.locator(".data-table tbody tr").filter({ hasText: "Noah Frei" }).filter({ hasText: "Privatkunde" });
+  await expect(privateCustomerRow).toBeVisible();
+  await expect(privateCustomerRow.locator("strong")).toHaveText("Noah Frei");
+  await page.close();
+});
+
 async function mockLoginSupabase(page) {
   await page.route("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm", async (route) => {
     await route.fulfill({

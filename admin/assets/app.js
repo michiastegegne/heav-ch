@@ -1,5 +1,5 @@
 import { HEAV_ADMIN_CONFIG, isBackendConfigured } from "/admin/config.js";
-import { calculateInvoice, formatCHF, validateInvoice } from "/admin/assets/domain.js";
+import { calculateInvoice, formatCHF, validateCustomer, validateInvoice } from "/admin/assets/domain.js";
 
 const shell = document.querySelector("#admin-shell");
 const loading = document.querySelector("#loading-screen");
@@ -44,6 +44,10 @@ function joinedData(data) {
   };
 }
 
+
+function customerLabel(customer) {
+  return customer?.company || customer?.contact_name || "Ohne Namen";
+}
 
 function createSupabaseAdapter(supabase, session) {
   const ownerId = session.user.id;
@@ -106,7 +110,7 @@ function renderDashboard() {
   return `<section class="view">
     <div class="hero-row"><h2>Good work.<br><em>Clear numbers.</em></h2><p>Dein kompakter Überblick über Kunden, laufende Produktionen und offene Rechnungen.</p></div>
     <div class="metric-grid">${metric("Kunden", customers.length)}${metric("Aktive Projekte", projects.filter((item) => ["planning", "active"].includes(item.status)).length)}${metric("Offene Rechnungen", formatCHF(openTotal))}${metric("Bezahlt dieses Jahr", formatCHF(paidThisYear))}</div>
-    <div class="content-grid"><section class="panel"><div class="panel-head"><h3>LETZTE RECHNUNGEN</h3><button class="text-button" data-view="invoices">Alle ansehen</button></div><div class="activity-list">${recent.length ? recent.map((invoice) => `<article class="activity-row"><div><strong>${esc(invoice.invoice_number)}</strong><span>${esc(invoice.customer?.company || "Ohne Kunde")} · ${formatDate(invoice.issue_date)}</span></div><div><strong>${formatCHF(invoice.total_rappen)}</strong><span class="status ${esc(invoice.status)}">${esc(statusLabel(invoice.status))}</span></div></article>`).join("") : `<p>Noch keine Rechnungen.</p>`}</div></section>
+    <div class="content-grid"><section class="panel"><div class="panel-head"><h3>LETZTE RECHNUNGEN</h3><button class="text-button" data-view="invoices">Alle ansehen</button></div><div class="activity-list">${recent.length ? recent.map((invoice) => `<article class="activity-row"><div><strong>${esc(invoice.invoice_number)}</strong><span>${esc(customerLabel(invoice.customer))} · ${formatDate(invoice.issue_date)}</span></div><div><strong>${formatCHF(invoice.total_rappen)}</strong><span class="status ${esc(invoice.status)}">${esc(statusLabel(invoice.status))}</span></div></article>`).join("") : `<p>Noch keine Rechnungen.</p>`}</div></section>
     <aside class="panel"><div class="panel-head"><h3>SCHNELLSTART</h3></div><div class="quick-list"><article class="quick-row"><button data-create="customer"><strong>Kunden erfassen</strong><span>Kontaktdaten zentral speichern</span></button><b>+</b></article><article class="quick-row"><button data-create="project"><strong>Projekt anlegen</strong><span>Produktion und Budget ordnen</span></button><b>+</b></article><article class="quick-row"><button data-create="invoice"><strong>Rechnung erstellen</strong><span>PDF generieren und versenden</span></button><b>+</b></article></div></aside></div>
   </section>`;
 }
@@ -117,8 +121,8 @@ function toolbar(type, placeholder, filters = []) { return `<div class="toolbar"
 function renderCustomers() {
   const items = filtered(state.data.customers, ["company", "contact_name", "email", "city"]);
   if (!state.data.customers.length) return `<section class="view">${emptyState("Der erste Kontakt.", "Erfasse deinen ersten Kunden und verknüpfe danach Projekte und Rechnungen.", "customer")}</section>`;
-  const rows = items.map((item) => `<tr><td><strong>${esc(item.company)}</strong><small>${esc(item.contact_name)}</small></td><td>${esc(item.email)}</td><td>${esc(item.phone || "–")}</td><td>${esc([item.postal_code,item.city].filter(Boolean).join(" "))}</td></tr>`).join("");
-  const cards = items.map((item) => `<article class="mobile-card"><div><strong>${esc(item.company)}</strong><small>${esc(item.contact_name)} · ${esc(item.email)}</small></div><span>${esc(item.city || "")}</span></article>`).join("");
+  const rows = items.map((item) => `<tr><td><strong>${esc(customerLabel(item))}</strong><small>${esc(item.company && item.contact_name ? item.contact_name : item.company ? "" : "Privatkunde")}</small></td><td>${esc(item.email || "–")}</td><td>${esc(item.phone || "–")}</td><td>${esc([item.postal_code,item.city].filter(Boolean).join(" ") || "–")}</td></tr>`).join("");
+  const cards = items.map((item) => `<article class="mobile-card"><div><strong>${esc(customerLabel(item))}</strong><small>${esc(item.company && item.contact_name ? item.contact_name : item.company ? "" : "Privatkunde")} · ${esc(item.email || "Keine E-Mail")}</small></div><span>${esc(item.city || "")}</span></article>`).join("");
   return `<section class="view">${toolbar("customer", "Kunden durchsuchen …")}<table class="data-table"><thead><tr><th>Kunde</th><th>E-Mail</th><th>Telefon</th><th>Ort</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list">${cards}</div></section>`;
 }
 
@@ -126,8 +130,8 @@ function renderProjects() {
   const all = state.data.projects;
   const items = filtered(all.filter((item) => state.filter === "all" || item.status === state.filter), ["title", "description"]);
   if (!all.length) return `<section class="view">${emptyState("From idea to frame.", "Lege das erste Projekt an und halte Status, Kunde und Budget im Blick.", "project")}</section>`;
-  const rows = items.map((item) => `<tr><td><strong>${esc(item.title)}</strong><small>${esc(item.customer?.company || "Ohne Kunde")}</small></td><td><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></td><td>${formatDate(item.due_date)}</td><td>${formatCHF(item.budget_rappen || 0)}</td></tr>`).join("");
-  const cards = items.map((item) => `<article class="mobile-card"><div><strong>${esc(item.title)}</strong><small>${esc(item.customer?.company || "Ohne Kunde")} · ${formatDate(item.due_date)}</small></div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></article>`).join("");
+  const rows = items.map((item) => `<tr><td><strong>${esc(item.title)}</strong><small>${esc(customerLabel(item.customer))}</small></td><td><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></td><td>${formatDate(item.due_date)}</td><td>${formatCHF(item.budget_rappen || 0)}</td></tr>`).join("");
+  const cards = items.map((item) => `<article class="mobile-card"><div><strong>${esc(item.title)}</strong><small>${esc(customerLabel(item.customer))} · ${formatDate(item.due_date)}</small></div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></article>`).join("");
   return `<section class="view">${toolbar("project", "Projekte durchsuchen …", [["all","Alle"],["planning","Planung"],["active","Aktiv"],["completed","Abgeschlossen"]])}<table class="data-table"><thead><tr><th>Projekt</th><th>Status</th><th>Deadline</th><th>Budget</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list">${cards}</div></section>`;
 }
 
@@ -138,8 +142,8 @@ function renderInvoices() {
   const all = state.data.invoices;
   const items = filtered(all.filter((item) => state.filter === "all" || item.status === state.filter), ["invoice_number"]);
   if (!all.length) return `<section class="view">${emptyState("Ready to invoice.", "Erstelle deine erste HEAV-Rechnung als PDF und sende sie direkt an den Kunden.", "invoice")}</section>`;
-  const rows = items.map((item) => `<tr><td><strong>${esc(item.invoice_number)}</strong><small>${formatDate(item.issue_date)}</small></td><td>${esc(item.customer?.company || "Ohne Kunde")}</td><td><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></td><td><strong>${formatCHF(item.total_rappen)}</strong><small>fällig ${formatDate(item.due_date)}</small></td><td>${invoiceActions(item)}</td></tr>`).join("");
-  const cards = items.map((item) => `<article class="mobile-card"><div><strong>${esc(item.invoice_number)} · ${formatCHF(item.total_rappen)}</strong><small>${esc(item.customer?.company || "Ohne Kunde")} · fällig ${formatDate(item.due_date)}</small>${invoiceActions(item)}</div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></article>`).join("");
+  const rows = items.map((item) => `<tr><td><strong>${esc(item.invoice_number)}</strong><small>${formatDate(item.issue_date)}</small></td><td>${esc(customerLabel(item.customer))}</td><td><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></td><td><strong>${formatCHF(item.total_rappen)}</strong><small>fällig ${formatDate(item.due_date)}</small></td><td>${invoiceActions(item)}</td></tr>`).join("");
+  const cards = items.map((item) => `<article class="mobile-card"><div><strong>${esc(item.invoice_number)} · ${formatCHF(item.total_rappen)}</strong><small>${esc(customerLabel(item.customer))} · fällig ${formatDate(item.due_date)}</small>${invoiceActions(item)}</div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></article>`).join("");
   return `<section class="view">${toolbar("invoice", "Rechnungen durchsuchen …", [["all","Alle"],["draft","Entwürfe"],["sent","Versendet"],["paid","Bezahlt"],["overdue","Überfällig"]])}<table class="data-table"><thead><tr><th>Rechnung</th><th>Kunde</th><th>Status</th><th>Total</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list">${cards}</div></section>`;
 }
 
@@ -153,7 +157,7 @@ function render() { title.textContent = viewNames[state.view]; content.innerHTML
 async function refresh() { state.data = await adapter.loadAll(); render(); }
 function setView(view) { state.view = view; state.query = ""; state.filter = "all"; document.querySelectorAll(".nav-link").forEach((item) => item.classList.toggle("is-active", item.dataset.view === view)); shell.classList.remove("nav-open"); render(); }
 
-function customerOptions(selected = "") { return state.data.customers.map((item) => `<option value="${esc(item.id)}" ${item.id === selected ? "selected" : ""}>${esc(item.company)}</option>`).join(""); }
+function customerOptions(selected = "") { return state.data.customers.map((item) => `<option value="${esc(item.id)}" ${item.id === selected ? "selected" : ""}>${esc(customerLabel(item))}</option>`).join(""); }
 function projectOptions(selected = "") { return state.data.projects.map((item) => `<option value="${esc(item.id)}" ${item.id === selected ? "selected" : ""}>${esc(item.title)}</option>`).join(""); }
 function field(label, name, type = "text", value = "", wide = false, extra = "") { return `<label class="form-field ${wide ? "wide" : ""}"><span>${esc(label)}</span><input type="${type}" name="${name}" value="${esc(value)}" ${extra}></label>`; }
 function openEditor(type) {
@@ -162,7 +166,7 @@ function openEditor(type) {
   dialogKicker.textContent = "NEU";
   if (type === "customer") {
     dialogTitle.textContent = "Kunde erfassen";
-    dialogBody.innerHTML = `<div class="form-grid">${field("Firma *","company","text","",false,"required")}${field("Kontaktperson","contact_name")}${field("E-Mail *","email","email","",false,"required")}${field("Telefon","phone","tel")}${field("Strasse / Nr. *","address_line1","text","",true,"required")}${field("PLZ *","postal_code","text","",false,"required")}${field("Ort *","city","text","",false,"required")}${field("Land","country","text","Schweiz",true)}</div>`;
+    dialogBody.innerHTML = `<p class="form-hint">Firma oder Kontaktperson genügt. Adresse, E-Mail und Telefon kannst du später ergänzen.</p><div class="form-grid">${field("Firma","company")}${field("Kontaktperson","contact_name")}${field("E-Mail","email","email")}${field("Telefon","phone","tel")}${field("Strasse / Nr.","address_line1","text","",true)}${field("PLZ","postal_code")}${field("Ort","city")}${field("Land","country","text","Schweiz",true)}</div>`;
   } else if (type === "project") {
     if (!state.data.customers.length) { showToast("Bitte zuerst einen Kunden erfassen.", "error"); setView("customers"); return; }
     dialogTitle.textContent = "Projekt anlegen";
@@ -201,7 +205,12 @@ function updateInvoiceTotal() {
 async function saveEditor(type) {
   if (!dialogForm.reportValidity()) return false;
   const data = Object.fromEntries(new FormData(dialogForm));
-  if (type === "customer") await adapter.saveCustomer({ company: data.company.trim(), contact_name: data.contact_name.trim(), email: data.email.trim(), phone: data.phone.trim(), address_line1: data.address_line1.trim(), postal_code: data.postal_code.trim(), city: data.city.trim(), country: data.country.trim() || "Schweiz" });
+  if (type === "customer") {
+    const customer = { company: data.company.trim(), contactName: data.contact_name.trim(), email: data.email.trim() };
+    const errors = validateCustomer(customer);
+    if (Object.keys(errors).length) { formError.textContent = Object.values(errors)[0]; return false; }
+    await adapter.saveCustomer({ company: customer.company, contact_name: customer.contactName, email: customer.email, phone: data.phone.trim(), address_line1: data.address_line1.trim(), postal_code: data.postal_code.trim(), city: data.city.trim(), country: data.country.trim() || "Schweiz" });
+  }
   if (type === "project") await adapter.saveProject({ customer_id: data.customer_id, title: data.title.trim(), status: data.status, budget_rappen: Math.round(Number(data.budget || 0) * 100), start_date: data.start_date || null, due_date: data.due_date || null, description: data.description.trim() });
   if (type === "invoice") {
     const rows = [...document.querySelectorAll(".invoice-item")];
