@@ -350,6 +350,7 @@ main {
 }
 .temporary-home-hidden { display: none !important; }
 .temporary-home-logo { min-height: min(72svh, 50rem); display: grid; place-items: center; padding: calc(var(--header) + 3rem) var(--gutter) 5rem; background: var(--night); }
+.temporary-home-logo-heading { margin: 0; font: inherit; }
 .temporary-home-logo-mark { color: var(--paper); font: 700 clamp(7rem, 28vw, 28rem)/.72 "Syne", sans-serif; letter-spacing: -.105em; text-decoration: none; transition: color .25s var(--ease); }
 .temporary-home-logo-mark:hover, .temporary-home-logo-mark:focus-visible { color: var(--acid); }
 .home-hero,
