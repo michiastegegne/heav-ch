@@ -189,7 +189,7 @@
 
   if (!reducedMotion && precisePointer && "IntersectionObserver" in window) {
     const motionTargets = $$(
-      "main .section-head, main .section-copy, main .link-row, main .split > *, main .work-feature > *, main .portfolio-panel, main .meta-item, main .step, main .prose > h2, main .prose > p, main .cta-panel > *",
+      "main .section-head, main .section-copy, main .link-row, main .split > *, main .work-feature > *, main .meta-item, main .step, main .prose > h2, main .prose > p, main .cta-panel > *",
     );
     const motionObserver = new IntersectionObserver(
       (entries) => {

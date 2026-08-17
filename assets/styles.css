@@ -1051,20 +1051,17 @@ main {
   justify-content: flex-end;
   align-items: flex-start;
 }
-.work-feature-copy h2,
-.portfolio-panel h2 {
+.work-feature-copy h2 {
   font: 500 clamp(3rem, 6vw, 6rem)/0.9 "Syne";
   letter-spacing: -0.06em;
   margin: auto 0 1.5rem;
 }
-.work-feature-copy h2 em,
-.portfolio-panel h2 em {
+.work-feature-copy h2 em {
   font-family: "Instrument Serif";
   font-weight: 400;
   color: var(--acid);
 }
-.work-feature-copy p,
-.portfolio-panel p {
+.work-feature-copy p {
   max-width: 34rem;
   color: var(--muted);
   font-size: clamp(1rem, 1.35vw, 1.18rem);
@@ -1195,20 +1192,6 @@ main {
 .gallery-lightbox-close { position: absolute; top: clamp(1rem, 2vw, 2rem); right: clamp(1rem, 2vw, 2rem); min-height: 2.75rem; padding: 0 1rem; }
 .gallery-lightbox-nav { justify-self: center; min-width: 2.9rem; min-height: 2.9rem; padding: .7rem; }
 .gallery-lightbox-close:hover, .gallery-lightbox-nav:hover, .gallery-lightbox-close:focus-visible, .gallery-lightbox-nav:focus-visible { border-color: var(--acid); color: var(--acid); outline: 0; }
-.portfolio-panel {
-  display: grid;
-  grid-template-columns: 1fr 3fr;
-  gap: clamp(2rem, 6vw, 6rem);
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  padding-block: clamp(2.5rem, 6vw, 5rem);
-}
-.portfolio-panel > div {
-  max-width: 60rem;
-}
-.portfolio-panel h2 {
-  margin-top: 0;
-}
 .proof-ledger {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1312,6 +1295,10 @@ main {
 }
 .client-logo--stadt-liestal {
   --client-logo-width: 11rem;
+  --client-logo-height: 4.2rem;
+}
+.client-logo--basler-zeitung {
+  --client-logo-width: 12.5rem;
   --client-logo-height: 4.2rem;
 }
 .contact-form-layout {
@@ -1963,9 +1950,6 @@ main {
   .work-feature-copy {
     min-height: 26rem;
     padding: 2rem 0;
-  }
-  .portfolio-panel {
-    grid-template-columns: 1fr;
   }
   .cta-panel {
     min-height: max(32rem, 64svh);
