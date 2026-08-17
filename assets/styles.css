@@ -1166,7 +1166,7 @@ main {
 .video-channel-link {
   margin-top: 2rem;
 }
-.selected-photography-intro { display: grid; grid-template-columns: minmax(0, 1fr) minmax(18rem, .72fr); gap: clamp(2rem, 8vw, 10rem); align-items: end; padding: clamp(5rem, 10vw, 10rem) var(--gutter) clamp(2.5rem, 5vw, 5rem); background: #171916; color: var(--paper); }
+.selected-photography-intro { scroll-margin-top: 5rem; display: grid; grid-template-columns: minmax(0, 1fr) minmax(18rem, .72fr); gap: clamp(2rem, 8vw, 10rem); align-items: end; padding: clamp(5rem, 10vw, 10rem) var(--gutter) clamp(2.5rem, 5vw, 5rem); background: #171916; color: var(--paper); }
 .selected-photography-intro .caps { color: var(--acid); }
 .selected-photography-intro h2 { margin: 1.25rem 0 0; font: 500 clamp(3.5rem, 7vw, 8rem)/.86 "Syne"; letter-spacing: -.065em; }
 .selected-photography-intro h2 em { font-family: "Instrument Serif", serif; font-weight: 400; color: var(--acid); }
@@ -1176,6 +1176,25 @@ main {
 .selected-photography-row { display: flex; gap: 4px; height: calc((100cqw - 8px) / var(--row-sum)); align-items: stretch; }
 .selected-photography-row figure { flex: 0 0 auto; width: auto; min-width: 0; height: 100%; aspect-ratio: var(--ratio); margin: 0; overflow: hidden; background: #10110e; }
 .selected-photography-row img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.selected-photography-copy { display: grid; gap: 1.1rem; align-self: end; }
+.gallery-instruction { color: var(--acid) !important; font-size: .76rem !important; letter-spacing: .09em; text-transform: uppercase; }
+.gallery-tile { position: relative; flex: 0 0 auto; width: auto; min-width: 0; height: 100%; aspect-ratio: var(--ratio); margin: 0; padding: 0; overflow: hidden; border: 0; background: #10110e; color: var(--paper); cursor: zoom-in; }
+.gallery-tile img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.gallery-tile::after { position: absolute; inset: 0; content: ""; border: 1px solid transparent; transition: border-color .2s var(--ease), background .2s var(--ease); pointer-events: none; }
+.gallery-tile-index { position: absolute; right: .65rem; bottom: .55rem; color: var(--acid); font: 600 .7rem/1 "DM Sans", Arial, sans-serif; letter-spacing: .04em; opacity: 0; transform: translateY(.35rem); transition: opacity .2s var(--ease), transform .2s var(--ease); pointer-events: none; }
+.gallery-tile:hover::after, .gallery-tile:focus-visible::after { border-color: var(--acid); background: rgba(9, 10, 8, .12); }
+.gallery-tile:hover .gallery-tile-index, .gallery-tile:focus-visible .gallery-tile-index { opacity: 1; transform: translateY(0); }
+.gallery-tile:focus-visible { outline: 2px solid var(--acid); outline-offset: 3px; }
+.gallery-lightbox { width: 100vw; max-width: none; height: 100dvh; max-height: none; margin: 0; padding: 0; border: 0; background: rgba(5, 6, 5, .98); color: var(--paper); }
+.gallery-lightbox::backdrop { background: rgba(5, 6, 5, .78); backdrop-filter: blur(10px); }
+.gallery-lightbox-frame { position: relative; display: grid; grid-template-columns: minmax(3.5rem, 8vw) minmax(0, 1fr) minmax(3.5rem, 8vw); align-items: center; width: 100%; height: 100%; padding: clamp(1rem, 3vw, 3rem); }
+.gallery-lightbox-figure { display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0; min-height: 0; height: min(100%, 58rem); margin: 0; }
+.gallery-lightbox-image { display: block; align-self: center; justify-self: center; max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; }
+.gallery-lightbox-caption { padding-top: .9rem; color: #c7cbc1; font-size: .78rem; letter-spacing: .08em; text-align: center; text-transform: uppercase; }
+.gallery-lightbox-close, .gallery-lightbox-nav { border: 1px solid rgba(239, 242, 232, .34); background: transparent; color: var(--paper); font: 600 .68rem/1 "DM Sans", Arial, sans-serif; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
+.gallery-lightbox-close { position: absolute; top: clamp(1rem, 2vw, 2rem); right: clamp(1rem, 2vw, 2rem); min-height: 2.75rem; padding: 0 1rem; }
+.gallery-lightbox-nav { justify-self: center; min-width: 2.9rem; min-height: 2.9rem; padding: .7rem; }
+.gallery-lightbox-close:hover, .gallery-lightbox-nav:hover, .gallery-lightbox-close:focus-visible, .gallery-lightbox-nav:focus-visible { border-color: var(--acid); color: var(--acid); outline: 0; }
 .portfolio-panel {
   display: grid;
   grid-template-columns: 1fr 3fr;
@@ -1883,8 +1902,17 @@ main {
   .selected-photography-intro { grid-template-columns: 1fr; gap: 1.5rem; padding-top: 4.5rem; padding-bottom: 2rem; }
   .selected-photography-gallery { padding-left: 0; padding-right: 0; }
   .selected-photography-grid { gap: 3px; }
-  .selected-photography-row { display: flex; gap: 3px; height: calc((100cqw - 6px) / var(--row-sum)); }
-  .selected-photography-row figure { flex: 0 0 auto; height: 100%; }
+  .selected-photography-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px; height: auto; }
+  .gallery-tile { width: 100%; height: auto; aspect-ratio: auto; }
+  .gallery-tile img { width: 100%; height: auto; }
+  .selected-photography-row .gallery-tile:first-child { grid-column: 1 / -1; }
+  .selected-photography-row .gallery-tile:last-child:nth-child(2) { grid-column: 1 / -1; }
+  .gallery-tile-index { opacity: 1; transform: none; }
+  .gallery-lightbox-frame { grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 1fr) auto; gap: .75rem; padding: 1rem; }
+  .gallery-lightbox-figure { grid-column: 1 / -1; grid-row: 1; height: 100%; }
+  .gallery-lightbox-nav { grid-row: 2; justify-self: stretch; min-height: 3rem; }
+  .gallery-lightbox-close { top: 1rem; right: 1rem; z-index: 2; }
+  .gallery-lightbox-caption { padding: .8rem 3.5rem .2rem; font-size: .66rem; }
   .instagram-profile-banner { grid-template-columns: auto minmax(0, 1fr); gap: 1rem; }
   .instagram-profile-copy strong { flex-wrap: nowrap; white-space: nowrap; font-size: clamp(.76rem, 3.45vw, .9rem); letter-spacing: -.025em; gap: .28rem; }
   .instagram-verified { width: 1em; height: 1em; flex-basis: 1em; }

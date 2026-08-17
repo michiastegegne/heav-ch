@@ -114,6 +114,60 @@
     }),
   );
 
+  const galleryItems = $$('[data-gallery-item]');
+  if (galleryItems.length) {
+    const lightbox = document.createElement("dialog");
+    lightbox.className = "gallery-lightbox";
+    lightbox.setAttribute("aria-label", "Image viewer");
+    lightbox.innerHTML = `
+      <div class="gallery-lightbox-frame">
+        <button class="gallery-lightbox-close" type="button" aria-label="Close image viewer">Close</button>
+        <button class="gallery-lightbox-nav gallery-lightbox-prev" type="button" aria-label="Previous image">Previous</button>
+        <figure class="gallery-lightbox-figure">
+          <img class="gallery-lightbox-image" alt="" />
+          <figcaption class="gallery-lightbox-caption"></figcaption>
+        </figure>
+        <button class="gallery-lightbox-nav gallery-lightbox-next" type="button" aria-label="Next image">Next</button>
+      </div>`;
+    document.body.append(lightbox);
+
+    const image = $(".gallery-lightbox-image", lightbox);
+    const caption = $(".gallery-lightbox-caption", lightbox);
+    const close = $(".gallery-lightbox-close", lightbox);
+    const previous = $(".gallery-lightbox-prev", lightbox);
+    const next = $(".gallery-lightbox-next", lightbox);
+    let activeIndex = 0;
+
+    const showImage = (index) => {
+      activeIndex = (index + galleryItems.length) % galleryItems.length;
+      const item = galleryItems[activeIndex];
+      const source = $("img", item);
+      if (!source) return;
+      image.src = source.currentSrc || source.src;
+      image.alt = source.alt;
+      caption.textContent = `${item.dataset.galleryCaption || source.alt} · ${String(activeIndex + 1).padStart(2, "0")} / ${String(galleryItems.length).padStart(2, "0")}`;
+    };
+    const openLightbox = (index) => {
+      showImage(index);
+      lightbox.showModal();
+      requestAnimationFrame(() => close.focus());
+    };
+
+    galleryItems.forEach((item, index) =>
+      item.addEventListener("click", () => openLightbox(index)),
+    );
+    close.addEventListener("click", () => lightbox.close());
+    previous.addEventListener("click", () => showImage(activeIndex - 1));
+    next.addEventListener("click", () => showImage(activeIndex + 1));
+    lightbox.addEventListener("click", (event) => {
+      if (event.target === lightbox) lightbox.close();
+    });
+    lightbox.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowLeft") showImage(activeIndex - 1);
+      if (event.key === "ArrowRight") showImage(activeIndex + 1);
+    });
+  }
+
   const enableGrain = () => document.body.classList.add("grain-ready");
   const scheduleGrain = () => {
     if ("requestIdleCallback" in window) {
