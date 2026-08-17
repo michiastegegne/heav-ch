@@ -17,7 +17,7 @@
  ["Ein Film ist der Anfang. Nicht das Ende.", "A film is the beginning, not the end."], ["Wir denken bereits in der Konzeption darüber nach, wie eine Geschichte als Hero-Film, Social Cut, Vertical Asset oder kampagnenbegleitender Content funktioniert.", "From concept onward, we consider how a story works as a hero film, social cut, vertical asset or campaign content."],
  ["Gegründet und geführt von Michias Tegegne, entsteht für jedes Projekt das passende Team – fokussiert, direkt und ohne unnötige Ebenen.", "Founded and led by Michias Tegegne, HEAV assembles the right team for every project—focused, direct and without unnecessary layers."], ["Wir glauben nicht an Bilder um der Bilder willen. Gute Filme beginnen mit einer präzisen Frage: Was soll ein Mensch nach dem letzten Frame verstehen, fühlen oder tun?", "We do not believe in images for their own sake. Good films begin with a precise question: what should someone understand, feel or do after the final frame?"], ["Michias Tegegne ist Inhaber und Gründer von HEAV. Er ist der persönliche Ansprechpartner für neue Projekte und verantwortet die strategische sowie kreative Ausrichtung der Filmproduktion.", "Michias Tegegne is HEAV's founder and director. He is the personal point of contact for new projects and leads the company's strategic and creative direction."],
  ["Bei HEAV verbindet Michias Tegegne strategische Klarheit mit einer filmischen Perspektive. Er begleitet Projekte vom ersten Gespräch über Idee und Produktion bis zur finalen Auslieferung.", "At HEAV, Michias Tegegne combines strategic clarity with a cinematic perspective. He guides projects from the first conversation through concept and production to final delivery."], ["Als Inhaber bleibt die Verantwortung persönlich: kurze Wege, direkte Entscheidungen und ein Team, das passend zur Aufgabe zusammengestellt wird.", "Ownership keeps responsibility personal: short paths, direct decisions and a team assembled for the task."], ["HEAV entwickelt und produziert Bewegtbild für Marken, Agenturen und Organisationen. Der Schwerpunkt liegt auf Brand Films, Imagefilmen, Campaign Content und kontinuierlicher Content Creation.", "HEAV develops and produces moving image for brands, agencies and organisations, with a focus on brand films, image films, campaign content and ongoing content creation."],
- ["Ich bin einverstanden, dass HEAV meine Angaben zur Bearbeitung der Anfrage verwendet. Der Versand erfolgt über FormSubmit.", "I agree that HEAV may use my details to process this enquiry. Submission is handled through FormSubmit."], ["Ein grober Zeithorizont hilft beim ersten Produktionsvorschlag.", "A rough timeframe helps shape the first production proposal."], ["Ein Film", "A film"],
+ ["Ich bin einverstanden, dass HEAV meine Angaben zur Bearbeitung der Anfrage verwendet. Der Versand erfolgt über FormSubmit.", "I agree that HEAV may use my details to process this enquiry. Submission is handled through FormSubmit."], ["Ein grober Zeithorizont hilft beim ersten Produktionsvorschlag.", "A rough timeframe helps shape the first production proposal."], ["Externer Inhalt · YouTube", "External content · YouTube"], ["Mit dem Aktivieren wird eine Verbindung zu YouTube hergestellt. Dabei können Personendaten an Google/YouTube übermittelt werden.", "Activating this player establishes a connection to YouTube. Personal data may be transmitted to Google/YouTube."], ["Video laden", "Load video"], ["Datenschutzhinweise", "Privacy notice"], ["Video auf YouTube ansehen", "Watch on YouTube"], ["Ein Film", "A film"],
  ["HEAV – Filmproduktion von Michias Tegegne", "HEAV – Film Production by Michias Tegegne"], ["Filmproduktion & Content – Leistungen | HEAV", "Film Production & Content – Services | HEAV"], ["Arbeiten & Einblicke | HEAV Filmproduktion", "Work & Insights | HEAV Film Production"], ["Über HEAV – Filmproduktion von Michias Tegegne", "About HEAV – Film Production by Michias Tegegne"], ["Michias Tegegne – Inhaber & Gründer von HEAV", "Michias Tegegne – Founder & Director of HEAV"], ["Kontakt – HEAV Filmproduktion", "Contact – HEAV Film Production"], ["Seite nicht gefunden | HEAV", "Page not found | HEAV"],
   ]);
   const translate = (value) => {
@@ -26,16 +26,18 @@
     [...translations.entries()].sort((a, b) => b[0].length - a[0].length).forEach(([from, to]) => { result = result.split(from).join(to); });
     return result;
   };
-  document.documentElement.lang = "en-CH";
-  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-  const textNodes = []; while (walker.nextNode()) textNodes.push(walker.currentNode);
-  textNodes.forEach((node) => { node.nodeValue = translate(node.nodeValue); });
-  $$("[title], [aria-label], [placeholder], meta[content], input[value]").forEach((element) => {
-    for (const attribute of ["title", "aria-label", "placeholder", "content", "value"]) {
-      if (element.hasAttribute(attribute)) element.setAttribute(attribute, translate(element.getAttribute(attribute)));
-    }
-  });
-  document.title = translate(document.title);
+  if (!document.body.hasAttribute("data-no-translate")) {
+    document.documentElement.lang = "en-CH";
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const textNodes = []; while (walker.nextNode()) textNodes.push(walker.currentNode);
+    textNodes.forEach((node) => { node.nodeValue = translate(node.nodeValue); });
+    $$("[title], [aria-label], [placeholder], meta[content], input[value]").forEach((element) => {
+      for (const attribute of ["title", "aria-label", "placeholder", "content", "value"]) {
+        if (element.hasAttribute(attribute)) element.setAttribute(attribute, translate(element.getAttribute(attribute)));
+      }
+    });
+    document.title = translate(document.title);
+  }
 
   const header = $(".site-header");
   const toggle = $(".menu-toggle");
@@ -128,6 +130,24 @@
     history.replaceState(null, "", `${location.pathname}#anfrage`);
     requestAnimationFrame(() => formSuccess.focus({ preventScroll: true }));
   }
+
+  $$('[data-load-youtube]').forEach((button) =>
+    button.addEventListener("click", () => {
+      const container = button.closest("[data-youtube-id]");
+      const id = container?.dataset.youtubeId;
+      if (!container || !id) return;
+      const frame = document.createElement("iframe");
+      frame.src = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}`;
+      frame.title = container.dataset.youtubeTitle || "YouTube video";
+      frame.loading = "lazy";
+      frame.referrerPolicy = "strict-origin-when-cross-origin";
+      frame.allow =
+        "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+      frame.allowFullscreen = true;
+      container.replaceChildren(frame);
+      container.classList.remove("video-consent");
+    }),
+  );
 
   const enableGrain = () => document.body.classList.add("grain-ready");
   const scheduleGrain = () => {
