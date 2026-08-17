@@ -31,6 +31,23 @@ export function getNextInvoiceStatus(currentStatus, action) {
   return STATUS_TRANSITIONS[currentStatus]?.[action] ?? null;
 }
 
+export function validateCustomer(customer) {
+  const errors = {};
+  const company = String(customer.company || "").trim();
+  const contactName = String(customer.contactName || "").trim();
+  const email = String(customer.email || "").trim();
+  if (!company && !contactName) {
+    errors.identity = "Bitte eine Firma oder Kontaktperson angeben.";
+  }
+  if (email) {
+    const [localPart, domainPart, ...extraParts] = email.split("@");
+    if (!localPart || !domainPart || extraParts.length || email.includes(" ") || !domainPart.includes(".")) {
+      errors.email = "Bitte eine gültige E-Mail-Adresse angeben.";
+    }
+  }
+  return errors;
+}
+
 export function validateInvoice(invoice) {
   const errors = {};
   if (!invoice.customerId) {
