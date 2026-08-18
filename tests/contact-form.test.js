@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 
 const contactSource = await readFile(new URL("../contact/index.html", import.meta.url), "utf8");
 const contactClient = await readFile(new URL("../assets/contact-form.js", import.meta.url), "utf8");
@@ -15,6 +16,28 @@ test("Kontaktformular bleibt HEAV-eigen und leitet nicht zu FormSubmit weiter", 
   assert.match(contactSource, /data-form-status/);
   assert.match(contactSource, /name="website"/);
   assert.doesNotMatch(contactSource, /name="_autoresponse"/);
+});
+
+test("Alle sichtbaren Desktop-Menüs führen zu Contact", async () => {
+  const publicPages = [
+    "index.html",
+    "404.html",
+    "about/index.html",
+    "contact/index.html",
+    "legal-notice/index.html",
+    "michias-tegegne/index.html",
+    "privacy/index.html",
+    "services/index.html",
+    "work/index.html",
+    "ueber-uns/index.html",
+  ];
+  const sources = await Promise.all(publicPages.map((path) => readFile(join(process.cwd(), path), "utf8")));
+  const desktopNavPages = sources.filter((source) => source.includes('class="desktop-nav"'));
+  assert.ok(desktopNavPages.length > 0, "Keine Desktop-Navigation gefunden.");
+  for (const source of desktopNavPages) {
+    const navigation = source.match(/<nav class="desktop-nav"[\s\S]*?<\/nav>/)?.[0] || "";
+    assert.match(navigation, /href="\/contact\/"/, "Desktop-Menü enthält keinen Contact-Link.");
+  }
 });
 
 test("Kontakt-Client übermittelt asynchron an die HEAV Edge Function", () => {
