@@ -220,7 +220,7 @@ Deno.serve(async (request) => {
         reply_to: "hello@heav.ch",
         subject: "Your project enquiry — HEAV",
         text:
-          `Thank you for getting in touch, ${enquiry.name}.\n\nYour project enquiry has reached HEAV. Michias will review the details personally and get back to you with the next steps.\n\nHEAV\nhttps://heav.ch`,
+          `Thank you for getting in touch, ${enquiry.name}.\n\nYour project enquiry has reached HEAV. HEAV will review the details and get back to you with the next steps.\n\nHEAV\nhttps://heav.ch`,
       });
     } catch (confirmationError) {
       console.error("contact confirmation failed", confirmationError);

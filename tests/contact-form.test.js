@@ -11,7 +11,7 @@ const supabaseConfig = await readFile(new URL("../supabase/config.toml", import.
 test("Kontaktformular bleibt HEAV-eigen und leitet nicht zu FormSubmit weiter", () => {
   assert.doesNotMatch(contactSource, /formsubmit/i);
   assert.match(contactSource, /data-contact-form/);
-  assert.match(contactSource, /assets\/contact-form\.js\?v=contact-edge-20260818/);
+  assert.match(contactSource, /assets\/contact-form\.js\?v=contact-heav-reply-20260818/);
   assert.match(contactSource, /data-form-status/);
   assert.match(contactSource, /name="website"/);
   assert.doesNotMatch(contactSource, /name="_autoresponse"/);
@@ -23,6 +23,10 @@ test("Kontakt-Client übermittelt asynchron an die HEAV Edge Function", () => {
   assert.match(contactClient, /application\/json/);
   assert.match(contactClient, /contactForm\.reset\(\)/);
   assert.match(contactClient, /aria-busy/);
+  assert.match(contactClient, /HEAV will get back/);
+  assert.doesNotMatch(contactSource, /Michias(?: Tegegne)? will get back/i);
+  assert.doesNotMatch(contactClient, /Michias will get back/i);
+  assert.doesNotMatch(functionSource, /Michias will review/i);
 });
 
 test("Kontakt-Edge-Function validiert, schützt und versendet über den bestehenden HEAV-Mailer", () => {

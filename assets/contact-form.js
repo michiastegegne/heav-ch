@@ -66,7 +66,7 @@ if (contactForm instanceof HTMLFormElement) {
 
       contactForm.reset();
       setSubmittedAt();
-      setStatus("Thank you — your enquiry is with HEAV. Michias will get back to you personally.", "success");
+      setStatus("Thank you — your enquiry is with HEAV. HEAV will get back to you shortly.", "success");
       status?.focus({ preventScroll: true });
     } catch (error) {
       const message = error instanceof Error && error.message
