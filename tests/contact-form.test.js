@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 
 const contactSource = await readFile(new URL("../contact/index.html", import.meta.url), "utf8");
@@ -18,20 +18,22 @@ test("Kontaktformular bleibt HEAV-eigen und leitet nicht zu FormSubmit weiter", 
   assert.doesNotMatch(contactSource, /name="_autoresponse"/);
 });
 
+async function publicHtmlSources(directory = process.cwd()) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const sources = [];
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      if ([".git", "admin", "login", "node_modules", "supabase", "tests"].includes(entry.name)) continue;
+      sources.push(...await publicHtmlSources(join(directory, entry.name)));
+    } else if (entry.isFile() && entry.name.endsWith(".html")) {
+      sources.push(await readFile(join(directory, entry.name), "utf8"));
+    }
+  }
+  return sources;
+}
+
 test("Alle sichtbaren Desktop-Menüs führen zu Contact", async () => {
-  const publicPages = [
-    "index.html",
-    "404.html",
-    "about/index.html",
-    "contact/index.html",
-    "legal-notice/index.html",
-    "michias-tegegne/index.html",
-    "privacy/index.html",
-    "services/index.html",
-    "work/index.html",
-    "ueber-uns/index.html",
-  ];
-  const sources = await Promise.all(publicPages.map((path) => readFile(join(process.cwd(), path), "utf8")));
+  const sources = await publicHtmlSources();
   const desktopNavPages = sources.filter((source) => source.includes('class="desktop-nav"'));
   assert.ok(desktopNavPages.length > 0, "Keine Desktop-Navigation gefunden.");
   for (const source of desktopNavPages) {
