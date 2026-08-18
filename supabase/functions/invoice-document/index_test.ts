@@ -2,6 +2,7 @@ import { assert, assertEquals, assertGreater } from "jsr:@std/assert@1";
 import { PDFDocument } from "npm:pdf-lib@1.17.1";
 import {
   buildInvoiceEmailHtml,
+  buildInvoicePaymentMessage,
   buildInvoiceText,
   buildSwissQrPayload,
   createInvoicePdf,
@@ -218,7 +219,7 @@ Deno.test("createInvoicePdf erzeugt eine valide einseitige HEAV-Rechnung", async
     invoice_items: [
       {
         position: 1,
-        description: "Konzeption ĀČŐ",
+        description: "Konzeption – Yousty",
         quantity: 1,
         unit_price_rappen: 100000,
       },
@@ -250,4 +251,29 @@ Deno.test("createInvoicePdf erzeugt eine valide einseitige HEAV-Rechnung", async
   assert(pdf.getAuthor()?.includes("Michias Tegegne"));
   assertEquals(pdf.getSubject(), "Rechnung mit Swiss QR-Zahlteil");
   await Deno.writeFile("/tmp/heav-edge-invoice-test.pdf", bytes);
+});
+
+Deno.test("QR-Zusatzinformation bleibt bei freien Positionszeichen kontrolliert", () => {
+  const message = buildInvoicePaymentMessage({
+    invoice_number: "HEAV-2026-1267",
+    invoice_items: [{
+      description: "Postproduktion – Yousty 🎬",
+      quantity: 1,
+      unit_price_rappen: 150000,
+      position: 1,
+    }],
+  });
+
+  assertEquals(message, "#01267");
+  const payload = buildSwissQrPayload({
+    iban: "CH9300762011623852957",
+    creditorName: "HEAV",
+    creditorStreet: "Musterstrasse",
+    creditorPostalCode: "8000",
+    creditorCity: "Zürich",
+    amountRappen: 150000,
+    reference: "RF18539007547034",
+    message,
+  });
+  assert(payload.includes("\n#01267\nEPD\n"));
 });

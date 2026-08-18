@@ -138,6 +138,14 @@ export const formatDocumentReference = (value: string) => {
   const digits = raw.match(/(?:#|\D)*(\d+)$/)?.[1] || raw.replace(/\D/g, "");
   return `#${digits.padStart(5, "0")}`;
 };
+
+// The QR reference is the authoritative payment identifier. Keep the optional
+// QR information field independent from free-form line-item text, because that
+// text may contain Unicode characters outside the Swiss QR character repertoire.
+export const buildInvoicePaymentMessage = (
+  invoice: Pick<Invoice, "invoice_number" | "invoice_items">,
+) => formatDocumentReference(invoice.invoice_number);
+
 const compactText = (value: unknown, maxLength: number) =>
   String(value ?? "").replace(/[\r\n]+/g, " ").trim().slice(0, maxLength);
 const normalizedVatNumber = (value: unknown) =>
@@ -757,12 +765,7 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
   const debtorPostalCode = compactText(customer.postal_code, 16);
   const debtorCity = compactText(customer.city, 35);
   const debtorCountry = countryCode(customer.country || "CH");
-  const paymentMessage = compactText(
-    `${invoice.invoice_number} · ${
-      invoice.invoice_items[0]?.description || "Rechnung"
-    }`,
-    140,
-  );
+  const paymentMessage = buildInvoicePaymentMessage(invoice);
   const qrPayload = buildSwissQrPayload({
     iban: settings.iban,
     creditorName,
