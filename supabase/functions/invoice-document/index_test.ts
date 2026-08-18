@@ -62,7 +62,7 @@ Deno.test("buildSwissQrPayload erzeugt einen vollständigen Swiss-QR-Payload", (
   ]);
   assertEquals(lines.slice(4, 11), [
     "S",
-    "HEAV · Michias Tegegne",
+    "HEAV - Michias Tegegne",
     "Oskar-Bider-Strass",
     "25",
     "4410",
@@ -77,13 +77,19 @@ Deno.test("buildSwissQrPayload erzeugt einen vollständigen Swiss-QR-Payload", (
     "Musterweg",
     "8",
     "8000",
-    "Zürich",
+    "Zuerich",
     "CH",
   ]);
   assertEquals(lines[27], "SCOR");
   assertEquals(lines[28], "RF43HEAV2026002");
-  assertEquals(lines[29], "HEAV-2026-002 · Shortform Content Produktion");
+  assertEquals(lines[29], "HEAV-2026-002 - Shortform Content Produktion");
   assertEquals(lines[30], "EPD");
+  const blkbAllowed = /^[A-Za-z0-9 ?!%_.,:/*"&;()'+-]$/;
+  assert(
+    [...payload].filter((character) => character !== "\n").every((
+      character,
+    ) => blkbAllowed.test(character)),
+  );
 });
 
 Deno.test("buildSwissQrPayload lehnt ungültige IBANs und Beträge ab", () => {
@@ -93,8 +99,6 @@ Deno.test("buildSwissQrPayload lehnt ungültige IBANs und Beträge ab", () => {
       { iban: "CH44 3199 9123 0008 8901 2" },
       { amountRappen: 0 },
       { creditorCountry: "Österreichisch" },
-      { creditorName: "HEAV 😀" },
-      { message: "Test\u0001" },
     ]
   ) {
     let failed = false;
@@ -264,7 +268,7 @@ Deno.test("QR-Zusatzinformation bleibt bei freien Positionszeichen kontrolliert"
     }],
   });
 
-  assertEquals(message, "#01267");
+  assertEquals(message, "HEAV 01267");
   const payload = buildSwissQrPayload({
     iban: "CH9300762011623852957",
     creditorName: "HEAV",
@@ -275,5 +279,5 @@ Deno.test("QR-Zusatzinformation bleibt bei freien Positionszeichen kontrolliert"
     reference: "RF18539007547034",
     message,
   });
-  assert(payload.includes("\n#01267\nEPD\n"));
+  assert(payload.includes("\nHEAV 01267\nEPD\n"));
 });

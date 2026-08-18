@@ -144,7 +144,7 @@ export const formatDocumentReference = (value: string) => {
 // text may contain Unicode characters outside the Swiss QR character repertoire.
 export const buildInvoicePaymentMessage = (
   invoice: Pick<Invoice, "invoice_number" | "invoice_items">,
-) => formatDocumentReference(invoice.invoice_number);
+) => `HEAV ${formatDocumentReference(invoice.invoice_number).slice(1)}`;
 
 const compactText = (value: unknown, maxLength: number) =>
   String(value ?? "").replace(/[\r\n]+/g, " ").trim().slice(0, maxLength);
@@ -331,10 +331,32 @@ function validCreditorReference(value: string) {
   return remainder === 1;
 }
 
+const blkbAllowedQrCharacter = /^[A-Za-z0-9 ?!%_.,:/*"&;()'+-]$/;
+
 const swissQrText = (value: unknown, maxLength: number, field: string) => {
-  const text = String(value ?? "").normalize("NFC").replace(/[\r\n\t]+/g, " ")
-    .trim().slice(0, maxLength);
-  if (!/^[\u0020-\u007E\u00A0-\u017F\u20AC]*$/u.test(text)) {
+  // BLKB accepts the QR text only in this conservative ASCII repertoire.
+  // Preserve German spellings before stripping remaining Unicode marks, then
+  // replace typographic punctuation and discard data-irrelevant symbols.
+  const text = String(value ?? "")
+    .replace(/[\r\n\t]+/g, " ")
+    .replace(/Ä/g, "Ae")
+    .replace(/Ö/g, "Oe")
+    .replace(/Ü/g, "Ue")
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss")
+    .normalize("NFKD")
+    .replace(/\p{M}+/gu, "")
+    .replace(/[·•–—]/g, "-")
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/[^A-Za-z0-9 ?!%_.,:/*"&;()'+-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength)
+    .trim();
+  if (![...text].every((character) => blkbAllowedQrCharacter.test(character))) {
     throw new Error(
       `${field} enthält Zeichen, die im Swiss QR Code nicht zulässig sind.`,
     );
