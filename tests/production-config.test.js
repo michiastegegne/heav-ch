@@ -22,12 +22,12 @@ test("Supabase-Browserclient ist auf eine geprüfte Version fixiert", () => {
   }
 });
 
-test("Kontaktformular bestätigt Anfragen automatisch an die geprüfte Absenderadresse", () => {
-  assert.match(contactSource, /action="https:\/\/formsubmit\.co\/hello@heav\.ch"/);
+test("Kontaktformular nutzt die HEAV-eigene Edge Function statt eines sichtbaren Fremdformulars", () => {
+  assert.doesNotMatch(contactSource, /formsubmit/i);
+  assert.match(contactSource, /data-contact-form/);
+  assert.match(contactSource, /assets\/contact-form\.js/);
   assert.match(contactSource, /name="email"/);
-  assert.match(contactSource, /name="_autoresponse"/);
-  assert.match(contactSource, /Thank you for contacting HEAV/);
-  assert.doesNotMatch(contactSource, /name="_captcha"\s+value="false"/);
+  assert.match(contactSource, /data-form-status/);
 });
 
 test("Admin lädt die produktive App mit versionsgebundenem Cache-Busting", () => {

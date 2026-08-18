@@ -1303,6 +1303,36 @@ main {
 .project-form {
   border-top: 1px solid rgba(9, 10, 8, 0.45);
 }
+.form-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.2rem 0;
+  color: #67655f;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+}
+.form-topline > :last-child {
+  text-align: right;
+}
+.form-status {
+  margin-top: 1.15rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--night);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+.form-status[hidden] {
+  display: none;
+}
+.form-status[data-state="success"] {
+  background: var(--acid);
+}
+.form-status[data-state="error"] {
+  background: var(--night);
+  color: var(--paper);
+}
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1401,6 +1431,10 @@ main {
 .form-submit:hover {
   background: var(--acid);
   color: var(--night);
+}
+.form-submit:disabled {
+  cursor: wait;
+  opacity: 0.7;
 }
 .form-submit .icon {
   --icon-size: 0.9rem;
@@ -1604,6 +1638,33 @@ main {
   }
   .project-video-frame {
     width: min(100%, 68rem);
+  }
+  .contact-form-layout {
+    grid-template-columns: minmax(20rem, 0.7fr) minmax(38rem, 1.3fr);
+    gap: clamp(4rem, 8vw, 10rem);
+  }
+  .project-form {
+    padding: 0 clamp(1.35rem, 2.4vw, 2.5rem) 1.75rem;
+    border: 1px solid rgba(9, 10, 8, 0.32);
+    background: rgba(255, 255, 255, 0.16);
+  }
+  .form-topline {
+    padding: 1.3rem 0;
+  }
+  .form-field {
+    min-height: 8.35rem;
+    padding-top: 1.55rem;
+    padding-bottom: 1.45rem;
+    transition: background-color 0.2s ease;
+  }
+  .form-field-wide {
+    min-height: 14rem;
+  }
+  .form-field:focus-within {
+    background: rgba(213, 255, 26, 0.16);
+  }
+  .form-consent {
+    margin-top: 1.8rem;
   }
 }
 @media (max-width: 800px) {
