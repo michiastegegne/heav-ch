@@ -105,11 +105,12 @@ function parseEnquiry(value: unknown): ContactEnquiry {
     submittedAt: Number(source.submittedAt),
   };
 
-  if (
-    !enquiry.name || !validMailbox(enquiry.email) || enquiry.message.length < 12
-  ) {
+  if (!enquiry.name || !validMailbox(enquiry.email)) {
+    throw new Error("Please complete your name and email address.");
+  }
+  if (enquiry.message.length < 12) {
     throw new Error(
-      "Please complete your name, email address and project details.",
+      "Please add a short project description (at least 12 characters).",
     );
   }
   if (

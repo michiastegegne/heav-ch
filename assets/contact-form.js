@@ -6,6 +6,7 @@ if (contactForm instanceof HTMLFormElement) {
   const submitButton = contactForm.querySelector("[data-form-submit]");
   const status = contactForm.querySelector("[data-form-status]");
   const startedAt = contactForm.querySelector("[name='submittedAt']");
+  const messageInput = contactForm.querySelector("[name='message']");
   const endpoint = `${HEAV_ADMIN_CONFIG.supabaseUrl}/functions/v1/contact-enquiry`;
 
   const setStatus = (message, state) => {
@@ -33,6 +34,12 @@ if (contactForm instanceof HTMLFormElement) {
 
   contactForm.addEventListener("submit", async (event) => {
     event.preventDefault();
+    const message = messageInput instanceof HTMLTextAreaElement ? messageInput.value.trim() : "";
+    if (message.length < 12) {
+      setStatus("Please add a short project description (at least 12 characters).", "error");
+      messageInput?.focus();
+      return;
+    }
     if (!contactForm.reportValidity()) return;
 
     const data = new FormData(contactForm);
