@@ -92,23 +92,6 @@
     requestAnimationFrame(() => formSuccess.focus({ preventScroll: true }));
   }
 
-  $$('[data-load-youtube]').forEach((button) =>
-    button.addEventListener("click", () => {
-      const container = button.closest("[data-youtube-id]");
-      const id = container?.dataset.youtubeId;
-      if (!container || !id) return;
-      const frame = document.createElement("iframe");
-      frame.src = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}`;
-      frame.title = container.dataset.youtubeTitle || "YouTube video";
-      frame.loading = "lazy";
-      frame.referrerPolicy = "strict-origin-when-cross-origin";
-      frame.allow =
-        "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
-      frame.allowFullscreen = true;
-      container.replaceChildren(frame);
-      container.classList.remove("video-consent");
-    }),
-  );
 
   const galleryItems = $$('[data-gallery-item]');
   if (galleryItems.length) {

@@ -1477,39 +1477,6 @@ main {
   border-color: var(--acid);
   color: var(--night);
 }
-.video-consent {
-  display: grid;
-  place-items: center;
-  background: #090a08;
-}
-.video-consent-content {
-  display: grid;
-  justify-items: start;
-  gap: 1.15rem;
-  width: min(100% - 3rem, 36rem);
-  padding: clamp(1.7rem, 4vw, 3rem);
-  background: rgba(9, 10, 8, 0.88);
-  border: 1px solid rgba(238, 234, 224, 0.3);
-  color: var(--cream);
-}
-.video-consent-content p {
-  margin: 0;
-  line-height: 1.6;
-  color: #cfcdc5;
-}
-.video-consent-content > a,
-.video-consent-content noscript a {
-  color: #cfcdc5;
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
-}
-.video-consent-button {
-  appearance: none;
-  cursor: pointer;
-  font: inherit;
-  color: inherit;
-  background: transparent;
-}
 .paper .button-link:hover,
 .acid .button-link:hover {
   background: var(--night);
