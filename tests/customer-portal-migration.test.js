@@ -7,6 +7,7 @@ const adminMigrationPath = new URL("../supabase/migrations/20260803_heav_admin.s
 const optionalCustomerMigrationPath = new URL("../supabase/migrations/20260806_optional_customer_details.sql", import.meta.url);
 const portalMigrationPath = new URL("../supabase/migrations/20260819_customer_portal.sql", import.meta.url);
 const invitationMigrationPath = new URL("../supabase/migrations/20260820_customer_portal_invites.sql", import.meta.url);
+const requestActionMigrationPath = new URL("../supabase/migrations/20260821_portal_request_actions.sql", import.meta.url);
 
 async function createDatabase() {
   const db = new PGlite();
@@ -23,7 +24,7 @@ async function createDatabase() {
     $$;
   `);
   const adminMigration = (await readFile(adminMigrationPath, "utf8")).replace("create extension if not exists pgcrypto;", "");
-  await db.exec(`${adminMigration}\n${await readFile(optionalCustomerMigrationPath, "utf8")}\n${await readFile(portalMigrationPath, "utf8")}\n${await readFile(invitationMigrationPath, "utf8")}`);
+  await db.exec(`${adminMigration}\n${await readFile(optionalCustomerMigrationPath, "utf8")}\n${await readFile(portalMigrationPath, "utf8")}\n${await readFile(invitationMigrationPath, "utf8")}\n${await readFile(requestActionMigrationPath, "utf8")}`);
   return db;
 }
 
@@ -115,5 +116,25 @@ test("nur eine von HEAV angelegte, nicht abgelaufene Einladung öffnet die Kunde
   const denied = await db.query(`select public.hook_restrict_heav_signup('{"user":{"email":"unknown@example.test"}}'::jsonb) as result`);
   assert.deepEqual(allowed.rows[0].result, {});
   assert.equal(denied.rows[0].result.error.http_code, 403);
+  await db.close();
+});
+
+test("Owner akzeptiert eine Portal-Anfrage atomar und erstellt den zugehörigen Kunden", async () => {
+  const db = await createDatabase();
+  const owner = "10000000-0000-4000-8000-000000000001";
+  const request = "60000000-0000-4000-8000-000000000001";
+  await db.exec(`
+    insert into auth.users(id) values ('${owner}');
+    select set_config('request.jwt.claim.sub', '${owner}', false);
+    insert into public.customer_portal_requests(id, owner_id, company, contact_name, email, phone, message)
+      values ('${request}', '${owner}', 'Muster AG', 'Alex Muster', 'alex@example.test', '+41 79 000 00 00', 'Bitte Portalzugang.');
+  `);
+  const accepted = await db.query(`select public.process_customer_portal_request('${request}', 'accept') as customer_id`);
+  const customerId = accepted.rows[0].customer_id;
+  const customer = await db.query(`select company, contact_name, email from public.customers where id = '${customerId}'`);
+  const status = await db.query(`select status, customer_id is not null as has_customer, reviewed_at is not null as reviewed from public.customer_portal_requests where id = '${request}'`);
+  assert.deepEqual(customer.rows, [{ company: 'Muster AG', contact_name: 'Alex Muster', email: 'alex@example.test' }]);
+  assert.deepEqual(status.rows, [{ status: 'accepted', has_customer: true, reviewed: true }]);
+  await assert.rejects(db.query(`select public.process_customer_portal_request('${request}', 'accept')`), /request is not pending/);
   await db.close();
 });
