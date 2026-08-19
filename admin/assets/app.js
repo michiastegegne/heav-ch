@@ -19,6 +19,7 @@ const viewNames = {
   projects: "Projekte",
   invoices: "Rechnungen",
   settings: "Einstellungen",
+  "portal-requests": "Portal-Anfragen",
 };
 const state = { view: "dashboard", query: "", filter: "all", data: null, supabase: null, sendRequestKeys: new Map() };
 const esc = (value = "") => String(value).replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
@@ -57,15 +58,16 @@ function createSupabaseAdapter(supabase, session) {
   const fail = (error) => { if (error) throw error; };
   return {
     async loadAll() {
-      const [customers, projects, invoices, settings] = await Promise.all([
+      const [customers, projects, invoices, settings, portalRequests] = await Promise.all([
         supabase.from("customers").select("*").order("company"),
         supabase.from("projects").select("*").order("created_at", { ascending: false }),
         supabase.from("invoices").select("*, invoice_items(*)").order("issue_date", { ascending: false }),
         supabase.from("company_settings").select("*").maybeSingle(),
+        supabase.from("customer_portal_requests").select("*").order("created_at", { ascending: false }),
       ]);
-      [customers, projects, invoices, settings].forEach((result) => fail(result.error));
+      [customers, projects, invoices, settings, portalRequests].forEach((result) => fail(result.error));
       const normalizedInvoices = invoices.data.map((invoice) => ({ ...invoice, items: invoice.invoice_items || [] }));
-      return joinedData({ customers: customers.data, projects: projects.data, invoices: normalizedInvoices, settings: settings.data || {} });
+      return joinedData({ customers: customers.data, projects: projects.data, invoices: normalizedInvoices, settings: settings.data || {}, portalRequests: portalRequests.data || [] });
     },
     async saveCustomer(payload) { const result = await supabase.from("customers").insert({ ...payload, owner_id: ownerId }); fail(result.error); },
     async updateCustomer(id, payload) { const result = await supabase.rpc("update_customer", { p_customer_id: id, p_company: payload.company, p_contact_name: payload.contact_name, p_email: payload.email, p_phone: payload.phone, p_address_line1: payload.address_line1, p_postal_code: payload.postal_code, p_city: payload.city, p_country: payload.country }); fail(result.error); },
@@ -93,6 +95,11 @@ function createSupabaseAdapter(supabase, session) {
       const parameterNames = { customer: "p_customer_id", project: "p_project_id", invoice: "p_invoice_id" };
       const result = await supabase.rpc(rpcNames[type], { [parameterNames[type]]: id });
       fail(result.error);
+    },
+    async processPortalRequest(id, action) {
+      const result = await supabase.rpc("process_customer_portal_request", { p_request_id: id, p_action: action });
+      fail(result.error);
+      return result.data;
     },
     async saveSettings(payload) { const result = await supabase.from("company_settings").upsert({ ...payload, owner_id: ownerId }, { onConflict: "owner_id" }); fail(result.error); },
     async invoiceAction(id, action, requestKey = null) {
@@ -131,6 +138,7 @@ function renderDashboard() {
 
 function filtered(items, fields) { const query = state.query.trim().toLowerCase(); return items.filter((item) => !query || fields.some((field) => String(item[field] || "").toLowerCase().includes(query))); }
 function toolbar(type, placeholder, filters = []) { return `<div class="toolbar"><label class="search-field"><span class="sr-only">Suchen</span><input type="search" data-search placeholder="${esc(placeholder)}" value="${esc(state.query)}"></label>${filters.length ? `<div class="filter-tabs">${filters.map(([value,label]) => `<button class="filter-tab ${state.filter === value ? "is-active" : ""}" data-filter="${value}">${label}</button>`).join("")}</div>` : ""}<button class="primary-action" data-create="${type}">Neu <span>+</span></button></div>`; }
+function filterToolbar(placeholder, filters) { return `<div class="toolbar"><label class="search-field"><span class="sr-only">Suchen</span><input type="search" data-search placeholder="${esc(placeholder)}" value="${esc(state.query)}"></label><div class="filter-tabs">${filters.map(([value,label]) => `<button class="filter-tab ${state.filter === value ? "is-active" : ""}" data-filter="${value}">${label}</button>`).join("")}</div></div>`; }
 
 function renderCustomers() {
   const items = filtered(state.data.customers, ["company", "contact_name", "email", "city"]);
@@ -161,12 +169,21 @@ function renderInvoices() {
   return `<section class="view">${toolbar("invoice", "Rechnungen durchsuchen …", [["all","Alle"],["draft","Entwürfe"],["sent","Versendet"],["paid","Bezahlt"],["overdue","Überfällig"],["cancelled","Storniert"]])}<table class="data-table"><thead><tr><th>Rechnung</th><th>Kunde</th><th>Status</th><th>Total</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list">${cards}</div></section>`;
 }
 
+function renderPortalRequests() {
+  const all = state.data.portalRequests || [];
+  const items = filtered(all.filter((item) => state.filter === "all" || item.status === state.filter), ["contact_name", "company", "email", "message"]);
+  const actions = (item) => item.status === "pending" ? `<div class="table-actions"><button class="primary-action" data-portal-request-action="accept" data-id="${esc(item.id)}">Akzeptieren</button><button class="danger-button" data-portal-request-action="decline" data-id="${esc(item.id)}">Ablehnen</button></div>` : `<span class="status ${esc(item.status === "accepted" ? "paid" : "cancelled")}">${esc(item.status === "accepted" ? "Akzeptiert" : "Abgelehnt")}</span>`;
+  if (!all.length) return `<section class="view"><div class="empty-state"><h3>Keine Portal-Anfragen.</h3><p>Neue Anfragen aus dem Kundenportal erscheinen hier.</p></div></section>`;
+  const rows = items.map((item) => `<tr><td><strong>${esc(item.company || item.contact_name)}</strong><small>${esc(item.contact_name)} · ${formatDate(item.created_at?.slice(0,10))}</small></td><td>${esc(item.email)}</td><td>${esc(item.phone || "–")}</td><td><small>${esc(item.message || "–")}</small></td><td>${actions(item)}</td></tr>`).join("");
+  return `<section class="view"><div class="hero-row"><h2>Neue Zugänge,<br><em>klar geprüft.</em></h2><p>Beim Akzeptieren wird automatisch ein Kundenprofil erstellt. Der Portalzugang wird erst mit der anschliessenden Einladung freigeschaltet.</p></div>${filterToolbar("Anfragen durchsuchen …", [["all","Alle"],["pending","Offen"],["accepted","Akzeptiert"],["declined","Abgelehnt"]])}<table class="data-table"><thead><tr><th>Anfrage</th><th>E-Mail</th><th>Telefon</th><th>Nachricht</th><th>Aktion</th></tr></thead><tbody>${rows}</tbody></table></section>`;
+}
+
 function renderSettings() {
   const settings = state.data.settings || {};
   return `<section class="view"><div class="hero-row"><h2>Business,<br><em>set clearly.</em></h2><p>Diese Angaben erscheinen auf deinen Rechnungen und in den Rechnungs-E-Mails. Ohne MWST-Nummer berechnet das System automatisch keine MWST.</p></div><div class="settings-grid"><article class="settings-card"><h3>Rechnungsabsender</h3><p>Rechtliche und finanzielle Angaben für alle PDF-Rechnungen.</p><div class="settings-list"><div><span>Firma</span><strong>${esc(settings.company_name || "HEAV")}</strong></div><div><span>Inhaber</span><strong>${esc(settings.owner_name || "Michias Tegegne")}</strong></div><div><span>E-Mail</span><strong>${esc(settings.email || "hello@heav.ch")}</strong></div><div><span>MWST</span><strong>${esc(settings.vat_number || "Nicht MWST-pflichtig")}</strong></div><div><span>IBAN</span><strong>${esc(settings.iban || "Noch offen")}</strong></div></div><button class="primary-action" data-create="settings" style="margin-top:24px">Angaben bearbeiten</button></article><article class="settings-card"><h3>Systemstatus</h3><p>Der Adminbereich nutzt einen getrennten, geschützten Backend-Zugang.</p><div class="settings-list"><div><span>Modus</span><strong>Produktion</strong></div><div><span>Datenbank</span><strong>Supabase RLS</strong></div><div><span>Rechnungsversand</span><strong>billing@heav.ch</strong></div><div><span>Website</span><strong>heav.ch</strong></div></div></article></div></section>`;
 }
 
-const renderers = { dashboard: renderDashboard, customers: renderCustomers, projects: renderProjects, invoices: renderInvoices, settings: renderSettings };
+const renderers = { dashboard: renderDashboard, customers: renderCustomers, projects: renderProjects, invoices: renderInvoices, settings: renderSettings, "portal-requests": renderPortalRequests };
 function render() { title.textContent = viewNames[state.view]; content.innerHTML = renderers[state.view](); content.focus({ preventScroll: true }); }
 async function refresh() { state.data = await adapter.loadAll(); render(); }
 function setView(view) { state.view = view; state.query = ""; state.filter = "all"; document.querySelectorAll(".nav-link").forEach((item) => item.classList.toggle("is-active", item.dataset.view === view)); shell.classList.remove("nav-open"); render(); }
@@ -283,12 +300,27 @@ async function deleteRecord(type, id, button) {
   }
 }
 
+async function portalRequestAction(id, action, button) {
+  const request = state.data.portalRequests.find((item) => item.id === id);
+  const label = request?.company || request?.contact_name || "diese Anfrage";
+  const question = action === "accept" ? `${label} akzeptieren und als Kundenprofil anlegen?` : `${label} wirklich ablehnen?`;
+  if (!window.confirm(question)) return;
+  button.disabled = true;
+  try {
+    await adapter.processPortalRequest(id, action);
+    await refresh();
+    showToast(action === "accept" ? "Anfrage akzeptiert. Kundenprofil wurde erstellt." : "Anfrage abgelehnt.");
+  } catch (error) { showToast(error.message || "Anfrage konnte nicht verarbeitet werden.", "error"); }
+  finally { button.disabled = false; }
+}
+
 content.addEventListener("click", (event) => {
   const create = event.target.closest("[data-create]"); if (create) openEditor(create.dataset.create);
   const view = event.target.closest("[data-view]"); if (view) setView(view.dataset.view);
   const filter = event.target.closest("[data-filter]"); if (filter) { state.filter = filter.dataset.filter; render(); }
   const edit = event.target.closest("[data-edit]"); if (edit) { const collections = { customer: state.data.customers, project: state.data.projects, invoice: state.data.invoices }; openEditor(edit.dataset.edit, collections[edit.dataset.edit].find((item) => item.id === edit.dataset.id)); }
   const action = event.target.closest("[data-invoice-action]"); if (action) invoiceAction(action.dataset.id, action.dataset.invoiceAction, action);
+  const requestAction = event.target.closest("[data-portal-request-action]"); if (requestAction) portalRequestAction(requestAction.dataset.id, requestAction.dataset.portalRequestAction, requestAction);
   const remove = event.target.closest("[data-delete-record]"); if (remove) deleteRecord(remove.dataset.deleteRecord, remove.dataset.id, remove);
 });
 content.addEventListener("input", (event) => { if (event.target.matches("[data-search]")) { state.query = event.target.value; const position = event.target.selectionStart; render(); const next = document.querySelector("[data-search]"); next.focus(); next.setSelectionRange(position, position); } });

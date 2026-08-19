@@ -8,6 +8,7 @@ test("Kundenportal ist eine private, eigene HEAV-Oberfläche mit Projekten, Doku
   const html = await read("../portal/index.html");
   const script = await read("../portal/assets/portal.js");
   const css = await read("../portal/assets/portal.css");
+  const adminScript = await read("../admin/assets/app.js");
 
   assert.match(html, /<meta name="robots" content="noindex,nofollow,noarchive"/);
   assert.match(html, /id="portal-projects"/);
@@ -17,6 +18,9 @@ test("Kundenportal ist eine private, eigene HEAV-Oberfläche mit Projekten, Doku
   assert.match(script, /customer_portal_memberships/);
   assert.match(script, /createSignedUrl/);
   assert.match(script, /customer_reviews/);
+  assert.match(adminScript, /customer_portal_requests/);
+  assert.match(adminScript, /process_customer_portal_request/);
+  assert.match(adminScript, /portal-requests/);
   assert.doesNotMatch(script, /service_role/i);
   assert.match(css, /@media\(max-width:760px\)/);
 });
