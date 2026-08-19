@@ -168,8 +168,10 @@ Deno.test("E-Mail-Banner enthält Portrait, Kontaktdaten und sichere Projekttext
   const html = buildInvoiceEmailHtml(invoice as never, settings as never);
   assert(html.includes("heav-email-wordmark.png"));
   assert(html.includes("background:#080909"));
+  assert(html.includes("margin:0 0 28px"));
   assert(html.includes('width="154" height="35"'));
-  assert(html.includes("michias-email-portrait.jpg"));
+  assert(html.includes("michias-email-profile-headroom.jpg"));
+  assert(!html.includes("michias-email-portrait.jpg"));
   assert(html.includes("border-radius:50%"));
   assert(html.includes("Founder &amp; Owner | HEAV"));
   assert(html.includes("mailto:hello@heav.ch"));
