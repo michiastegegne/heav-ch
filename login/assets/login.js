@@ -92,8 +92,17 @@ if (!isBackendConfigured()) {
     HEAV_ADMIN_CONFIG.supabaseUrl,
     HEAV_ADMIN_CONFIG.supabaseAnonKey,
   );
+  async function workspaceDestination() {
+    const { data: memberships, error } = await supabase
+      .from("customer_portal_memberships")
+      .select("id")
+      .eq("status", "active")
+      .limit(1);
+    if (!error && memberships?.length) return "/portal/";
+    return "/admin/";
+  }
   const { data } = await supabase.auth.getSession();
-  if (data.session) window.location.replace("/admin/");
+  if (data.session) window.location.replace(await workspaceDestination());
 
   forms.login.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -109,7 +118,7 @@ if (!isBackendConfigured()) {
       setAuthBusy(forms.login, false);
       return;
     }
-    window.location.assign("/admin/");
+    window.location.assign(await workspaceDestination());
   });
 
   forms.signup.addEventListener("submit", async (event) => {
@@ -160,7 +169,7 @@ if (!isBackendConfigured()) {
       return;
     }
     setMessage(messages["signup-code"], "Konto bestätigt. HEAV Studio wird geöffnet.", true);
-    window.location.assign("/admin/");
+    window.location.assign(await workspaceDestination());
   });
 
   forms.recovery.addEventListener("submit", async (event) => {
@@ -211,6 +220,6 @@ if (!isBackendConfigured()) {
       return;
     }
     setMessage(messages["recovery-code"], "Passwort gespeichert. HEAV Studio wird geöffnet.", true);
-    window.location.assign("/admin/");
+    window.location.assign(await workspaceDestination());
   });
 }

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="de-CH">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="robots" content="noindex,nofollow,noarchive" />
+    <meta name="theme-color" content="#090a08" />
+    <title>Kundenportal – HEAV</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/portal/assets/portal.css" />
+  </head>
+  <body>
+    <div class="loading-screen" id="loading-screen" aria-live="polite"><strong>HEAV</strong><span>Portal wird geladen …</span></div>
+    <div class="portal" id="portal" hidden>
+      <header class="site-header">
+        <a class="brand" href="/" aria-label="Zur HEAV Website">HEAV</a>
+        <div class="header-actions"><span class="secure-label">GESCHÜTZTES KUNDENPORTAL</span><button class="text-button" id="logout-button" type="button">Abmelden</button></div>
+      </header>
+      <main>
+        <section class="portal-hero" aria-labelledby="portal-title">
+          <span class="eyebrow">HEAV · PRIVATE DELIVERY</span>
+          <h1 id="portal-title">Everything for<br /><em>your project.</em></h1>
+          <p id="portal-intro">Deine Projekte, Dateien und Dokumente an einem geschützten Ort.</p>
+        </section>
+        <section class="portal-section" aria-labelledby="projects-heading">
+          <div class="section-head"><div><span class="eyebrow">PROJEKTE</span><h2 id="projects-heading">Aktuelle Arbeit</h2></div><span class="count" id="project-count"></span></div>
+          <div class="project-grid" id="portal-projects"></div>
+        </section>
+        <section class="portal-section split-section">
+          <div class="section-block" aria-labelledby="invoices-heading">
+            <div class="section-head"><div><span class="eyebrow">RECHNUNGEN</span><h2 id="invoices-heading">Abrechnung</h2></div></div>
+            <div class="record-list" id="portal-invoices"></div>
+          </div>
+          <div class="section-block" aria-labelledby="files-heading">
+            <div class="section-head"><div><span class="eyebrow">DELIVERY</span><h2 id="files-heading">Dateien & Dokumente</h2></div></div>
+            <div class="file-list" id="portal-files"></div>
+          </div>
+        </section>
+        <section class="portal-section feedback-section" aria-labelledby="feedback-heading">
+          <div><span class="eyebrow">FEEDBACK</span><h2 id="feedback-heading">Deine Erfahrung mit HEAV</h2><p>Deine Rezension wird vor einer allfälligen Veröffentlichung persönlich geprüft.</p></div>
+          <form id="review-form" class="review-form">
+            <label><span>Name für die Rezension</span><input name="reviewer_name" autocomplete="name" maxlength="120" required /></label>
+            <label id="review-customer-field" hidden><span>Kundenkonto</span><select name="customer_id" id="review-customer"></select></label>
+            <label><span>Deine Rezension</span><textarea name="body" minlength="20" maxlength="2000" required placeholder="Wie war die Zusammenarbeit?"></textarea></label>
+            <p id="review-message" class="form-message" role="status" aria-live="polite"></p>
+            <button class="primary-button" type="submit">Rezension senden <span aria-hidden="true">↗</span></button>
+          </form>
+        </section>
+      </main>
+      <footer>HEAV Filmproduktion Schweiz · Private Daten werden nur für dein Kundenkonto bereitgestellt.</footer>
+    </div>
+    <script type="module" src="/portal/assets/portal.js"></script>
+  </body>
+</html>
