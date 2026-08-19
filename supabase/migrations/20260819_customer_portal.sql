@@ -212,10 +212,6 @@ $$;
 revoke all on function public.can_download_customer_storage_object(text, text) from public, anon;
 grant execute on function public.can_download_customer_storage_object(text, text) to authenticated;
 
-alter table storage.objects enable row level security;
-grant usage on schema storage to authenticated;
-grant select on storage.objects to authenticated;
-create policy "member downloads only assigned customer delivery files" on storage.objects
-  for select to authenticated using (
-    public.can_download_customer_storage_object(bucket_id, name)
-  );
+-- The Storage schema is owned by Supabase, so object access is issued by the
+-- portal download Edge Function after this exact predicate returns true.
+-- Do not attempt to alter storage.objects from a project migration.

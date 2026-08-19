@@ -65,11 +65,13 @@ test("ein aktiver Portalzugang sieht ausschliesslich seine Kundenprojekte, Rechn
   const projects = await db.query("select title from public.projects order by title");
   const invoices = await db.query("select invoice_number from public.invoices order by invoice_number");
   const files = await db.query("select original_filename from public.customer_files order by original_filename");
-  const storageObjects = await db.query("select name from storage.objects order by name");
+  const allowedStorage = await db.query(`select public.can_download_customer_storage_object('customer-deliveries', 'customers/${customerA}/alpha-final.zip') as allowed`);
+  const deniedStorage = await db.query(`select public.can_download_customer_storage_object('customer-deliveries', 'customers/${customerB}/beta-film.mp4') as allowed`);
   assert.deepEqual(projects.rows, [{ title: "Alpha Film" }]);
   assert.deepEqual(invoices.rows, [{ invoice_number: "HEAV-001" }]);
   assert.deepEqual(files.rows, [{ original_filename: "alpha-final.zip" }]);
-  assert.deepEqual(storageObjects.rows, [{ name: `customers/${customerA}/alpha-final.zip` }]);
+  assert.deepEqual(allowedStorage.rows, [{ allowed: true }]);
+  assert.deepEqual(deniedStorage.rows, [{ allowed: false }]);
   await db.close();
 });
 
