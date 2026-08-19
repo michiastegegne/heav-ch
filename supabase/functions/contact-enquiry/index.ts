@@ -15,7 +15,7 @@ const maxLengths = {
 
 const contactReplyEmail = "hello@heav.ch";
 const wordmarkImage = "https://heav.ch/assets/images/heav-email-wordmark.png";
-const profileImage = "https://heav.ch/assets/images/michias-email-profile-full.jpg";
+const profileImage = "https://heav.ch/assets/images/michias-email-profile-headroom.jpg";
 
 type ContactEnquiry = {
   name: string;
