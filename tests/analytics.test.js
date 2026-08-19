@@ -12,7 +12,7 @@ async function collectPublicHtml(directory) {
     const absolute = resolve(directory, entry.name);
     const fromRoot = relative(siteRoot, absolute);
     if (entry.isDirectory()) {
-      if ([".git", "admin", "login", "supabase", "tests", "node_modules"].includes(entry.name)) continue;
+      if ([".git", "admin", "login", "portal", "supabase", "tests", "node_modules"].includes(entry.name)) continue;
       await collectPublicHtml(absolute);
     } else if (entry.isFile() && entry.name.endsWith(".html")) {
       publicHtml.push(fromRoot.split(sep).join("/"));

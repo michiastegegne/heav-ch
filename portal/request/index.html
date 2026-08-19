@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en-CH">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="robots" content="noindex,nofollow,noarchive" />
+    <meta name="theme-color" content="#090a08" />
+    <title>Request portal access – HEAV</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/portal/assets/portal.css" />
+  </head>
+  <body>
+    <main class="portal">
+      <header class="site-header"><a class="brand" href="/" aria-label="Go to the HEAV website">HEAV</a></header>
+      <section class="feedback-section" style="min-height:calc(100svh - 85px);align-items:center">
+        <div><span class="eyebrow">CLIENT PORTAL</span><h1 style="color:var(--ink)">Request<br /><em style="color:#536b00">access.</em></h1><p>Send your details and HEAV will review your request before any project or document is shared.</p></div>
+        <form id="portal-request-form" class="review-form" novalidate>
+          <label><span>Your name</span><input name="contact_name" autocomplete="name" maxlength="160" required /></label>
+          <label><span>Company (optional)</span><input name="company" autocomplete="organization" maxlength="200" /></label>
+          <label><span>Email</span><input name="email" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" required /></label>
+          <label><span>Phone (optional)</span><input name="phone" type="tel" autocomplete="tel" maxlength="80" /></label>
+          <label><span>Message (optional)</span><textarea name="message" maxlength="2000" placeholder="Tell us which project this relates to."></textarea></label>
+          <label aria-hidden="true" style="display:none"><span>Website</span><input name="website" tabindex="-1" autocomplete="off" /></label>
+          <p id="request-message" class="form-message" role="status" aria-live="polite"></p>
+          <button class="primary-button" type="submit">Send request <span aria-hidden="true">↗</span></button>
+          <a class="text-button" href="/login/" style="color:var(--ink)">Already have access? Sign in</a>
+        </form>
+      </section>
+    </main>
+    <script type="module" src="/portal/request/assets/request.js"></script>
+  </body>
+</html>
