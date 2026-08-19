@@ -60,6 +60,15 @@ test("Kurzbeschreibungen werden vor dem Versand klar erklärt", () => {
   assert.match(functionSource, /Please add a short project description/);
 });
 
+test("Bestätigungsmail nutzt einen eigenen HEAV-Absender und das HEAV-E-Mailbanner", () => {
+  assert.match(functionSource, /CONTACT_FROM_EMAIL/);
+  assert.match(functionSource, /Project enquiry received — HEAV/);
+  assert.match(functionSource, /heav-email-wordmark\.png/);
+  assert.match(functionSource, /michias-email-portrait\.jpg/);
+  assert.match(functionSource, /Founder &amp; Owner \| HEAV/);
+  assert.doesNotMatch(functionSource, /billing/i);
+});
+
 test("Kontakt-Edge-Function validiert, schützt und versendet über den bestehenden HEAV-Mailer", () => {
   assert.match(functionSource, /RESEND_API_KEY/);
   assert.match(functionSource, /RESEND_FROM_EMAIL/);

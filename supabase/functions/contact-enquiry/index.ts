@@ -13,6 +13,10 @@ const maxLengths = {
   message: 5000,
 };
 
+const contactReplyEmail = "hello@heav.ch";
+const wordmarkImage = "https://heav.ch/assets/images/heav-email-wordmark.png";
+const profileImage = "https://heav.ch/assets/images/michias-email-portrait.jpg";
+
 type ContactEnquiry = {
   name: string;
   company: string;
@@ -162,6 +166,47 @@ function emailHtml(enquiry: ContactEnquiry) {
   }</p></section></main></body></html>`;
 }
 
+function confirmationEmailText(enquiry: ContactEnquiry) {
+  return `Hello ${enquiry.name},
+
+Thank you for reaching out to HEAV.
+
+Your project enquiry has arrived safely. HEAV will review the details and get back to you with the next steps.
+
+Kind regards
+HEAV
+${contactReplyEmail}
+https://heav.ch`;
+}
+
+function confirmationEmailHtml(enquiry: ContactEnquiry) {
+  const name = escapeHtml(enquiry.name);
+  const projectType = escapeHtml(enquiry.projectType || "Project enquiry");
+  return `<div style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;color:#151515;font-size:16px;line-height:1.55;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin:0 0 28px;padding:0;background:#080909;">
+    <tr><td style="padding:18px 20px;"><img src="${wordmarkImage}" width="154" height="35" alt="HEAV" style="display:block;width:154px;height:35px;border:0;outline:none;text-decoration:none;" /></td></tr>
+  </table>
+  <p style="margin:0 0 20px;">Hello ${name},</p>
+  <h1 style="margin:0 0 18px;color:#151515;font-family:Arial,Helvetica,sans-serif;font-size:30px;line-height:1.12;font-weight:600;">Your project enquiry<br>is with HEAV.</h1>
+  <p style="margin:0 0 20px;">Thank you for reaching out. We have received your project details and HEAV will get back to you with the next steps.</p>
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin:0 0 28px;border-top:1px solid #c9c6be;border-bottom:1px solid #c9c6be;">
+    <tr><td style="padding:13px 0;color:#777777;font-size:11px;letter-spacing:.12em;text-transform:uppercase;">Project enquiry</td><td align="right" style="padding:13px 0;color:#151515;font-size:15px;">${projectType}</td></tr>
+  </table>
+  <p style="margin:0 0 28px;">If you need to add anything, simply reply to this email.</p>
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin:0;padding:0;">
+    <tr>
+      <td valign="middle" style="padding:0 18px 0 0;"><img src="${profileImage}" width="88" height="88" alt="Michias Tegegne" style="display:block;width:88px;height:88px;border:1px solid #151515;border-radius:50%;object-fit:cover;" /></td>
+      <td valign="middle" style="padding:0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.45;">
+        <strong style="display:block;color:#111111;font-size:18px;line-height:1.2;">Michias Tegegne</strong>
+        <span style="display:block;margin:3px 0 7px;color:#777777;">Founder &amp; Owner | HEAV</span>
+        <a href="mailto:${contactReplyEmail}" style="color:#111111;text-decoration:underline;text-underline-offset:2px;">${contactReplyEmail}</a><br>
+        <a href="https://heav.ch" style="color:#777777;text-decoration:underline;text-underline-offset:2px;">heav.ch</a>
+      </td>
+    </tr>
+  </table>
+</div>`;
+}
+
 async function sendEmail(resendKey: string, payload: Record<string, unknown>) {
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -200,14 +245,16 @@ Deno.serve(async (request) => {
     if (enquiry.website) return responseJson({ ok: true }, 200, origin);
 
     const resendKey = Deno.env.get("RESEND_API_KEY");
-    const fromEmail = Deno.env.get("RESEND_FROM_EMAIL");
-    if (!resendKey || !fromEmail || !validSender(fromEmail)) {
+    const fallbackFromEmail = Deno.env.get("RESEND_FROM_EMAIL");
+    const contactFromEmail = Deno.env.get("CONTACT_FROM_EMAIL") ||
+      fallbackFromEmail;
+    if (!resendKey || !contactFromEmail || !validSender(contactFromEmail)) {
       throw new Error("Contact delivery is not configured.");
     }
 
     await sendEmail(resendKey, {
-      from: fromEmail,
-      to: ["hello@heav.ch"],
+      from: contactFromEmail,
+      to: [contactReplyEmail],
       reply_to: enquiry.email,
       subject: `Project enquiry — ${enquiry.name}`,
       text: emailText(enquiry),
@@ -216,12 +263,12 @@ Deno.serve(async (request) => {
 
     try {
       await sendEmail(resendKey, {
-        from: fromEmail,
+        from: contactFromEmail,
         to: [enquiry.email],
-        reply_to: "hello@heav.ch",
-        subject: "Your project enquiry — HEAV",
-        text:
-          `Thank you for getting in touch, ${enquiry.name}.\n\nYour project enquiry has reached HEAV. HEAV will review the details and get back to you with the next steps.\n\nHEAV\nhttps://heav.ch`,
+        reply_to: contactReplyEmail,
+        subject: "Project enquiry received — HEAV",
+        text: confirmationEmailText(enquiry),
+        html: confirmationEmailHtml(enquiry),
       });
     } catch (confirmationError) {
       console.error("contact confirmation failed", confirmationError);
