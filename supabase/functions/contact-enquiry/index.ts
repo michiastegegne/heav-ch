@@ -182,29 +182,37 @@ https://heav.ch`;
 function confirmationEmailHtml(enquiry: ContactEnquiry) {
   const name = escapeHtml(enquiry.name);
   const projectType = escapeHtml(enquiry.projectType || "Project enquiry");
-  return `<div style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;color:#151515;font-size:16px;line-height:1.55;">
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin:0 0 28px;padding:0;background:#080909;">
-    <tr><td style="padding:18px 20px;"><img src="${wordmarkImage}" width="154" height="35" alt="HEAV" style="display:block;width:154px;height:35px;border:0;outline:none;text-decoration:none;" /></td></tr>
+  return `<!doctype html><html><body style="margin:0;padding:0;background:#f1eee6;color:#151515;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;border-collapse:collapse;background:#f1eee6;">
+    <tr><td align="center" style="padding:24px 12px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width:100%;max-width:600px;border-collapse:collapse;background:#ffffff;">
+        <tr><td style="padding:20px 24px;background:#080909;">
+          <img src="${wordmarkImage}" width="138" height="31" alt="HEAV" style="display:block;width:138px;height:31px;border:0;outline:none;text-decoration:none;" />
+        </td></tr>
+        <tr><td style="padding:36px 36px 32px;color:#151515;font-size:16px;line-height:1.55;">
+          <p style="margin:0 0 20px;">Hello ${name},</p>
+          <h1 style="margin:0 0 20px;color:#151515;font-family:Arial,Helvetica,sans-serif;font-size:30px;line-height:1.12;font-weight:600;">Your project enquiry<br>is with HEAV.</h1>
+          <p style="margin:0 0 24px;">Thank you for reaching out. We have received your project details and HEAV will get back to you with the next steps.</p>
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;border-collapse:collapse;margin:0 0 24px;border-top:1px solid #c9c6be;border-bottom:1px solid #c9c6be;">
+            <tr><td style="padding:13px 0;color:#777777;font-size:11px;letter-spacing:.12em;text-transform:uppercase;">Project enquiry</td><td align="right" style="padding:13px 0;color:#151515;font-size:15px;">${projectType}</td></tr>
+          </table>
+          <p style="margin:0 0 26px;">If you need to add anything, simply reply to this email.</p>
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin:0;padding:0;">
+            <tr>
+              <td valign="middle" style="padding:0 14px 0 0;"><img src="${profileImage}" width="64" height="64" alt="Michias Tegegne" style="display:block;width:64px;height:64px;border:1px solid #151515;border-radius:50%;" /></td>
+              <td valign="middle" style="padding:0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.45;">
+                <strong style="display:block;color:#111111;font-size:16px;line-height:1.2;">Michias Tegegne</strong>
+                <span style="display:block;margin:3px 0 6px;color:#777777;">Founder &amp; Owner | HEAV</span>
+                <a href="mailto:${contactReplyEmail}" style="color:#111111;text-decoration:underline;">${contactReplyEmail}</a><br>
+                <a href="https://heav.ch" style="color:#777777;text-decoration:underline;">heav.ch</a>
+              </td>
+            </tr>
+          </table>
+        </td></tr>
+      </table>
+    </td></tr>
   </table>
-  <p style="margin:0 0 20px;">Hello ${name},</p>
-  <h1 style="margin:0 0 18px;color:#151515;font-family:Arial,Helvetica,sans-serif;font-size:30px;line-height:1.12;font-weight:600;">Your project enquiry<br>is with HEAV.</h1>
-  <p style="margin:0 0 20px;">Thank you for reaching out. We have received your project details and HEAV will get back to you with the next steps.</p>
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin:0 0 28px;border-top:1px solid #c9c6be;border-bottom:1px solid #c9c6be;">
-    <tr><td style="padding:13px 0;color:#777777;font-size:11px;letter-spacing:.12em;text-transform:uppercase;">Project enquiry</td><td align="right" style="padding:13px 0;color:#151515;font-size:15px;">${projectType}</td></tr>
-  </table>
-  <p style="margin:0 0 28px;">If you need to add anything, simply reply to this email.</p>
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin:0;padding:0;">
-    <tr>
-      <td valign="middle" style="padding:0 18px 0 0;"><img src="${profileImage}" width="88" height="88" alt="Michias Tegegne" style="display:block;width:88px;height:88px;border:1px solid #151515;border-radius:50%;object-fit:cover;" /></td>
-      <td valign="middle" style="padding:0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.45;">
-        <strong style="display:block;color:#111111;font-size:18px;line-height:1.2;">Michias Tegegne</strong>
-        <span style="display:block;margin:3px 0 7px;color:#777777;">Founder &amp; Owner | HEAV</span>
-        <a href="mailto:${contactReplyEmail}" style="color:#111111;text-decoration:underline;text-underline-offset:2px;">${contactReplyEmail}</a><br>
-        <a href="https://heav.ch" style="color:#777777;text-decoration:underline;text-underline-offset:2px;">heav.ch</a>
-      </td>
-    </tr>
-  </table>
-</div>`;
+</body></html>`;
 }
 
 async function sendEmail(resendKey: string, payload: Record<string, unknown>) {
