@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.portal-access-request]
 verify_jwt = false
+
+[functions.portal-send-invite]
+verify_jwt = true
