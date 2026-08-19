@@ -64,7 +64,7 @@ test("Bestätigungsmail nutzt einen eigenen HEAV-Absender und das HEAV-E-Mailban
   assert.match(functionSource, /CONTACT_FROM_EMAIL/);
   assert.match(functionSource, /Project enquiry received — HEAV/);
   assert.match(functionSource, /heav-email-wordmark\.png/);
-  assert.match(functionSource, /michias-email-profile-full\.jpg/);
+  assert.match(functionSource, /michias-email-profile-headroom\.jpg/);
   assert.match(functionSource, /Founder &amp; Owner \| HEAV/);
   assert.match(functionSource, /width="154" height="35"/);
   assert.match(functionSource, /width="88" height="88"/);
