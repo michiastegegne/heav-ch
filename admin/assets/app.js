@@ -101,6 +101,14 @@ function createSupabaseAdapter(supabase, session) {
       fail(result.error);
       return result.data;
     },
+    async sendPortalInvite(customerId) {
+      const { data, error } = await supabase.functions.invoke("portal-send-invite", { body: { customerId } });
+      if (error) {
+        const details = await error.context?.json?.().catch(() => null);
+        throw new Error(details?.error || "Einladung konnte nicht versendet werden.");
+      }
+      return data;
+    },
     async saveSettings(payload) { const result = await supabase.from("company_settings").upsert({ ...payload, owner_id: ownerId }, { onConflict: "owner_id" }); fail(result.error); },
     async invoiceAction(id, action, requestKey = null) {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -172,7 +180,11 @@ function renderInvoices() {
 function renderPortalRequests() {
   const all = state.data.portalRequests || [];
   const items = filtered(all.filter((item) => state.filter === "all" || item.status === state.filter), ["contact_name", "company", "email", "message"]);
-  const actions = (item) => item.status === "pending" ? `<div class="table-actions"><button class="primary-action" data-portal-request-action="accept" data-id="${esc(item.id)}">Akzeptieren</button><button class="danger-button" data-portal-request-action="decline" data-id="${esc(item.id)}">Ablehnen</button></div>` : `<span class="status ${esc(item.status === "accepted" ? "paid" : "cancelled")}">${esc(item.status === "accepted" ? "Akzeptiert" : "Abgelehnt")}</span>`;
+  const actions = (item) => {
+    if (item.status === "pending") return `<div class="table-actions"><button class="primary-action" data-portal-request-action="accept" data-id="${esc(item.id)}">Akzeptieren</button><button class="danger-button" data-portal-request-action="decline" data-id="${esc(item.id)}">Ablehnen</button></div>`;
+    if (item.status === "accepted") return `<div class="table-actions"><button class="primary-action" data-portal-request-action="invite" data-id="${esc(item.id)}">Einladung senden</button><span class="status paid">Akzeptiert</span></div>`;
+    return `<span class="status cancelled">Abgelehnt</span>`;
+  };
   if (!all.length) return `<section class="view"><div class="empty-state"><h3>Keine Portal-Anfragen.</h3><p>Neue Anfragen aus dem Kundenportal erscheinen hier.</p></div></section>`;
   const rows = items.map((item) => `<tr><td><strong>${esc(item.company || item.contact_name)}</strong><small>${esc(item.contact_name)} · ${formatDate(item.created_at?.slice(0,10))}</small></td><td>${esc(item.email)}</td><td>${esc(item.phone || "–")}</td><td><small>${esc(item.message || "–")}</small></td><td>${actions(item)}</td></tr>`).join("");
   return `<section class="view"><div class="hero-row"><h2>Neue Zugänge,<br><em>klar geprüft.</em></h2><p>Beim Akzeptieren wird automatisch ein Kundenprofil erstellt. Der Portalzugang wird erst mit der anschliessenden Einladung freigeschaltet.</p></div>${filterToolbar("Anfragen durchsuchen …", [["all","Alle"],["pending","Offen"],["accepted","Akzeptiert"],["declined","Abgelehnt"]])}<table class="data-table"><thead><tr><th>Anfrage</th><th>E-Mail</th><th>Telefon</th><th>Nachricht</th><th>Aktion</th></tr></thead><tbody>${rows}</tbody></table></section>`;
@@ -303,13 +315,19 @@ async function deleteRecord(type, id, button) {
 async function portalRequestAction(id, action, button) {
   const request = state.data.portalRequests.find((item) => item.id === id);
   const label = request?.company || request?.contact_name || "diese Anfrage";
-  const question = action === "accept" ? `${label} akzeptieren und als Kundenprofil anlegen?` : `${label} wirklich ablehnen?`;
+  const question = action === "accept" ? `${label} akzeptieren und als Kundenprofil anlegen?` : action === "invite" ? `Sichere Portal-Einladung an ${request?.email || "diese Adresse"} senden?` : `${label} wirklich ablehnen?`;
   if (!window.confirm(question)) return;
   button.disabled = true;
   try {
-    await adapter.processPortalRequest(id, action);
-    await refresh();
-    showToast(action === "accept" ? "Anfrage akzeptiert. Kundenprofil wurde erstellt." : "Anfrage abgelehnt.");
+    if (action === "invite") {
+      if (!request?.customer_id) throw new Error("Für diese Anfrage fehlt das Kundenprofil.");
+      await adapter.sendPortalInvite(request.customer_id);
+      showToast(`Einladung wurde an ${request.email} gesendet.`);
+    } else {
+      await adapter.processPortalRequest(id, action);
+      await refresh();
+      showToast(action === "accept" ? "Anfrage akzeptiert. Kundenprofil wurde erstellt." : "Anfrage abgelehnt.");
+    }
   } catch (error) { showToast(error.message || "Anfrage konnte nicht verarbeitet werden.", "error"); }
   finally { button.disabled = false; }
 }
