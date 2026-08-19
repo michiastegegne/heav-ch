@@ -17,8 +17,17 @@ if (!isBackendConfigured()) {
     HEAV_ADMIN_CONFIG.supabaseUrl,
     HEAV_ADMIN_CONFIG.supabaseAnonKey,
   );
+  async function workspaceDestination() {
+    const { data: memberships, error } = await supabase
+      .from("customer_portal_memberships")
+      .select("id")
+      .eq("status", "active")
+      .limit(1);
+    if (!error && memberships?.length) return "/portal/";
+    return "/admin/";
+  }
   const { data } = await supabase.auth.getSession();
-  if (data.session) window.location.replace("/admin/");
+  if (data.session) window.location.replace(await workspaceDestination());
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -26,8 +35,7 @@ if (!isBackendConfigured()) {
     message.textContent = "";
     if (!form.reportValidity()) return;
     button.disabled = true;
-    const values = new FormData(form);
-    const email = values.get("email").trim();
+    const email = new FormData(form).get("email").trim().toLowerCase();
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
@@ -42,5 +50,6 @@ if (!isBackendConfigured()) {
     }
     message.classList.add("success");
     message.textContent = "Sign-in link sent. Please check your email.";
+    button.disabled = false;
   });
 }
