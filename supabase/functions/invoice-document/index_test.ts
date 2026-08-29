@@ -12,6 +12,7 @@ import {
   formatPaymentReference,
   invoiceFilename,
   shouldRenderPaymentPartOnFirstPage,
+  shouldRenderPreDiscountSubtotal,
   validVatNumber,
 } from "./index.ts";
 
@@ -184,6 +185,13 @@ Deno.test("E-Mail-Banner enthält Portrait, Kontaktdaten und sichere Projekttext
 Deno.test("Rabattprozente werden aus Rabattbetrag und Zwischentotal klar formatiert", () => {
   assertEquals(formatDiscountPercent(-6190, 41250), "15 %");
   assertEquals(formatDiscountPercent(-5000, 0), "Rabatt");
+});
+
+Deno.test("Jede Rabattzeile erhält einen Zwischentotal-Block, auch ohne vorherige Leistung", () => {
+  assert(shouldRenderPreDiscountSubtotal(-6190));
+  assert(shouldRenderPreDiscountSubtotal(-1));
+  assert(!shouldRenderPreDiscountSubtotal(0));
+  assert(!shouldRenderPreDiscountSubtotal(100));
 });
 
 Deno.test("Zahlteil bleibt bei fünf sichtbaren Rechnungszeilen auf der Folgeseite", () => {

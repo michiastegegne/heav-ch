@@ -135,6 +135,7 @@ export const formatDiscountPercent = (
   const percent = Math.round(Math.abs(discountRappen) * 1000 / subtotalBeforeDiscountRappen) / 10;
   return `${Number.isInteger(percent) ? percent.toFixed(0) : percent.toFixed(1)} %`;
 };
+export const shouldRenderPreDiscountSubtotal = (amountRappen: number) => amountRappen < 0;
 export const shouldRenderPaymentPartOnFirstPage = (displayRowCount: number) =>
   displayRowCount <= 4;
 const formatDate = (date: string) => date.split("-").reverse().join(".");
@@ -723,12 +724,9 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
   drawRight("BETRAG", right, y - 16, 5.8, syne, colors.muted);
   y -= 27;
   const orderedItems = [...invoice.invoice_items].sort((a, b) => a.position - b.position);
-  let subtotalBeforeDiscount = 0;
   const displayRowCount = orderedItems.reduce((count, item) => {
     const amount = Math.round(Number(item.quantity) * item.unit_price_rappen);
-    const addsSubtotalRow = amount < 0 && subtotalBeforeDiscount > 0;
-    subtotalBeforeDiscount += amount;
-    return count + 1 + Number(addsSubtotalRow);
+    return count + 1 + Number(shouldRenderPreDiscountSubtotal(amount));
   }, 0);
   const rowHeight = displayRowCount > 6 ? 19 : 27;
   let runningSubtotal = 0;
@@ -743,7 +741,7 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
       6.5,
     );
 
-    if (isDiscount && runningSubtotal > 0) {
+    if (shouldRenderPreDiscountSubtotal(amount)) {
       draw("ZWISCHENTOTAL VOR RABATT", margin + 40, y - 9, 6.4, syne, colors.muted);
       drawRight(formatCHF(runningSubtotal).replace("CHF ", ""), right, y - 9, 7.5, dm);
       y -= rowHeight;
