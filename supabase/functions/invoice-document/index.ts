@@ -138,6 +138,7 @@ export const formatDiscountPercent = (
 export const shouldRenderPostDiscountSubtotal = (amountRappen: number) => amountRappen < 0;
 export const shouldRenderPaymentPartOnFirstPage = (displayRowCount: number) =>
   displayRowCount <= 5;
+export const shouldRenderPaymentPartTearOffGuide = () => false;
 const formatDate = (date: string) => date.split("-").reverse().join(".");
 export const formatPaymentReference = (value: string) =>
   String(value ?? "")
@@ -847,34 +848,36 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
   const renderPaymentPart = (target: typeof page) => {
     const sectionTop = 297.64; // 105 mm Swiss payment-part height.
     const receiptWidth = 175.75; // 62 mm receipt width.
-    target.drawLine({
-      start: { x: 0, y: sectionTop },
-      end: { x: width, y: sectionTop },
-      color: colors.night,
-      thickness: .55,
-      dashArray: [3, 2],
-    });
+    if (shouldRenderPaymentPartTearOffGuide()) {
+      target.drawLine({
+        start: { x: 0, y: sectionTop },
+        end: { x: width, y: sectionTop },
+        color: colors.night,
+        thickness: .55,
+        dashArray: [3, 2],
+      });
+      target.drawText("Vor der Einzahlung abzutrennen", {
+        x: width - 137,
+        y: sectionTop + 4,
+        size: 6,
+        font: paymentRegular,
+        color: colors.night,
+      });
+      target.drawText("Vor der Einzahlung abzutrennen", {
+        x: receiptWidth - 4,
+        y: 8,
+        size: 6,
+        font: paymentRegular,
+        color: colors.night,
+        rotate: degrees(90),
+      });
+    }
     target.drawLine({
       start: { x: receiptWidth, y: 0 },
       end: { x: receiptWidth, y: sectionTop },
       color: colors.night,
       thickness: .55,
       dashArray: [3, 2],
-    });
-    target.drawText("Vor der Einzahlung abzutrennen", {
-      x: width - 137,
-      y: sectionTop + 4,
-      size: 6,
-      font: paymentRegular,
-      color: colors.night,
-    });
-    target.drawText("Vor der Einzahlung abzutrennen", {
-      x: receiptWidth - 4,
-      y: 8,
-      size: 6,
-      font: paymentRegular,
-      color: colors.night,
-      rotate: degrees(90),
     });
     const pdraw = (
       text: string,

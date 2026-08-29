@@ -12,6 +12,7 @@ import {
   formatPaymentReference,
   invoiceFilename,
   shouldRenderPaymentPartOnFirstPage,
+  shouldRenderPaymentPartTearOffGuide,
   shouldRenderPostDiscountSubtotal,
   validVatNumber,
 } from "./index.ts";
@@ -198,6 +199,10 @@ Deno.test("Zahlteil bleibt bei bis zu fünf sichtbaren Rechnungszeilen auf der e
   assert(shouldRenderPaymentPartOnFirstPage(4));
   assert(shouldRenderPaymentPartOnFirstPage(5));
   assert(!shouldRenderPaymentPartOnFirstPage(6));
+});
+
+Deno.test("Der moderne Zahlteil zeigt keine Abrissanleitung", () => {
+  assert(!shouldRenderPaymentPartTearOffGuide());
 });
 
 Deno.test("PDF-Dateiname verwendet zuerst den Projekt-Titel und sonst den Kunden", () => {
