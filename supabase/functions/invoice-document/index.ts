@@ -200,14 +200,15 @@ export function buildInvoiceEmailHtml(invoice: Invoice, settings: Settings) {
   const website = safePublicUrl(settings.website_url, "https://heav.ch");
   const profileImage =
     "https://heav.ch/assets/images/michias-email-profile-headroom.jpg";
-  const wordmarkImage = "https://heav.ch/assets/images/heav-email-wordmark.png";
+  const wordmarkImage =
+    "https://heav.ch/assets/images/heav-email-wordmark-transparent.png";
   const phoneRow = phone
     ? `<br><a href="tel:${
       escapeHtml(phone.replace(/[^+0-9]/g, ""))
     }" style="color:#777777;text-decoration:none;">${escapeHtml(phone)}</a>`
     : "";
   return `<div style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;color:#151515;font-size:16px;line-height:1.55;">
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin:0 0 28px;padding:0;background:#080909;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin:0 0 28px;padding:0;background:#2453ff;">
     <tr>
       <td style="padding:18px 20px;">
         <img src="${wordmarkImage}" width="154" height="35" alt="HEAV" style="display:block;width:154px;height:35px;border:0;outline:none;text-decoration:none;" />

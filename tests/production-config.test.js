@@ -31,13 +31,13 @@ test("Kontaktformular nutzt die HEAV-eigene Edge Function statt eines sichtbaren
 });
 
 test("Admin lädt die produktive App mit versionsgebundenem Cache-Busting", () => {
-  assert.match(adminHtml, /src="\/admin\/assets\/app\.js\?v=20260819-portal-invites"/);
+  assert.match(adminHtml, /src="\/admin\/assets\/app\.js\?v=20260829-invoice-status"/);
 });
 
 test("Portal bietet owner-geschützte Bearbeitung für Kunden, Projekte, Rechnungen und manuelle Statuswahl", () => {
   assert.match(adminSource, /updateCustomer/);
   assert.match(adminSource, /updateProject/);
   assert.match(adminSource, /updateInvoice/);
-  assert.match(adminSource, /Status · auch für manuell versandte PDFs/);
+  assert.match(adminSource, /Versand- und Zahlungsstatus · auch für manuell versandte PDFs/);
   assert.match(adminSource, /data-edit="invoice"/);
 });

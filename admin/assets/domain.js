@@ -31,6 +31,22 @@ export function getNextInvoiceStatus(currentStatus, action) {
   return STATUS_TRANSITIONS[currentStatus]?.[action] ?? null;
 }
 
+const STATUS_LABELS = {
+  draft: "Nicht versendet",
+  sent: "Versendet",
+  paid: "Bezahlt",
+  overdue: "Überfällig",
+  cancelled: "Storniert",
+  planning: "Planung",
+  active: "Aktiv",
+  completed: "Abgeschlossen",
+  on_hold: "Pausiert",
+};
+
+export function statusLabel(status) {
+  return STATUS_LABELS[status] || status;
+}
+
 export function validateCustomer(customer) {
   const errors = {};
   const company = String(customer.company || "").trim();

@@ -4,6 +4,7 @@ import {
   calculateInvoice,
   formatCHF,
   getNextInvoiceStatus,
+  statusLabel,
   validateInvoice,
 } from "../admin/assets/domain.js";
 
@@ -33,6 +34,12 @@ test("Rechnungsstatus erlaubt nur nachvollziehbare Übergänge", () => {
   assert.equal(getNextInvoiceStatus("sent", "mark_paid"), "paid");
   assert.equal(getNextInvoiceStatus("paid", "send"), null);
   assert.equal(getNextInvoiceStatus("cancelled", "mark_paid"), null);
+});
+
+test("Rechnungsstatus beschreibt einen Entwurf eindeutig als nicht versendet", () => {
+  assert.equal(statusLabel("draft"), "Nicht versendet");
+  assert.equal(statusLabel("sent"), "Versendet");
+  assert.equal(statusLabel("paid"), "Bezahlt");
 });
 
 test("validateInvoice verlangt Kunde, Positionen, Datum und Fälligkeit", () => {
