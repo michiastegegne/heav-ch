@@ -194,9 +194,10 @@ Deno.test("Jede Rabattzeile erhält einen Zwischentotal-Block, auch ohne vorheri
   assert(!shouldRenderPreDiscountSubtotal(100));
 });
 
-Deno.test("Zahlteil bleibt bei fünf sichtbaren Rechnungszeilen auf der Folgeseite", () => {
+Deno.test("Zahlteil bleibt bei bis zu fünf sichtbaren Rechnungszeilen auf der ersten Seite", () => {
   assert(shouldRenderPaymentPartOnFirstPage(4));
-  assert(!shouldRenderPaymentPartOnFirstPage(5));
+  assert(shouldRenderPaymentPartOnFirstPage(5));
+  assert(!shouldRenderPaymentPartOnFirstPage(6));
 });
 
 Deno.test("PDF-Dateiname verwendet zuerst den Projekt-Titel und sonst den Kunden", () => {

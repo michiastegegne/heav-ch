@@ -137,7 +137,7 @@ export const formatDiscountPercent = (
 };
 export const shouldRenderPreDiscountSubtotal = (amountRappen: number) => amountRappen < 0;
 export const shouldRenderPaymentPartOnFirstPage = (displayRowCount: number) =>
-  displayRowCount <= 4;
+  displayRowCount <= 5;
 const formatDate = (date: string) => date.split("-").reverse().join(".");
 export const formatPaymentReference = (value: string) =>
   String(value ?? "")
@@ -715,7 +715,7 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
       );
     });
 
-  let y = height - 318;
+  let y = height - 298;
   line(y, margin, right, colors.night, 1);
   draw("POS", margin, y - 16, 5.8, syne, colors.muted);
   draw("LEISTUNG", margin + 40, y - 16, 5.8, syne, colors.muted);
