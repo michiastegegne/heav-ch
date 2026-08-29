@@ -910,14 +910,14 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
         color: colors.night,
         rotate: degrees(90),
       });
+      target.drawLine({
+        start: { x: receiptWidth, y: 0 },
+        end: { x: receiptWidth, y: sectionTop },
+        color: colors.night,
+        thickness: .55,
+        dashArray: [3, 2],
+      });
     }
-    target.drawLine({
-      start: { x: receiptWidth, y: 0 },
-      end: { x: receiptWidth, y: sectionTop },
-      color: colors.night,
-      thickness: .55,
-      dashArray: [3, 2],
-    });
     const pdraw = (
       text: string,
       x: number,
