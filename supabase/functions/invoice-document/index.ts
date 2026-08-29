@@ -804,16 +804,16 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
         "ZWISCHENTOTAL NACH RABATT",
         margin + 40,
         y - 9,
-        6.4,
-        syne,
-        colors.muted,
+        6.8,
+        paymentBold,
+        colors.night,
       );
       drawRight(
         formatCHF(runningSubtotal).replace("CHF ", ""),
         right,
         y - 9,
         7.5,
-        dm,
+        paymentBold,
       );
       y -= rowHeight;
       line(y, margin, right);

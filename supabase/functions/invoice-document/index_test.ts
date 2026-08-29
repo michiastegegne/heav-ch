@@ -197,6 +197,17 @@ Deno.test("Jede Rabattzeile erhält ein Zwischentotal nach dem Rabatt", () => {
   assert(!shouldRenderPostDiscountSubtotal(100));
 });
 
+Deno.test("Zwischentotal nach Rabatt wird als klare fette Ergebniszeile gesetzt", async () => {
+  const source = await Deno.readTextFile(
+    new URL("./index.ts", import.meta.url),
+  );
+  const block = source.match(
+    /"ZWISCHENTOTAL NACH RABATT"[\s\S]{0,450}?y -= rowHeight/,
+  )?.[0] ?? "";
+  assertEquals(block.match(/paymentBold/g)?.length, 2);
+  assert(block.includes("colors.night"));
+});
+
 Deno.test("Zahlteil bleibt bei bis zu fünf sichtbaren Rechnungszeilen auf der ersten Seite", () => {
   assert(shouldRenderPaymentPartOnFirstPage(4));
   assert(shouldRenderPaymentPartOnFirstPage(5));
