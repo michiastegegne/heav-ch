@@ -7,9 +7,11 @@ import {
   buildSwissQrPayload,
   createInvoicePdf,
   escapeHtml,
+  formatDiscountPercent,
   formatDocumentReference,
   formatPaymentReference,
   invoiceFilename,
+  shouldRenderPaymentPartOnFirstPage,
   validVatNumber,
 } from "./index.ts";
 
@@ -177,6 +179,16 @@ Deno.test("E-Mail-Banner enthält Portrait, Kontaktdaten und sichere Projekttext
   assert(html.includes("&lt;Yousty Video&gt;"));
   assert(html.includes("Please find attached the invoice"));
   assert(!html.includes("<script>"));
+});
+
+Deno.test("Rabattprozente werden aus Rabattbetrag und Zwischentotal klar formatiert", () => {
+  assertEquals(formatDiscountPercent(-6190, 41250), "15 %");
+  assertEquals(formatDiscountPercent(-5000, 0), "Rabatt");
+});
+
+Deno.test("Zahlteil bleibt bei fünf sichtbaren Rechnungszeilen auf der Folgeseite", () => {
+  assert(shouldRenderPaymentPartOnFirstPage(4));
+  assert(!shouldRenderPaymentPartOnFirstPage(5));
 });
 
 Deno.test("PDF-Dateiname verwendet zuerst den Projekt-Titel und sonst den Kunden", () => {

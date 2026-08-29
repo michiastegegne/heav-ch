@@ -126,6 +126,17 @@ const formatCHF = (rappen: number) => {
   const [whole, decimals] = (Math.round(rappen) / 100).toFixed(2).split(".");
   return `CHF ${whole.replace(/\B(?=(\d{3})+(?!\d))/g, "’")}.${decimals}`;
 };
+export const formatDiscountPercent = (
+  discountRappen: number,
+  subtotalBeforeDiscountRappen: number,
+) => {
+  if (!Number.isFinite(discountRappen) || !Number.isFinite(subtotalBeforeDiscountRappen) ||
+    discountRappen >= 0 || subtotalBeforeDiscountRappen <= 0) return "Rabatt";
+  const percent = Math.round(Math.abs(discountRappen) * 1000 / subtotalBeforeDiscountRappen) / 10;
+  return `${Number.isInteger(percent) ? percent.toFixed(0) : percent.toFixed(1)} %`;
+};
+export const shouldRenderPaymentPartOnFirstPage = (displayRowCount: number) =>
+  displayRowCount <= 4;
 const formatDate = (date: string) => date.split("-").reverse().join(".");
 export const formatPaymentReference = (value: string) =>
   String(value ?? "")
@@ -711,14 +722,19 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
   drawRight("EINZELPREIS", 486, y - 16, 5.8, syne, colors.muted);
   drawRight("BETRAG", right, y - 16, 5.8, syne, colors.muted);
   y -= 27;
-  const rowHeight = invoice.invoice_items.length > 6 ? 19 : 27;
-  for (
-    const item of [...invoice.invoice_items].sort((a, b) =>
-      a.position - b.position
-    )
-  ) {
+  const orderedItems = [...invoice.invoice_items].sort((a, b) => a.position - b.position);
+  let subtotalBeforeDiscount = 0;
+  const displayRowCount = orderedItems.reduce((count, item) => {
     const amount = Math.round(Number(item.quantity) * item.unit_price_rappen);
-    draw(String(item.position).padStart(2, "0"), margin, y - 9, 7, syne);
+    const addsSubtotalRow = amount < 0 && subtotalBeforeDiscount > 0;
+    subtotalBeforeDiscount += amount;
+    return count + 1 + Number(addsSubtotalRow);
+  }, 0);
+  const rowHeight = displayRowCount > 6 ? 19 : 27;
+  let runningSubtotal = 0;
+  for (const item of orderedItems) {
+    const amount = Math.round(Number(item.quantity) * item.unit_price_rappen);
+    const isDiscount = amount < 0;
     const descriptionSize = fittedSize(
       compactText(item.description, 80),
       paymentRegular,
@@ -726,27 +742,51 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
       250,
       6.5,
     );
-    draw(
-      compactText(item.description, 80),
-      margin + 40,
-      y - 9,
-      descriptionSize,
-      paymentRegular,
-    );
-    drawRight(String(Number(item.quantity)), 404, y - 9, 7.5, dm);
-    drawRight(
-      formatCHF(item.unit_price_rappen).replace("CHF ", ""),
-      486,
-      y - 9,
-      7.5,
-      dm,
-    );
-    drawRight(formatCHF(amount).replace("CHF ", ""), right, y - 9, 7.5, dm);
+
+    if (isDiscount && runningSubtotal > 0) {
+      draw("ZWISCHENTOTAL VOR RABATT", margin + 40, y - 9, 6.4, syne, colors.muted);
+      drawRight(formatCHF(runningSubtotal).replace("CHF ", ""), right, y - 9, 7.5, dm);
+      y -= rowHeight;
+      line(y, margin, right);
+    }
+
+    if (isDiscount) {
+      draw("RB", margin, y - 9, 7, syne, colors.acid);
+      draw(
+        compactText(item.description, 80),
+        margin + 40,
+        y - 9,
+        descriptionSize,
+        paymentRegular,
+      );
+      drawRight(formatDiscountPercent(amount, runningSubtotal), 404, y - 9, 7.5, dm);
+      drawRight("—", 486, y - 9, 7.5, dm, colors.muted);
+      drawRight(`− ${formatCHF(Math.abs(amount)).replace("CHF ", "")}`, right, y - 9, 7.5, dm);
+    } else {
+      draw(String(item.position).padStart(2, "0"), margin, y - 9, 7, syne);
+      draw(
+        compactText(item.description, 80),
+        margin + 40,
+        y - 9,
+        descriptionSize,
+        paymentRegular,
+      );
+      drawRight(String(Number(item.quantity)), 404, y - 9, 7.5, dm);
+      drawRight(
+        formatCHF(item.unit_price_rappen).replace("CHF ", ""),
+        486,
+        y - 9,
+        7.5,
+        dm,
+      );
+      drawRight(formatCHF(amount).replace("CHF ", ""), right, y - 9, 7.5, dm);
+    }
+    runningSubtotal += amount;
     y -= rowHeight;
     line(y, margin, right);
   }
 
-  const totalY = Math.max(invoice.invoice_items.length > 6 ? 86 : 334, y - 19);
+  const totalY = Math.max(shouldRenderPaymentPartOnFirstPage(displayRowCount) ? 334 : 86, y - 19);
   draw("Zwischensumme", 355, totalY, 7.5, dm, colors.muted);
   drawRight(formatCHF(invoice.subtotal_rappen), right, totalY, 8, dm);
   if (Number(invoice.tax_rate) > 0) {
@@ -1022,7 +1062,7 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
     );
   };
 
-  if (invoice.invoice_items.length <= 6) renderPaymentPart(page);
+  if (shouldRenderPaymentPartOnFirstPage(displayRowCount)) renderPaymentPart(page);
   else {
     draw("Zahlteil auf der Folgeseite", margin, 29, 6.5, syne, colors.muted);
     const paymentPage = pdf.addPage([595.28, 841.89]);
