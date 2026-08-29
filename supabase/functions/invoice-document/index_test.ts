@@ -12,7 +12,7 @@ import {
   formatPaymentReference,
   invoiceFilename,
   shouldRenderPaymentPartOnFirstPage,
-  shouldRenderPreDiscountSubtotal,
+  shouldRenderPostDiscountSubtotal,
   validVatNumber,
 } from "./index.ts";
 
@@ -187,11 +187,11 @@ Deno.test("Rabattprozente werden aus Rabattbetrag und Zwischentotal klar formati
   assertEquals(formatDiscountPercent(-5000, 0), "Rabatt");
 });
 
-Deno.test("Jede Rabattzeile erhält einen Zwischentotal-Block, auch ohne vorherige Leistung", () => {
-  assert(shouldRenderPreDiscountSubtotal(-6190));
-  assert(shouldRenderPreDiscountSubtotal(-1));
-  assert(!shouldRenderPreDiscountSubtotal(0));
-  assert(!shouldRenderPreDiscountSubtotal(100));
+Deno.test("Jede Rabattzeile erhält ein Zwischentotal nach dem Rabatt", () => {
+  assert(shouldRenderPostDiscountSubtotal(-6190));
+  assert(shouldRenderPostDiscountSubtotal(-1));
+  assert(!shouldRenderPostDiscountSubtotal(0));
+  assert(!shouldRenderPostDiscountSubtotal(100));
 });
 
 Deno.test("Zahlteil bleibt bei bis zu fünf sichtbaren Rechnungszeilen auf der ersten Seite", () => {

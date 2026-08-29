@@ -135,7 +135,7 @@ export const formatDiscountPercent = (
   const percent = Math.round(Math.abs(discountRappen) * 1000 / subtotalBeforeDiscountRappen) / 10;
   return `${Number.isInteger(percent) ? percent.toFixed(0) : percent.toFixed(1)} %`;
 };
-export const shouldRenderPreDiscountSubtotal = (amountRappen: number) => amountRappen < 0;
+export const shouldRenderPostDiscountSubtotal = (amountRappen: number) => amountRappen < 0;
 export const shouldRenderPaymentPartOnFirstPage = (displayRowCount: number) =>
   displayRowCount <= 5;
 const formatDate = (date: string) => date.split("-").reverse().join(".");
@@ -726,7 +726,7 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
   const orderedItems = [...invoice.invoice_items].sort((a, b) => a.position - b.position);
   const displayRowCount = orderedItems.reduce((count, item) => {
     const amount = Math.round(Number(item.quantity) * item.unit_price_rappen);
-    return count + 1 + Number(shouldRenderPreDiscountSubtotal(amount));
+    return count + 1 + Number(shouldRenderPostDiscountSubtotal(amount));
   }, 0);
   const rowHeight = displayRowCount > 6 ? 19 : 27;
   let runningSubtotal = 0;
@@ -741,15 +741,8 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
       6.5,
     );
 
-    if (shouldRenderPreDiscountSubtotal(amount)) {
-      draw("ZWISCHENTOTAL VOR RABATT", margin + 40, y - 9, 6.4, syne, colors.muted);
-      drawRight(formatCHF(runningSubtotal).replace("CHF ", ""), right, y - 9, 7.5, dm);
-      y -= rowHeight;
-      line(y, margin, right);
-    }
-
     if (isDiscount) {
-      draw("RB", margin, y - 9, 7, syne, colors.acid);
+      draw(String(item.position).padStart(2, "0"), margin, y - 9, 7, syne);
       draw(
         compactText(item.description, 80),
         margin + 40,
@@ -782,6 +775,12 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
     runningSubtotal += amount;
     y -= rowHeight;
     line(y, margin, right);
+    if (shouldRenderPostDiscountSubtotal(amount)) {
+      draw("ZWISCHENTOTAL NACH RABATT", margin + 40, y - 9, 6.4, syne, colors.muted);
+      drawRight(formatCHF(runningSubtotal).replace("CHF ", ""), right, y - 9, 7.5, dm);
+      y -= rowHeight;
+      line(y, margin, right);
+    }
   }
 
   const totalY = Math.max(shouldRenderPaymentPartOnFirstPage(displayRowCount) ? 334 : 86, y - 19);
