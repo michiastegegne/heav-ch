@@ -7,9 +7,13 @@ import {
   buildSwissQrPayload,
   createInvoicePdf,
   escapeHtml,
+  formatDiscountPercent,
   formatDocumentReference,
   formatPaymentReference,
   invoiceFilename,
+  shouldRenderPaymentPartOnFirstPage,
+  shouldRenderPaymentPartTearOffGuide,
+  shouldRenderPostDiscountSubtotal,
   validVatNumber,
 } from "./index.ts";
 
@@ -179,6 +183,28 @@ Deno.test("E-Mail-Banner enthält Portrait, Kontaktdaten und sichere Projekttext
   assert(html.includes("&lt;Yousty Video&gt;"));
   assert(html.includes("Please find attached the invoice"));
   assert(!html.includes("<script>"));
+});
+
+Deno.test("Rabattprozente werden aus Rabattbetrag und Zwischentotal klar formatiert", () => {
+  assertEquals(formatDiscountPercent(-6190, 41250), "15 %");
+  assertEquals(formatDiscountPercent(-5000, 0), "Rabatt");
+});
+
+Deno.test("Jede Rabattzeile erhält ein Zwischentotal nach dem Rabatt", () => {
+  assert(shouldRenderPostDiscountSubtotal(-6190));
+  assert(shouldRenderPostDiscountSubtotal(-1));
+  assert(!shouldRenderPostDiscountSubtotal(0));
+  assert(!shouldRenderPostDiscountSubtotal(100));
+});
+
+Deno.test("Zahlteil bleibt bei bis zu fünf sichtbaren Rechnungszeilen auf der ersten Seite", () => {
+  assert(shouldRenderPaymentPartOnFirstPage(4));
+  assert(shouldRenderPaymentPartOnFirstPage(5));
+  assert(!shouldRenderPaymentPartOnFirstPage(6));
+});
+
+Deno.test("Der moderne Zahlteil zeigt keine Abrissanleitung", () => {
+  assert(!shouldRenderPaymentPartTearOffGuide());
 });
 
 Deno.test("PDF-Dateiname verwendet zuerst den Projekt-Titel und sonst den Kunden", () => {
