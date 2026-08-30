@@ -63,8 +63,10 @@ test("Kurzbeschreibungen werden vor dem Versand klar erklärt", () => {
 test("Bestätigungsmail nutzt einen eigenen HEAV-Absender und das HEAV-E-Mailbanner", () => {
   assert.match(functionSource, /CONTACT_FROM_EMAIL/);
   assert.match(functionSource, /Project enquiry received — HEAV/);
-  assert.match(functionSource, /heav-email-wordmark-transparent\.png/);
-  assert.match(functionSource, /background:#2453ff/);
+  assert.match(functionSource, /heav-email-wordmark\.png/);
+  assert.match(functionSource, /background:#080909/);
+  assert.doesNotMatch(functionSource, /heav-email-wordmark-transparent\.png/);
+  assert.doesNotMatch(functionSource, /background:#2453ff/);
   assert.match(functionSource, /michias-email-profile-headroom\.jpg/);
   assert.match(functionSource, /Founder &amp; Owner \| HEAV/);
   assert.match(functionSource, /width="154" height="35"/);
