@@ -222,7 +222,7 @@ function openEditor(type, existing = null) {
     dialogTitle.textContent = existing ? `Rechnung bearbeiten · ${item.invoice_number}` : "Rechnung erstellen";
     const vatRegistered = validVatNumber(state.data.settings?.vat_number);
     const customerId = item.customer_id || "";
-    dialogBody.innerHTML = `<div class="form-grid"><label class="form-field"><span>Kunde *</span><select name="customer_id" required><option value="">Bitte wählen</option>${customerOptions(customerId)}</select></label><label class="form-field"><span>Projekt</span><select name="project_id"><option value="">Kein Projekt</option>${projectOptions(customerId,item.project_id || "")}</select></label>${existing ? `<label class="form-field wide"><span>Versand- und Zahlungsstatus · auch für manuell versandte PDFs</span><select name="status">${["draft","sent","paid","overdue","cancelled"].map((status) => `<option value="${status}" ${item.status === status ? "selected" : ""}>${statusLabel(status)}</option>`).join("")}</select></label>` : ""}${!existing ? `<div class="sequence-note wide"><strong>Automatische Referenz</strong><span>Die Zahlungsreferenz wird beim Speichern fortlaufend und buchhaltungssicher vergeben.</span></div>` : ""}${field(vatRegistered ? "MWST %" : "MWST % · nicht registriert","tax_rate","number",item.tax_rate ?? (vatRegistered ? (state.data.settings?.default_tax_rate ?? 0) : 0),false,vatRegistered ? 'min="0" step="0.1"' : 'readonly aria-readonly="true"')}${field("Rechnungsdatum *","issue_date","date",item.issue_date || today(),false,"required")}${field("Fällig am *","due_date","date",item.due_date || plusDays(today(),state.data.settings?.default_due_days || 30),false,"required")}<div class="invoice-items"><span class="items-label">Positionen *</span><div id="invoice-item-list"></div><button class="secondary-button" type="button" data-add-item>Position hinzufügen</button></div><label class="form-field wide"><span>Hinweis auf Rechnung</span><textarea name="notes">${esc(item.notes || "")}</textarea></label><div class="invoice-total" id="invoice-total">TOTAL&nbsp;&nbsp; CHF 0.00</div></div>`;
+    dialogBody.innerHTML = `<div class="form-grid"><label class="form-field"><span>Kunde *</span><select name="customer_id" required><option value="">Bitte wählen</option>${customerOptions(customerId)}</select></label><label class="form-field"><span>Projekt</span><select name="project_id"><option value="">Kein Projekt</option>${projectOptions(customerId,item.project_id || "")}</select></label>${existing ? `<label class="form-field wide"><span>Versand- und Zahlungsstatus · auch für manuell versandte PDFs</span><select name="status">${["draft","sent","paid","overdue","cancelled"].map((status) => `<option value="${status}" ${item.status === status ? "selected" : ""}>${statusLabel(status)}</option>`).join("")}</select></label>` : ""}${!existing ? `<div class="sequence-note wide"><strong>Automatische Referenz</strong><span>Die Zahlungsreferenz wird beim Speichern fortlaufend und buchhaltungssicher vergeben.</span></div>` : ""}${field(vatRegistered ? "MWST %" : "MWST % · nicht registriert","tax_rate","number",item.tax_rate ?? (vatRegistered ? (state.data.settings?.default_tax_rate ?? 0) : 0),false,vatRegistered ? 'min="0" step="0.1"' : 'readonly aria-readonly="true"')}${field("Rechnungsdatum *","issue_date","date",item.issue_date || today(),false,"required")}${field("Fällig am *","due_date","date",item.due_date || plusDays(today(),state.data.settings?.default_due_days || 30),false,"required")}<div class="invoice-items"><span class="items-label">Positionen *</span><div id="invoice-item-list"></div><div class="invoice-add-actions"><button class="secondary-button" type="button" data-add-item>Position hinzufügen</button><button class="secondary-button" type="button" data-add-discount>Rabatt hinzufügen</button></div></div><label class="form-field wide"><span>Hinweis auf Rechnung</span><textarea name="notes">${esc(item.notes || "")}</textarea></label><div class="invoice-total" id="invoice-total">TOTAL&nbsp;&nbsp; CHF 0.00</div></div>`;
     (existing ? item.items : [null]).forEach((invoiceItem) => addInvoiceItem(invoiceItem));
   } else {
     const settings = state.data.settings || {};
@@ -231,20 +231,41 @@ function openEditor(type, existing = null) {
   }
   dialog.showModal();
 }
-function addInvoiceItem(item = null) {
+function readInvoiceEditorItems() {
+  return [...document.querySelectorAll(".invoice-item")].map((row) => {
+    const description = row.querySelector('[name="item_description"]').value.trim();
+    if (row.dataset.kind === "discount") {
+      return {
+        description,
+        quantity: 1,
+        unitPrice: -Math.abs(Number(row.querySelector('[name="discount_value"]').value)),
+      };
+    }
+    return {
+      description,
+      quantity: Number(row.querySelector('[name="item_quantity"]').value),
+      unitPrice: Number(row.querySelector('[name="item_price"]').value),
+    };
+  });
+}
+
+function addInvoiceItem(item = null, kind = "service") {
   const list = document.querySelector("#invoice-item-list");
   const row = document.createElement("div");
-  row.className = "invoice-item";
-  row.innerHTML = `<input name="item_description" placeholder="Leistung" aria-label="Leistung" value="${esc(item?.description || "")}" required><input name="item_quantity" type="number" value="${item?.quantity ?? 1}" min="0.01" step="0.01" aria-label="Menge" required><input name="item_price" type="number" min="0" step="0.05" placeholder="CHF" value="${item ? item.unit_price_rappen / 100 : ""}" aria-label="Einzelpreis in CHF" required><button class="remove-item" type="button" data-remove-item aria-label="Position entfernen">×</button>`;
+  const isDiscount = kind === "discount" || Number(item?.unit_price_rappen) < 0;
+  row.className = `invoice-item ${isDiscount ? "is-discount" : ""}`;
+  row.dataset.kind = isDiscount ? "discount" : "service";
+  const remove = `<button class="remove-item" type="button" data-remove-item aria-label="Position entfernen">×</button>`;
+  row.innerHTML = isDiscount
+    ? `<input name="item_description" placeholder="Rabatt" aria-label="Rabatt" value="${esc(item?.description || "Rabatt")}" required><span class="discount-kind" aria-label="Rabattart: fixer Betrag">Rabatt</span><input name="discount_value" type="number" min="0.01" step="0.01" placeholder="CHF" value="${item ? Math.abs(Number(item.unit_price_rappen)) / 100 : ""}" aria-label="Rabatt in CHF" required>${remove}`
+    : `<input name="item_description" placeholder="Leistung" aria-label="Leistung" value="${esc(item?.description || "")}" required><input name="item_quantity" type="number" value="${item?.quantity ?? 1}" min="0.01" step="0.01" aria-label="Menge" required><input name="item_price" type="number" min="0" step="0.05" placeholder="CHF" value="${item ? item.unit_price_rappen / 100 : ""}" aria-label="Einzelpreis in CHF" required>${remove}`;
   list.append(row);
   updateInvoiceTotal();
 }
 function updateInvoiceTotal() {
   const total = document.querySelector("#invoice-total"); if (!total) return;
-  const rows = [...document.querySelectorAll(".invoice-item")];
-  const items = rows.map((row) => ({ quantity: row.querySelector('[name="item_quantity"]').value, unitPrice: row.querySelector('[name="item_price"]').value }));
   const tax = dialogForm.elements.tax_rate?.value || 0;
-  total.innerHTML = `TOTAL&nbsp;&nbsp; ${formatCHF(calculateInvoice(items, tax).totalRappen)}`;
+  total.innerHTML = `TOTAL&nbsp;&nbsp; ${formatCHF(calculateInvoice(readInvoiceEditorItems(), tax).totalRappen)}`;
 }
 
 async function saveEditor(type) {
@@ -258,9 +279,9 @@ async function saveEditor(type) {
   }
   if (type === "project") { const payload = { customer_id: data.customer_id, title: data.title.trim(), status: data.status, budget_rappen: Math.round(Number(data.budget || 0) * 100), start_date: data.start_date || null, due_date: data.due_date || null, description: data.description.trim() }; if (dialogForm.dataset.editId) await adapter.updateProject(dialogForm.dataset.editId, payload); else await adapter.saveProject(payload); }
   if (type === "invoice") {
-    const rows = [...document.querySelectorAll(".invoice-item")];
-    const items = rows.map((row) => ({ description: row.querySelector('[name="item_description"]').value.trim(), quantity: Number(row.querySelector('[name="item_quantity"]').value), unit_price_rappen: Math.round(Number(row.querySelector('[name="item_price"]').value) * 100) }));
-    const payload = { customerId: data.customer_id, issueDate: data.issue_date, dueDate: data.due_date, items: items.map((item) => ({ description: item.description, quantity: item.quantity, unitPrice: item.unit_price_rappen / 100 })) };
+    const editorItems = readInvoiceEditorItems();
+    const items = editorItems.map((item) => ({ description: item.description, quantity: item.quantity, unit_price_rappen: Math.round(item.unitPrice * 100) }));
+    const payload = { customerId: data.customer_id, issueDate: data.issue_date, dueDate: data.due_date, items: editorItems };
     const errors = validateInvoice(payload); if (Object.keys(errors).length) { formError.textContent = Object.values(errors)[0]; return false; }
     const invoicePayload = { customer_id: data.customer_id, project_id: data.project_id || null, issue_date: data.issue_date, due_date: data.due_date, status: data.status || "draft", tax_rate: Number(data.tax_rate || 0), notes: data.notes.trim(), items }; if (dialogForm.dataset.editId) await adapter.updateInvoice(dialogForm.dataset.editId, invoicePayload); else await adapter.saveInvoice(invoicePayload);
   }
@@ -341,8 +362,8 @@ content.addEventListener("click", (event) => {
   const remove = event.target.closest("[data-delete-record]"); if (remove) deleteRecord(remove.dataset.deleteRecord, remove.dataset.id, remove);
 });
 content.addEventListener("input", (event) => { if (event.target.matches("[data-search]")) { state.query = event.target.value; const position = event.target.selectionStart; render(); const next = document.querySelector("[data-search]"); next.focus(); next.setSelectionRange(position, position); } });
-dialogBody.addEventListener("click", (event) => { if (event.target.closest("[data-add-item]")) addInvoiceItem(); if (event.target.closest("[data-remove-item]")) { if (document.querySelectorAll(".invoice-item").length > 1) event.target.closest(".invoice-item").remove(); updateInvoiceTotal(); } });
-dialogBody.addEventListener("input", (event) => { if (event.target.matches('[name="item_quantity"],[name="item_price"],[name="tax_rate"]')) updateInvoiceTotal(); });
+dialogBody.addEventListener("click", (event) => { if (event.target.closest("[data-add-item]")) addInvoiceItem(); if (event.target.closest("[data-add-discount]")) addInvoiceItem(null, "discount"); if (event.target.closest("[data-remove-item]")) { if (document.querySelectorAll(".invoice-item").length > 1) event.target.closest(".invoice-item").remove(); updateInvoiceTotal(); } });
+dialogBody.addEventListener("input", (event) => { if (event.target.matches('[name="item_quantity"],[name="item_price"],[name="discount_value"],[name="tax_rate"]')) updateInvoiceTotal(); });
 dialogBody.addEventListener("change", (event) => { if (event.target.matches('[name="customer_id"]') && dialogForm.dataset.type === "invoice") { const projects = dialogForm.elements.project_id; projects.innerHTML = `<option value="">Kein Projekt</option>${projectOptions(event.target.value)}`; } });
 dialogForm.addEventListener("submit", async (event) => { const submitter = event.submitter; if (submitter?.value !== "save") return; event.preventDefault(); submitter.disabled = true; formError.textContent = ""; try { if (await saveEditor(dialogForm.dataset.type)) { dialog.close(); await refresh(); showToast("Gespeichert."); } } catch (error) { formError.textContent = error.message || "Speichern fehlgeschlagen."; } finally { submitter.disabled = false; } });
 document.addEventListener("click", (event) => { const nav = event.target.closest(".nav-link"); if (nav) setView(nav.dataset.view); if (event.target.closest("[data-open-nav]")) shell.classList.add("nav-open"); if (event.target.closest("[data-close-nav]")) shell.classList.remove("nav-open"); const create = event.target.closest("[data-create]"); if (create && !content.contains(create)) openEditor(create.dataset.create); });

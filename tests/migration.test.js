@@ -9,6 +9,7 @@ const reliabilityMigrationPath = new URL("../supabase/migrations/20260810_portal
 const shortReferenceMigrationPath = new URL("../supabase/migrations/20260811_short_invoice_reference.sql", import.meta.url);
 const projectSnapshotMigrationPath = new URL("../supabase/migrations/20260812_invoice_project_snapshot.sql", import.meta.url);
 const editableRecordsMigrationPath = new URL("../supabase/migrations/20260813_editable_portal_records.sql", import.meta.url);
+const discountItemsMigrationPath = new URL("../supabase/migrations/20260830_invoice_discounts_and_item_order.sql", import.meta.url);
 
 async function createMigrationDatabase() {
   const db = new PGlite();
@@ -331,6 +332,50 @@ test("Owner kann Kunden, Projekte, Rechnungspositionen und Status kontrolliert n
   const updated = await db.query(`select invoice_number, status, total_rappen, notes, project_title_snapshot, customer_snapshot->>'company' as customer from public.invoices where id = '${invoiceId}'`);
   assert.deepEqual(updated.rows[0], { invoice_number: originalNumber, status: 'sent', total_rappen: 150000, notes: 'Manuell versendet', project_title_snapshot: 'Neuprojekt', customer: 'Neu AG' });
   assert.equal((await db.query(`select count(*)::int as count from public.invoice_items where invoice_id = '${invoiceId}'`)).rows[0].count, 1);
+  await db.close();
+});
+
+test("Rabatte werden sicher gespeichert und die übermittelte Reihenfolge bleibt kanonisch", async () => {
+  const db = await createMigrationDatabase();
+  await db.exec(await readFile(reliabilityMigrationPath, "utf8"));
+  await db.exec(await readFile(shortReferenceMigrationPath, "utf8"));
+  await db.exec(await readFile(projectSnapshotMigrationPath, "utf8"));
+  await db.exec(await readFile(editableRecordsMigrationPath, "utf8"));
+  await db.exec(await readFile(discountItemsMigrationPath, "utf8"));
+  const owner = "10000000-0000-4000-8000-000000000060";
+  const customer = "20000000-0000-4000-8000-000000000060";
+  await db.exec(`
+    insert into auth.users(id) values ('${owner}');
+    select set_config('request.jwt.claim.sub', '${owner}', false);
+    insert into public.customers(id, owner_id, company, email, address_line1, postal_code, city)
+    values ('${customer}', '${owner}', 'Rabattkunde AG', 'rabatt@test.example', 'Testweg 1', '8000', 'Zürich');
+    insert into public.company_settings(owner_id, company_name, owner_name, email, address_line1, postal_code, city, iban, vat_number)
+    values ('${owner}', 'HEAV', 'Michias Tegegne', 'hello@heav.ch', 'Teststrasse 2', '4051', 'Basel', 'CH8200769420675792002', '');
+  `);
+  const created = await db.query(`select * from public.create_invoice(
+    '${customer}', null, '2026-08-30', '2026-09-30', 0, '',
+    '[{"description":"Produktion","quantity":1,"unit_price_rappen":100000},{"description":"Rabatt","quantity":1,"unit_price_rappen":-10000},{"description":"Reise","quantity":1,"unit_price_rappen":25000}]'::jsonb
+  )`);
+  const invoiceId = created.rows[0].invoice_id;
+  assert.deepEqual((await db.query(`select description, position, unit_price_rappen from public.invoice_items where invoice_id = '${invoiceId}' order by position`)).rows, [
+    { description: "Produktion", position: 1, unit_price_rappen: 100000 },
+    { description: "Rabatt", position: 2, unit_price_rappen: -10000 },
+    { description: "Reise", position: 3, unit_price_rappen: 25000 },
+  ]);
+  assert.equal((await db.query(`select total_rappen from public.invoices where id = '${invoiceId}'`)).rows[0].total_rappen, 115000);
+
+  await db.query(`select public.update_invoice('${invoiceId}', '${customer}', null, '2026-08-30', '2026-09-30', 'draft', 0, '',
+    '[{"description":"Produktion","quantity":1,"unit_price_rappen":100000},{"description":"Reise","quantity":1,"unit_price_rappen":25000},{"description":"Rabatt 15 %","quantity":1,"unit_price_rappen":-18750}]'::jsonb)`);
+  assert.deepEqual((await db.query(`select description, position from public.invoice_items where invoice_id = '${invoiceId}' order by position`)).rows, [
+    { description: "Produktion", position: 1 },
+    { description: "Reise", position: 2 },
+    { description: "Rabatt 15 %", position: 3 },
+  ]);
+  assert.equal((await db.query(`select total_rappen from public.invoices where id = '${invoiceId}'`)).rows[0].total_rappen, 106250);
+  await assert.rejects(db.query(`select * from public.create_invoice(
+    '${customer}', null, '2026-08-30', '2026-09-30', 0, '',
+    '[{"description":"Rabatt zuerst","quantity":1,"unit_price_rappen":-1000},{"description":"Produktion","quantity":1,"unit_price_rappen":10000}]'::jsonb
+  )`), /discount must follow a positive subtotal/);
   await db.close();
 });
 

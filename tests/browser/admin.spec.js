@@ -32,7 +32,12 @@ async function mockStudioSupabase(page) {
         ],
         invoices: [
           { id: "i1", customer_id: "c1", project_id: "p1", invoice_number: "HEAV-2026-001", payment_reference: "RF51HEAV2026000001", issue_date: "2026-07-28", due_date: "2026-08-27", status: "sent", subtotal_rappen: 850000, tax_rappen: 68850, total_rappen: 918850, tax_rate: 8.1, invoice_items: [] },
-          { id: "i2", customer_id: "c2", project_id: "p2", invoice_number: "HEAV-2026-002", payment_reference: "RF24HEAV2026000002", issue_date: "2026-08-01", due_date: "2026-08-31", status: "draft", subtotal_rappen: 460000, tax_rappen: 37260, total_rappen: 497260, tax_rate: 8.1, invoice_items: [] }
+          { id: "i2", customer_id: "c2", project_id: "p2", invoice_number: "HEAV-2026-002", payment_reference: "RF24HEAV2026000002", issue_date: "2026-08-01", due_date: "2026-08-31", status: "sent", subtotal_rappen: 50820, tax_rappen: 0, total_rappen: 50820, tax_rate: 0, invoice_items: [
+            { position: 1, description: "Foto- & Videoproduktion vor Ort", quantity: 2.75, unit_price_rappen: 15000 },
+            { position: 2, description: "Persönlicher Sonderrabatt", quantity: 1, unit_price_rappen: -6190 },
+            { position: 3, description: "Foto-/Equipment-Zuschlag", quantity: 1, unit_price_rappen: 10000 },
+            { position: 4, description: "An- und Rückreise", quantity: 1, unit_price_rappen: 5760 }
+          ] }
         ],
         company_settings: [{ company_name: "HEAV", owner_name: "Michias Tegegne", email: "hello@heav.ch", iban: "", default_tax_rate: 8.1, default_due_days: 30 }]
       };
@@ -54,7 +59,11 @@ async function mockStudioSupabase(page) {
             return builder;
           },
           rpc: async (name, payload) => {
+            if (name === "update_invoice") {
+              window.__lastUpdatedInvoiceItems = payload.p_items;
+            }
             if (name === "create_invoice") {
+              window.__lastCreatedInvoiceItems = payload.p_items;
               const subtotal = payload.p_items.reduce((sum, item) => sum + Math.round(item.quantity * item.unit_price_rappen), 0);
               const tax = Math.round(subtotal * payload.p_tax_rate / 100);
               store.invoices.unshift({ id: crypto.randomUUID(), customer_id: payload.p_customer_id, project_id: payload.p_project_id, invoice_number: "HEAV-2026-003", payment_reference: "RF94HEAV2026000003", issue_date: payload.p_issue_date, due_date: payload.p_due_date, status: "draft", subtotal_rappen: subtotal, tax_rappen: tax, total_rappen: subtotal + tax, tax_rate: payload.p_tax_rate, invoice_items: payload.p_items });
@@ -150,6 +159,59 @@ test("Kunde: Privatkunde ohne Firma und Kontaktdaten speichern", async ({ browse
   const privateCustomerRow = page.locator(".data-table tbody tr").filter({ hasText: "Noah Frei" }).filter({ hasText: "Privatkunde" });
   await expect(privateCustomerRow).toBeVisible();
   await expect(privateCustomerRow.locator("strong")).toHaveText("Noah Frei");
+  await page.close();
+});
+
+test("Bestehende negative Rabattposition lässt sich ohne native Zahlenfeld-Sperre bearbeiten", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/admin/`);
+  await page.locator('.nav-link[data-view="invoices"]').click();
+  const invoiceRow = page.locator(".data-table tbody tr").filter({ hasText: "HEAV-2026-002" });
+  await invoiceRow.getByRole("button", { name: "Bearbeiten" }).click();
+
+  const discountRow = page.locator(".invoice-item").nth(1);
+  await expect(discountRow.locator('[name="discount_value"]')).toHaveValue("61.9");
+  await expect(discountRow.locator('[name="discount_value"]')).toHaveAttribute("min", "0.01");
+  await expect(discountRow.locator('[name="item_price"]')).toHaveCount(0);
+  const servicePriceBox = await page.locator('.invoice-item').first().locator('[name="item_price"]').boundingBox();
+  const discountValueBox = await discountRow.locator('[name="discount_value"]').boundingBox();
+  expect(discountValueBox.x).toBeCloseTo(servicePriceBox.x, 0);
+  await expect(page.locator("#invoice-total")).toContainText("CHF 508.20");
+
+  await page.getByRole("button", { name: "Speichern" }).click();
+  await expect(page.locator("#editor-dialog")).not.toBeVisible();
+  expect(await page.evaluate(() => window.__lastUpdatedInvoiceItems)).toEqual([
+    { description: "Foto- & Videoproduktion vor Ort", quantity: 2.75, unit_price_rappen: 15000 },
+    { description: "Persönlicher Sonderrabatt", quantity: 1, unit_price_rappen: -6190 },
+    { description: "Foto-/Equipment-Zuschlag", quantity: 1, unit_price_rappen: 10000 },
+    { description: "An- und Rückreise", quantity: 1, unit_price_rappen: 5760 },
+  ]);
+  await page.close();
+});
+
+test("Neue Rechnung erhält einen klaren Rabatt-Workflow statt negativer Preiseingabe", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/admin/`);
+  await page.getByRole("button", { name: /Neue Rechnung/ }).click();
+  await page.locator('select[name="customer_id"]').selectOption("c2");
+  const serviceRow = page.locator(".invoice-item").first();
+  await serviceRow.locator('[name="item_description"]').fill("Produktion");
+  await serviceRow.locator('[name="item_quantity"]').fill("2");
+  await serviceRow.locator('[name="item_price"]').fill("100");
+
+  await page.getByRole("button", { name: "Rabatt hinzufügen" }).click();
+  const discountRow = page.locator(".invoice-item.is-discount");
+  await discountRow.locator('[name="item_description"]').fill("Persönlicher Sonderrabatt");
+  await discountRow.locator('[name="discount_value"]').fill("25");
+  await expect(page.locator("#invoice-total")).toContainText("CHF 175.00");
+  await page.getByRole("button", { name: "Speichern", exact: true }).click();
+
+  expect(await page.evaluate(() => window.__lastCreatedInvoiceItems)).toEqual([
+    { description: "Produktion", quantity: 2, unit_price_rappen: 10000 },
+    { description: "Persönlicher Sonderrabatt", quantity: 1, unit_price_rappen: -2500 },
+  ]);
   await page.close();
 });
 
