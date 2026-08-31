@@ -76,17 +76,6 @@ type Invoice = {
   invoice_items: InvoiceItem[];
 };
 
-export function escapeHtml(value: unknown) {
-  return String(value ?? "").replace(/[&<>"']/g, (character) =>
-    ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;",
-    })[character] as string);
-}
-
 function safeHeader(value: unknown) {
   return String(value ?? "").replace(/[\r\n]+/g, " ").slice(0, 160);
 }
@@ -182,17 +171,6 @@ const validMailbox = (value: unknown, allowDisplayName = false) => {
   return Boolean(address && /^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/.test(address));
 };
 
-const safePublicUrl = (value: unknown, fallback = "") => {
-  try {
-    const url = new URL(String(value || fallback));
-    return ["http:", "https:"].includes(url.protocol)
-      ? url.toString()
-      : fallback;
-  } catch {
-    return fallback;
-  }
-};
-
 function invoiceGreetingAndProject(invoice: Invoice) {
   const greeting = compactText(
     invoice.customers.contact_name || invoice.customers.company,
@@ -210,58 +188,6 @@ export function buildInvoiceText(invoice: Invoice, settings: Settings) {
   return `Hello ${greeting}\n\n${projectLine}\n\nThank you for the opportunity and the great collaboration.\n\nIf you have any questions, please feel free to get in touch.\n\nKind regards\n${
     compactText(settings.owner_name, 160)
   }\n${compactText(settings.company_name, 160)}`;
-}
-
-export function buildInvoiceEmailHtml(invoice: Invoice, settings: Settings) {
-  const { greeting, projectLine } = invoiceGreetingAndProject(invoice);
-  const name = escapeHtml(compactText(settings.owner_name, 160));
-  const company = escapeHtml(compactText(settings.company_name, 160));
-  const phone = compactText(settings.phone, 80);
-  const email = compactText(settings.email, 160);
-  const website = safePublicUrl(settings.website_url, "https://heav.ch");
-  const profileImage =
-    "https://heav.ch/assets/images/michias-email-profile-headroom.jpg";
-  const wordmarkImage =
-    "https://heav.ch/assets/images/heav-email-wordmark.png";
-  const phoneRow = phone
-    ? `<br><a href="tel:${
-      escapeHtml(phone.replace(/[^+0-9]/g, ""))
-    }" style="color:#777777;text-decoration:none;">${escapeHtml(phone)}</a>`
-    : "";
-  return `<div style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;color:#151515;font-size:16px;line-height:1.55;">
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin:0 0 28px;padding:0;background:#080909;">
-    <tr>
-      <td style="padding:18px 20px;">
-        <img src="${wordmarkImage}" width="154" height="35" alt="HEAV" style="display:block;width:154px;height:35px;border:0;outline:none;text-decoration:none;" />
-      </td>
-    </tr>
-  </table>
-  <p style="margin:0 0 20px;">Hello ${escapeHtml(greeting)}</p>
-  <p style="margin:0 0 20px;">${escapeHtml(projectLine)}</p>
-  <p style="margin:0 0 20px;">Thank you for the opportunity and the great collaboration.</p>
-  <p style="margin:0 0 26px;">If you have any questions, please feel free to get in touch.</p>
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin:0;padding:0;">
-    <tr>
-      <td valign="middle" style="padding:0 18px 0 0;">
-        <img src="${profileImage}" width="88" height="88" alt="${name}" style="display:block;width:88px;height:88px;border:1px solid #151515;border-radius:50%;object-fit:cover;" />
-      </td>
-      <td valign="middle" style="padding:0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.45;">
-        <strong style="display:block;color:#111111;font-size:18px;line-height:1.2;">${name}</strong>
-        <span style="display:block;margin:3px 0 7px;color:#777777;">Founder &amp; Owner | ${company}</span>
-        <a href="mailto:${
-    escapeHtml(email)
-  }" style="color:#111111;text-decoration:underline;text-underline-offset:2px;">${
-    escapeHtml(email)
-  }</a>${phoneRow}<br>
-        <a href="${
-    escapeHtml(website)
-  }" style="color:#777777;text-decoration:underline;text-underline-offset:2px;">${
-    escapeHtml(website.replace(/^https?:\/\//, "").replace(/\/$/, ""))
-  }</a>
-      </td>
-    </tr>
-  </table>
-</div>`;
 }
 
 const isoCountryCodes = new Set(
@@ -1294,7 +1220,6 @@ if (import.meta.main) {
               } von ${settings.company_name}`,
             ),
             text: buildInvoiceText(invoice, settings),
-            html: buildInvoiceEmailHtml(invoice, settings),
             attachments: [{
               filename: invoiceFilename(invoice),
               content: base64(pdfBytes),

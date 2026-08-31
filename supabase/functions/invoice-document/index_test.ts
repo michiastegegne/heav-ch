@@ -1,12 +1,10 @@
 import { assert, assertEquals, assertGreater } from "jsr:@std/assert@1";
 import { PDFDocument } from "npm:pdf-lib@1.17.1";
 import {
-  buildInvoiceEmailHtml,
   buildInvoicePaymentMessage,
   buildInvoiceText,
   buildSwissQrPayload,
   createInvoicePdf,
-  escapeHtml,
   formatDiscountPercent,
   formatDocumentReference,
   formatPaymentReference,
@@ -16,13 +14,6 @@ import {
   shouldRenderPostDiscountSubtotal,
   validVatNumber,
 } from "./index.ts";
-
-Deno.test("escapeHtml neutralisiert Kundendaten im E-Mail-HTML", () => {
-  assertEquals(
-    escapeHtml(`<img src=x onerror="alert('x')"> & Firma`),
-    "&lt;img src=x onerror=&quot;alert(&#39;x&#39;)&quot;&gt; &amp; Firma",
-  );
-});
 
 Deno.test("Zahlungsreferenzen bleiben in ISO-11649-Vierergruppen lesbar", () => {
   assertEquals(formatPaymentReference("RF43HEAV2026002"), "RF43 HEAV 2026 002");
@@ -157,34 +148,16 @@ Deno.test("E-Mail-Text bleibt ohne Projekt klar und professionell", () => {
   assert(text.includes("Please find the invoice attached as a PDF."));
 });
 
-Deno.test("E-Mail-Banner enthält Portrait, Kontaktdaten und sichere Projekttexte", () => {
-  const invoice = {
-    project_title_snapshot: "<Yousty Video>",
-    customers: { contact_name: "Yoyo <script>" },
-  };
-  const settings = {
-    owner_name: "Michias Tegegne",
-    company_name: "HEAV",
-    email: "hello@heav.ch",
-    phone: "+41 77 451 05 92",
-    website_url: "https://heav.ch",
-  };
-  const html = buildInvoiceEmailHtml(invoice as never, settings as never);
-  assert(html.includes("heav-email-wordmark.png"));
-  assert(html.includes("background:#080909"));
-  assert(!html.includes("heav-email-wordmark-transparent.png"));
-  assert(!html.includes("background:#2453ff"));
-  assert(html.includes("margin:0 0 28px"));
-  assert(html.includes('width="154" height="35"'));
-  assert(html.includes("michias-email-profile-headroom.jpg"));
-  assert(!html.includes("michias-email-portrait.jpg"));
-  assert(html.includes("border-radius:50%"));
-  assert(html.includes("Founder &amp; Owner | HEAV"));
-  assert(html.includes("mailto:hello@heav.ch"));
-  assert(html.includes("tel:+41774510592"));
-  assert(html.includes("&lt;Yousty Video&gt;"));
-  assert(html.includes("Please find attached the invoice"));
-  assert(!html.includes("<script>"));
+Deno.test("Rechnungsversand nutzt nur Klartext und PDF ohne HTML-Trackingfläche", async () => {
+  const source = await Deno.readTextFile(
+    new URL("./index.ts", import.meta.url),
+  );
+  const resendPayload = source.match(
+    /body: JSON\.stringify\(\{[\s\S]*?attachments: \[\{[\s\S]*?\}\],[\s\S]*?\}\),/,
+  )?.[0] ?? "";
+  assert(resendPayload.includes("text: buildInvoiceText(invoice, settings)"));
+  assert(!resendPayload.includes("html:"));
+  assert(!resendPayload.includes("buildInvoiceEmailHtml"));
 });
 
 Deno.test("Rabattprozente werden aus Rabattbetrag und Zwischentotal klar formatiert", () => {
