@@ -60,25 +60,32 @@ test("Kurzbeschreibungen werden vor dem Versand klar erklärt", () => {
   assert.match(functionSource, /Please add a short project description/);
 });
 
-test("Bestätigungsmail nutzt einen eigenen HEAV-Absender", () => {
+test("Bestätigungsmail nutzt einen eigenen HEAV-Absender und das HEAV-E-Mailbanner", () => {
   assert.match(functionSource, /CONTACT_FROM_EMAIL/);
   assert.match(functionSource, /Project enquiry received — HEAV/);
+  assert.match(functionSource, /heav-email-wordmark\.png/);
+  assert.match(functionSource, /background:#080909/);
+  assert.doesNotMatch(functionSource, /heav-email-wordmark-transparent\.png/);
+  assert.doesNotMatch(functionSource, /background:#2453ff/);
+  assert.match(functionSource, /michias-email-profile-headroom\.jpg/);
+  assert.match(functionSource, /Founder &amp; Owner \| HEAV/);
+  assert.match(functionSource, /width="154" height="35"/);
+  assert.match(functionSource, /width="88" height="88"/);
+  assert.doesNotMatch(functionSource, /max-width:600px/);
   assert.doesNotMatch(functionSource, /billing/i);
 });
 
-test("Kontaktmails werden als schlichte Klartextnachrichten ohne HTML versendet", () => {
+test("Kontaktmails versenden Textalternativen und HEAV-HTML", () => {
   const payloads = [...functionSource.matchAll(
     /await sendEmail\(resendKey, \{([\s\S]*?)\n\s*\}\);/g,
   )].map((match) => match[1]);
   assert.equal(payloads.length, 2);
   for (const payload of payloads) {
     assert.match(payload, /\btext:/);
-    assert.doesNotMatch(payload, /\bhtml:/);
+    assert.match(payload, /\bhtml:/);
   }
-  assert.doesNotMatch(
-    functionSource.match(/function confirmationEmailText[\s\S]*?\n\}/)?.[0] || "",
-    /https?:\/\//,
-  );
+  assert.match(functionSource, /html: emailHtml\(enquiry\)/);
+  assert.match(functionSource, /html: confirmationEmailHtml\(enquiry\)/);
 });
 
 test("Kontakt-Edge-Function validiert, schützt und versendet über den bestehenden HEAV-Mailer", () => {
