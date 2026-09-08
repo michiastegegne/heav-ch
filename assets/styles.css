@@ -1274,6 +1274,14 @@ main {
   --client-logo-width: 12rem;
   --client-logo-height: 3.2rem;
 }
+.client-logo--alfa-romeo {
+  --client-logo-width: 5.7rem;
+  --client-logo-height: 5.7rem;
+}
+.section > .client-block .client-logos .client-logo--alfa-romeo img {
+  filter: none;
+  opacity: .72;
+}
 .contact-form-layout {
   display: grid;
   grid-template-columns: minmax(16rem, 0.72fr) minmax(0, 1.28fr);
