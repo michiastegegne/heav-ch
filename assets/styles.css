@@ -1234,10 +1234,22 @@ main {
   justify-content: center;
   padding: 0;
 }
+.client-logos a {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: .15rem;
+}
+.client-logos a:focus-visible {
+  outline: 2px solid var(--acid);
+  outline-offset: .35rem;
+}
 .client-logos img {
   display: block;
-  max-width: min(100%, var(--client-logo-width, 10.5rem));
-  max-height: var(--client-logo-height, 4.8rem);
+  max-width: min(100%, var(--client-logo-width, 10rem));
+  max-height: var(--client-logo-height, 4.4rem);
   width: auto;
   height: auto;
   object-fit: contain;
@@ -1245,38 +1257,16 @@ main {
   opacity: 0.72;
 }
 .client-logo--shield {
-  --client-logo-width: 4.7rem;
-  --client-logo-height: 5.7rem;
+  --client-logo-width: 4.5rem;
+  --client-logo-height: 5rem;
 }
 .client-logo--square {
-  --client-logo-width: 7.2rem;
-  --client-logo-height: 5.4rem;
-}
-.client-logo--cewe {
-  --client-logo-width: 7.4rem;
-}
-.client-logo--wide {
-  --client-logo-width: 11.5rem;
-}
-.client-logo--compact {
-  --client-logo-width: 6.4rem;
-  --client-logo-height: 5.2rem;
-}
-.client-logo--stadt-liestal {
-  --client-logo-width: 11rem;
-  --client-logo-height: 4.2rem;
-}
-.client-logo--basler-zeitung {
-  --client-logo-width: 12.5rem;
-  --client-logo-height: 4.2rem;
-}
-.client-logo--redken {
-  --client-logo-width: 12rem;
-  --client-logo-height: 3.2rem;
+  --client-logo-width: 5.25rem;
+  --client-logo-height: 5rem;
 }
 .client-logo--alfa-romeo {
-  --client-logo-width: 5.7rem;
-  --client-logo-height: 5.7rem;
+  --client-logo-width: 5.1rem;
+  --client-logo-height: 5.1rem;
 }
 .section > .client-block .client-logos .client-logo--alfa-romeo img {
   filter: none;
