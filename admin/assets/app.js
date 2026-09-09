@@ -452,6 +452,21 @@ async function boot() {
     state.supabase = createClient(HEAV_ADMIN_CONFIG.supabaseUrl, HEAV_ADMIN_CONFIG.supabaseAnonKey);
     const { data, error } = await state.supabase.auth.getSession();
     if (error || !data.session) { window.location.replace("/login/"); return; }
+
+    const userId = data.session.user.id;
+    const { data: settings } = await state.supabase.from("company_settings").select("owner_id").maybeSingle();
+    const isOwner = settings?.owner_id === userId;
+
+    if (!isOwner) {
+      const { data: memberships, error: membershipError } = await state.supabase
+        .from("customer_portal_memberships")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("status", "active")
+        .limit(1);
+      if (!membershipError && memberships?.length) { window.location.replace("/portal/"); return; }
+    }
+
     adapter = createSupabaseAdapter(state.supabase, data.session);
     state.data = await adapter.loadAll();
     loading.remove(); shell.hidden = false; render();

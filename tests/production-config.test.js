@@ -33,7 +33,7 @@ test("Kontaktformular nutzt die HEAV-eigene Edge Function statt eines sichtbaren
 test("Admin lädt Rabatt- und UI-Confirm-Assets mit Cache-Versionen", () => {
   assert.match(adminHtml, /href="\/admin\/assets\/admin\.css\?v=20260830-discount-edit"/);
   assert.match(adminHtml, /href="\/admin\/assets\/admin-enhancements\.css\?v=20260909-confirm"/);
-  assert.match(adminHtml, /src="\/admin\/assets\/app\.js\?v=20260909-confirm"/);
+  assert.match(adminHtml, /src="\/admin\/assets\/app\.js\?v=20260909-role"/);
 });
 
 test("Portal bietet owner-geschützte Bearbeitung für Kunden, Projekte, Rechnungen und manuelle Statuswahl", () => {

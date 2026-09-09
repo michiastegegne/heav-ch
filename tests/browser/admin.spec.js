@@ -16,7 +16,7 @@ async function assertHealthy(page, errors) {
 async function mockStudioSupabase(page) {
   await page.addInitScript(() => localStorage.setItem("__heavStudioSession", "1"));
   await page.route("https://bkazlpqjvbuhwmjcwexn.supabase.co/functions/v1/invoice-document", async (route) => {
-    await route.fulfill({ status: 200, contentType: "application/pdf", body: "%PDF-1.4\n% HEAV test PDF\n%%EOF" });
+    await route.fulfill({ status: 200, contentType: "application/pdf", body: "%PDF-1.4\\n% HEAV test PDF\\n%%EOF" });
   });
   await page.route("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm", async (route) => {
     await route.fulfill({
@@ -40,6 +40,7 @@ async function mockStudioSupabase(page) {
           ] }
         ],
         company_settings: [{ company_name: "HEAV", owner_name: "Michias Tegegne", email: "hello@heav.ch", iban: "", default_tax_rate: 8.1, default_due_days: 30 }],
+        customer_portal_memberships: [],
         customer_portal_requests: [{ id: "r1", company: "Studio Nord", contact_name: "Lea Meier", email: "lea@studio-nord.example", phone: "+41 79 123 45 67", message: "Zugang für die Filmabnahme 2026.", status: "pending", created_at: "2026-09-09T10:00:00Z" }]
       };
       const result = (data) => ({ data, error: null });
@@ -52,8 +53,10 @@ async function mockStudioSupabase(page) {
           from(table) {
             const builder = {
               select() { return builder; },
+              eq() { return builder; },
               order: async () => result(store[table]),
               maybeSingle: async () => result(store[table][0] || null),
+              limit: async () => result(store[table].slice(0, 1)),
               insert: async (payload) => { store[table].push({ id: crypto.randomUUID(), ...payload }); return result(null); },
               upsert: async (payload) => { store[table] = [{ ...store[table][0], ...payload }]; return result(null); }
             };
@@ -85,6 +88,32 @@ async function mockStudioSupabase(page) {
     });
   });
 }
+
+async function mockClientSupabase(page) {
+  await page.route("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm", async (route) => {
+    await route.fulfill({
+      contentType: "application/javascript",
+      body: `const result = (data) => ({ data, error: null });
+      export function createClient() {
+        return {
+          auth: { getSession: async () => ({ data: { session: { access_token: "client-test", user: { id: "client-test" } } }, error: null }) },
+          from(table) {
+            const builder = {
+              select() { return builder; }, eq() { return builder; }, order: async () => result([]), maybeSingle: async () => result(null), limit: async () => result(table === "customer_portal_memberships" ? [{ id: "membership-test" }] : [])
+            };
+            return builder;
+          }
+        };
+      }`,
+    });
+  });
+}
+
+test("Client-Konto wird aus dem Studio ins private Portal umgeleitet", async ({ page }) => {
+  await mockClientSupabase(page);
+  await page.goto(`${base}/admin/`);
+  await page.waitForURL(/\/portal\/$/);
+});
 
 test("Desktop: Dashboard und vollständiger Erfassungsfluss", async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
@@ -156,7 +185,6 @@ test("Desktop: Dashboard und vollständiger Erfassungsfluss", async ({ browser }
   await page.screenshot({ path: "qa/admin-desktop.png", fullPage: true });
   await page.close();
 });
-
 
 test("Kunde: Privatkunde ohne Firma und Kontaktdaten speichern", async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
@@ -310,7 +338,7 @@ test("Login: sendet einen Magic-Link nur für bestehende Benutzer und ohne Vorsc
   await page.getByRole("button", { name: /Send sign-in link/ }).click();
   await expect.poll(() => page.evaluate(() => window.__heavOtpPayload)).toEqual({
     email: "admin@heav.ch",
-    options: { emailRedirectTo: "http://127.0.0.1:4180/login/", shouldCreateUser: false },
+    options: { emailRedirectTo: `${base}/login/`, shouldCreateUser: false },
   });
   await expect(page.getByText(/Sign-in link sent/)).toBeVisible();
   await expect(page.locator("#login-message")).toHaveClass(/is-dispatch-success/);
