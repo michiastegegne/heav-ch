@@ -10,4 +10,12 @@ input:focus{box-shadow:0 5px 0 -4px var(--acid)}
 button{transition:transform .2s var(--login-ease),box-shadow .2s ease,background-color .2s ease!important}
 @media(any-hover:hover) and (pointer:fine){button:hover{transform:translateY(-2px);box-shadow:0 13px 25px rgba(153,185,0,.2)}}
 @media(max-width:760px){.login-card form{padding:24px 0;border-inline:0;box-shadow:none;background:transparent}}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;scroll-behavior:auto!important}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+
+@keyframes login-rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes login-plane{0%{opacity:0;transform:translate(-13px,10px) scale(.65) rotate(-18deg)}55%{opacity:1;transform:translate(3px,-2px) scale(1) rotate(0)}100%{opacity:1;transform:none}}
+@keyframes login-check{0%{opacity:0;transform:scale(.42) rotate(-20deg)}70%{transform:scale(1.16) rotate(5deg)}100%{opacity:1;transform:scale(1)}}
+.login-card{animation:login-rise .55s both var(--login-ease)}
+button:active{transform:scale(.98)!important}button.is-loading{opacity:.8;cursor:wait}button.is-loading span{display:inline-block;animation:login-plane .65s infinite var(--login-ease)}
+.form-message.is-dispatch-success{display:flex;align-items:center;gap:10px;padding:12px 13px;border:1px solid rgba(215,255,56,.48);background:rgba(215,255,56,.1);color:var(--paper)}
+.send-plane{display:grid;place-items:center;flex:0 0 auto;width:32px;height:32px;border-radius:50%;background:var(--acid);animation:login-plane .55s both var(--login-ease)}.send-plane svg{width:16px;stroke:var(--night);stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}.send-success-copy{display:grid;gap:2px;line-height:1.25}.send-success-copy strong{font-size:.79rem}.send-success-copy small{font-size:.72rem;color:#bec6b7}.send-check{display:grid;place-items:center;flex:0 0 auto;margin-left:auto;width:23px;height:23px;border:1px solid var(--acid);border-radius:50%;color:var(--acid);font-weight:800;animation:login-check .42s .24s both var(--login-ease)}

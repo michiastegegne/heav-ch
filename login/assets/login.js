@@ -3,6 +3,7 @@ import { HEAV_ADMIN_CONFIG, isBackendConfigured } from "/admin/config.js";
 const form = document.querySelector("#login-form");
 const message = document.querySelector("#login-message");
 const button = form.querySelector("button");
+const successMarkup = (title, copy) => `<span class="send-plane" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M21 3 10 14"/><path d="m21 3-7 18-4-7-7-4Z"/></svg></span><span class="send-success-copy"><strong>${title}</strong><small>${copy}</small></span><span class="send-check" aria-hidden="true">✓</span>`;
 
 if (!isBackendConfigured()) {
   message.textContent = "Secure backend access is currently being configured.";
@@ -35,6 +36,8 @@ if (!isBackendConfigured()) {
     message.textContent = "";
     if (!form.reportValidity()) return;
     button.disabled = true;
+    button.classList.add("is-loading");
+    button.setAttribute("aria-busy", "true");
     const email = new FormData(form).get("email").trim().toLowerCase();
     const { error } = await supabase.auth.signInWithOtp({
       email,
@@ -46,10 +49,14 @@ if (!isBackendConfigured()) {
     if (error) {
       message.textContent = "Sign-in could not be started. Please try again later.";
       button.disabled = false;
+      button.classList.remove("is-loading");
+      button.removeAttribute("aria-busy");
       return;
     }
-    message.classList.add("success");
-    message.textContent = "Sign-in link sent. Please check your email.";
+    message.className = "form-message success is-dispatch-success";
+    message.innerHTML = successMarkup("Sign-in link sent", "A secure link is on its way to your inbox.");
     button.disabled = false;
+    button.classList.remove("is-loading");
+    button.removeAttribute("aria-busy");
   });
 }

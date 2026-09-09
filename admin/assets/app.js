@@ -13,6 +13,9 @@ const dialogKicker = document.querySelector("#dialog-kicker");
 const formError = document.querySelector("#form-error");
 const toast = document.querySelector("#toast");
 const topbarCreate = document.querySelector(".topbar .primary-action");
+const workspace = document.querySelector(".workspace");
+const navMenuButton = document.querySelector("[data-open-nav]");
+let navRestoreFocus = null;
 
 const viewNames = {
   dashboard: "Übersicht",
@@ -33,8 +36,18 @@ const validVatNumber = (value = "") => /^CHE-\d{3}\.\d{3}\.\d{3} (MWST|TVA|IVA)$
 
 
 function showToast(message, tone = "default") {
+  toast.className = "toast";
   toast.textContent = message;
   toast.style.borderLeft = `4px solid ${tone === "error" ? "#ff5b35" : "#d7ff38"}`;
+  toast.hidden = false;
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => { toast.hidden = true; }, 4200);
+}
+
+function showDispatchSuccess(title = "Rechnung versendet", copy = "Der sichere Versand wurde bestätigt.") {
+  toast.className = "toast is-dispatch-success";
+  toast.style.borderLeft = "4px solid #d7ff38";
+  toast.innerHTML = `<span class="dispatch-plane" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M21 3 10 14"/><path d="m21 3-7 18-4-7-7-4Z"/></svg></span><span><strong>${esc(title)}</strong><small>${esc(copy)}</small></span><span class="dispatch-check" aria-hidden="true">✓</span>`;
   toast.hidden = false;
   clearTimeout(showToast.timer);
   showToast.timer = setTimeout(() => { toast.hidden = true; }, 4200);
@@ -213,7 +226,20 @@ function syncTopbarAction() {
 }
 function render() { title.textContent = viewNames[state.view]; syncTopbarAction(); content.innerHTML = renderers[state.view](); content.focus({ preventScroll: true }); }
 async function refresh() { state.data = await adapter.loadAll(); render(); }
-function setView(view) { state.view = view; state.query = ""; state.filter = "all"; document.querySelectorAll(".nav-link").forEach((item) => item.classList.toggle("is-active", item.dataset.view === view)); shell.classList.remove("nav-open"); render(); }
+function setNavigationOpen(open, { restoreFocus = true } = {}) {
+  const isOpen = Boolean(open);
+  shell.classList.toggle("nav-open", isOpen);
+  navMenuButton.setAttribute("aria-expanded", String(isOpen));
+  workspace.inert = isOpen;
+  if (isOpen) {
+    navRestoreFocus = document.activeElement;
+    requestAnimationFrame(() => document.querySelector(".nav-link.is-active")?.focus());
+  } else if (restoreFocus && navRestoreFocus === navMenuButton) {
+    navMenuButton.focus({ preventScroll: true });
+  }
+}
+
+function setView(view) { state.view = view; state.query = ""; state.filter = "all"; document.querySelectorAll(".nav-link").forEach((item) => item.classList.toggle("is-active", item.dataset.view === view)); setNavigationOpen(false, { restoreFocus: false }); render(); }
 
 function customerOptions(selected = "") { return state.data.customers.map((item) => `<option value="${esc(item.id)}" ${item.id === selected ? "selected" : ""}>${esc(customerLabel(item))}</option>`).join(""); }
 function projectOptions(customerId = "", selected = "") { return state.data.projects.filter((item) => item.customer_id === customerId).map((item) => `<option value="${esc(item.id)}" ${item.id === selected ? "selected" : ""}>${esc(item.title)}</option>`).join(""); }
@@ -328,7 +354,8 @@ async function invoiceAction(id, action, button) {
     if (action === "send") state.sendRequestKeys.delete(id);
     if (action === "download") {
       const url = URL.createObjectURL(result); const link = document.createElement("a"); link.href = url; link.download = `${state.data.invoices.find((item) => item.id === id)?.invoice_number || "HEAV-Rechnung"}.pdf`; link.click(); URL.revokeObjectURL(url); showToast("PDF wurde erstellt.");
-    } else { showToast(action === "send" ? "Rechnung wurde versendet." : action === "cancel" ? "Rechnung wurde storniert." : "Rechnung als bezahlt markiert."); await refresh(); }
+    } else if (action === "send") { showDispatchSuccess(); await refresh(); }
+    else { showToast(action === "cancel" ? "Rechnung wurde storniert." : "Rechnung als bezahlt markiert."); await refresh(); }
   } catch (error) { showToast(error.message || "Aktion fehlgeschlagen.", "error"); }
   finally { button.disabled = false; }
 }
@@ -358,7 +385,7 @@ async function portalRequestAction(id, action, button) {
     if (action === "invite") {
       if (!request?.customer_id) throw new Error("Für diese Anfrage fehlt das Kundenprofil.");
       await adapter.sendPortalInvite(request.customer_id);
-      showToast(`Einladung wurde an ${request.email} gesendet.`);
+      showDispatchSuccess("Einladung versendet", "Der sichere Zugang wurde per E-Mail verschickt.");
     } else {
       await adapter.processPortalRequest(id, action);
       await refresh();
@@ -382,7 +409,8 @@ dialogBody.addEventListener("click", (event) => { if (event.target.closest("[dat
 dialogBody.addEventListener("input", (event) => { if (event.target.matches('[name="item_quantity"],[name="item_price"],[name="discount_value"],[name="tax_rate"]')) updateInvoiceTotal(); });
 dialogBody.addEventListener("change", (event) => { if (event.target.matches('[name="customer_id"]') && dialogForm.dataset.type === "invoice") { const projects = dialogForm.elements.project_id; projects.innerHTML = `<option value="">Kein Projekt</option>${projectOptions(event.target.value)}`; } });
 dialogForm.addEventListener("submit", async (event) => { const submitter = event.submitter; if (submitter?.value !== "save") return; event.preventDefault(); submitter.disabled = true; formError.textContent = ""; try { if (await saveEditor(dialogForm.dataset.type)) { dialog.close(); await refresh(); showToast("Gespeichert."); } } catch (error) { formError.textContent = error.message || "Speichern fehlgeschlagen."; } finally { submitter.disabled = false; } });
-document.addEventListener("click", (event) => { const nav = event.target.closest(".nav-link"); if (nav) setView(nav.dataset.view); if (event.target.closest("[data-open-nav]")) shell.classList.add("nav-open"); if (event.target.closest("[data-close-nav]")) shell.classList.remove("nav-open"); const create = event.target.closest("[data-create]"); if (create && !content.contains(create)) openEditor(create.dataset.create); });
+document.addEventListener("click", (event) => { const nav = event.target.closest(".nav-link"); if (nav) setView(nav.dataset.view); if (event.target.closest("[data-open-nav]")) setNavigationOpen(true); if (event.target.closest("[data-close-nav]")) setNavigationOpen(false); const create = event.target.closest("[data-create]"); if (create && !content.contains(create)) openEditor(create.dataset.create); });
+document.addEventListener("keydown", (event) => { if (event.key === "Escape" && shell.classList.contains("nav-open")) setNavigationOpen(false); });
 document.querySelector("#logout-button").addEventListener("click", async () => { await adapter.logout(); window.location.replace("/login/"); });
 
 async function boot() {

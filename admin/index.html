@@ -10,14 +10,14 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 
     <link rel="stylesheet" href="/admin/assets/admin.css?v=20260830-discount-edit" />
-    <link rel="stylesheet" href="/admin/assets/admin-enhancements.css?v=20260909-ui" />
+    <link rel="stylesheet" href="/admin/assets/admin-enhancements.css?v=20260909-motion" />
   </head>
   <body>
     <div class="loading-screen" id="loading-screen" aria-live="polite">
       <strong>HEAV</strong><span>Studio wird geladen …</span>
     </div>
     <div class="admin-shell" id="admin-shell" hidden>
-      <aside class="sidebar" id="sidebar">
+      <aside class="sidebar" id="sidebar" aria-label="Studio Navigation">
         <div class="sidebar-head">
           <a class="brand" href="/" aria-label="Zur HEAV Website">HEAV</a>
           <button class="nav-close icon-button" type="button" aria-label="Menü schliessen" data-close-nav>×</button>
@@ -39,7 +39,7 @@
       <div class="nav-scrim" data-close-nav></div>
       <section class="workspace">
         <header class="topbar">
-          <button class="menu-button icon-button" type="button" aria-label="Menü öffnen" data-open-nav>Menü</button>
+          <button class="menu-button icon-button" type="button" aria-label="Menü öffnen" aria-controls="sidebar" aria-expanded="false" data-open-nav>Menü</button>
           <div>
             <span class="kicker">HEAV STUDIO</span>
             <h1 id="view-title">Übersicht</h1>
@@ -66,6 +66,6 @@
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-    <script type="module" src="/admin/assets/app.js?v=20260830-discount-edit"></script>
+    <script type="module" src="/admin/assets/app.js?v=20260909-motion"></script>
   </body>
 </html>

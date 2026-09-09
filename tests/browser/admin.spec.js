@@ -224,9 +224,16 @@ test("Mobile: echte 390px-Ansicht, Navigation und Rechnungsdialog", async ({ bro
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
   await page.goto(`${base}/admin/`);
   await expect(page.getByRole("heading", { name: "Übersicht" })).toBeVisible();
-  await page.getByRole("button", { name: "Menü öffnen" }).click();
+  const menuButton = page.getByRole("button", { name: "Menü öffnen" });
+  await menuButton.click();
   await expect(page.locator("#admin-shell")).toHaveClass(/nav-open/);
+  await expect(menuButton).toHaveAttribute("aria-expanded", "true");
   await expect(page.locator("#sidebar")).toBeVisible();
+  await expect(page.locator('.nav-link[data-view="dashboard"]')).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(menuButton).toHaveAttribute("aria-expanded", "false");
+  await expect(menuButton).toBeFocused();
+  await menuButton.click();
   await page.locator('.nav-link[data-view="invoices"]').click();
   await expect(page.locator("#view-title")).toHaveText("Rechnungen");
   const filterMetrics = await page.locator(".filter-tabs").evaluate((element) => ({
@@ -271,6 +278,9 @@ test("Login: sendet einen Magic-Link nur für bestehende Benutzer und ohne Vorsc
     options: { emailRedirectTo: "http://127.0.0.1:4180/login/", shouldCreateUser: false },
   });
   await expect(page.getByText(/Sign-in link sent/)).toBeVisible();
+  await expect(page.locator("#login-message")).toHaveClass(/is-dispatch-success/);
+  await expect(page.locator("#login-message .send-plane")).toBeVisible();
+  await expect(page.locator("#login-message .send-check")).toBeVisible();
   await expect(page.getByText(/Vorschau|Musterrechnung/i)).toHaveCount(0);
   await expect(page.getByRole("button", { name: /installieren/i })).toHaveCount(0);
 });
