@@ -1,0 +1,22 @@
+/* Private HEAV portal: consistent interaction and clear action hierarchy */
+:root{--portal-focus:rgba(215,255,56,.78);--portal-ease:cubic-bezier(.2,.8,.2,1)}
+button,a,input,textarea{ -webkit-tap-highlight-color:transparent }
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--portal-focus);outline-offset:4px}
+.project-card,.record,.file-row,.primary-button,.download-button,.text-button{transition:transform .2s var(--portal-ease),background-color .2s ease,border-color .2s ease,box-shadow .2s ease,color .2s ease}
+.project-card,.record,.file-row{border-radius:14px}
+.project-card{overflow:hidden}
+.record,.file-row{padding-inline:16px}
+.primary-button{box-shadow:0 10px 24px rgba(140,169,0,.12)}
+.form-message{font-weight:600}
+@media(any-hover:hover) and (pointer:fine){
+  .primary-button:hover{transform:translateY(-2px);box-shadow:0 14px 28px rgba(140,169,0,.22)}
+  .project-card:hover{transform:translateY(-4px);box-shadow:0 18px 36px rgba(0,0,0,.22)}
+  .record:hover,.file-row:hover{background:rgba(238,234,224,.055)}
+  .download-button:hover{background:var(--acid);color:var(--night);border-color:var(--acid);transform:translateY(-1px)}
+}
+@media(max-width:760px){
+  .project-card,.record,.file-row{border-radius:10px}
+  .record,.file-row{padding-inline:14px}
+  .primary-button{min-height:52px}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;scroll-behavior:auto!important}}

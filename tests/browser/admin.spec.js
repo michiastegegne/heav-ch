@@ -96,6 +96,7 @@ test("Desktop: Dashboard und vollständiger Erfassungsfluss", async ({ browser }
   await expect(page.getByText("Good work.")).toBeVisible();
 
   await page.locator('.nav-link[data-view="customers"]').click();
+  await expect(page.locator(".topbar .primary-action")).toHaveText(/Kunde erfassen/);
   await page.locator('[data-create="customer"]').first().click();
   await page.getByRole("button", { name: "Abbrechen" }).click();
   await expect(page.locator("#editor-dialog")).not.toBeVisible();
@@ -260,16 +261,16 @@ test("Login: sendet einen Magic-Link nur für bestehende Benutzer und ohne Vorsc
     });
   });
   await page.goto(`${base}/login/`);
-  await expect(page).toHaveTitle("Login – HEAV Studio");
+  await expect(page).toHaveTitle("Sign in – HEAV Studio");
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
   await expect(page.locator('input[type="password"]')).toHaveCount(0);
-  await page.getByLabel("E-Mail").fill("admin@heav.ch");
-  await page.getByRole("button", { name: /Anmeldelink senden/ }).click();
+  await page.getByLabel("Email").fill("admin@heav.ch");
+  await page.getByRole("button", { name: /Send sign-in link/ }).click();
   await expect.poll(() => page.evaluate(() => window.__heavOtpPayload)).toEqual({
     email: "admin@heav.ch",
     options: { emailRedirectTo: "http://127.0.0.1:4180/login/", shouldCreateUser: false },
   });
-  await expect(page.getByText(/Anmeldelink wurde gesendet/)).toBeVisible();
+  await expect(page.getByText(/Sign-in link sent/)).toBeVisible();
   await expect(page.getByText(/Vorschau|Musterrechnung/i)).toHaveCount(0);
   await expect(page.getByRole("button", { name: /installieren/i })).toHaveCount(0);
 });

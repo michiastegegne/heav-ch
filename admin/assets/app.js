@@ -12,6 +12,7 @@ const dialogTitle = document.querySelector("#dialog-title");
 const dialogKicker = document.querySelector("#dialog-kicker");
 const formError = document.querySelector("#form-error");
 const toast = document.querySelector("#toast");
+const topbarCreate = document.querySelector(".topbar .primary-action");
 
 const viewNames = {
   dashboard: "Übersicht",
@@ -144,7 +145,7 @@ function renderDashboard() {
 }
 
 function filtered(items, fields) { const query = state.query.trim().toLowerCase(); return items.filter((item) => !query || fields.some((field) => String(item[field] || "").toLowerCase().includes(query))); }
-function toolbar(type, placeholder, filters = []) { return `<div class="toolbar"><label class="search-field"><span class="sr-only">Suchen</span><input type="search" data-search placeholder="${esc(placeholder)}" value="${esc(state.query)}"></label>${filters.length ? `<div class="filter-tabs">${filters.map(([value,label]) => `<button class="filter-tab ${state.filter === value ? "is-active" : ""}" data-filter="${value}">${label}</button>`).join("")}</div>` : ""}<button class="primary-action" data-create="${type}">Neu <span>+</span></button></div>`; }
+function toolbar(type, placeholder, filters = []) { return `<div class="toolbar"><label class="search-field"><span class="sr-only">Suchen</span><input type="search" data-search placeholder="${esc(placeholder)}" value="${esc(state.query)}"></label>${filters.length ? `<div class="filter-tabs">${filters.map(([value,label]) => `<button class="filter-tab ${state.filter === value ? "is-active" : ""}" data-filter="${value}">${label}</button>`).join("")}</div>` : ""}</div>`; }
 function filterToolbar(placeholder, filters) { return `<div class="toolbar"><label class="search-field"><span class="sr-only">Suchen</span><input type="search" data-search placeholder="${esc(placeholder)}" value="${esc(state.query)}"></label><div class="filter-tabs">${filters.map(([value,label]) => `<button class="filter-tab ${state.filter === value ? "is-active" : ""}" data-filter="${value}">${label}</button>`).join("")}</div></div>`; }
 
 function renderCustomers() {
@@ -195,7 +196,22 @@ function renderSettings() {
 }
 
 const renderers = { dashboard: renderDashboard, customers: renderCustomers, projects: renderProjects, invoices: renderInvoices, settings: renderSettings, "portal-requests": renderPortalRequests };
-function render() { title.textContent = viewNames[state.view]; content.innerHTML = renderers[state.view](); content.focus({ preventScroll: true }); }
+const topbarActions = {
+  dashboard: ["invoice", "Neue Rechnung"],
+  customers: ["customer", "Kunde erfassen"],
+  projects: ["project", "Projekt anlegen"],
+  invoices: ["invoice", "Neue Rechnung"],
+};
+function syncTopbarAction() {
+  const action = topbarActions[state.view];
+  topbarCreate.hidden = !action;
+  if (!action) return;
+  const [type, label] = action;
+  topbarCreate.dataset.create = type;
+  topbarCreate.setAttribute("aria-label", label);
+  topbarCreate.innerHTML = `${label} <span aria-hidden="true">+</span>`;
+}
+function render() { title.textContent = viewNames[state.view]; syncTopbarAction(); content.innerHTML = renderers[state.view](); content.focus({ preventScroll: true }); }
 async function refresh() { state.data = await adapter.loadAll(); render(); }
 function setView(view) { state.view = view; state.query = ""; state.filter = "all"; document.querySelectorAll(".nav-link").forEach((item) => item.classList.toggle("is-active", item.dataset.view === view)); shell.classList.remove("nav-open"); render(); }
 
