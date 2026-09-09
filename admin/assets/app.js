@@ -15,6 +15,11 @@ const toast = document.querySelector("#toast");
 const topbarCreate = document.querySelector(".topbar .primary-action");
 const workspace = document.querySelector(".workspace");
 const navMenuButton = document.querySelector("[data-open-nav]");
+const actionConfirmDialog = document.querySelector("#action-confirm-dialog");
+const actionConfirmKicker = document.querySelector("#action-confirm-kicker");
+const actionConfirmTitle = document.querySelector("#action-confirm-title");
+const actionConfirmCopy = document.querySelector("#action-confirm-copy");
+const actionConfirmButton = document.querySelector("#action-confirm-button");
 let navRestoreFocus = null;
 
 const viewNames = {
@@ -51,6 +56,19 @@ function showDispatchSuccess(title = "Rechnung versendet", copy = "Der sichere V
   toast.hidden = false;
   clearTimeout(showToast.timer);
   showToast.timer = setTimeout(() => { toast.hidden = true; }, 4200);
+}
+
+function confirmAction({ kicker = "BESTÄTIGEN", title, copy, confirmLabel = "Bestätigen", destructive = false }) {
+  actionConfirmKicker.textContent = kicker;
+  actionConfirmTitle.textContent = title;
+  actionConfirmCopy.textContent = copy;
+  actionConfirmButton.textContent = confirmLabel;
+  actionConfirmButton.classList.toggle("is-destructive", destructive);
+  return new Promise((resolve) => {
+    actionConfirmDialog.addEventListener("close", () => resolve(actionConfirmDialog.returnValue === "confirm"), { once: true });
+    actionConfirmDialog.showModal();
+    requestAnimationFrame(() => actionConfirmButton.focus({ preventScroll: true }));
+  });
 }
 
 function joinedData(data) {
@@ -200,7 +218,8 @@ function renderPortalRequests() {
   };
   if (!all.length) return `<section class="view"><div class="empty-state"><h3>Keine Portal-Anfragen.</h3><p>Neue Anfragen aus dem Kundenportal erscheinen hier.</p></div></section>`;
   const rows = items.map((item) => `<tr><td><strong>${esc(item.company || item.contact_name)}</strong><small>${esc(item.contact_name)} · ${formatDate(item.created_at?.slice(0,10))}</small></td><td>${esc(item.email)}</td><td>${esc(item.phone || "–")}</td><td><small>${esc(item.message || "–")}</small></td><td>${actions(item)}</td></tr>`).join("");
-  return `<section class="view"><div class="hero-row"><h2>Neue Zugänge,<br><em>klar geprüft.</em></h2><p>Beim Akzeptieren wird automatisch ein Kundenprofil erstellt. Der Portalzugang wird erst mit der anschliessenden Einladung freigeschaltet.</p></div>${filterToolbar("Anfragen durchsuchen …", [["all","Alle"],["pending","Offen"],["accepted","Akzeptiert"],["declined","Abgelehnt"]])}<table class="data-table"><thead><tr><th>Anfrage</th><th>E-Mail</th><th>Telefon</th><th>Nachricht</th><th>Aktion</th></tr></thead><tbody>${rows}</tbody></table></section>`;
+  const cards = items.map((item) => `<article class="mobile-card portal-request-card"><div><strong>${esc(item.company || item.contact_name)}</strong><small>${esc(item.contact_name)} · ${esc(item.email)}</small>${item.phone ? `<small>${esc(item.phone)}</small>` : ""}${item.message ? `<p>${esc(item.message)}</p>` : ""}${actions(item)}</div><span class="status ${esc(item.status === "pending" ? "draft" : item.status === "accepted" ? "paid" : "cancelled")}">${esc(item.status === "pending" ? "Offen" : item.status === "accepted" ? "Akzeptiert" : "Abgelehnt")}</span></article>`).join("");
+  return `<section class="view"><div class="hero-row"><h2>Neue Zugänge,<br><em>klar geprüft.</em></h2><p>Beim Akzeptieren wird automatisch ein Kundenprofil erstellt. Der Portalzugang wird erst mit der anschliessenden Einladung freigeschaltet.</p></div>${filterToolbar("Anfragen durchsuchen …", [["all","Alle"],["pending","Offen"],["accepted","Akzeptiert"],["declined","Abgelehnt"]])}<table class="data-table"><thead><tr><th>Anfrage</th><th>E-Mail</th><th>Telefon</th><th>Nachricht</th><th>Aktion</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list portal-request-cards">${cards}</div></section>`;
 }
 
 function renderSettings() {
@@ -226,6 +245,7 @@ function syncTopbarAction() {
 }
 function render() { title.textContent = viewNames[state.view]; syncTopbarAction(); content.innerHTML = renderers[state.view](); content.focus({ preventScroll: true }); }
 async function refresh() { state.data = await adapter.loadAll(); render(); }
+function navigationFocusable() { return [...document.querySelectorAll("#sidebar a[href],#sidebar button:not([disabled])")].filter((element) => element.getClientRects().length); }
 function setNavigationOpen(open, { restoreFocus = true } = {}) {
   const isOpen = Boolean(open);
   shell.classList.toggle("nav-open", isOpen);
@@ -343,9 +363,9 @@ async function invoiceAction(id, action, button) {
   if (action === "send") {
     const recipient = current?.customer?.email || "unbekannte Adresse";
     const total = formatCHF(current?.total_rappen || 0);
-    if (!window.confirm(`Rechnung ${current?.invoice_number || ""} über ${total} jetzt an ${recipient} senden?`)) return;
+    if (!await confirmAction({ kicker: "RECHNUNG VERSENDEN", title: "Rechnung jetzt senden?", copy: `${current?.invoice_number || "Diese Rechnung"} über ${total} wird an ${recipient} gesendet.`, confirmLabel: "Jetzt senden" })) return;
   }
-  if (action === "cancel" && !window.confirm(`Rechnung ${current?.invoice_number || ""} wirklich stornieren? Danach sind Versand und Zahlungs-PDF gesperrt.`)) return;
+  if (action === "cancel" && !await confirmAction({ kicker: "RECHNUNG STORNIEREN", title: "Rechnung wirklich stornieren?", copy: `${current?.invoice_number || "Diese Rechnung"} kann danach weder versendet noch als bezahlt markiert werden.`, confirmLabel: "Stornieren", destructive: true })) return;
   button.disabled = true;
   try {
     const requestKey = action === "send" ? (state.sendRequestKeys.get(id) || crypto.randomUUID()) : null;
@@ -362,7 +382,7 @@ async function invoiceAction(id, action, button) {
 
 async function deleteRecord(type, id, button) {
   const labels = { customer: "diesen Kunden", project: "dieses Projekt", invoice: "diesen Rechnungsentwurf" };
-  if (!window.confirm(`Willst du ${labels[type]} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`)) return;
+  if (!await confirmAction({ kicker: "LÖSCHEN", title: "Eintrag wirklich löschen?", copy: `Willst du ${labels[type]} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`, confirmLabel: "Löschen", destructive: true })) return;
   button.disabled = true;
   try {
     await adapter.deleteRecord(type, id);
@@ -378,8 +398,9 @@ async function deleteRecord(type, id, button) {
 async function portalRequestAction(id, action, button) {
   const request = state.data.portalRequests.find((item) => item.id === id);
   const label = request?.company || request?.contact_name || "diese Anfrage";
-  const question = action === "accept" ? `${label} akzeptieren und als Kundenprofil anlegen?` : action === "invite" ? `Sichere Portal-Einladung an ${request?.email || "diese Adresse"} senden?` : `${label} wirklich ablehnen?`;
-  if (!window.confirm(question)) return;
+  const question = action === "accept" ? `${label} wird akzeptiert und als Kundenprofil angelegt.` : action === "invite" ? `Die sichere Portal-Einladung wird an ${request?.email || "diese Adresse"} gesendet.` : `${label} wird abgelehnt.`;
+  const options = action === "accept" ? { kicker: "ANFRAGE AKZEPTIEREN", title: "Anfrage akzeptieren?", copy: question, confirmLabel: "Akzeptieren" } : action === "invite" ? { kicker: "PORTAL-EINLADUNG", title: "Einladung jetzt senden?", copy: question, confirmLabel: "Einladung senden" } : { kicker: "ANFRAGE ABLEHNEN", title: "Anfrage wirklich ablehnen?", copy: question, confirmLabel: "Ablehnen", destructive: true };
+  if (!await confirmAction(options)) return;
   button.disabled = true;
   try {
     if (action === "invite") {
@@ -410,7 +431,18 @@ dialogBody.addEventListener("input", (event) => { if (event.target.matches('[nam
 dialogBody.addEventListener("change", (event) => { if (event.target.matches('[name="customer_id"]') && dialogForm.dataset.type === "invoice") { const projects = dialogForm.elements.project_id; projects.innerHTML = `<option value="">Kein Projekt</option>${projectOptions(event.target.value)}`; } });
 dialogForm.addEventListener("submit", async (event) => { const submitter = event.submitter; if (submitter?.value !== "save") return; event.preventDefault(); submitter.disabled = true; formError.textContent = ""; try { if (await saveEditor(dialogForm.dataset.type)) { dialog.close(); await refresh(); showToast("Gespeichert."); } } catch (error) { formError.textContent = error.message || "Speichern fehlgeschlagen."; } finally { submitter.disabled = false; } });
 document.addEventListener("click", (event) => { const nav = event.target.closest(".nav-link"); if (nav) setView(nav.dataset.view); if (event.target.closest("[data-open-nav]")) setNavigationOpen(true); if (event.target.closest("[data-close-nav]")) setNavigationOpen(false); const create = event.target.closest("[data-create]"); if (create && !content.contains(create)) openEditor(create.dataset.create); });
-document.addEventListener("keydown", (event) => { if (event.key === "Escape" && shell.classList.contains("nav-open")) setNavigationOpen(false); });
+document.addEventListener("keydown", (event) => {
+  if (!shell.classList.contains("nav-open")) return;
+  if (event.key === "Escape") { event.preventDefault(); setNavigationOpen(false); return; }
+  if (event.key !== "Tab") return;
+  const focusable = navigationFocusable();
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable.at(-1);
+  if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+  else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  else if (!document.querySelector("#sidebar").contains(document.activeElement)) { event.preventDefault(); first.focus(); }
+});
 document.querySelector("#logout-button").addEventListener("click", async () => { await adapter.logout(); window.location.replace("/login/"); });
 
 async function boot() {

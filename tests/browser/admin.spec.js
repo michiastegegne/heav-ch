@@ -39,7 +39,8 @@ async function mockStudioSupabase(page) {
             { position: 4, description: "An- und Rückreise", quantity: 1, unit_price_rappen: 5760 }
           ] }
         ],
-        company_settings: [{ company_name: "HEAV", owner_name: "Michias Tegegne", email: "hello@heav.ch", iban: "", default_tax_rate: 8.1, default_due_days: 30 }]
+        company_settings: [{ company_name: "HEAV", owner_name: "Michias Tegegne", email: "hello@heav.ch", iban: "", default_tax_rate: 8.1, default_due_days: 30 }],
+        customer_portal_requests: [{ id: "r1", company: "Studio Nord", contact_name: "Lea Meier", email: "lea@studio-nord.example", phone: "+41 79 123 45 67", message: "Zugang für die Filmabnahme 2026.", status: "pending", created_at: "2026-09-09T10:00:00Z" }]
       };
       const result = (data) => ({ data, error: null });
       export function createClient() {
@@ -126,21 +127,29 @@ test("Desktop: Dashboard und vollständiger Erfassungsfluss", async ({ browser }
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe("HEAV-2026-003.pdf");
   await expect(newInvoiceRow).toContainText("RF94 HEAV 2026 0000 03");
+  await newInvoiceRow.getByRole("button", { name: "Senden" }).click();
+  await expect(page.locator("#action-confirm-dialog")).toBeVisible();
+  await expect(page.locator("#action-confirm-dialog")).toContainText("Rechnung jetzt senden?");
+  await expect(page.locator("#action-confirm-dialog")).toContainText("mira@example.com");
+  await page.screenshot({ path: "qa/admin-send-confirm-dialog.png", fullPage: true });
+  await page.locator("#action-confirm-dialog").getByRole("button", { name: "Abbrechen" }).click();
+  await expect(page.locator("#action-confirm-dialog")).toBeHidden();
 
-  page.once("dialog", (prompt) => prompt.accept());
   await newInvoiceRow.getByRole("button", { name: /Rechnung löschen/ }).click();
+  await expect(page.locator("#action-confirm-dialog")).toBeVisible();
+  await page.locator("#action-confirm-dialog").getByRole("button", { name: "Löschen" }).click();
   await expect(newInvoiceRow).toHaveCount(0);
 
   await page.locator('.nav-link[data-view="projects"]').click();
   const projectRow = page.locator(".data-table tbody tr").filter({ hasText: "Campaign Content" });
-  page.once("dialog", (prompt) => prompt.accept());
   await projectRow.getByRole("button", { name: /Projekt löschen/ }).click();
+  await page.locator("#action-confirm-dialog").getByRole("button", { name: "Löschen" }).click();
   await expect(projectRow).toHaveCount(0);
 
   await page.locator('.nav-link[data-view="customers"]').click();
   const customerRow = page.locator(".data-table tbody tr").filter({ hasText: "Testkunde AG" });
-  page.once("dialog", (prompt) => prompt.accept());
   await customerRow.getByRole("button", { name: /Kunde löschen/ }).click();
+  await page.locator("#action-confirm-dialog").getByRole("button", { name: "Löschen" }).click();
   await expect(customerRow).toHaveCount(0);
 
   await assertHealthy(page, errors);
@@ -230,6 +239,11 @@ test("Mobile: echte 390px-Ansicht, Navigation und Rechnungsdialog", async ({ bro
   await expect(menuButton).toHaveAttribute("aria-expanded", "true");
   await expect(page.locator("#sidebar")).toBeVisible();
   await expect(page.locator('.nav-link[data-view="dashboard"]')).toBeFocused();
+  await page.locator("#logout-button").focus();
+  await page.keyboard.press("Tab");
+  await expect(page.locator("#sidebar .brand")).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(page.locator("#logout-button")).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(menuButton).toHaveAttribute("aria-expanded", "false");
   await expect(menuButton).toBeFocused();
@@ -249,6 +263,27 @@ test("Mobile: echte 390px-Ansicht, Navigation und Rechnungsdialog", async ({ bro
   const box = await close.boundingBox();
   expect(box.width).toBeGreaterThanOrEqual(44);
   expect(box.height).toBeGreaterThanOrEqual(44);
+  await page.close();
+});
+
+test("Mobile: Portal-Anfragen bleiben als handlungsfähige Karten erreichbar", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await mockStudioSupabase(page);
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+  await page.goto(`${base}/admin/`);
+  await page.getByRole("button", { name: "Menü öffnen" }).click();
+  await page.locator('.nav-link[data-view="portal-requests"]').click();
+  const card = page.locator(".portal-request-card").filter({ hasText: "Studio Nord" });
+  await expect(card).toBeVisible();
+  await expect(card).toContainText("Lea Meier");
+  await expect(card.getByRole("button", { name: "Akzeptieren" })).toBeVisible();
+  await expect(card.getByRole("button", { name: "Ablehnen" })).toBeVisible();
+  await expect(page.locator(".data-table")).toBeHidden();
+  const actionMetrics = await card.getByRole("button", { name: "Akzeptieren" }).evaluate((element) => ({ width: element.getBoundingClientRect().width, height: element.getBoundingClientRect().height }));
+  expect(actionMetrics.height).toBeGreaterThanOrEqual(44);
+  await assertHealthy(page, errors);
   await page.close();
 });
 

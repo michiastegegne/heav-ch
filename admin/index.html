@@ -10,7 +10,7 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 
     <link rel="stylesheet" href="/admin/assets/admin.css?v=20260830-discount-edit" />
-    <link rel="stylesheet" href="/admin/assets/admin-enhancements.css?v=20260909-motion" />
+    <link rel="stylesheet" href="/admin/assets/admin-enhancements.css?v=20260909-confirm" />
   </head>
   <body>
     <div class="loading-screen" id="loading-screen" aria-live="polite">
@@ -65,7 +65,15 @@
       </form>
     </dialog>
 
+    <dialog class="action-confirm-dialog" id="action-confirm-dialog" aria-labelledby="action-confirm-title" aria-describedby="action-confirm-copy">
+      <form method="dialog" class="action-confirm-shell" id="action-confirm-form">
+        <div class="action-confirm-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M21 3 10 14"/><path d="m21 3-7 18-4-7-7-4Z"/></svg></div>
+        <div><span class="kicker" id="action-confirm-kicker">BESTÄTIGEN</span><h2 id="action-confirm-title">Aktion bestätigen</h2><p id="action-confirm-copy"></p></div>
+        <footer><button class="secondary-button" value="cancel" type="submit" formnovalidate>Abbrechen</button><button class="primary-action" id="action-confirm-button" value="confirm" type="submit">Jetzt senden <span aria-hidden="true">↗</span></button></footer>
+      </form>
+    </dialog>
+
     <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-    <script type="module" src="/admin/assets/app.js?v=20260909-motion"></script>
+    <script type="module" src="/admin/assets/app.js?v=20260909-confirm"></script>
   </body>
 </html>
