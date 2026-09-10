@@ -93,6 +93,12 @@ async function mockStudioSupabase(page) {
               store.customers = store.customers.filter((item) => item.id !== payload.p_customer_id);
             }
             return result(null);
+          },
+          functions: {
+            invoke: async (name, { body }) => {
+              if (name === "offer-send") window.__lastOfferEmail = body;
+              return { data: { recipient: "anna@nordlicht.example" }, error: null };
+            }
           }
         };
       }`,
@@ -415,7 +421,7 @@ test("Studio: Rechnungen, Kunden und Projekte verwenden klare Icon-Aktionen", as
 });
 
 
-test("Studio: Offerte wird erstellt und als geschützter Kundenportal-Link freigegeben", async ({ browser }) => {
+test("Studio: Offerte wird erstellt und per geschütztem Portal-Link versendet", async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   await mockStudioSupabase(page);
   await page.goto(`${base}/studio/`);
@@ -428,7 +434,9 @@ test("Studio: Offerte wird erstellt und als geschützter Kundenportal-Link freig
   await page.locator(".invoice-item").first().getByLabel("Einzelpreis in CHF").fill("1200");
   await page.getByRole("button", { name: "Speichern" }).click();
   await expect(page.getByText("Social Cutdowns")).toBeVisible();
-  await page.getByRole("button", { name: "Link freigeben" }).first().click();
+  await page.getByRole("button", { name: "Offerte per E-Mail senden" }).first().click();
+  await page.getByRole("button", { name: "Jetzt senden" }).click();
+  await expect.poll(() => page.evaluate(() => window.__lastOfferEmail)).toMatchObject({ offerId: expect.any(String) });
   await expect(page.locator(".data-table tbody tr").first()).toContainText("Versendet");
   await page.close();
 });

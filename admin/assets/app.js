@@ -137,6 +137,14 @@ function createSupabaseAdapter(supabase, session) {
       return Array.isArray(result.data) ? result.data[0] : result.data;
     },
     async shareOffer(id) { const result = await supabase.rpc("share_customer_offer", { p_offer_id: id }); fail(result.error); },
+    async sendOffer(id) {
+      const { data, error } = await supabase.functions.invoke("offer-send", { body: { offerId: id } });
+      if (error) {
+        const details = await error.context?.json?.().catch(() => null);
+        throw new Error(details?.error || "Offerte konnte nicht per E-Mail gesendet werden.");
+      }
+      return data;
+    },
     async updateInvoice(id, payload) {
       const result = await supabase.rpc("update_invoice", { p_invoice_id: id, p_customer_id: payload.customer_id, p_project_id: payload.project_id, p_issue_date: payload.issue_date, p_due_date: payload.due_date, p_status: payload.status, p_tax_rate: payload.tax_rate, p_notes: payload.notes, p_items: payload.items });
       fail(result.error);
@@ -249,7 +257,7 @@ function renderInvoices() {
 function renderOffers() {
   const all = state.data.offers || [];
   if (!all.length) return `<section class="view">${emptyState("Offerte erstellen.", "Erstelle eine Offerte, kopiere danach ihren geschützten Kundenportal-Link und teile ihn mit deinem Kunden.", "offer")}</section>`;
-  const rows = all.map((offer) => `<tr><td><strong>${esc(offer.offer_number)}</strong><small>${esc(offer.title)} · gültig bis ${formatDate(offer.valid_until)}</small></td><td>${esc(offer.customer?.company || customerLabel(state.data.customers.find((customer) => customer.id === offer.customer_id)))}</td><td><span class="status ${esc(offer.status)}">${esc(statusLabel(offer.status))}</span></td><td><strong>${formatCHF(offer.total_rappen)}</strong></td><td><div class="table-actions">${offer.status === "draft" ? actionIconButton("paper-plane", "Link freigeben", `data-share-offer="${esc(offer.id)}"`) : ""}${actionIconButton("link", "Link kopieren", `data-copy-offer="${esc(offer.id)}"`)}</div></td></tr>`).join("");
+  const rows = all.map((offer) => `<tr><td><strong>${esc(offer.offer_number)}</strong><small>${esc(offer.title)} · gültig bis ${formatDate(offer.valid_until)}</small></td><td>${esc(offer.customer?.company || customerLabel(state.data.customers.find((customer) => customer.id === offer.customer_id)))}</td><td><span class="status ${esc(offer.status)}">${esc(statusLabel(offer.status))}</span></td><td><strong>${formatCHF(offer.total_rappen)}</strong></td><td><div class="table-actions">${["draft", "sent"].includes(offer.status) ? actionIconButton("paper-plane", offer.status === "draft" ? "Offerte per E-Mail senden" : "Offerte erneut per E-Mail senden", `data-send-offer="${esc(offer.id)}"`) : ""}${actionIconButton("link", "Link kopieren", `data-copy-offer="${esc(offer.id)}"`)}</div></td></tr>`).join("");
   return `<section class="view">${toolbar("offer", "Offerten durchsuchen …", [["all", "Alle"], ["draft", "Entwürfe"], ["sent", "Offen"], ["accepted", "Angenommen"], ["expired", "Abgelaufen"]])}<table class="data-table"><thead><tr><th>Offerte</th><th>Kunde</th><th>Status</th><th>Total</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table></section>`;
 }
 function renderPortalRequests() {
@@ -475,22 +483,40 @@ async function portalRequestAction(id, action, button) {
 
 async function copyText(value) {
   if (navigator.clipboard?.writeText) {
-    try { await navigator.clipboard.writeText(value); return; } catch { /* Fall back for browsers that deny clipboard permission. */ }
+    try { await navigator.clipboard.writeText(value); return; } catch { /* Use the legacy user-gesture path below. */ }
   }
   const field = document.createElement("textarea");
-  field.value = value; field.setAttribute("readonly", ""); field.style.position = "fixed"; field.style.opacity = "0";
-  document.body.append(field); field.select();
-  const copied = document.execCommand("copy"); field.remove();
-  if (!copied) throw new Error("Dein Browser hat den Link nicht kopiert.");
+  field.value = value;
+  field.setAttribute("readonly", "");
+  field.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0";
+  document.body.append(field);
+  field.focus();
+  field.select();
+  const copied = document.execCommand("copy");
+  field.remove();
+  if (!copied) throw new Error("Kopieren wurde vom Browser blockiert. Bitte den Link erneut über das Link-Icon kopieren.");
 }
-async function copyOfferLink(id, share, button) {
+async function copyOfferLink(id, button) {
   button.disabled = true;
   try {
-    if (share) { await adapter.shareOffer(id); await refresh(); }
     const link = `${window.location.origin}/client/?offer=${encodeURIComponent(id)}`;
     await copyText(link);
     showToast("Geschützter Kundenportal-Link wurde kopiert.");
   } catch (error) { showToast(error.message || "Link konnte nicht kopiert werden.", "error"); }
+  finally { button.disabled = false; }
+}
+async function sendOffer(id, button) {
+  const offer = state.data.offers.find((item) => item.id === id);
+  const customer = state.data.customers.find((item) => item.id === offer?.customer_id);
+  const recipient = customer?.email || "die Kunden-E-Mail";
+  if (!await confirmAction({ kicker: "OFFERTE VERSENDEN", title: "Offerte per E-Mail senden?", copy: `${offer?.offer_number || "Diese Offerte"} wird im Kundenportal freigegeben und an ${recipient} gesendet.`, confirmLabel: "Jetzt senden" })) return;
+  button.disabled = true;
+  try {
+    await adapter.shareOffer(id);
+    const result = await adapter.sendOffer(id);
+    await refresh();
+    showDispatchSuccess("Offerte versendet", `Der geschützte Portal-Link wurde an ${result?.recipient || recipient} gesendet.`);
+  } catch (error) { showToast(error.message || "Offerte konnte nicht per E-Mail gesendet werden.", "error"); }
   finally { button.disabled = false; }
 }
 
@@ -501,8 +527,8 @@ content.addEventListener("click", async (event) => {
   const edit = event.target.closest("[data-edit]"); if (edit) { const collections = { customer: state.data.customers, project: state.data.projects, invoice: state.data.invoices }; openEditor(edit.dataset.edit, collections[edit.dataset.edit].find((item) => item.id === edit.dataset.id)); }
   const action = event.target.closest("[data-invoice-action]"); if (action) invoiceAction(action.dataset.id, action.dataset.invoiceAction, action);
   const requestAction = event.target.closest("[data-portal-request-action]"); if (requestAction) portalRequestAction(requestAction.dataset.id, requestAction.dataset.portalRequestAction, requestAction);
-  const shareOffer = event.target.closest("[data-share-offer]"); if (shareOffer) await copyOfferLink(shareOffer.dataset.shareOffer, true, shareOffer);
-  const copyOffer = event.target.closest("[data-copy-offer]"); if (copyOffer) await copyOfferLink(copyOffer.dataset.copyOffer, false, copyOffer);
+  const sendOfferButton = event.target.closest("[data-send-offer]"); if (sendOfferButton) await sendOffer(sendOfferButton.dataset.sendOffer, sendOfferButton);
+  const copyOffer = event.target.closest("[data-copy-offer]"); if (copyOffer) await copyOfferLink(copyOffer.dataset.copyOffer, copyOffer);
   const remove = event.target.closest("[data-delete-record]"); if (remove) deleteRecord(remove.dataset.deleteRecord, remove.dataset.id, remove);
 });
 content.addEventListener("input", (event) => { if (event.target.matches("[data-search]")) { state.query = event.target.value; const position = event.target.selectionStart; render(); const next = document.querySelector("[data-search]"); next.focus(); next.setSelectionRange(position, position); } });

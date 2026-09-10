@@ -9,6 +9,7 @@ const contactSource = await readFile(new URL("../contact/index.html", import.met
 const studioHtml = await readFile(new URL("../studio/index.html", import.meta.url), "utf8");
 const invoiceDocumentSource = await readFile(new URL("../supabase/functions/invoice-document/index.ts", import.meta.url), "utf8");
 const actionCss = await readFile(new URL("../admin/assets/admin-actions.css", import.meta.url), "utf8");
+const offerSendSource = await readFile(new URL("../supabase/functions/offer-send/index.ts", import.meta.url), "utf8").catch(() => "");
 
 test("Produktionsfrontend ist mit dem HEAV-Supabase-Projekt verbunden", () => {
   assert.equal(HEAV_ADMIN_CONFIG.supabaseUrl, "https://bkazlpqjvbuhwmjcwexn.supabase.co");
@@ -50,6 +51,17 @@ test("Studio-Iconleisten bleiben in einer kompakten Reihe", () => {
   assert.match(actionCss, /\.data-table td:last-child\{[^}]*min-width:240px/);
   assert.match(actionCss, /\.customer-name\{[^}]*gap:7px/);
   assert.match(actionCss, /@media\(max-width:760px\)\{[\s\S]*?\.table-actions\{[\s\S]*?overflow-x:auto/);
+});
+
+test("Offerten können zuverlässig kopiert und per HEAV-Mail versendet werden", () => {
+  assert.match(adminSource, /data-send-offer/);
+  assert.match(adminSource, /sendOffer\(id\)/);
+  assert.match(adminSource, /navigator\.clipboard\.writeText/);
+  assert.match(adminSource, /document\.execCommand\("copy"\)/);
+  assert.match(offerSendSource, /RESEND_API_KEY/);
+  assert.match(offerSendSource, /offerId/);
+  assert.match(offerSendSource, /customer_portal_memberships/);
+  assert.match(offerSendSource, /offer_events/);
 });
 
 test("Portal bietet owner-geschützte Bearbeitung für Kunden, Projekte, Rechnungen und manuelle Statuswahl", () => {
