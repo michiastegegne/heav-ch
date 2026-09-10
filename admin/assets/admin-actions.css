@@ -1,2 +1,85 @@
-/* Compact, familiar action language for HEAV Studio records. */
-.action-icon{display:inline-grid;place-items:center;width:38px;height:38px;padding:0;border:1px solid transparent;border-radius:50%;background:transparent;color:var(--night);cursor:pointer;vertical-align:middle;transition:transform .18s var(--ease-out),background-color .18s ease,border-color .18s ease,color .18s ease}.action-icon svg,.customer-contact svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.action-icon:hover{transform:translateY(-1px);border-color:var(--line);background:var(--surface-raised)}.action-icon:active{transform:scale(.94)}.action-icon.is-danger{color:#9a351f}.action-icon.is-danger:hover{border-color:rgba(154,53,31,.3);background:rgba(154,53,31,.08);color:#d63f1f}.customer-name{display:inline-flex;align-items:center;gap:9px}.customer-contact{display:inline-grid;place-items:center;width:27px;height:27px;border-radius:50%;background:rgba(215,255,56,.58);color:var(--night);flex:0 0 auto}.customer-contact svg{width:15px;height:15px}.data-table td:last-child{min-width:0}.table-actions{gap:6px}.mobile-card .table-actions{margin-top:14px}@media(max-width:820px){.action-icon{width:44px;height:44px}.customer-contact{width:30px;height:30px}.mobile-card .table-actions{gap:8px}}@media(prefers-reduced-motion:reduce){.action-icon{transition:none}}
+/* HEAV Studio — dense record actions and customer identity. */
+.action-icon{
+  display:inline-grid;
+  place-items:center;
+  flex:0 0 40px;
+  width:40px;
+  height:40px;
+  padding:0;
+  border:1px solid transparent;
+  border-radius:10px;
+  background:transparent;
+  color:var(--night);
+  cursor:pointer;
+  vertical-align:middle;
+  transition:transform .18s var(--ease-out),background-color .18s ease,border-color .18s ease,color .18s ease;
+}
+.action-icon svg,.customer-contact svg{
+  width:18px;
+  height:18px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.7;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.action-icon:hover{transform:translateY(-1px);border-color:var(--line);background:var(--surface-raised)}
+.action-icon:active{transform:scale(.94)}
+.action-icon.is-danger{color:#9a351f}
+.action-icon.is-danger:hover{border-color:rgba(154,53,31,.3);background:rgba(154,53,31,.08);color:#d63f1f}
+
+/* Never let the browser squeeze record actions into a vertical stack. */
+.data-table td:last-child{
+  width:240px;
+  min-width:240px;
+  padding-right:16px;
+  white-space:normal;
+}
+.data-table th:last-child{width:240px;min-width:240px;padding-right:16px}
+.table-actions{
+  display:inline-flex;
+  flex-wrap:nowrap;
+  align-items:center;
+  justify-content:flex-end;
+  gap:4px;
+  width:100%;
+  min-width:max-content;
+  white-space:nowrap;
+}
+.table-actions .action-icon{flex:0 0 40px}
+
+/* Customer identity stays close to its label, not detached from it. */
+.customer-name{display:inline-flex;align-items:center;gap:7px}
+.customer-contact{
+  display:inline-grid;
+  place-items:center;
+  width:24px;
+  height:24px;
+  border-radius:50%;
+  background:rgba(215,255,56,.58);
+  color:var(--night);
+  flex:0 0 auto;
+}
+.customer-contact svg{width:14px;height:14px}
+
+/* Bring the desktop record list into a tighter, deliberate rhythm. */
+.data-table td{padding-top:17px;padding-bottom:17px}
+.data-table td:first-child{min-width:236px}
+.data-table small{margin-top:3px}
+
+.mobile-card .table-actions{margin-top:14px}
+@media(max-width:820px){
+  .action-icon{flex-basis:44px;width:44px;height:44px}
+  .customer-contact{width:28px;height:28px}
+  .mobile-card .table-actions{gap:6px}
+}
+@media(max-width:760px){
+  .table-actions{
+    justify-content:flex-start;
+    max-width:100%;
+    overflow-x:auto;
+    scrollbar-width:thin;
+    padding-bottom:2px;
+  }
+}
+@media(prefers-reduced-motion:reduce){.action-icon{transition:none}}

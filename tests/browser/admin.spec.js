@@ -400,6 +400,17 @@ test("Studio: Rechnungen, Kunden und Projekte verwenden klare Icon-Aktionen", as
   await page.locator('.nav-link[data-view="invoices"]').click();
   const invoiceRow = page.locator(".data-table tbody tr").first();
   await expect(invoiceRow.getByRole("button", { name: "Rechnung senden" }).locator("svg")).toBeVisible();
+  const actionLayout = await invoiceRow.locator(".table-actions").evaluate((toolbar) => {
+    const buttons = [...toolbar.querySelectorAll("button")].map((button) => button.getBoundingClientRect());
+    return {
+      display: getComputedStyle(toolbar).display,
+      flexWrap: getComputedStyle(toolbar).flexWrap,
+      actionTopSpread: Math.max(...buttons.map(({ top }) => top)) - Math.min(...buttons.map(({ top }) => top)),
+    };
+  });
+  expect(actionLayout.display).toBe("inline-flex");
+  expect(actionLayout.flexWrap).toBe("nowrap");
+  expect(actionLayout.actionTopSpread).toBeLessThanOrEqual(1);
   await page.close();
 });
 

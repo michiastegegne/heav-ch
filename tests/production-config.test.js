@@ -8,6 +8,7 @@ const adminSource = await readFile(new URL("../admin/assets/app.js", import.meta
 const contactSource = await readFile(new URL("../contact/index.html", import.meta.url), "utf8");
 const studioHtml = await readFile(new URL("../studio/index.html", import.meta.url), "utf8");
 const invoiceDocumentSource = await readFile(new URL("../supabase/functions/invoice-document/index.ts", import.meta.url), "utf8");
+const actionCss = await readFile(new URL("../admin/assets/admin-actions.css", import.meta.url), "utf8");
 
 test("Produktionsfrontend ist mit dem HEAV-Supabase-Projekt verbunden", () => {
   assert.equal(HEAV_ADMIN_CONFIG.supabaseUrl, "https://bkazlpqjvbuhwmjcwexn.supabase.co");
@@ -41,7 +42,14 @@ test("Studio-Aktionen verwenden kompakte, zugängliche SVG-Icons", () => {
   assert.match(adminSource, /actionIconButton\("edit", "Bearbeiten"/);
   assert.match(adminSource, /paper-plane/);
   assert.match(adminSource, /customer-contact/);
-  assert.match(studioHtml, /admin-actions\.css\?v=20260910-icons/);
+  assert.match(studioHtml, /admin-actions\.css\?v=20260910-layout/);
+});
+
+test("Studio-Iconleisten bleiben in einer kompakten Reihe", () => {
+  assert.match(actionCss, /\.table-actions\{[^}]*flex-wrap:nowrap/);
+  assert.match(actionCss, /\.data-table td:last-child\{[^}]*min-width:240px/);
+  assert.match(actionCss, /\.customer-name\{[^}]*gap:7px/);
+  assert.match(actionCss, /@media\(max-width:760px\)\{[\s\S]*?\.table-actions\{[\s\S]*?overflow-x:auto/);
 });
 
 test("Portal bietet owner-geschützte Bearbeitung für Kunden, Projekte, Rechnungen und manuelle Statuswahl", () => {
