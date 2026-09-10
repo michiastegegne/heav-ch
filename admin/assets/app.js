@@ -203,16 +203,37 @@ function actionIconButton(icon, label, attributes, tone = "") {
 function contactMark() { return `<span class="customer-contact" title="Kunde" aria-label="Kunde">${actionIcons["customer-contact"]}</span>`; }
 
 function renderDashboard() {
-  const { customers, projects, invoices } = state.data;
+  const { customers, projects, invoices, offers = [] } = state.data;
+  const activeProjects = projects.filter((item) => ["planning", "active"].includes(item.status));
+  const focusProject = [...activeProjects].sort((a, b) => String(a.due_date || "9999-12-31").localeCompare(String(b.due_date || "9999-12-31")))[0];
   const openInvoices = invoices.filter((item) => ["sent", "overdue"].includes(item.status));
   const openTotal = openInvoices.reduce((sum, item) => sum + item.total_rappen, 0);
+  const openOffers = offers.filter((item) => ["draft", "sent"].includes(item.status));
+  const offerTotal = openOffers.reduce((sum, item) => sum + (item.total_rappen || 0), 0);
   const paidThisYear = invoices.filter((item) => item.status === "paid" && item.issue_date?.startsWith(String(new Date().getFullYear()))).reduce((sum, item) => sum + item.total_rappen, 0);
-  const recent = [...invoices].slice(0, 5);
-  return `<section class="view">
-    <div class="hero-row"><h2>Good work.<br><em>Clear numbers.</em></h2><p>Dein kompakter Überblick über Kunden, laufende Produktionen und offene Rechnungen.</p></div>
-    <div class="metric-grid">${metric("Kunden", customers.length)}${metric("Aktive Projekte", projects.filter((item) => ["planning", "active"].includes(item.status)).length)}${metric("Offene Rechnungen", formatCHF(openTotal))}${metric("Bezahlt dieses Jahr", formatCHF(paidThisYear))}</div>
-    <div class="content-grid"><section class="panel"><div class="panel-head"><h3>LETZTE RECHNUNGEN</h3><button class="text-button" data-view="invoices">Alle ansehen</button></div><div class="activity-list">${recent.length ? recent.map((invoice) => `<article class="activity-row"><div><strong>${esc(invoice.invoice_number)}</strong><span>${esc(invoice.customer?.company || "Ohne Kunde")} · ${formatDate(invoice.issue_date)}</span></div><div><strong>${formatCHF(invoice.total_rappen)}</strong><span class="status ${esc(invoice.status)}">${esc(statusLabel(invoice.status))}</span></div></article>`).join("") : `<p>Noch keine Rechnungen.</p>`}</div></section>
-    <aside class="panel"><div class="panel-head"><h3>SCHNELLSTART</h3></div><div class="quick-list"><article class="quick-row"><button data-create="customer"><strong>Kunden erfassen</strong><span>Kontaktdaten zentral speichern</span></button><b>+</b></article><article class="quick-row"><button data-create="project"><strong>Projekt anlegen</strong><span>Produktion und Budget ordnen</span></button><b>+</b></article><article class="quick-row"><button data-create="invoice"><strong>Rechnung erstellen</strong><span>PDF generieren und versenden</span></button><b>+</b></article></div></aside></div>
+  const recent = [...invoices].slice(0, 4);
+  const projectInvoices = focusProject ? invoices.filter((item) => item.project_id === focusProject.id && item.status !== "cancelled") : [];
+  const projectCustomer = focusProject?.customer || customers.find((item) => item.id === focusProject?.customer_id);
+  const projectOpenInvoices = projectInvoices.filter((item) => ["draft", "sent", "overdue"].includes(item.status));
+  const projectInvoiced = projectInvoices.reduce((sum, item) => sum + (item.total_rappen || 0), 0);
+  const productionRows = [...activeProjects].sort((a, b) => String(a.due_date || "9999-12-31").localeCompare(String(b.due_date || "9999-12-31"))).slice(0, 3);
+  const focusSurface = focusProject
+    ? `<article class="dashboard-focus">
+        <div class="dashboard-focus-head"><div><span class="kicker">IM FOKUS</span><h3>${esc(focusProject.title)}</h3><p>${esc(focusProject.description || "Produktion, Kunde und Geldfluss bleiben in einem klaren Kontext.")}</p></div><span class="status ${esc(focusProject.status)}">${esc(statusLabel(focusProject.status))}</span></div>
+        <div class="dashboard-focus-modules">
+          <div><span>KUNDE</span><strong>${esc(customerLabel(projectCustomer))}</strong><small>${esc(projectCustomer?.email || "E-Mail noch offen")}</small></div>
+          <div><span>DEADLINE</span><strong>${formatDate(focusProject.due_date)}</strong><small>${focusProject.start_date ? `Start ${formatDate(focusProject.start_date)}` : "Start offen"}</small></div>
+          <div><span>GELDFLUSS</span><strong>${formatCHF(projectInvoiced)}</strong><small>${projectOpenInvoices.length ? `${projectOpenInvoices.length} offen` : "Keine offene Rechnung"}</small></div>
+        </div>
+        <footer class="dashboard-focus-footer"><button class="project-module-link" type="button" data-dashboard-project-focus="${esc(focusProject.id)}">Projekt-Canvas öffnen <span aria-hidden="true">→</span></button><div><button class="secondary-button" type="button" data-create="offer" data-project-id="${esc(focusProject.id)}">Offerte</button><button class="primary-action" type="button" data-create="invoice" data-project-id="${esc(focusProject.id)}">Rechnung <span aria-hidden="true">+</span></button></div></footer>
+      </article>`
+    : `<article class="dashboard-focus dashboard-focus--empty"><div><span class="kicker">PRODUKTION</span><h3>Der nächste klare Schritt.</h3><p>Lege ein Projekt an. Danach bündelt HEAV Kunde, Budget, Offerte und Rechnung an einem Ort.</p></div><button class="primary-action" type="button" data-create="project">Projekt anlegen <span aria-hidden="true">+</span></button></article>`;
+  return `<section class="view dashboard-view">
+    <header class="dashboard-intro"><div><span class="kicker">HEAV STUDIO</span><h2>Everything,<br><em>in its place.</em></h2></div><p>Ein ruhiger Überblick für laufende Produktionen, Kundenbeziehungen und den nächsten finanziellen Schritt.</p></header>
+    <section class="dashboard-stage">${focusSurface}<aside class="dashboard-money"><span class="kicker">MONEY FLOW</span><strong>${formatCHF(openTotal)}</strong><p>${openInvoices.length ? `${openInvoices.length} Rechnung${openInvoices.length === 1 ? "" : "en"} wartet auf Zahlung.` : "Keine offene Rechnung im Moment."}</p><div class="dashboard-money-list"><div><span>In Pipeline</span><b>${formatCHF(offerTotal)}</b></div><div><span>Offene Offerten</span><b>${openOffers.length}</b></div><div><span>Bezahlt dieses Jahr</span><b>${formatCHF(paidThisYear)}</b></div></div><button class="project-module-link" type="button" data-view="invoices">Rechnungen öffnen <span aria-hidden="true">→</span></button></aside></section>
+    <div class="metric-grid dashboard-metrics">${metric("Kunden", customers.length)}${metric("Aktive Produktionen", activeProjects.length)}${metric("Offene Forderungen", formatCHF(openTotal))}${metric("In Pipeline", formatCHF(offerTotal))}</div>
+    <section class="dashboard-grid"><section class="panel dashboard-panel"><div class="panel-head"><div><span class="kicker">RECHNUNGEN</span><h3>Letzte Bewegungen</h3></div><button class="text-button" data-view="invoices">Alle ansehen</button></div><div class="activity-list">${recent.length ? recent.map((invoice) => `<article class="activity-row"><div><strong>${esc(invoice.invoice_number)}</strong><span>${esc(invoice.customer?.company || "Ohne Kunde")} · ${formatDate(invoice.issue_date)}</span></div><div><strong>${formatCHF(invoice.total_rappen)}</strong><span class="status ${esc(invoice.status)}">${esc(statusLabel(invoice.status))}</span></div></article>`).join("") : `<p>Noch keine Rechnungen.</p>`}</div></section>
+    <aside class="panel dashboard-panel dashboard-productions"><div class="panel-head"><div><span class="kicker">PRODUKTIONEN</span><h3>Was als Nächstes zählt</h3></div><button class="text-button" data-view="projects">Alle öffnen</button></div><div class="dashboard-production-list">${productionRows.length ? productionRows.map((project) => `<button class="dashboard-production-row" type="button" data-dashboard-project-focus="${esc(project.id)}"><span class="status ${esc(project.status)}">${esc(statusLabel(project.status))}</span><strong>${esc(project.title)}</strong><small>${esc(project.customer?.company || "Ohne Kunde")} · ${project.due_date ? `Deadline ${formatDate(project.due_date)}` : "Deadline offen"}</small><b aria-hidden="true">→</b></button>`).join("") : `<div class="dashboard-empty-copy"><strong>Noch keine laufende Produktion.</strong><span>Lege ein Projekt an, wenn ein Auftrag konkret wird.</span></div>`}</div><div class="dashboard-quick-actions"><button class="secondary-button" type="button" data-create="customer">Kunde</button><button class="secondary-button" type="button" data-create="project">Projekt</button><button class="primary-action" type="button" data-create="invoice">Rechnung <span aria-hidden="true">+</span></button></div></aside></section>
   </section>`;
 }
 
@@ -553,6 +574,7 @@ content.addEventListener("click", async (event) => {
   const view = event.target.closest("[data-view]"); if (view) setView(view.dataset.view);
   const filter = event.target.closest("[data-filter]"); if (filter) { state.filter = filter.dataset.filter; render(); }
   const projectFocus = event.target.closest("[data-project-focus]"); if (projectFocus) { state.selectedProjectId = projectFocus.dataset.projectFocus; render(); document.querySelector(`[data-project-focus="${state.selectedProjectId}"]`)?.focus({ preventScroll: true }); }
+  const dashboardProjectFocus = event.target.closest("[data-dashboard-project-focus]"); if (dashboardProjectFocus) { state.selectedProjectId = dashboardProjectFocus.dataset.dashboardProjectFocus; setView("projects"); }
   const edit = event.target.closest("[data-edit]"); if (edit) { const collections = { customer: state.data.customers, project: state.data.projects, invoice: state.data.invoices }; openEditor(edit.dataset.edit, collections[edit.dataset.edit].find((item) => item.id === edit.dataset.id)); }
   const action = event.target.closest("[data-invoice-action]"); if (action) invoiceAction(action.dataset.id, action.dataset.invoiceAction, action);
   const requestAction = event.target.closest("[data-portal-request-action]"); if (requestAction) portalRequestAction(requestAction.dataset.id, requestAction.dataset.portalRequestAction, requestAction);

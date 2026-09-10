@@ -140,7 +140,11 @@ test("Desktop: Dashboard und vollständiger Erfassungsfluss", async ({ browser }
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
   await page.goto(`${base}/admin/`);
   await expect(page.getByRole("heading", { name: "Übersicht" })).toBeVisible();
-  await expect(page.getByText("Good work.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Everything, in its place." })).toBeVisible();
+  await expect(page.getByText("MONEY FLOW", { exact: true })).toBeVisible();
+  await expect(page.locator(".dashboard-focus").getByRole("heading", { name: "Brand Film 2026" })).toBeVisible();
+  await page.getByRole("button", { name: "Projekt-Canvas öffnen" }).click();
+  await expect(page.getByRole("heading", { name: "Brand Film 2026" })).toBeVisible();
 
   await page.locator('.nav-link[data-view="customers"]').click();
   await expect(page.locator(".topbar .primary-action")).toHaveText(/Kunde erfassen/);
@@ -201,6 +205,35 @@ test("Desktop: Dashboard und vollständiger Erfassungsfluss", async ({ browser }
   await assertHealthy(page, errors);
   await page.screenshot({ path: "qa/admin-desktop.png", fullPage: true });
   await page.close();
+});
+
+test("Dashboard: Fokus, Geldfluss und Produktionen bleiben auf Desktop und Mobile klar", async ({ browser }) => {
+  const desktop = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  await mockStudioSupabase(desktop);
+  const desktopErrors = [];
+  desktop.on("pageerror", (error) => desktopErrors.push(error.message));
+  desktop.on("console", (message) => { if (message.type() === "error") desktopErrors.push(message.text()); });
+  await desktop.goto(`${base}/admin/`);
+  await expect(desktop.locator(".dashboard-stage")).toBeVisible();
+  await expect(desktop.locator(".dashboard-focus-modules > div")).toHaveCount(3);
+  await expect(desktop.locator(".dashboard-production-row")).toHaveCount(2);
+  await desktop.waitForTimeout(700);
+  await desktop.screenshot({ path: "qa/admin-dashboard-desktop.png", fullPage: true });
+  await assertHealthy(desktop, desktopErrors);
+  await desktop.close();
+
+  const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await mockStudioSupabase(mobile);
+  const mobileErrors = [];
+  mobile.on("pageerror", (error) => mobileErrors.push(error.message));
+  mobile.on("console", (message) => { if (message.type() === "error") mobileErrors.push(message.text()); });
+  await mobile.goto(`${base}/admin/`);
+  await expect(mobile.locator(".dashboard-focus")).toBeVisible();
+  await expect(mobile.locator(".dashboard-focus-footer .primary-action")).toHaveCSS("min-height", "44px");
+  await mobile.waitForTimeout(700);
+  await mobile.screenshot({ path: "qa/admin-dashboard-mobile.png", fullPage: true });
+  await assertHealthy(mobile, mobileErrors);
+  await mobile.close();
 });
 
 test("Kunde: Privatkunde ohne Firma und Kontaktdaten speichern", async ({ browser }) => {
