@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="/portal/assets/portal.css" />
     <link rel="stylesheet" href="/portal/assets/portal-enhancements.css?v=20260909-motion" />
     <link rel="stylesheet" href="/portal/assets/portal-offers.css?v=20260910-offers" />
+    <link rel="stylesheet" href="/portal/assets/portal-document-preview.css?v=20260910-embedded" />
   </head>
   <body>
     <div class="loading-screen" id="loading-screen" aria-live="polite"><strong>HEAV</strong><span>Portal wird geladen …</span></div>
@@ -24,6 +25,7 @@
       </main>
       <footer>HEAV Filmproduktion Schweiz · Private Daten werden nur für dein Kundenkonto bereitgestellt.</footer>
     </div>
+    <dialog class="invoice-preview-dialog" id="invoice-preview-dialog" aria-labelledby="invoice-preview-title"><section class="invoice-preview-shell"><header><div><span class="eyebrow">RECHNUNG</span><h2 id="invoice-preview-title">PDF-Vorschau</h2></div><form method="dialog"><button class="invoice-preview-close" aria-label="PDF-Vorschau schliessen" title="Schliessen">×</button></form></header><div class="invoice-preview-stage"><p class="invoice-preview-loading" id="invoice-preview-loading" role="status">PDF wird geladen …</p><iframe id="invoice-preview-frame" title="Rechnungs-PDF Vorschau"></iframe></div><footer><button class="secondary-button" id="invoice-preview-download" type="button" disabled>PDF herunterladen</button><form method="dialog"><button class="text-button" type="submit">Schliessen</button></form></footer></section></dialog>
     <dialog class="offer-accept-dialog" id="offer-accept-dialog" aria-labelledby="offer-accept-title" aria-describedby="offer-accept-copy"><form method="dialog" class="offer-accept-shell"><span class="eyebrow">VERBINDLICHE ANNAHME</span><h2 id="offer-accept-title">Offerte annehmen?</h2><p id="offer-accept-copy">Mit der Annahme bestätigst du verbindlich die aufgeführten Leistungen, Beträge und Bedingungen.</p><p class="offer-legal-copy">Der Zeitpunkt und dein Kundenportal-Konto werden bei der Annahme protokolliert.</p><footer><button class="secondary-button" value="cancel">Abbrechen</button><button class="primary-button" type="button" id="offer-accept-confirm">Offerte verbindlich annehmen <span aria-hidden="true">↗</span></button></footer></form></dialog>
     <script type="module" src="/portal/assets/portal.js?v=20260910-offers"></script>
   </body>

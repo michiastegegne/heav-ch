@@ -13,7 +13,15 @@ const reviewCustomer = document.querySelector("#review-customer");
 const reviewMessage = document.querySelector("#review-message");
 const offerAcceptDialog = document.querySelector("#offer-accept-dialog");
 const offerAcceptConfirm = document.querySelector("#offer-accept-confirm");
+const invoicePreviewDialog = document.querySelector("#invoice-preview-dialog");
+const invoicePreviewTitle = document.querySelector("#invoice-preview-title");
+const invoicePreviewFrame = document.querySelector("#invoice-preview-frame");
+const invoicePreviewLoading = document.querySelector("#invoice-preview-loading");
+const invoicePreviewDownload = document.querySelector("#invoice-preview-download");
 let supabase;
+let previewBlob = null;
+let previewFilename = "Rechnung.pdf";
+let previewUrl = null;
 let memberships = [];
 let activeOfferId = null;
 
@@ -70,6 +78,33 @@ function downloadBlob(blob, filename) {
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+function clearInvoicePreview() {
+  invoicePreviewFrame.removeAttribute("src");
+  if (previewUrl) URL.revokeObjectURL(previewUrl);
+  previewUrl = null;
+  previewBlob = null;
+  previewFilename = "Rechnung.pdf";
+  invoicePreviewDownload.disabled = true;
+  invoicePreviewLoading.hidden = false;
+}
+function startInvoicePreview(invoice) {
+  clearInvoicePreview();
+  invoicePreviewTitle.textContent = invoice.invoice_number;
+  invoicePreviewLoading.textContent = "PDF wird geladen …";
+  invoicePreviewDialog.showModal();
+}
+function showInvoicePreview(blob, invoice) {
+  previewBlob = blob;
+  previewFilename = `${invoice.invoice_number}.pdf`;
+  previewUrl = URL.createObjectURL(blob);
+  invoicePreviewFrame.src = previewUrl;
+  invoicePreviewLoading.hidden = true;
+  invoicePreviewDownload.disabled = false;
+}
+invoicePreviewDialog.addEventListener("close", clearInvoicePreview);
+invoicePreviewDownload.addEventListener("click", () => {
+  if (previewBlob) downloadBlob(previewBlob, previewFilename);
+});
 
 async function loadPortal() {
   const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
@@ -105,16 +140,16 @@ async function loadPortal() {
     const button = preview || download;
     button.disabled = true;
     const invoice = (invoices.data || []).find((item) => item.id === button.dataset.invoicePreview || item.id === button.dataset.invoiceDownload);
-    const previewWindow = preview ? window.open("", "_blank", "noopener") : null;
+    if (!invoice) { button.disabled = false; return; }
+    if (preview) startInvoicePreview(invoice);
     try {
       const blob = await invoicePdf(invoice.id);
-      if (preview) {
-        const url = URL.createObjectURL(blob);
-        if (previewWindow) previewWindow.location.href = url;
-        else window.open(url, "_blank", "noopener");
-        setTimeout(() => URL.revokeObjectURL(url), 60_000);
-      } else downloadBlob(blob, `${invoice.invoice_number}.pdf`);
-    } catch (error) { if (previewWindow) previewWindow.close(); alert(error.message || "Rechnung konnte nicht geladen werden."); } finally { button.disabled = false; }
+      if (preview) showInvoicePreview(blob, invoice);
+      else downloadBlob(blob, `${invoice.invoice_number}.pdf`);
+    } catch (error) {
+      if (preview && invoicePreviewDialog.open) invoicePreviewDialog.close();
+      alert(error.message || "Rechnung konnte nicht geladen werden.");
+    } finally { button.disabled = false; }
   });
   filesEl.addEventListener("click", async (event) => {
     const button = event.target.closest("[data-file-id]");

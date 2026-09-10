@@ -1,0 +1,41 @@
+/* In-portal invoice PDF viewer: no separate window or macOS viewer hand-off. */
+.invoice-preview-dialog{
+  width:min(1180px,calc(100vw - 40px));
+  height:min(900px,calc(100svh - 40px));
+  margin:auto;
+  padding:0;
+  border:0;
+  background:var(--paper);
+  color:var(--ink);
+  box-shadow:0 32px 100px rgba(0,0,0,.5);
+}
+.invoice-preview-dialog::backdrop{background:rgba(9,10,8,.76);backdrop-filter:blur(5px)}
+.invoice-preview-shell{display:grid;grid-template-rows:auto minmax(0,1fr) auto;height:100%}
+.invoice-preview-shell>header,.invoice-preview-shell>footer{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  padding:18px 22px;
+  border-color:rgba(9,10,8,.14);
+}
+.invoice-preview-shell>header{border-bottom:1px solid rgba(9,10,8,.14)}
+.invoice-preview-shell>header h2{margin:4px 0 0;font-family:"Instrument Serif",Georgia,serif;font-size:2rem;font-weight:400;letter-spacing:-.04em}
+.invoice-preview-shell .eyebrow{color:#686761}
+.invoice-preview-shell>footer{justify-content:flex-end;border-top:1px solid rgba(9,10,8,.14)}
+.invoice-preview-shell>footer form,.invoice-preview-shell>header form{margin:0}
+.invoice-preview-shell .text-button{color:var(--ink)}
+.invoice-preview-close{display:grid;place-items:center;width:42px;height:42px;border:1px solid rgba(9,10,8,.14);border-radius:50%;background:transparent;color:var(--ink);font-size:1.7rem;line-height:1;cursor:pointer}
+.invoice-preview-stage{position:relative;min-height:0;background:#d8d6d0}
+.invoice-preview-stage iframe{display:block;width:100%;height:100%;border:0;background:#fff}
+.invoice-preview-loading{position:absolute;inset:0;z-index:1;display:grid;place-items:center;margin:0;background:#d8d6d0;color:#686761;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase}
+.invoice-preview-loading[hidden]{display:none}
+.invoice-preview-shell .secondary-button{min-height:42px;padding-inline:16px;border-color:rgba(9,10,8,.25);color:var(--ink)}
+.invoice-preview-shell .text-button{display:inline-flex;align-items:center;min-height:42px;padding:0 4px}
+@media(max-width:640px){
+  .invoice-preview-dialog{width:100vw;height:100svh;max-width:none;max-height:none;border-radius:0}
+  .invoice-preview-shell>header,.invoice-preview-shell>footer{padding:14px 16px}
+  .invoice-preview-shell>header h2{font-size:1.65rem}
+  .invoice-preview-shell>footer{gap:10px}
+  .invoice-preview-shell>footer .secondary-button{min-height:44px;padding-inline:14px}
+}

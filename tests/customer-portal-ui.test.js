@@ -36,17 +36,22 @@ test("Kundenportal-Anfragen werden über eine eigene HEAV-Funktion statt einer o
   assert.doesNotMatch(script, /signUp\(/);
 });
 
-test("Kundenportal bietet Rechnungs-PDF-Vorschau und verbindliche Offerten-Annahme", async () => {
+test("Kundenportal zeigt Rechnungs-PDFs eingebettet und erlaubt den Download", async () => {
   const [html, script] = await Promise.all([
     read("../client/index.html"),
     read("../portal/assets/portal.js"),
   ]);
+  assert.match(html, /id="invoice-preview-dialog"/);
+  assert.match(html, /id="invoice-preview-frame"/);
   assert.match(html, /id="portal-offers"/);
   assert.match(html, /id="offer-accept-dialog"/);
+  assert.match(html, /PDF wird geladen/);
   assert.match(script, /invoice-document/);
-  assert.match(script, /Vorschau/);
+  assert.match(script, /showModal\(\)/);
+  assert.match(script, /invoicePreviewFrame\.src/);
+  assert.match(script, /URL\.revokeObjectURL/);
   assert.match(script, /accept_customer_offer/);
-  assert.match(html, /verbindlich/);
+  assert.doesNotMatch(script, /window\.open\(/);
 });
 
 test("Studio und Kundenportal haben klare kanonische URLs mit Legacy-Weiterleitungen", async () => {
