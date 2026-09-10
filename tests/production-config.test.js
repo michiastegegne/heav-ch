@@ -35,7 +35,7 @@ test("Kontaktformular nutzt die HEAV-eigene Edge Function statt eines sichtbaren
 test("Studio lädt Rabatt- und UI-Confirm-Assets mit Cache-Versionen", () => {
   assert.match(studioHtml, /href="\/admin\/assets\/admin\.css\?v=20260830-discount-edit"/);
   assert.match(studioHtml, /href="\/admin\/assets\/admin-enhancements\.css\?v=20260909-confirm"/);
-  assert.match(studioHtml, /src="\/admin\/assets\/app\.js\?v=20260910-owner-priority"/);
+  assert.match(studioHtml, /src="\/admin\/assets\/app\.js\?v=20260910-offer-email"/);
 });
 
 test("Studio-Aktionen verwenden kompakte, zugängliche SVG-Icons", () => {
