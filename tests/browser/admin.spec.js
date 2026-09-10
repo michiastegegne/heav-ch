@@ -419,6 +419,54 @@ test("Studio: Rechnungen, Kunden und Projekte verwenden klare Icon-Aktionen", as
   expect(actionLayout.actionTopSpread).toBeLessThanOrEqual(1);
   await page.close();
 });
+test("Studio: Projekt-Canvas verbindet Produktion, Kunde und Finanzschritte", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  await mockStudioSupabase(page);
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+  await page.goto(`${base}/studio/`);
+  await page.locator('.nav-link[data-view="projects"]').click();
+  const canvas = page.locator(".project-canvas");
+  await expect(canvas).toBeVisible();
+  await expect(canvas).toContainText("Brand Film 2026");
+  await expect(canvas).toContainText("CHF 9’188.50");
+  await page.locator('[data-project-focus="p2"]').first().click();
+  await expect(canvas).toContainText("Campaign Content");
+  await expect(canvas).toContainText("Atelier Morgen");
+  await canvas.locator('[data-create="invoice"]').click();
+  await expect(page.getByRole("heading", { name: "Rechnung erstellen" })).toBeVisible();
+  await expect(page.locator('select[name="customer_id"]')).toHaveValue("c2");
+  await expect(page.locator('select[name="project_id"]')).toHaveValue("p2");
+  await page.getByRole("button", { name: "Dialog schliessen" }).click();
+  await assertHealthy(page, errors);
+  await page.screenshot({ path: "qa/admin-project-canvas-desktop.png", fullPage: true });
+  await page.close();
+});
+
+test("Studio: Projekt-Canvas bleibt in echter 390px-Ansicht vollständig bedienbar", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await mockStudioSupabase(page);
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+  await page.goto(`${base}/studio/`);
+  await page.getByRole("button", { name: "Menü öffnen" }).click();
+  await page.locator('.nav-link[data-view="projects"]').click();
+  await expect(page.locator("#admin-shell")).not.toHaveClass(/nav-open/);
+  await page.waitForTimeout(350);
+  const canvas = page.locator(".project-canvas");
+  await expect(canvas).toBeVisible();
+  const metrics = await canvas.evaluate((element) => ({ clientWidth: element.clientWidth, scrollWidth: element.scrollWidth }));
+  expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth);
+  const action = canvas.locator('[data-create="invoice"]');
+  const box = await action.boundingBox();
+  expect(box.width).toBeGreaterThanOrEqual(44);
+  expect(box.height).toBeGreaterThanOrEqual(44);
+  await assertHealthy(page, errors);
+  await page.screenshot({ path: "qa/admin-project-canvas-mobile.png", fullPage: true });
+  await page.close();
+});
 
 
 test("Studio: Offerte wird erstellt und per geschütztem Portal-Link versendet", async ({ browser }) => {
