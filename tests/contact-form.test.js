@@ -12,7 +12,7 @@ const supabaseConfig = await readFile(new URL("../supabase/config.toml", import.
 test("Kontaktformular bleibt HEAV-eigen und leitet nicht zu FormSubmit weiter", () => {
   assert.doesNotMatch(contactSource, /formsubmit/i);
   assert.match(contactSource, /data-contact-form/);
-  assert.match(contactSource, /assets\/contact-form\.js\?v=contact-description-20260818/);
+  assert.match(contactSource, /assets\/contact-form\.js\?v=michias-personal-20260910/);
   assert.match(contactSource, /data-form-status/);
   assert.match(contactSource, /name="website"/);
   assert.doesNotMatch(contactSource, /name="_autoresponse"/);
@@ -42,16 +42,15 @@ test("Alle sichtbaren Desktop-Menüs führen zu Contact", async () => {
   }
 });
 
-test("Kontakt-Client übermittelt asynchron an die HEAV Edge Function", () => {
+test("Kontakt-Client übermittelt asynchron an die eigene Edge Function von Michias", () => {
   assert.match(contactClient, /functions\/v1\/contact-enquiry/);
   assert.match(contactClient, /fetch\(/);
   assert.match(contactClient, /application\/json/);
   assert.match(contactClient, /contactForm\.reset\(\)/);
   assert.match(contactClient, /aria-busy/);
-  assert.match(contactClient, /HEAV will get back/);
-  assert.doesNotMatch(contactSource, /Michias(?: Tegegne)? will get back/i);
-  assert.doesNotMatch(contactClient, /Michias will get back/i);
-  assert.doesNotMatch(functionSource, /Michias will review/i);
+  assert.match(contactClient, /Michias\. He will get back/);
+  assert.match(contactSource, /Michias will get back/i);
+  assert.match(functionSource, /Michias will review/i);
 });
 
 test("Kurzbeschreibungen werden vor dem Versand klar erklärt", () => {
@@ -60,22 +59,21 @@ test("Kurzbeschreibungen werden vor dem Versand klar erklärt", () => {
   assert.match(functionSource, /Please add a short project description/);
 });
 
-test("Bestätigungsmail nutzt einen eigenen HEAV-Absender und das HEAV-E-Mailbanner", () => {
+test("Bestätigungsmail trägt die Personenmarke Michias Tegegne", () => {
   assert.match(functionSource, /CONTACT_FROM_EMAIL/);
-  assert.match(functionSource, /Project enquiry received — HEAV/);
-  assert.match(functionSource, /heav-email-wordmark\.png/);
+  assert.match(functionSource, /Project enquiry received — Michias Tegegne/);
+  assert.match(functionSource, /Michias Tegegne<span/);
   assert.match(functionSource, /background:#080909/);
-  assert.doesNotMatch(functionSource, /heav-email-wordmark-transparent\.png/);
+  assert.doesNotMatch(functionSource, /heav-email-wordmark/);
   assert.doesNotMatch(functionSource, /background:#2453ff/);
   assert.match(functionSource, /michias-email-profile-headroom\.jpg/);
-  assert.match(functionSource, /Founder &amp; Owner \| HEAV/);
-  assert.match(functionSource, /width="154" height="35"/);
+  assert.match(functionSource, /Director &amp; photographer/);
   assert.match(functionSource, /width="88" height="88"/);
   assert.doesNotMatch(functionSource, /max-width:600px/);
   assert.doesNotMatch(functionSource, /billing/i);
 });
 
-test("Kontaktmails versenden Textalternativen und HEAV-HTML", () => {
+test("Kontaktmails versenden Textalternativen und Marken-HTML", () => {
   const payloads = [...functionSource.matchAll(
     /await sendEmail\(resendKey, \{([\s\S]*?)\n\s*\}\);/g,
   )].map((match) => match[1]);

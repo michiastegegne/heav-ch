@@ -48,8 +48,8 @@
     dialog.innerHTML = `
       <div class="analytics-consent__content">
         <p class="analytics-consent__eyebrow">Privacy</p>
-        <h2>${preferences ? "Analytics preferences" : "Help us understand how HEAV is used."}</h2>
-        <p>With your permission, HEAV uses Google Analytics to measure anonymous website usage. You can accept or decline. Your choice does not affect the website.</p>
+        <h2>${preferences ? "Analytics preferences" : "Help Michias understand how this website is used."}</h2>
+        <p>With your permission, Michias Tegegne uses Google Analytics to measure anonymous website usage. You can accept or decline. Your choice does not affect the website.</p>
         <p><a href="/privacy/">Learn more in our privacy notice</a>.</p>
       </div>
       <div class="analytics-consent__actions">

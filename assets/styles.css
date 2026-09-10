@@ -465,7 +465,7 @@ main {
     linear-gradient(150deg, #111 15%, #2e3325 52%, #090909);
 }
 .hero-art:after {
-  content: "HEAV / FRAME 001";
+  content: "M / T / FRAME 001";
   position: absolute;
   right: 1.1rem;
   top: 50%;
@@ -1006,7 +1006,7 @@ main {
     linear-gradient(118deg, #10110f, #714534 57%, #121310);
 }
 .work-feature-art:after {
-  content: "HEAV / PORTFOLIO ACCESS";
+  content: "M / T / PORTFOLIO";
   position: absolute;
   right: 1.2rem;
   bottom: 1.2rem;
@@ -2132,5 +2132,53 @@ main {
   }
   .analytics-consent__actions button {
     flex: 1;
+  }
+}
+
+/* Personal identity: the public site is the practice of Michias Tegegne.
+   HEAV remains deliberately reserved for the separate private Studio product. */
+.brand.personal-brand {
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: clamp(1.15rem, 1.55vw, 1.52rem);
+  font-weight: 400;
+  letter-spacing: -0.055em;
+}
+.brand.personal-brand:after {
+  width: 0.3em;
+  height: 0.3em;
+  margin-left: 0.18em;
+}
+.temporary-home-logo {
+  min-height: min(72svh, 50rem);
+}
+.temporary-home-logo-mark.personal-wordmark {
+  display: grid;
+  gap: 0.04em;
+  color: var(--paper);
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: clamp(5rem, 18vw, 16.5rem);
+  font-weight: 400;
+  letter-spacing: -0.07em;
+  line-height: 0.72;
+  text-align: center;
+}
+.temporary-home-logo-mark.personal-wordmark span,
+.temporary-home-logo-mark.personal-wordmark em {
+  display: block;
+  font: inherit;
+}
+.temporary-home-logo-mark.personal-wordmark em {
+  color: var(--acid);
+}
+@media (max-width: 800px) {
+  .brand.personal-brand {
+    font-size: clamp(1.08rem, 5vw, 1.34rem);
+  }
+  .temporary-home-logo {
+    min-height: min(58svh, 35rem);
+  }
+  .temporary-home-logo-mark.personal-wordmark {
+    font-size: clamp(4.45rem, 21vw, 8.25rem);
+    line-height: 0.76;
   }
 }

@@ -32,13 +32,13 @@ test("Google Analytics wird erst nach ausdrücklicher Einwilligung geladen", asy
   assert.match(source, /data-analytics-preferences/);
 });
 
-test("Alle öffentlichen HEAV-Seiten binden den einwilligungsbasierten Analytics-Loader ein", async () => {
+test("Alle öffentlichen Seiten binden den einwilligungsbasierten Analytics-Loader ein", async () => {
   assert.ok(publicHtml.length > 10, "expected the public site to contain multiple HTML pages");
   for (const page of publicHtml) {
     const html = await readFile(resolve(siteRoot, page), "utf8");
     assert.match(
       html,
-      /<script src="\/assets\/analytics\.js\?v=ga4-consent-20260818" defer><\/script>/,
+      /<script src="\/assets\/analytics\.js\?v=michias-personal-20260910" defer><\/script>/,
       `${page} must load the shared analytics consent script`,
     );
   }
@@ -49,4 +49,19 @@ test("Datenschutzerklärung beschreibt GA4 und die Widerrufsoption", async () =>
   assert.match(privacy, /Google Analytics 4/);
   assert.match(privacy, /Google Ireland Limited/);
   assert.match(privacy, /data-analytics-preferences/);
+});
+
+test("Öffentliche Seiten tragen Michias Tegegne als Personenmarke; HEAV bleibt dem Produktbereich vorbehalten", async () => {
+  const canonicalPages = ["index.html", "services/index.html", "work/index.html", "about/index.html", "michias-tegegne/index.html", "contact/index.html", "privacy/index.html", "legal-notice/index.html"];
+  for (const page of canonicalPages) {
+    const source = await readFile(resolve(siteRoot, page), "utf8");
+    assert.match(source, /Michias Tegegne/);
+    assert.match(source, /og:site_name" content="Michias Tegegne"/);
+    assert.match(source, /"@type": "Person"/);
+    assert.doesNotMatch(source, /"@type": "Organization"/);
+  }
+  for (const page of publicHtml) {
+    const source = await readFile(resolve(siteRoot, page), "utf8");
+    assert.doesNotMatch(source, /\bHEAV\b/, `${page} must not present the former production brand`);
+  }
 });
