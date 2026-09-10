@@ -163,11 +163,11 @@ test("Desktop: Dashboard und vollständiger Erfassungsfluss", async ({ browser }
   await expect(page.locator(".data-table").getByText("HEAV-2026-003", { exact: true })).toBeVisible();
   const newInvoiceRow = page.locator(".data-table tbody tr").filter({ hasText: "HEAV-2026-003" });
   const downloadPromise = page.waitForEvent("download");
-  await newInvoiceRow.getByRole("button", { name: "PDF", exact: true }).click();
+  await newInvoiceRow.getByRole("button", { name: "PDF herunterladen", exact: true }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe("HEAV-2026-003.pdf");
   await expect(newInvoiceRow).toContainText("RF94 HEAV 2026 0000 03");
-  await newInvoiceRow.getByRole("button", { name: "Senden" }).click();
+  await newInvoiceRow.getByRole("button", { name: "Rechnung senden" }).click();
   await expect(page.locator("#action-confirm-dialog")).toBeVisible();
   await expect(page.locator("#action-confirm-dialog")).toContainText("Rechnung jetzt senden?");
   await expect(page.locator("#action-confirm-dialog")).toContainText("mira@example.com");
@@ -383,6 +383,26 @@ test("Login: sendet einen Magic-Link nur für bestehende Benutzer und ohne Vorsc
   await expect(page.getByText(/Vorschau|Musterrechnung/i)).toHaveCount(0);
   await expect(page.getByRole("button", { name: /installieren/i })).toHaveCount(0);
 });
+
+test("Studio: Rechnungen, Kunden und Projekte verwenden klare Icon-Aktionen", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  await page.locator('.nav-link[data-view="customers"]').click();
+  const customerRow = page.locator(".data-table tbody tr").first();
+  await expect(customerRow.locator(".customer-contact svg")).toBeVisible();
+  const edit = customerRow.getByRole("button", { name: "Bearbeiten" });
+  await expect(edit.locator("svg")).toBeVisible();
+  await expect(edit).toHaveAttribute("title", "Bearbeiten");
+  const editBounds = await edit.boundingBox();
+  expect(editBounds.width).toBeGreaterThanOrEqual(38);
+  expect(editBounds.height).toBeGreaterThanOrEqual(38);
+  await page.locator('.nav-link[data-view="invoices"]').click();
+  const invoiceRow = page.locator(".data-table tbody tr").first();
+  await expect(invoiceRow.getByRole("button", { name: "Rechnung senden" }).locator("svg")).toBeVisible();
+  await page.close();
+});
+
 
 test("Studio: Offerte wird erstellt und als geschützter Kundenportal-Link freigegeben", async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });

@@ -36,6 +36,14 @@ test("Studio lädt Rabatt- und UI-Confirm-Assets mit Cache-Versionen", () => {
   assert.match(studioHtml, /src="\/admin\/assets\/app\.js\?v=20260910-routes"/);
 });
 
+test("Studio-Aktionen verwenden kompakte, zugängliche SVG-Icons", () => {
+  assert.match(adminSource, /function actionIconButton/);
+  assert.match(adminSource, /actionIconButton\("edit", "Bearbeiten"/);
+  assert.match(adminSource, /paper-plane/);
+  assert.match(adminSource, /customer-contact/);
+  assert.match(studioHtml, /admin-actions\.css\?v=20260910-icons/);
+});
+
 test("Portal bietet owner-geschützte Bearbeitung für Kunden, Projekte, Rechnungen und manuelle Statuswahl", () => {
   assert.match(adminSource, /updateCustomer/);
   assert.match(adminSource, /updateProject/);
