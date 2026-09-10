@@ -8,6 +8,7 @@ const optionalCustomerMigrationPath = new URL("../supabase/migrations/20260806_o
 const portalMigrationPath = new URL("../supabase/migrations/20260819_customer_portal.sql", import.meta.url);
 const invitationMigrationPath = new URL("../supabase/migrations/20260820_customer_portal_invites.sql", import.meta.url);
 const requestActionMigrationPath = new URL("../supabase/migrations/20260821_portal_request_actions.sql", import.meta.url);
+const offerMigrationPath = new URL("../supabase/migrations/20260910_customer_offers.sql", import.meta.url);
 
 async function createDatabase() {
   const db = new PGlite();
@@ -24,7 +25,7 @@ async function createDatabase() {
     $$;
   `);
   const adminMigration = (await readFile(adminMigrationPath, "utf8")).replace("create extension if not exists pgcrypto;", "");
-  await db.exec(`${adminMigration}\n${await readFile(optionalCustomerMigrationPath, "utf8")}\n${await readFile(portalMigrationPath, "utf8")}\n${await readFile(invitationMigrationPath, "utf8")}\n${await readFile(requestActionMigrationPath, "utf8")}`);
+  await db.exec(`${adminMigration}\n${await readFile(optionalCustomerMigrationPath, "utf8")}\n${await readFile(portalMigrationPath, "utf8")}\n${await readFile(invitationMigrationPath, "utf8")}\n${await readFile(requestActionMigrationPath, "utf8")}\n${await readFile(offerMigrationPath, "utf8")}`);
   return db;
 }
 
@@ -136,5 +137,35 @@ test("Owner akzeptiert eine Portal-Anfrage atomar und erstellt den zugehörigen 
   assert.deepEqual(customer.rows, [{ company: 'Muster AG', contact_name: 'Alex Muster', email: 'alex@example.test' }]);
   assert.deepEqual(status.rows, [{ status: 'accepted', has_customer: true, reviewed: true }]);
   await assert.rejects(db.query(`select public.process_customer_portal_request('${request}', 'accept')`), /request is not pending/);
+  await db.close();
+});
+
+test("Kunde kann eine gültige Offerte genau einmal verbindlich annehmen", async () => {
+  const db = await createDatabase();
+  const owner = "10000000-0000-4000-8000-000000000001";
+  const client = "10000000-0000-4000-8000-000000000002";
+  const customer = "20000000-0000-4000-8000-000000000001";
+  const offer = "70000000-0000-4000-8000-000000000001";
+  await db.exec(`
+    insert into auth.users(id) values ('${owner}'), ('${client}');
+    select set_config('request.jwt.claim.sub', '${owner}', false);
+    insert into public.customers(id, owner_id, company, email, address_line1, postal_code, city)
+      values ('${customer}', '${owner}', 'Alpha AG', 'alpha@example.test', 'A-Weg 1', '8000', 'Zürich');
+    insert into public.customer_portal_memberships(owner_id, customer_id, user_id)
+      values ('${owner}', '${customer}', '${client}');
+    insert into public.offers(id, owner_id, customer_id, offer_number, title, issue_date, valid_until, status, subtotal_rappen, tax_rappen, total_rappen)
+      values ('${offer}', '${owner}', '${customer}', 'HEAV-O-2026-001', 'Filmproduktion', '2026-09-10', '2026-10-10', 'sent', 100000, 8100, 108100);
+    insert into public.offer_items(owner_id, offer_id, position, description, quantity, unit_price_rappen)
+      values ('${owner}', '${offer}', 1, 'Produktion', 1, 100000);
+    select set_config('request.jwt.claim.sub', '${client}', false);
+    set role authenticated;
+  `);
+  const visible = await db.query("select offer_number from public.offers");
+  assert.deepEqual(visible.rows, [{ offer_number: "HEAV-O-2026-001" }]);
+  const accepted = await db.query(`select public.accept_customer_offer('${offer}') as accepted_at`);
+  assert.ok(accepted.rows[0].accepted_at, "Annahme muss einen Zeitstempel liefern");
+  const stored = await db.query(`select status, accepted_by = '${client}'::uuid as accepted_by_client, accepted_at is not null as accepted from public.offers where id = '${offer}'`);
+  assert.deepEqual(stored.rows, [{ status: "accepted", accepted_by_client: true, accepted: true }]);
+  await assert.rejects(db.query(`select public.accept_customer_offer('${offer}')`), /already accepted/);
   await db.close();
 });

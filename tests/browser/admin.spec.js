@@ -39,6 +39,9 @@ async function mockStudioSupabase(page) {
             { position: 4, description: "An- und Rückreise", quantity: 1, unit_price_rappen: 5760 }
           ] }
         ],
+        offers: [
+          { id: "o1", customer_id: "c1", project_id: "p1", offer_number: "HEAV-O-2026-001", title: "Brand Film Produktion", issue_date: "2026-09-01", valid_until: "2026-10-01", status: "draft", subtotal_rappen: 500000, tax_rappen: 40500, total_rappen: 540500, tax_rate: 8.1, notes: "Produktion gemäss Briefing.", terms: "Mit der Annahme ist die Offerte verbindlich.", offer_items: [{ position: 1, description: "Produktion", quantity: 1, unit_price_rappen: 500000 }] }
+        ],
         company_settings: [{ company_name: "HEAV", owner_name: "Michias Tegegne", email: "hello@heav.ch", iban: "", default_tax_rate: 8.1, default_due_days: 30 }],
         customer_portal_memberships: [],
         customer_portal_requests: [{ id: "r1", company: "Studio Nord", contact_name: "Lea Meier", email: "lea@studio-nord.example", phone: "+41 79 123 45 67", message: "Zugang für die Filmabnahme 2026.", status: "pending", created_at: "2026-09-09T10:00:00Z" }]
@@ -71,6 +74,14 @@ async function mockStudioSupabase(page) {
               const subtotal = payload.p_items.reduce((sum, item) => sum + Math.round(item.quantity * item.unit_price_rappen), 0);
               const tax = Math.round(subtotal * payload.p_tax_rate / 100);
               store.invoices.unshift({ id: crypto.randomUUID(), customer_id: payload.p_customer_id, project_id: payload.p_project_id, invoice_number: "HEAV-2026-003", payment_reference: "RF94HEAV2026000003", issue_date: payload.p_issue_date, due_date: payload.p_due_date, status: "draft", subtotal_rappen: subtotal, tax_rappen: tax, total_rappen: subtotal + tax, tax_rate: payload.p_tax_rate, invoice_items: payload.p_items });
+            }
+            if (name === "create_offer") {
+              const subtotal = payload.p_items.reduce((sum, item) => sum + Math.round(item.quantity * item.unit_price_rappen), 0);
+              const tax = Math.round(subtotal * payload.p_tax_rate / 100);
+              store.offers.unshift({ id: crypto.randomUUID(), customer_id: payload.p_customer_id, project_id: payload.p_project_id, offer_number: "HEAV-O-2026-002", title: payload.p_title, issue_date: payload.p_issue_date, valid_until: payload.p_valid_until, status: "draft", subtotal_rappen: subtotal, tax_rappen: tax, total_rappen: subtotal + tax, tax_rate: payload.p_tax_rate, notes: payload.p_notes, terms: payload.p_terms, offer_items: payload.p_items });
+            }
+            if (name === "share_customer_offer") {
+              const offer = store.offers.find((item) => item.id === payload.p_offer_id); if (offer) offer.status = "sent";
             }
             if (name === "delete_draft_invoice") {
               store.invoices = store.invoices.filter((item) => item.id !== payload.p_invoice_id);
@@ -371,4 +382,22 @@ test("Login: sendet einen Magic-Link nur für bestehende Benutzer und ohne Vorsc
   await expect(page.locator("#login-message .send-check")).toBeVisible();
   await expect(page.getByText(/Vorschau|Musterrechnung/i)).toHaveCount(0);
   await expect(page.getByRole("button", { name: /installieren/i })).toHaveCount(0);
+});
+
+test("Studio: Offerte wird erstellt und als geschützter Kundenportal-Link freigegeben", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  await page.locator('.nav-link[data-view="offers"]').click();
+  await expect(page.getByRole("heading", { name: "Offerten" })).toBeVisible();
+  await page.getByRole("button", { name: /Neue Offerte/ }).click();
+  await page.locator('select[name="customer_id"]').selectOption("c1");
+  await page.getByLabel("Titel *").fill("Social Cutdowns");
+  await page.locator(".invoice-item").first().getByLabel("Leistung").fill("Schnitt");
+  await page.locator(".invoice-item").first().getByLabel("Einzelpreis in CHF").fill("1200");
+  await page.getByRole("button", { name: "Speichern" }).click();
+  await expect(page.getByText("Social Cutdowns")).toBeVisible();
+  await page.getByRole("button", { name: "Link freigeben" }).first().click();
+  await expect(page.locator(".data-table tbody tr").first()).toContainText("Versendet");
+  await page.close();
 });

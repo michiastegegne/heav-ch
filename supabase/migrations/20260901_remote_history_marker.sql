@@ -1,0 +1,4 @@
+-- History marker for migration 20260901, which exists in the linked production
+-- database but was missing from the repository checkout. The exact schema delta
+-- is recovered separately by the following remote-schema reconciliation migration.
+-- This marker intentionally performs no schema change.

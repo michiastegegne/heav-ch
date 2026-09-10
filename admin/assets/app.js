@@ -27,6 +27,7 @@ const viewNames = {
   customers: "Kunden",
   projects: "Projekte",
   invoices: "Rechnungen",
+  offers: "Offerten",
   settings: "Einstellungen",
   "portal-requests": "Portal-Anfragen",
 };
@@ -90,16 +91,18 @@ function createSupabaseAdapter(supabase, session) {
   const fail = (error) => { if (error) throw error; };
   return {
     async loadAll() {
-      const [customers, projects, invoices, settings, portalRequests] = await Promise.all([
+      const [customers, projects, invoices, offers, settings, portalRequests] = await Promise.all([
         supabase.from("customers").select("*").order("company"),
         supabase.from("projects").select("*").order("created_at", { ascending: false }),
         supabase.from("invoices").select("*, invoice_items(*)").order("issue_date", { ascending: false }),
+        supabase.from("offers").select("*, offer_items(*) ").order("issue_date", { ascending: false }),
         supabase.from("company_settings").select("*").maybeSingle(),
         supabase.from("customer_portal_requests").select("*").order("created_at", { ascending: false }),
       ]);
-      [customers, projects, invoices, settings, portalRequests].forEach((result) => fail(result.error));
+      [customers, projects, invoices, offers, settings, portalRequests].forEach((result) => fail(result.error));
       const normalizedInvoices = invoices.data.map((invoice) => ({ ...invoice, items: invoice.invoice_items || [] }));
-      return joinedData({ customers: customers.data, projects: projects.data, invoices: normalizedInvoices, settings: settings.data || {}, portalRequests: portalRequests.data || [] });
+      const normalizedOffers = (offers.data || []).map((offer) => ({ ...offer, items: offer.offer_items || [] }));
+      return joinedData({ customers: customers.data, projects: projects.data, invoices: normalizedInvoices, offers: normalizedOffers, settings: settings.data || {}, portalRequests: portalRequests.data || [] });
     },
     async saveCustomer(payload) { const result = await supabase.from("customers").insert({ ...payload, owner_id: ownerId }); fail(result.error); },
     async updateCustomer(id, payload) { const result = await supabase.rpc("update_customer", { p_customer_id: id, p_company: payload.company, p_contact_name: payload.contact_name, p_email: payload.email, p_phone: payload.phone, p_address_line1: payload.address_line1, p_postal_code: payload.postal_code, p_city: payload.city, p_country: payload.country }); fail(result.error); },
@@ -118,6 +121,22 @@ function createSupabaseAdapter(supabase, session) {
       });
       fail(result.error);
     },
+    async saveOffer(payload) {
+      const result = await supabase.rpc("create_offer", {
+        p_customer_id: payload.customer_id,
+        p_project_id: payload.project_id,
+        p_title: payload.title,
+        p_issue_date: payload.issue_date,
+        p_valid_until: payload.valid_until,
+        p_tax_rate: payload.tax_rate,
+        p_notes: payload.notes,
+        p_terms: payload.terms,
+        p_items: payload.items,
+      });
+      fail(result.error);
+      return Array.isArray(result.data) ? result.data[0] : result.data;
+    },
+    async shareOffer(id) { const result = await supabase.rpc("share_customer_offer", { p_offer_id: id }); fail(result.error); },
     async updateInvoice(id, payload) {
       const result = await supabase.rpc("update_invoice", { p_invoice_id: id, p_customer_id: payload.customer_id, p_project_id: payload.project_id, p_issue_date: payload.issue_date, p_due_date: payload.due_date, p_status: payload.status, p_tax_rate: payload.tax_rate, p_notes: payload.notes, p_items: payload.items });
       fail(result.error);
@@ -208,6 +227,12 @@ function renderInvoices() {
   return `<section class="view">${toolbar("invoice", "Rechnungen durchsuchen …", [["all","Alle"], ...["draft","sent","paid","overdue","cancelled"].map((status) => [status,statusLabel(status)])])}<table class="data-table"><thead><tr><th>Rechnung</th><th>Kunde</th><th>Status</th><th>Total</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list">${cards}</div></section>`;
 }
 
+function renderOffers() {
+  const all = state.data.offers || [];
+  if (!all.length) return `<section class="view">${emptyState("Offerte erstellen.", "Erstelle eine Offerte, kopiere danach ihren geschützten Kundenportal-Link und teile ihn mit deinem Kunden.", "offer")}</section>`;
+  const rows = all.map((offer) => `<tr><td><strong>${esc(offer.offer_number)}</strong><small>${esc(offer.title)} · gültig bis ${formatDate(offer.valid_until)}</small></td><td>${esc(offer.customer?.company || customerLabel(state.data.customers.find((customer) => customer.id === offer.customer_id)))}</td><td><span class="status ${esc(offer.status)}">${esc(statusLabel(offer.status))}</span></td><td><strong>${formatCHF(offer.total_rappen)}</strong></td><td><div class="table-actions">${offer.status === "draft" ? `<button class="text-button" data-share-offer="${esc(offer.id)}">Link freigeben</button>` : ""}<button class="text-button" data-copy-offer="${esc(offer.id)}">Link kopieren</button></div></td></tr>`).join("");
+  return `<section class="view">${toolbar("offer", "Offerten durchsuchen …", [["all", "Alle"], ["draft", "Entwürfe"], ["sent", "Offen"], ["accepted", "Angenommen"], ["expired", "Abgelaufen"]])}<table class="data-table"><thead><tr><th>Offerte</th><th>Kunde</th><th>Status</th><th>Total</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table></section>`;
+}
 function renderPortalRequests() {
   const all = state.data.portalRequests || [];
   const items = filtered(all.filter((item) => state.filter === "all" || item.status === state.filter), ["contact_name", "company", "email", "message"]);
@@ -227,12 +252,13 @@ function renderSettings() {
   return `<section class="view"><div class="hero-row"><h2>Business,<br><em>set clearly.</em></h2><p>Diese Angaben erscheinen auf deinen Rechnungen und in den Rechnungs-E-Mails. Ohne MWST-Nummer berechnet das System automatisch keine MWST.</p></div><div class="settings-grid"><article class="settings-card"><h3>Rechnungsabsender</h3><p>Rechtliche und finanzielle Angaben für alle PDF-Rechnungen.</p><div class="settings-list"><div><span>Firma</span><strong>${esc(settings.company_name || "HEAV")}</strong></div><div><span>Inhaber</span><strong>${esc(settings.owner_name || "Michias Tegegne")}</strong></div><div><span>E-Mail</span><strong>${esc(settings.email || "hello@heav.ch")}</strong></div><div><span>MWST</span><strong>${esc(settings.vat_number || "Nicht MWST-pflichtig")}</strong></div><div><span>IBAN</span><strong>${esc(settings.iban || "Noch offen")}</strong></div></div><button class="primary-action" data-create="settings" style="margin-top:24px">Angaben bearbeiten</button></article><article class="settings-card"><h3>Systemstatus</h3><p>Der Adminbereich nutzt einen getrennten, geschützten Backend-Zugang.</p><div class="settings-list"><div><span>Modus</span><strong>Produktion</strong></div><div><span>Datenbank</span><strong>Supabase RLS</strong></div><div><span>Rechnungsversand</span><strong>billing@heav.ch</strong></div><div><span>Website</span><strong>heav.ch</strong></div></div></article></div></section>`;
 }
 
-const renderers = { dashboard: renderDashboard, customers: renderCustomers, projects: renderProjects, invoices: renderInvoices, settings: renderSettings, "portal-requests": renderPortalRequests };
+const renderers = { dashboard: renderDashboard, customers: renderCustomers, projects: renderProjects, invoices: renderInvoices, offers: renderOffers, settings: renderSettings, "portal-requests": renderPortalRequests };
 const topbarActions = {
   dashboard: ["invoice", "Neue Rechnung"],
   customers: ["customer", "Kunde erfassen"],
   projects: ["project", "Projekt anlegen"],
   invoices: ["invoice", "Neue Rechnung"],
+  offers: ["offer", "Neue Offerte"],
 };
 function syncTopbarAction() {
   const action = topbarActions[state.view];
@@ -286,6 +312,12 @@ function openEditor(type, existing = null) {
     const customerId = item.customer_id || "";
     dialogBody.innerHTML = `<div class="form-grid"><label class="form-field"><span>Kunde *</span><select name="customer_id" required><option value="">Bitte wählen</option>${customerOptions(customerId)}</select></label><label class="form-field"><span>Projekt</span><select name="project_id"><option value="">Kein Projekt</option>${projectOptions(customerId,item.project_id || "")}</select></label>${existing ? `<label class="form-field wide"><span>Versand- und Zahlungsstatus · auch für manuell versandte PDFs</span><select name="status">${["draft","sent","paid","overdue","cancelled"].map((status) => `<option value="${status}" ${item.status === status ? "selected" : ""}>${statusLabel(status)}</option>`).join("")}</select></label>` : ""}${!existing ? `<div class="sequence-note wide"><strong>Automatische Referenz</strong><span>Die Zahlungsreferenz wird beim Speichern fortlaufend und buchhaltungssicher vergeben.</span></div>` : ""}${field(vatRegistered ? "MWST %" : "MWST % · nicht registriert","tax_rate","number",item.tax_rate ?? (vatRegistered ? (state.data.settings?.default_tax_rate ?? 0) : 0),false,vatRegistered ? 'min="0" step="0.1"' : 'readonly aria-readonly="true"')}${field("Rechnungsdatum *","issue_date","date",item.issue_date || today(),false,"required")}${field("Fällig am *","due_date","date",item.due_date || plusDays(today(),state.data.settings?.default_due_days || 30),false,"required")}<div class="invoice-items"><span class="items-label">Positionen *</span><div id="invoice-item-list"></div><div class="invoice-add-actions"><button class="secondary-button" type="button" data-add-item>Position hinzufügen</button><button class="secondary-button" type="button" data-add-discount>Rabatt hinzufügen</button></div></div><label class="form-field wide"><span>Hinweis auf Rechnung</span><textarea name="notes">${esc(item.notes || "")}</textarea></label><div class="invoice-total" id="invoice-total">TOTAL&nbsp;&nbsp; CHF 0.00</div></div>`;
     (existing ? item.items : [null]).forEach((invoiceItem) => addInvoiceItem(invoiceItem));
+  } else if (type === "offer") {
+    if (!state.data.customers.length) { showToast("Bitte zuerst einen Kunden erfassen.", "error"); setView("customers"); return; }
+    const vatRegistered = validVatNumber(state.data.settings?.vat_number);
+    dialogTitle.textContent = "Offerte erstellen";
+    dialogBody.innerHTML = `<div class="form-grid"><label class="form-field"><span>Kunde *</span><select name="customer_id" required><option value="">Bitte wählen</option>${customerOptions()}</select></label><label class="form-field"><span>Projekt</span><select name="project_id"><option value="">Kein Projekt</option></select></label>${field("Titel *","title","text","",true,"required")}${field(vatRegistered ? "MWST %" : "MWST % · nicht registriert","tax_rate","number",vatRegistered ? (state.data.settings?.default_tax_rate ?? 0) : 0,false,vatRegistered ? 'min="0" step="0.1"' : 'readonly aria-readonly="true"')}${field("Offertdatum *","issue_date","date",today(),false,"required")}${field("Gültig bis *","valid_until","date",plusDays(today(),30),false,"required")}<div class="invoice-items"><span class="items-label">Leistungen *</span><div id="invoice-item-list"></div><div class="invoice-add-actions"><button class="secondary-button" type="button" data-add-item>Position hinzufügen</button><button class="secondary-button" type="button" data-add-discount>Rabatt hinzufügen</button></div></div><label class="form-field wide"><span>Hinweis für den Kunden</span><textarea name="notes"></textarea></label><label class="form-field wide"><span>Verbindlichkeit bei Annahme *</span><textarea name="terms" required>Mit der Annahme dieser Offerte bestätigst du verbindlich die aufgeführten Leistungen, Beträge und Bedingungen.</textarea></label><div class="invoice-total" id="invoice-total">TOTAL&nbsp;&nbsp; CHF 0.00</div></div>`;
+    addInvoiceItem();
   } else {
     const settings = state.data.settings || {};
     dialogKicker.textContent = "EINSTELLUNGEN"; dialogTitle.textContent = "Rechnungsabsender";
@@ -346,6 +378,12 @@ async function saveEditor(type) {
     const payload = { customerId: data.customer_id, issueDate: data.issue_date, dueDate: data.due_date, items: editorItems };
     const errors = validateInvoice(payload); if (Object.keys(errors).length) { formError.textContent = Object.values(errors)[0]; return false; }
     const invoicePayload = { customer_id: data.customer_id, project_id: data.project_id || null, issue_date: data.issue_date, due_date: data.due_date, status: data.status || "draft", tax_rate: Number(data.tax_rate || 0), notes: data.notes.trim(), items }; if (dialogForm.dataset.editId) await adapter.updateInvoice(dialogForm.dataset.editId, invoicePayload); else await adapter.saveInvoice(invoicePayload);
+  }
+  if (type === "offer") {
+    const editorItems = readInvoiceEditorItems();
+    const items = editorItems.map((item) => ({ description: item.description, quantity: item.quantity, unit_price_rappen: Math.round(item.unitPrice * 100) }));
+    if (!data.customer_id || !data.title.trim() || !data.issue_date || !data.valid_until || data.valid_until < data.issue_date || !items.length) { formError.textContent = "Bitte Kunde, Titel, gültige Daten und mindestens eine Leistung ausfüllen."; return false; }
+    await adapter.saveOffer({ customer_id: data.customer_id, project_id: data.project_id || null, title: data.title.trim(), issue_date: data.issue_date, valid_until: data.valid_until, tax_rate: Number(data.tax_rate || 0), notes: data.notes.trim(), terms: data.terms.trim(), items });
   }
   if (type === "settings") {
     const vatNumber = normalizeVatNumber(data.vat_number);
@@ -416,19 +454,42 @@ async function portalRequestAction(id, action, button) {
   finally { button.disabled = false; }
 }
 
-content.addEventListener("click", (event) => {
+async function copyText(value) {
+  if (navigator.clipboard?.writeText) {
+    try { await navigator.clipboard.writeText(value); return; } catch { /* Fall back for browsers that deny clipboard permission. */ }
+  }
+  const field = document.createElement("textarea");
+  field.value = value; field.setAttribute("readonly", ""); field.style.position = "fixed"; field.style.opacity = "0";
+  document.body.append(field); field.select();
+  const copied = document.execCommand("copy"); field.remove();
+  if (!copied) throw new Error("Dein Browser hat den Link nicht kopiert.");
+}
+async function copyOfferLink(id, share, button) {
+  button.disabled = true;
+  try {
+    if (share) { await adapter.shareOffer(id); await refresh(); }
+    const link = `${window.location.origin}/client/?offer=${encodeURIComponent(id)}`;
+    await copyText(link);
+    showToast("Geschützter Kundenportal-Link wurde kopiert.");
+  } catch (error) { showToast(error.message || "Link konnte nicht kopiert werden.", "error"); }
+  finally { button.disabled = false; }
+}
+
+content.addEventListener("click", async (event) => {
   const create = event.target.closest("[data-create]"); if (create) openEditor(create.dataset.create);
   const view = event.target.closest("[data-view]"); if (view) setView(view.dataset.view);
   const filter = event.target.closest("[data-filter]"); if (filter) { state.filter = filter.dataset.filter; render(); }
   const edit = event.target.closest("[data-edit]"); if (edit) { const collections = { customer: state.data.customers, project: state.data.projects, invoice: state.data.invoices }; openEditor(edit.dataset.edit, collections[edit.dataset.edit].find((item) => item.id === edit.dataset.id)); }
   const action = event.target.closest("[data-invoice-action]"); if (action) invoiceAction(action.dataset.id, action.dataset.invoiceAction, action);
   const requestAction = event.target.closest("[data-portal-request-action]"); if (requestAction) portalRequestAction(requestAction.dataset.id, requestAction.dataset.portalRequestAction, requestAction);
+  const shareOffer = event.target.closest("[data-share-offer]"); if (shareOffer) await copyOfferLink(shareOffer.dataset.shareOffer, true, shareOffer);
+  const copyOffer = event.target.closest("[data-copy-offer]"); if (copyOffer) await copyOfferLink(copyOffer.dataset.copyOffer, false, copyOffer);
   const remove = event.target.closest("[data-delete-record]"); if (remove) deleteRecord(remove.dataset.deleteRecord, remove.dataset.id, remove);
 });
 content.addEventListener("input", (event) => { if (event.target.matches("[data-search]")) { state.query = event.target.value; const position = event.target.selectionStart; render(); const next = document.querySelector("[data-search]"); next.focus(); next.setSelectionRange(position, position); } });
 dialogBody.addEventListener("click", (event) => { if (event.target.closest("[data-add-item]")) addInvoiceItem(); if (event.target.closest("[data-add-discount]")) addInvoiceItem(null, "discount"); if (event.target.closest("[data-remove-item]")) { if (document.querySelectorAll(".invoice-item").length > 1) event.target.closest(".invoice-item").remove(); updateInvoiceTotal(); } });
 dialogBody.addEventListener("input", (event) => { if (event.target.matches('[name="item_quantity"],[name="item_price"],[name="discount_value"],[name="tax_rate"]')) updateInvoiceTotal(); });
-dialogBody.addEventListener("change", (event) => { if (event.target.matches('[name="customer_id"]') && dialogForm.dataset.type === "invoice") { const projects = dialogForm.elements.project_id; projects.innerHTML = `<option value="">Kein Projekt</option>${projectOptions(event.target.value)}`; } });
+dialogBody.addEventListener("change", (event) => { if (event.target.matches('[name="customer_id"]') && ["invoice", "offer"].includes(dialogForm.dataset.type)) { const projects = dialogForm.elements.project_id; projects.innerHTML = `<option value="">Kein Projekt</option>${projectOptions(event.target.value)}`; } });
 dialogForm.addEventListener("submit", async (event) => { const submitter = event.submitter; if (submitter?.value !== "save") return; event.preventDefault(); submitter.disabled = true; formError.textContent = ""; try { if (await saveEditor(dialogForm.dataset.type)) { dialog.close(); await refresh(); showToast("Gespeichert."); } } catch (error) { formError.textContent = error.message || "Speichern fehlgeschlagen."; } finally { submitter.disabled = false; } });
 document.addEventListener("click", (event) => { const nav = event.target.closest(".nav-link"); if (nav) setView(nav.dataset.view); if (event.target.closest("[data-open-nav]")) setNavigationOpen(true); if (event.target.closest("[data-close-nav]")) setNavigationOpen(false); const create = event.target.closest("[data-create]"); if (create && !content.contains(create)) openEditor(create.dataset.create); });
 document.addEventListener("keydown", (event) => {

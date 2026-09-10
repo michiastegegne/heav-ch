@@ -1192,6 +1192,10 @@ if (import.meta.main) {
       if (invoiceError || !storedInvoice) {
         throw invoiceError || new Error("Rechnung nicht gefunden.");
       }
+      const isOwner = storedInvoice.owner_id === userData.user.id;
+      if (!isOwner && action !== "download") {
+        throw new Error("Diese Rechnungsaktion ist nur für HEAV verfügbar.");
+      }
       if (storedInvoice.is_legacy) {
         throw new Error(
           "Diese historische Rechnung wurde vor der unveränderlichen Archivierung erstellt und kann nicht neu als Zahlungsdokument erzeugt oder versendet werden.",
@@ -1214,16 +1218,18 @@ if (import.meta.main) {
       }
       const pdfBytes = await createInvoicePdf(invoice, settings);
       if (action === "download") {
-        const { error: eventError } = await supabase.rpc(
-          "record_invoice_action",
-          {
-            p_invoice_id: invoiceId,
-            p_action: "downloaded",
-            p_recipient: null,
-            p_details: {},
-          },
-        );
-        if (eventError) throw eventError;
+        if (isOwner) {
+          const { error: eventError } = await supabase.rpc(
+            "record_invoice_action",
+            {
+              p_invoice_id: invoiceId,
+              p_action: "downloaded",
+              p_recipient: null,
+              p_details: {},
+            },
+          );
+          if (eventError) throw eventError;
+        }
         const pdfBody = new ArrayBuffer(pdfBytes.byteLength);
         new Uint8Array(pdfBody).set(pdfBytes);
         return new Response(pdfBody, {
