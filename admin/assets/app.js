@@ -464,7 +464,7 @@ async function boot() {
         .eq("user_id", userId)
         .eq("status", "active")
         .limit(1);
-      if (!membershipError && memberships?.length) { window.location.replace("/portal/"); return; }
+      if (!membershipError && memberships?.length) { window.location.replace("/client/"); return; }
     }
 
     adapter = createSupabaseAdapter(state.supabase, data.session);

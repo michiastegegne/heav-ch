@@ -109,10 +109,10 @@ async function mockClientSupabase(page) {
   });
 }
 
-test("Client-Konto wird aus dem Studio ins private Portal umgeleitet", async ({ page }) => {
+test("Client-Konto wird aus dem Studio ins private Kundenportal umgeleitet", async ({ page }) => {
   await mockClientSupabase(page);
-  await page.goto(`${base}/admin/`);
-  await page.waitForURL(/\/portal\/$/);
+  await page.goto(`${base}/studio/`);
+  await page.waitForURL(/\/client\/$/);
 });
 
 test("Desktop: Dashboard und vollständiger Erfassungsfluss", async ({ browser }) => {
@@ -313,6 +313,31 @@ test("Mobile: Portal-Anfragen bleiben als handlungsfähige Karten erreichbar", a
   expect(actionMetrics.height).toBeGreaterThanOrEqual(44);
   await assertHealthy(page, errors);
   await page.close();
+});
+
+test("Login: ein Owner mit Kundenmitgliedschaft landet im HEAV Studio", async ({ page }) => {
+  await page.route("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm", async (route) => {
+    await route.fulfill({
+      contentType: "application/javascript",
+      body: `const result = (data) => ({ data, error: null });
+      export function createClient() {
+        return {
+          auth: { getSession: async () => ({ data: { session: { user: { id: "owner-test" } } }, error: null }) },
+          from(table) {
+            const builder = {
+              select() { return builder; },
+              eq() { return builder; },
+              maybeSingle: async () => result(table === "company_settings" ? { owner_id: "owner-test" } : null),
+              limit: async () => result(table === "customer_portal_memberships" ? [{ id: "membership-test" }] : [])
+            };
+            return builder;
+          }
+        };
+      }`,
+    });
+  });
+  await page.goto(`${base}/login/`);
+  await page.waitForURL(/\/studio\/$/);
 });
 
 test("Login: sendet einen Magic-Link nur für bestehende Benutzer und ohne Vorschau", async ({ page }) => {

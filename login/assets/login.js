@@ -18,17 +18,25 @@ if (!isBackendConfigured()) {
     HEAV_ADMIN_CONFIG.supabaseUrl,
     HEAV_ADMIN_CONFIG.supabaseAnonKey,
   );
-  async function workspaceDestination() {
+  async function workspaceDestination(session) {
+    const user = session.user;
+    const { data: settings, error: settingsError } = await supabase
+      .from("company_settings")
+      .select("owner_id")
+      .maybeSingle();
+    if (!settingsError && settings?.owner_id === user.id) return "/studio/";
+
     const { data: memberships, error } = await supabase
       .from("customer_portal_memberships")
       .select("id")
+      .eq("user_id", user.id)
       .eq("status", "active")
       .limit(1);
-    if (!error && memberships?.length) return "/portal/";
-    return "/admin/";
+    if (!error && memberships?.length) return "/client/";
+    return "/studio/";
   }
   const { data } = await supabase.auth.getSession();
-  if (data.session) window.location.replace(await workspaceDestination());
+  if (data.session) window.location.replace(await workspaceDestination(data.session));
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();

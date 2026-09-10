@@ -5,7 +5,7 @@ import { readFile } from "node:fs/promises";
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
 test("Kundenportal ist eine private, eigene HEAV-Oberfläche mit Projekten, Dokumenten und Feedback", async () => {
-  const html = await read("../portal/index.html");
+  const html = await read("../client/index.html");
   const script = await read("../portal/assets/portal.js");
   const css = await read("../portal/assets/portal.css");
   const adminScript = await read("../admin/assets/app.js");
@@ -28,7 +28,7 @@ test("Kundenportal ist eine private, eigene HEAV-Oberfläche mit Projekten, Doku
 });
 
 test("Kundenportal-Anfragen werden über eine eigene HEAV-Funktion statt einer offenen Auth-Registrierung übermittelt", async () => {
-  const html = await read("../portal/request/index.html");
+  const html = await read("../client/request/index.html");
   const script = await read("../portal/request/assets/request.js");
   assert.match(html, /id="portal-request-form"/);
   assert.match(html, /name="email"/);
@@ -36,8 +36,25 @@ test("Kundenportal-Anfragen werden über eine eigene HEAV-Funktion statt einer o
   assert.doesNotMatch(script, /signUp\(/);
 });
 
-test("Login leitet aktive Kundenaccounts ins Portal und Owner weiterhin ins Studio", async () => {
+test("Studio und Kundenportal haben klare kanonische URLs mit Legacy-Weiterleitungen", async () => {
+  const [studio, client, adminRedirect, portalRedirect] = await Promise.all([
+    read("../studio/index.html"),
+    read("../client/index.html"),
+    read("../admin/index.html"),
+    read("../portal/index.html"),
+  ]);
+  assert.match(studio, /HEAV STUDIO/);
+  assert.match(client, /GESCHÜTZTES KUNDENPORTAL/);
+  assert.match(adminRedirect, /location\.replace\(destination\("\/studio\/"\)\)/);
+  assert.match(portalRedirect, /location\.replace\(destination\("\/client\/"\)\)/);
+});
+
+test("Login leitet aktive Kundenaccounts zum Kundenportal und Owner ins Studio", async () => {
   const script = await read("../login/assets/login.js");
-  assert.match(script, /customer_portal_memberships/);
-  assert.match(script, /window\.location\.replace\(await workspaceDestination\(\)\)/);
+  assert.match(script, /company_settings/);
+  assert.match(script, /owner_id/);
+  assert.match(script, /\.eq\("user_id", user\.id\)/);
+  assert.match(script, /return "\/client\/"/);
+  assert.match(script, /return "\/studio\/"/);
+  assert.match(script, /workspaceDestination\(data\.session\)/);
 });
