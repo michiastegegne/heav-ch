@@ -204,36 +204,29 @@ function contactMark() { return `<span class="customer-contact" title="Kunde" ar
 
 function renderDashboard() {
   const { customers, projects, invoices, offers = [] } = state.data;
-  const activeProjects = projects.filter((item) => ["planning", "active"].includes(item.status));
-  const focusProject = [...activeProjects].sort((a, b) => String(a.due_date || "9999-12-31").localeCompare(String(b.due_date || "9999-12-31")))[0];
-  const openInvoices = invoices.filter((item) => ["sent", "overdue"].includes(item.status));
-  const openTotal = openInvoices.reduce((sum, item) => sum + item.total_rappen, 0);
-  const openOffers = offers.filter((item) => ["draft", "sent"].includes(item.status));
-  const offerTotal = openOffers.reduce((sum, item) => sum + (item.total_rappen || 0), 0);
-  const paidThisYear = invoices.filter((item) => item.status === "paid" && item.issue_date?.startsWith(String(new Date().getFullYear()))).reduce((sum, item) => sum + item.total_rappen, 0);
-  const recent = [...invoices].slice(0, 4);
-  const projectInvoices = focusProject ? invoices.filter((item) => item.project_id === focusProject.id && item.status !== "cancelled") : [];
-  const projectCustomer = focusProject?.customer || customers.find((item) => item.id === focusProject?.customer_id);
-  const projectOpenInvoices = projectInvoices.filter((item) => ["draft", "sent", "overdue"].includes(item.status));
-  const projectInvoiced = projectInvoices.reduce((sum, item) => sum + (item.total_rappen || 0), 0);
-  const productionRows = [...activeProjects].sort((a, b) => String(a.due_date || "9999-12-31").localeCompare(String(b.due_date || "9999-12-31"))).slice(0, 3);
-  const focusSurface = focusProject
-    ? `<article class="dashboard-focus">
-        <div class="dashboard-focus-head"><div><span class="kicker">IM FOKUS</span><h3>${esc(focusProject.title)}</h3><p>${esc(focusProject.description || "Produktion, Kunde und Geldfluss bleiben in einem klaren Kontext.")}</p></div><span class="status ${esc(focusProject.status)}">${esc(statusLabel(focusProject.status))}</span></div>
-        <div class="dashboard-focus-modules">
-          <div><span>KUNDE</span><strong>${esc(customerLabel(projectCustomer))}</strong><small>${esc(projectCustomer?.email || "E-Mail noch offen")}</small></div>
-          <div><span>DEADLINE</span><strong>${formatDate(focusProject.due_date)}</strong><small>${focusProject.start_date ? `Start ${formatDate(focusProject.start_date)}` : "Start offen"}</small></div>
-          <div><span>GELDFLUSS</span><strong>${formatCHF(projectInvoiced)}</strong><small>${projectOpenInvoices.length ? `${projectOpenInvoices.length} offen` : "Keine offene Rechnung"}</small></div>
-        </div>
-        <footer class="dashboard-focus-footer"><button class="project-module-link" type="button" data-dashboard-project-focus="${esc(focusProject.id)}">Projekt-Canvas öffnen <span aria-hidden="true">→</span></button><div><button class="secondary-button" type="button" data-create="offer" data-project-id="${esc(focusProject.id)}">Offerte</button><button class="primary-action" type="button" data-create="invoice" data-project-id="${esc(focusProject.id)}">Rechnung <span aria-hidden="true">+</span></button></div></footer>
-      </article>`
-    : `<article class="dashboard-focus dashboard-focus--empty"><div><span class="kicker">PRODUKTION</span><h3>Der nächste klare Schritt.</h3><p>Lege ein Projekt an. Danach bündelt HEAV Kunde, Budget, Offerte und Rechnung an einem Ort.</p></div><button class="primary-action" type="button" data-create="project">Projekt anlegen <span aria-hidden="true">+</span></button></article>`;
-  return `<section class="view dashboard-view">
-    <header class="dashboard-intro"><div><span class="kicker">HEAV STUDIO</span><h2>Everything,<br><em>in its place.</em></h2></div><p>Ein ruhiger Überblick für laufende Produktionen, Kundenbeziehungen und den nächsten finanziellen Schritt.</p></header>
-    <section class="dashboard-stage">${focusSurface}<aside class="dashboard-money"><span class="kicker">MONEY FLOW</span><strong>${formatCHF(openTotal)}</strong><p>${openInvoices.length ? `${openInvoices.length} Rechnung${openInvoices.length === 1 ? "" : "en"} wartet auf Zahlung.` : "Keine offene Rechnung im Moment."}</p><div class="dashboard-money-list"><div><span>In Pipeline</span><b>${formatCHF(offerTotal)}</b></div><div><span>Offene Offerten</span><b>${openOffers.length}</b></div><div><span>Bezahlt dieses Jahr</span><b>${formatCHF(paidThisYear)}</b></div></div><button class="project-module-link" type="button" data-view="invoices">Rechnungen öffnen <span aria-hidden="true">→</span></button></aside></section>
-    <div class="metric-grid dashboard-metrics">${metric("Kunden", customers.length)}${metric("Aktive Produktionen", activeProjects.length)}${metric("Offene Forderungen", formatCHF(openTotal))}${metric("In Pipeline", formatCHF(offerTotal))}</div>
-    <section class="dashboard-grid"><section class="panel dashboard-panel"><div class="panel-head"><div><span class="kicker">RECHNUNGEN</span><h3>Letzte Bewegungen</h3></div><button class="text-button" data-view="invoices">Alle ansehen</button></div><div class="activity-list">${recent.length ? recent.map((invoice) => `<article class="activity-row"><div><strong>${esc(invoice.invoice_number)}</strong><span>${esc(invoice.customer?.company || "Ohne Kunde")} · ${formatDate(invoice.issue_date)}</span></div><div><strong>${formatCHF(invoice.total_rappen)}</strong><span class="status ${esc(invoice.status)}">${esc(statusLabel(invoice.status))}</span></div></article>`).join("") : `<p>Noch keine Rechnungen.</p>`}</div></section>
-    <aside class="panel dashboard-panel dashboard-productions"><div class="panel-head"><div><span class="kicker">PRODUKTIONEN</span><h3>Was als Nächstes zählt</h3></div><button class="text-button" data-view="projects">Alle öffnen</button></div><div class="dashboard-production-list">${productionRows.length ? productionRows.map((project) => `<button class="dashboard-production-row" type="button" data-dashboard-project-focus="${esc(project.id)}"><span class="status ${esc(project.status)}">${esc(statusLabel(project.status))}</span><strong>${esc(project.title)}</strong><small>${esc(project.customer?.company || "Ohne Kunde")} · ${project.due_date ? `Deadline ${formatDate(project.due_date)}` : "Deadline offen"}</small><b aria-hidden="true">→</b></button>`).join("") : `<div class="dashboard-empty-copy"><strong>Noch keine laufende Produktion.</strong><span>Lege ein Projekt an, wenn ein Auftrag konkret wird.</span></div>`}</div><div class="dashboard-quick-actions"><button class="secondary-button" type="button" data-create="customer">Kunde</button><button class="secondary-button" type="button" data-create="project">Projekt</button><button class="primary-action" type="button" data-create="invoice">Rechnung <span aria-hidden="true">+</span></button></div></aside></section>
+  const activeProjects = projects.filter(item => ["planning", "active"].includes(item.status)).sort((a,b) => String(a.due_date || "9999").localeCompare(String(b.due_date || "9999")));
+  const focusProject = activeProjects[0];
+  const openInvoices = invoices.filter(item => ["sent", "overdue"].includes(item.status));
+  const drafts = invoices.filter(item => item.status === "draft");
+  const openOffers = offers.filter(item => ["draft", "sent"].includes(item.status));
+  const sum = items => items.reduce((total, item) => total + (item.total_rappen || 0), 0);
+  const paid = invoices.filter(item => item.status === "paid");
+  const projectCustomer = focusProject?.customer || customers.find(item => item.id === focusProject?.customer_id);
+  const projectPaid = paid.filter(item => item.project_id === focusProject?.id);
+  const focusSurface = focusProject ? `<article class="dashboard-focus">
+    <div class="dashboard-focus-head"><div><span class="kicker">NÄCHSTE PRODUKTION</span><h3>${esc(focusProject.title)}</h3><p>${esc(focusProject.description || "")}</p></div><span class="status ${esc(focusProject.status)}">${esc(statusLabel(focusProject.status))}</span></div>
+    <div class="dashboard-focus-modules"><div><span>KUNDE</span><strong>${esc(customerLabel(projectCustomer))}</strong><small>${esc(projectCustomer?.email || "Keine E-Mail hinterlegt")}</small></div><div><span>ABGABE</span><strong>${formatDate(focusProject.due_date)}</strong><small>${focusProject.start_date ? `Start ${formatDate(focusProject.start_date)}` : "Start nicht festgelegt"}</small></div><div><span>BEZAHLT</span><strong>${formatCHF(sum(projectPaid))}</strong><small>Als bezahlt erfasst</small></div></div>
+    <footer class="dashboard-focus-footer"><button class="project-module-link" type="button" data-dashboard-project-focus="${esc(focusProject.id)}">Projekt-Canvas öffnen <span aria-hidden="true">→</span></button><div><button class="secondary-button" type="button" data-create="offer" data-project-id="${esc(focusProject.id)}">Offerte</button><button class="primary-action" type="button" data-create="invoice" data-project-id="${esc(focusProject.id)}">Rechnung <span aria-hidden="true">+</span></button></div></footer>
+  </article>` : `<article class="dashboard-focus dashboard-focus--empty"><span class="kicker">PRODUKTION</span><h3>Kein laufendes Projekt</h3><p>Erfasse den nächsten Auftrag mit Kunde und Produktionsterminen.</p><button class="primary-action" data-create="project">Projekt anlegen</button></article>`;
+  return `<section class="view dashboard-view"><header class="dashboard-intro"><div><h2>Dein Arbeitsbereich</h2><p>Produktionen und nächste Schritte auf einen Blick.</p></div></header>
+    <section class="dashboard-stage">${focusSurface}<aside class="dashboard-money"><span class="kicker">AUSSTEHENDE ZAHLUNGEN</span><strong>${formatCHF(sum(openInvoices))}</strong><p>${openInvoices.length} versendete / überfällige Rechnungen</p><div class="dashboard-money-list"><div><span>Bezahlt erfasst</span><b>${formatCHF(sum(paid))}</b></div><div><span>Entwürfe · nicht fällig</span><b>${formatCHF(sum(drafts))}</b></div></div><button class="project-module-link" data-view="invoices">Rechnungen öffnen <span aria-hidden="true">→</span></button></aside></section>
+    <section class="dashboard-grid"><section class="panel dashboard-panel"><div class="panel-head"><h3>Nächste Finanzschritte</h3><span class="kicker">${drafts.length + openOffers.length + openInvoices.length} EINTRÄGE</span></div><div class="workspace-action-list">
+      ${drafts.slice(0,3).map(item => `<article class="workspace-action"><div><span class="status draft">Entwurf</span><strong>${esc(item.invoice_number)}</strong><small>${esc(customerLabel(item.customer))} · ${formatCHF(item.total_rappen)} · noch nicht fällig</small></div>${invoiceActions(item)}</article>`).join("")}
+      ${openOffers.slice(0,3).map(item => `<article class="workspace-action"><div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span><strong>${esc(item.title || item.offer_number)}</strong><small>Offerte · ${formatCHF(item.total_rappen)} · gültig bis ${formatDate(item.valid_until)}</small></div>${offerActions(item)}</article>`).join("")}
+      ${openInvoices.slice(0,3).map(item => `<article class="workspace-action"><div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span><strong>${esc(item.invoice_number)}</strong><small>${esc(customerLabel(item.customer))} · ${formatCHF(item.total_rappen)} · fällig ${formatDate(item.due_date)}</small></div>${invoiceActions(item)}</article>`).join("")}
+      ${!drafts.length && !openOffers.length && !openInvoices.length ? '<p>Keine offenen Finanzschritte.</p>' : ''}
+    </div><div class="panel-footer"><button class="text-button" data-view="invoices">Alle Rechnungen</button><button class="text-button" data-view="offers">Alle Offerten</button></div></section>
+    <aside class="panel dashboard-panel dashboard-productions"><div class="panel-head"><h3>Laufende Projekte</h3><button class="text-button" data-view="projects">Alle öffnen</button></div><div class="dashboard-production-list">${activeProjects.slice(0,3).map(project => `<button class="dashboard-production-row" data-dashboard-project-focus="${esc(project.id)}"><span class="status ${esc(project.status)}">${esc(statusLabel(project.status))}</span><strong>${esc(project.title)}</strong><small>${esc(customerLabel(project.customer))} · ${formatDate(project.due_date)}</small><b aria-hidden="true">→</b></button>`).join("") || '<p>Keine laufende Produktion.</p>'}</div><div class="dashboard-quick-actions"><button class="secondary-button" data-create="customer">Kunde erfassen</button><button class="primary-action" data-create="project">Projekt anlegen</button></div></aside></section>
   </section>`;
 }
 
@@ -250,35 +243,34 @@ function renderCustomers() {
 }
 
 function renderProjectCanvas(project) {
-  const invoices = state.data.invoices.filter((item) => item.project_id === project.id && item.status !== "cancelled");
-  const offers = (state.data.offers || []).filter((item) => item.project_id === project.id);
-  const openInvoices = invoices.filter((item) => ["draft", "sent", "overdue"].includes(item.status));
-  const invoicedTotal = invoices.reduce((sum, item) => sum + (item.total_rappen || 0), 0);
-  const customer = project.customer || state.data.customers.find((item) => item.id === project.customer_id);
-  const productionDetail = [project.start_date ? `Start ${formatDate(project.start_date)}` : "Start offen", project.due_date ? `Deadline ${formatDate(project.due_date)}` : "Keine Deadline"].join(" · ");
-  return `<section class="project-canvas" aria-label="Projekt-Canvas">
-    <header class="project-canvas-head">
-      <div><span class="kicker">PROJEKT-CANVAS</span><h3>${esc(project.title)}</h3><p>${esc(project.description || "Ein klarer Ort für Produktion, Kunde und finanzielle Schritte.")}</p></div>
-      ${actionIconButton("edit", `Projekt bearbeiten: ${project.title}`, `data-edit="project" data-id="${esc(project.id)}"`)}
-    </header>
+  const invoices = state.data.invoices.filter(item => item.project_id === project.id);
+  const offers = (state.data.offers || []).filter(item => item.project_id === project.id);
+  const sum = statuses => invoices.filter(item => statuses.includes(item.status)).reduce((total,item) => total + (item.total_rappen || 0), 0);
+  const customer = project.customer || state.data.customers.find(item => item.id === project.customer_id);
+  const accepted = offers.filter(item => item.status === "accepted");
+  return `<section class="project-canvas" aria-label="Projekt-Canvas" tabindex="-1">
+    <header class="project-canvas-head"><div><span class="kicker">PROJEKT-CANVAS</span><h3>${esc(project.title)}</h3>${project.description ? `<p>${esc(project.description)}</p>` : ''}</div>${actionIconButton("edit", `Projekt bearbeiten: ${project.title}`, `data-edit="project" data-id="${esc(project.id)}"`)}</header>
     <div class="project-module-grid">
-      <article class="project-module project-module--production"><span class="project-module-index">01</span><div><span class="project-module-label">PRODUKTION</span><strong><span class="status ${esc(project.status)}">${esc(statusLabel(project.status))}</span></strong><p>${esc(productionDetail)}</p></div></article>
-      <article class="project-module"><span class="project-module-index">02</span><div><span class="project-module-label">KUNDE</span><strong>${esc(customerLabel(customer))}</strong><p>${esc(customer?.email || "E-Mail noch offen")}</p><button class="project-module-link" type="button" data-view="customers">Kunden öffnen <span aria-hidden="true">→</span></button></div></article>
-      <article class="project-module"><span class="project-module-index">03</span><div><span class="project-module-label">FINANZEN</span><strong>${formatCHF(invoicedTotal)}</strong><p>${openInvoices.length ? `${openInvoices.length} offene Rechnung${openInvoices.length === 1 ? "" : "en"}` : invoices.length ? `${invoices.length} Rechnung${invoices.length === 1 ? "" : "en"} abgeschlossen` : "Noch keine Rechnung"}</p><button class="project-module-link" type="button" data-view="invoices">Rechnungen öffnen <span aria-hidden="true">→</span></button></div></article>
-      <article class="project-module project-module--next"><span class="project-module-index">04</span><div><span class="project-module-label">NÄCHSTER SCHRITT</span><strong>${offers.length ? "Offerte oder Rechnung ergänzen" : "Offerte vorbereiten"}</strong><div class="project-canvas-actions"><button class="secondary-button" type="button" data-create="offer" data-project-id="${esc(project.id)}">Offerte</button><button class="primary-action" type="button" data-create="invoice" data-project-id="${esc(project.id)}">Rechnung <span aria-hidden="true">+</span></button></div></div></article>
+      <article class="project-module"><div><span class="project-module-label">KUNDE</span><strong>${esc(customerLabel(customer))}</strong><p>${esc(customer?.email || "Keine E-Mail hinterlegt")}</p>${customer ? `<button class="project-module-link" data-edit="customer" data-id="${esc(customer.id)}">Kundendaten bearbeiten <span aria-hidden="true">→</span></button>` : ''}</div></article>
+      <article class="project-module project-module--production"><div><span class="project-module-label">PRODUKTION</span><strong><span class="status ${esc(project.status)}">${esc(statusLabel(project.status))}</span></strong><p>Start: ${formatDate(project.start_date)}<br>Abgabe: ${formatDate(project.due_date)}</p><p>Projektbudget: ${formatCHF(project.budget_rappen || 0)}</p></div></article>
     </div>
+    <section class="project-finances" aria-label="Projektfinanzen"><h4>Finanzstand</h4><div class="project-money-grid"><div data-project-money="paid"><span>Bezahlt erfasst</span><strong>${formatCHF(sum(["paid"]))}</strong></div><div data-project-money="open"><span>Ausstehend</span><strong>${formatCHF(sum(["sent", "overdue"]))}</strong></div><div data-project-money="draft"><span>Entwürfe · nicht fällig</span><strong>${formatCHF(sum(["draft"]))}</strong></div></div></section>
+    <section class="project-documents"><div class="panel-head"><div><h4>Vereinbarung · Offerten</h4><p>${accepted.length ? `${accepted.length} Offerte(n) angenommen` : "Noch keine angenommene Offerte"}</p></div><button class="secondary-button" data-create="offer" data-project-id="${esc(project.id)}">Offerte</button></div>
+    ${offers.map(item => `<article class="workspace-action"><div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span><strong>${esc(item.offer_number)} · ${esc(item.title)}</strong><small>${formatCHF(item.total_rappen)} · gültig bis ${formatDate(item.valid_until)}</small></div>${offerActions(item)}</article>`).join("") || '<p class="document-empty">Noch keine Offerte verknüpft. Bereite die Leistungen für diesen Kunden vor.</p>'}</section>
+    <section class="project-documents"><div class="panel-head"><div><h4>Rechnungen</h4><p>Dokumente und Zahlungsstatus zu diesem Projekt</p></div><button class="primary-action" data-create="invoice" data-project-id="${esc(project.id)}">Rechnung <span aria-hidden="true">+</span></button></div>
+    ${invoices.map(item => `<article class="workspace-action"><div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span><strong>${esc(item.invoice_number)}</strong><small>${formatCHF(item.total_rappen)} · ${item.status === "draft" ? "Entwurf, noch nicht fällig" : `fällig ${formatDate(item.due_date)}`}</small></div>${invoiceActions(item)}</article>`).join("") || '<p class="document-empty">Noch keine Rechnung verknüpft.</p>'}</section>
   </section>`;
 }
 
 function renderProjects() {
   const all = state.data.projects;
   const items = filtered(all.filter((item) => state.filter === "all" || item.status === state.filter), ["title", "description"]);
-  if (!all.length) return `<section class="view">${emptyState("From idea to frame.", "Lege das erste Projekt an und halte Status, Kunde und Budget im Blick.", "project")}</section>`;
+  if (!all.length) return `<section class="view">${emptyState("Noch keine Projekte", "Lege das erste Projekt an und halte Status, Kunde und Budget im Blick.", "project")}</section>`;
   const selected = items.find((item) => item.id === state.selectedProjectId) || items[0] || null;
   if (selected) state.selectedProjectId = selected.id;
-  const rows = items.map((item) => `<tr class="${item.id === state.selectedProjectId ? "is-selected" : ""}"><td><button class="project-record" type="button" data-project-focus="${esc(item.id)}" aria-pressed="${String(item.id === state.selectedProjectId)}"><strong>${esc(item.title)}</strong><small>${esc(item.customer?.company || "Ohne Kunde")}</small></button></td><td><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></td><td>${formatDate(item.due_date)}</td><td>${formatCHF(item.budget_rappen || 0)}</td><td><div class="table-actions">${actionIconButton("edit", "Bearbeiten", `data-edit="project" data-id="${esc(item.id)}"`)}${actionIconButton("trash", `Projekt löschen: ${item.title}`, `data-delete-record="project" data-id="${esc(item.id)}"`, "is-danger")}</div></td></tr>`).join("");
-  const cards = items.map((item) => `<article class="mobile-card ${item.id === state.selectedProjectId ? "is-selected" : ""}"><div><button class="project-record" type="button" data-project-focus="${esc(item.id)}" aria-pressed="${String(item.id === state.selectedProjectId)}"><strong>${esc(item.title)}</strong><small>${esc(item.customer?.company || "Ohne Kunde")} · ${formatDate(item.due_date)}</small></button><div class="table-actions">${actionIconButton("edit", "Bearbeiten", `data-edit="project" data-id="${esc(item.id)}"`)}${actionIconButton("trash", `Projekt löschen: ${item.title}`, `data-delete-record="project" data-id="${esc(item.id)}"`, "is-danger")}</div></div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></article>`).join("");
-  return `<section class="view"><div class="project-view-intro"><div><span class="kicker">PROJEKTE</span><h2>One project.<br><em>One clear picture.</em></h2></div><p>Jede Produktion erhält ihren eigenen Canvas. Sichtbar bleibt nur, was als Nächstes relevant ist: Kunde, Status und Geldfluss.</p></div>${toolbar("project", "Projekte durchsuchen …", [["all","Alle"],["planning","Planung"],["active","Aktiv"],["completed","Abgeschlossen"]])}${selected ? renderProjectCanvas(selected) : `<div class="empty-state"><h3>Keine Projekte in diesem Filter.</h3><p>Wähle einen anderen Status oder passe die Suche an.</p></div>`}<div class="project-register"><div class="panel-head"><h3>PROJEKTREGISTER</h3><span>${items.length} ${items.length === 1 ? "Projekt" : "Projekte"}</span></div><table class="data-table"><thead><tr><th>Projekt</th><th>Status</th><th>Deadline</th><th>Budget</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list">${cards}</div></div></section>`;
+  const rows = items.map((item) => `<tr class="${item.id === state.selectedProjectId ? "is-selected" : ""}"><td><button class="project-record" type="button" data-project-focus="${esc(item.id)}" aria-pressed="${String(item.id === state.selectedProjectId)}"><strong>${esc(item.title)}</strong><small>${esc(customerLabel(item.customer))}</small></button></td><td><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></td><td>${formatDate(item.due_date)}</td><td>${formatCHF(item.budget_rappen || 0)}</td><td><div class="table-actions">${actionIconButton("edit", "Bearbeiten", `data-edit="project" data-id="${esc(item.id)}"`)}${actionIconButton("trash", `Projekt löschen: ${item.title}`, `data-delete-record="project" data-id="${esc(item.id)}"`, "is-danger")}</div></td></tr>`).join("");
+  const cards = items.map((item) => `<article class="mobile-card ${item.id === state.selectedProjectId ? "is-selected" : ""}"><div><button class="project-record" type="button" data-project-focus="${esc(item.id)}" aria-pressed="${String(item.id === state.selectedProjectId)}"><strong>${esc(item.title)}</strong><small>${esc(customerLabel(item.customer))} · ${formatDate(item.due_date)}</small></button><div class="table-actions">${actionIconButton("edit", "Bearbeiten", `data-edit="project" data-id="${esc(item.id)}"`)}${actionIconButton("trash", `Projekt löschen: ${item.title}`, `data-delete-record="project" data-id="${esc(item.id)}"`, "is-danger")}</div></div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></article>`).join("");
+  return `<section class="view">${toolbar("project", "Projekte durchsuchen …", [["all","Alle"],["planning","Planung"],["active","Aktiv"],["completed","Abgeschlossen"]])}${selected ? `<label class="project-picker"><span>Projekt auswählen</span><select data-project-picker>${items.map(item => `<option value="${esc(item.id)}" ${item.id === selected.id ? "selected" : ""}>${esc(item.title)} · ${esc(customerLabel(item.customer))}</option>`).join("")}</select></label>` : ""}${selected ? renderProjectCanvas(selected) : `<div class="empty-state"><h3>Keine Projekte in diesem Filter.</h3><p>Wähle einen anderen Status oder passe die Suche an.</p></div>`}<div class="project-register"><div class="panel-head"><h3>PROJEKTREGISTER</h3><span>${items.length} ${items.length === 1 ? "Projekt" : "Projekte"}</span></div><table class="data-table"><thead><tr><th>Projekt</th><th>Status</th><th>Deadline</th><th>Budget</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list">${cards}</div></div></section>`;
 }
 
 function invoiceActions(invoice) {
@@ -292,17 +284,23 @@ function invoiceActions(invoice) {
 function renderInvoices() {
   const all = state.data.invoices;
   const items = filtered(all.filter((item) => state.filter === "all" || item.status === state.filter), ["invoice_number"]);
-  if (!all.length) return `<section class="view">${emptyState("Ready to invoice.", "Erstelle deine erste HEAV-Rechnung als PDF und sende sie direkt an den Kunden.", "invoice")}</section>`;
-  const rows = items.map((item) => `<tr><td><strong>${esc(item.invoice_number)}</strong><small>${formatDate(item.issue_date)} · ${item.is_legacy ? "Historisch archiviert" : esc(formatReference(item.payment_reference))}</small></td><td>${esc(item.customer?.company || "Ohne Kunde")}</td><td><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></td><td><strong>${formatCHF(item.total_rappen)}</strong><small>fällig ${formatDate(item.due_date)}</small></td><td>${invoiceActions(item)}</td></tr>`).join("");
-  const cards = items.map((item) => `<article class="mobile-card"><div><strong>${esc(item.invoice_number)} · ${formatCHF(item.total_rappen)}</strong><small>${esc(item.customer?.company || "Ohne Kunde")} · fällig ${formatDate(item.due_date)}</small>${invoiceActions(item)}</div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></article>`).join("");
+  if (!all.length) return `<section class="view">${emptyState("Noch keine Rechnungen", "Erstelle deine erste HEAV-Rechnung als PDF und sende sie direkt an den Kunden.", "invoice")}</section>`;
+  const rows = items.map((item) => `<tr><td><strong>${esc(item.invoice_number)}</strong><small>${formatDate(item.issue_date)} · ${item.is_legacy ? "Historisch archiviert" : esc(formatReference(item.payment_reference))}</small></td><td>${esc(customerLabel(item.customer))}</td><td><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></td><td><strong>${formatCHF(item.total_rappen)}</strong><small>fällig ${formatDate(item.due_date)}</small></td><td>${invoiceActions(item)}</td></tr>`).join("");
+  const cards = items.map((item) => `<article class="mobile-card"><div><strong>${esc(item.invoice_number)} · ${formatCHF(item.total_rappen)}</strong><small>${esc(customerLabel(item.customer))} · fällig ${formatDate(item.due_date)}</small>${invoiceActions(item)}</div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></article>`).join("");
   return `<section class="view">${toolbar("invoice", "Rechnungen durchsuchen …", [["all","Alle"], ...["draft","sent","paid","overdue","cancelled"].map((status) => [status,statusLabel(status)])])}<table class="data-table"><thead><tr><th>Rechnung</th><th>Kunde</th><th>Status</th><th>Total</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list">${cards}</div></section>`;
 }
 
+function offerActions(offer) {
+  return `<div class="table-actions">${["draft", "sent"].includes(offer.status) ? actionIconButton("paper-plane", offer.status === "draft" ? "Offerte per E-Mail senden" : "Offerte erneut per E-Mail senden", `data-send-offer="${esc(offer.id)}"`) : ""}${actionIconButton("link", "Link kopieren", `data-copy-offer="${esc(offer.id)}"`)}</div>`;
+}
 function renderOffers() {
   const all = state.data.offers || [];
-  if (!all.length) return `<section class="view">${emptyState("Offerte erstellen.", "Erstelle eine Offerte, kopiere danach ihren geschützten Kundenportal-Link und teile ihn mit deinem Kunden.", "offer")}</section>`;
-  const rows = all.map((offer) => `<tr><td><strong>${esc(offer.offer_number)}</strong><small>${esc(offer.title)} · gültig bis ${formatDate(offer.valid_until)}</small></td><td>${esc(offer.customer?.company || customerLabel(state.data.customers.find((customer) => customer.id === offer.customer_id)))}</td><td><span class="status ${esc(offer.status)}">${esc(statusLabel(offer.status))}</span></td><td><strong>${formatCHF(offer.total_rappen)}</strong></td><td><div class="table-actions">${["draft", "sent"].includes(offer.status) ? actionIconButton("paper-plane", offer.status === "draft" ? "Offerte per E-Mail senden" : "Offerte erneut per E-Mail senden", `data-send-offer="${esc(offer.id)}"`) : ""}${actionIconButton("link", "Link kopieren", `data-copy-offer="${esc(offer.id)}"`)}</div></td></tr>`).join("");
-  return `<section class="view">${toolbar("offer", "Offerten durchsuchen …", [["all", "Alle"], ["draft", "Entwürfe"], ["sent", "Offen"], ["accepted", "Angenommen"], ["expired", "Abgelaufen"]])}<table class="data-table"><thead><tr><th>Offerte</th><th>Kunde</th><th>Status</th><th>Total</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table></section>`;
+  if (!all.length) return `<section class="view">${emptyState("Noch keine Offerte", "Erstelle eine Offerte für deinen Kunden und teile sie über das geschützte Portal.", "offer")}</section>`;
+  const items = filtered(all.filter(item => state.filter === "all" || item.status === state.filter), ["offer_number", "title"]);
+  const customer = item => customerLabel(state.data.customers.find(customer => customer.id === item.customer_id));
+  const rows = items.map(item => `<tr><td><strong>${esc(item.offer_number)}</strong><small>${esc(item.title)} · gültig bis ${formatDate(item.valid_until)}</small></td><td>${esc(customer(item))}</td><td><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></td><td><strong>${formatCHF(item.total_rappen)}</strong></td><td>${offerActions(item)}</td></tr>`).join("");
+  const cards = items.map(item => `<article class="mobile-card offer-card"><div><strong>${esc(item.offer_number)}</strong><small>${esc(item.title)}</small><small>${esc(customer(item))} · gültig bis ${formatDate(item.valid_until)}</small><p class="record-amount">${formatCHF(item.total_rappen)}</p>${offerActions(item)}</div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></article>`).join("");
+  return `<section class="view">${toolbar("offer", "Offerten durchsuchen …", [["all", "Alle"], ["draft", "Entwürfe"], ["sent", "Offen"], ["accepted", "Angenommen"], ["declined", "Abgelehnt"], ["expired", "Abgelaufen"]])}${items.length ? `<table class="data-table"><thead><tr><th>Offerte</th><th>Kunde</th><th>Status</th><th>Total</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list">${cards}</div>` : '<p class="no-results" role="status">Keine Offerten gefunden. Passe Suche oder Status an.</p>'}</section>`;
 }
 function renderPortalRequests() {
   const all = state.data.portalRequests || [];
@@ -315,12 +313,12 @@ function renderPortalRequests() {
   if (!all.length) return `<section class="view"><div class="empty-state"><h3>Keine Portal-Anfragen.</h3><p>Neue Anfragen aus dem Kundenportal erscheinen hier.</p></div></section>`;
   const rows = items.map((item) => `<tr><td><strong>${esc(item.company || item.contact_name)}</strong><small>${esc(item.contact_name)} · ${formatDate(item.created_at?.slice(0,10))}</small></td><td>${esc(item.email)}</td><td>${esc(item.phone || "–")}</td><td><small>${esc(item.message || "–")}</small></td><td>${actions(item)}</td></tr>`).join("");
   const cards = items.map((item) => `<article class="mobile-card portal-request-card"><div><strong>${esc(item.company || item.contact_name)}</strong><small>${esc(item.contact_name)} · ${esc(item.email)}</small>${item.phone ? `<small>${esc(item.phone)}</small>` : ""}${item.message ? `<p>${esc(item.message)}</p>` : ""}${actions(item)}</div><span class="status ${esc(item.status === "pending" ? "draft" : item.status === "accepted" ? "paid" : "cancelled")}">${esc(item.status === "pending" ? "Offen" : item.status === "accepted" ? "Akzeptiert" : "Abgelehnt")}</span></article>`).join("");
-  return `<section class="view"><div class="hero-row"><h2>Neue Zugänge,<br><em>klar geprüft.</em></h2><p>Beim Akzeptieren wird automatisch ein Kundenprofil erstellt. Der Portalzugang wird erst mit der anschliessenden Einladung freigeschaltet.</p></div>${filterToolbar("Anfragen durchsuchen …", [["all","Alle"],["pending","Offen"],["accepted","Akzeptiert"],["declined","Abgelehnt"]])}<table class="data-table"><thead><tr><th>Anfrage</th><th>E-Mail</th><th>Telefon</th><th>Nachricht</th><th>Aktion</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list portal-request-cards">${cards}</div></section>`;
+  return `<section class="view"><div class="hero-row"><h2>Portal-Anfragen prüfen</h2><p>Beim Akzeptieren wird automatisch ein Kundenprofil erstellt. Der Portalzugang wird erst mit der anschliessenden Einladung freigeschaltet.</p></div>${filterToolbar("Anfragen durchsuchen …", [["all","Alle"],["pending","Offen"],["accepted","Akzeptiert"],["declined","Abgelehnt"]])}<table class="data-table"><thead><tr><th>Anfrage</th><th>E-Mail</th><th>Telefon</th><th>Nachricht</th><th>Aktion</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list portal-request-cards">${cards}</div></section>`;
 }
 
 function renderSettings() {
   const settings = state.data.settings || {};
-  return `<section class="view"><div class="hero-row"><h2>Business,<br><em>set clearly.</em></h2><p>Diese Angaben erscheinen auf deinen Rechnungen und in den Rechnungs-E-Mails. Ohne MWST-Nummer berechnet das System automatisch keine MWST.</p></div><div class="settings-grid"><article class="settings-card"><h3>Rechnungsabsender</h3><p>Rechtliche und finanzielle Angaben für alle PDF-Rechnungen.</p><div class="settings-list"><div><span>Firma</span><strong>${esc(settings.company_name || "HEAV")}</strong></div><div><span>Inhaber</span><strong>${esc(settings.owner_name || "Michias Tegegne")}</strong></div><div><span>E-Mail</span><strong>${esc(settings.email || "hello@heav.ch")}</strong></div><div><span>MWST</span><strong>${esc(settings.vat_number || "Nicht MWST-pflichtig")}</strong></div><div><span>IBAN</span><strong>${esc(settings.iban || "Noch offen")}</strong></div></div><button class="primary-action" data-create="settings" style="margin-top:24px">Angaben bearbeiten</button></article><article class="settings-card"><h3>Systemstatus</h3><p>Der Adminbereich nutzt einen getrennten, geschützten Backend-Zugang.</p><div class="settings-list"><div><span>Modus</span><strong>Produktion</strong></div><div><span>Datenbank</span><strong>Supabase RLS</strong></div><div><span>Rechnungsversand</span><strong>billing@heav.ch</strong></div><div><span>Website</span><strong>heav.ch</strong></div></div></article></div></section>`;
+  return `<section class="view"><div class="hero-row"><h2>Dein Unternehmen</h2><p>Diese Angaben erscheinen auf deinen Rechnungen und in den Rechnungs-E-Mails. Ohne MWST-Nummer berechnet das System automatisch keine MWST.</p></div><div class="settings-grid"><article class="settings-card"><h3>Rechnungsabsender</h3><p>Rechtliche und finanzielle Angaben für alle PDF-Rechnungen.</p><div class="settings-list"><div><span>Firma</span><strong>${esc(settings.company_name || "HEAV")}</strong></div><div><span>Inhaber</span><strong>${esc(settings.owner_name || "Michias Tegegne")}</strong></div><div><span>E-Mail</span><strong>${esc(settings.email || "hello@heav.ch")}</strong></div><div><span>MWST</span><strong>${esc(settings.vat_number || "Nicht MWST-pflichtig")}</strong></div><div><span>IBAN</span><strong>${esc(settings.iban || "Noch offen")}</strong></div></div><button class="primary-action" data-create="settings" style="margin-top:24px">Angaben bearbeiten</button></article><article class="settings-card"><h3>Systemstatus</h3><p>Der Adminbereich nutzt einen getrennten, geschützten Backend-Zugang.</p><div class="settings-list"><div><span>Modus</span><strong>Produktion</strong></div><div><span>Datenbank</span><strong>Supabase RLS</strong></div><div><span>Rechnungsversand</span><strong>billing@heav.ch</strong></div><div><span>Website</span><strong>heav.ch</strong></div></div></article></div></section>`;
 }
 
 const renderers = { dashboard: renderDashboard, customers: renderCustomers, projects: renderProjects, invoices: renderInvoices, offers: renderOffers, settings: renderSettings, "portal-requests": renderPortalRequests };
@@ -340,7 +338,21 @@ function syncTopbarAction() {
   topbarCreate.setAttribute("aria-label", label);
   topbarCreate.innerHTML = `${label} <span aria-hidden="true">+</span>`;
 }
-function render() { title.textContent = viewNames[state.view]; syncTopbarAction(); content.innerHTML = renderers[state.view](); content.focus({ preventScroll: true }); }
+function financeNavigation() {
+  return `<nav class="finance-nav" aria-label="Finanzen">${[["invoices", "Rechnungen"], ["offers", "Offerten"]].map(([view, label]) => `<button type="button" data-view="${view}" ${state.view === view ? 'aria-current="page"' : ''}>${label}</button>`).join("")}</nav>`;
+}
+function render() {
+  title.textContent = viewNames[state.view];
+  syncTopbarAction();
+  const finance = ["invoices", "offers"].includes(state.view);
+  content.innerHTML = (finance ? financeNavigation() : "") + renderers[state.view]();
+  document.querySelectorAll(".nav-link,.bottom-link").forEach((item) => {
+    const active = item.dataset.view === state.view || (finance && item.dataset.view === "invoices");
+    item.classList.toggle("is-active", active);
+    if (active) item.setAttribute("aria-current", "page"); else item.removeAttribute("aria-current");
+  });
+  content.focus({ preventScroll: true });
+}
 async function refresh() { state.data = await adapter.loadAll(); render(); }
 function navigationFocusable() { return [...document.querySelectorAll("#sidebar a[href],#sidebar button:not([disabled])")].filter((element) => element.getClientRects().length); }
 function setNavigationOpen(open, { restoreFocus = true } = {}) {
@@ -348,6 +360,7 @@ function setNavigationOpen(open, { restoreFocus = true } = {}) {
   shell.classList.toggle("nav-open", isOpen);
   navMenuButton.setAttribute("aria-expanded", String(isOpen));
   workspace.inert = isOpen;
+  document.querySelector(".bottom-nav").inert = isOpen;
   if (isOpen) {
     navRestoreFocus = document.activeElement;
     requestAnimationFrame(() => document.querySelector(".nav-link.is-active")?.focus());
@@ -573,7 +586,7 @@ content.addEventListener("click", async (event) => {
   const create = event.target.closest("[data-create]"); if (create) openEditor(create.dataset.create, null, { projectId: create.dataset.projectId || "" });
   const view = event.target.closest("[data-view]"); if (view) setView(view.dataset.view);
   const filter = event.target.closest("[data-filter]"); if (filter) { state.filter = filter.dataset.filter; render(); }
-  const projectFocus = event.target.closest("[data-project-focus]"); if (projectFocus) { state.selectedProjectId = projectFocus.dataset.projectFocus; render(); document.querySelector(`[data-project-focus="${state.selectedProjectId}"]`)?.focus({ preventScroll: true }); }
+  const projectFocus = event.target.closest("[data-project-focus]"); if (projectFocus) { state.selectedProjectId = projectFocus.dataset.projectFocus; render(); document.querySelector(".project-canvas")?.focus(); }
   const dashboardProjectFocus = event.target.closest("[data-dashboard-project-focus]"); if (dashboardProjectFocus) { state.selectedProjectId = dashboardProjectFocus.dataset.dashboardProjectFocus; setView("projects"); }
   const edit = event.target.closest("[data-edit]"); if (edit) { const collections = { customer: state.data.customers, project: state.data.projects, invoice: state.data.invoices }; openEditor(edit.dataset.edit, collections[edit.dataset.edit].find((item) => item.id === edit.dataset.id)); }
   const action = event.target.closest("[data-invoice-action]"); if (action) invoiceAction(action.dataset.id, action.dataset.invoiceAction, action);
@@ -582,13 +595,27 @@ content.addEventListener("click", async (event) => {
   const copyOffer = event.target.closest("[data-copy-offer]"); if (copyOffer) await copyOfferLink(copyOffer.dataset.copyOffer, copyOffer);
   const remove = event.target.closest("[data-delete-record]"); if (remove) deleteRecord(remove.dataset.deleteRecord, remove.dataset.id, remove);
 });
+content.addEventListener("change", event => {
+  if (!event.target.matches("[data-project-picker]")) return;
+  state.selectedProjectId = event.target.value;
+  render();
+  document.querySelector("[data-project-picker]")?.focus({ preventScroll: true });
+});
 content.addEventListener("input", (event) => { if (event.target.matches("[data-search]")) { state.query = event.target.value; const position = event.target.selectionStart; render(); const next = document.querySelector("[data-search]"); next.focus(); next.setSelectionRange(position, position); } });
 dialogBody.addEventListener("click", (event) => { if (event.target.closest("[data-add-item]")) addInvoiceItem(); if (event.target.closest("[data-add-discount]")) addInvoiceItem(null, "discount"); if (event.target.closest("[data-remove-item]")) { if (document.querySelectorAll(".invoice-item").length > 1) event.target.closest(".invoice-item").remove(); updateInvoiceTotal(); } });
 dialogBody.addEventListener("input", (event) => { if (event.target.matches('[name="item_quantity"],[name="item_price"],[name="discount_value"],[name="tax_rate"]')) updateInvoiceTotal(); });
 dialogBody.addEventListener("change", (event) => { if (event.target.matches('[name="customer_id"]') && ["invoice", "offer"].includes(dialogForm.dataset.type)) { const projects = dialogForm.elements.project_id; projects.innerHTML = `<option value="">Kein Projekt</option>${projectOptions(event.target.value)}`; } });
 dialogForm.addEventListener("submit", async (event) => { const submitter = event.submitter; if (submitter?.value !== "save") return; event.preventDefault(); submitter.disabled = true; formError.textContent = ""; try { if (await saveEditor(dialogForm.dataset.type)) { dialog.close(); await refresh(); showToast("Gespeichert."); } } catch (error) { formError.textContent = error.message || "Speichern fehlgeschlagen."; } finally { submitter.disabled = false; } });
-document.addEventListener("click", (event) => { const nav = event.target.closest(".nav-link"); if (nav) setView(nav.dataset.view); if (event.target.closest("[data-open-nav]")) setNavigationOpen(true); if (event.target.closest("[data-close-nav]")) setNavigationOpen(false); const create = event.target.closest("[data-create]"); if (create && !content.contains(create)) openEditor(create.dataset.create); });
+document.addEventListener("click", (event) => { const nav = event.target.closest(".nav-link,.bottom-link"); if (nav) setView(nav.dataset.view); if (event.target.closest("[data-open-nav]")) setNavigationOpen(true); if (event.target.closest("[data-close-nav]")) setNavigationOpen(false); const create = event.target.closest("[data-create]"); if (create && !content.contains(create)) openEditor(create.dataset.create); });
 document.addEventListener("keydown", (event) => {
+  const modal = document.querySelector("dialog[open]");
+  if (modal && event.key === "Tab") {
+    const controls = [...modal.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href]')].filter(el => el.getClientRects().length);
+    const first = controls[0], last = controls.at(-1);
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    return;
+  }
   if (!shell.classList.contains("nav-open")) return;
   if (event.key === "Escape") { event.preventDefault(); setNavigationOpen(false); return; }
   if (event.key !== "Tab") return;

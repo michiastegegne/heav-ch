@@ -33,6 +33,34 @@ const status = (value) => ({ sent: "Offen", paid: "Bezahlt", overdue: "Überfäl
 const kind = (value) => ({ image: "BILD", video: "VIDEO", gallery: "GALERIE", offer: "OFFERTE", document: "DOKUMENT" })[value] || "DATEI";
 
 function empty(message) { return `<p class="empty">${esc(message)}</p>`; }
+function renderNextStep(offers, invoices, files) {
+  const target = document.querySelector("#portal-next-step");
+  if (!target) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const offer = offers.find((item) => item.status === "sent" && item.valid_until >= today);
+  const openInvoices = invoices.filter((item) => ["sent", "overdue"].includes(item.status));
+  let title = "Aktuell nichts zu bestätigen";
+  let copy = "Sobald etwas für dich bereitsteht, findest du es hier.";
+  let href = "";
+  let label = "";
+  if (offer) {
+    title = "Deine Offerte ist bereit";
+    copy = `${offer.title} · ${chf(offer.total_rappen)}`;
+    href = `#offer-${offer.id}`;
+    label = "Offerte prüfen";
+  } else if (openInvoices.length) {
+    title = "Deine Abrechnung im Blick";
+    copy = `${openInvoices.length === 1 ? "Eine Rechnung ist" : `${openInvoices.length} Rechnungen sind`} noch offen. Die Zahlungsdaten findest du im PDF.`;
+    href = "#invoices-heading";
+    label = "Rechnung ansehen";
+  } else if (files.some((file) => file.download_enabled)) {
+    title = "Dateien für dich";
+    copy = "Deine freigegebenen Dateien stehen zum Download bereit.";
+    href = "#files-heading";
+    label = "Dateien ansehen";
+  }
+  target.innerHTML = `<div><span class="eyebrow">NÄCHSTER SCHRITT</span><h2>${esc(title)}</h2><p>${esc(copy)}</p></div>${href ? `<a class="primary-button" href="${esc(href)}">${esc(label)} <span aria-hidden="true">→</span></a>` : ""}`;
+}
 function renderProjects(projects) {
   projectCount.textContent = `${projects.length} ${projects.length === 1 ? "Projekt" : "Projekte"}`;
   projectsEl.innerHTML = projects.length ? projects.map((project) => `<article class="project-card"><div><span>${esc(status(project.status))}</span><h3>${esc(project.title)}</h3><p>${esc(project.description || "Details und Delivery-Dateien werden hier bereitgestellt.")}</p></div><div class="project-meta"><span>${date(project.start_date)}</span><span>${project.due_date ? `bis ${date(project.due_date)}` : ""}</span></div></article>`).join("") : empty("Aktuell ist noch kein Projekt zugewiesen. Sobald HEAV ein Projekt freigibt, erscheint es hier.");
@@ -126,6 +154,7 @@ async function loadPortal() {
   renderInvoices(invoices.data || []);
   renderOffers(offers.data || []);
   renderFiles(files.data || []);
+  renderNextStep(offers.data || [], invoices.data || [], files.data || []);
   const suppliedName = sessionData.session.user.user_metadata?.full_name;
   if (suppliedName) reviewForm.elements.reviewer_name.value = suppliedName;
   if (memberships.length === 1) reviewCustomer.innerHTML = `<option value="${esc(memberships[0].customer_id)}">Mein Kundenkonto</option>`;

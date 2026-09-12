@@ -4,20 +4,24 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
     <meta name="robots" content="noindex,nofollow,noarchive" />
-    <meta name="theme-color" content="#090a08" />
+    <meta name="theme-color" content="#111214" />
     <title>Kundenportal – HEAV</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/portal/assets/portal.css" />
     <link rel="stylesheet" href="/portal/assets/portal-enhancements.css?v=20260909-motion" />
     <link rel="stylesheet" href="/portal/assets/portal-offers.css?v=20260910-offers" />
     <link rel="stylesheet" href="/portal/assets/portal-document-preview.css?v=20260910-embedded" />
+    <link rel="stylesheet" href="/portal/assets/client-workspace.css?v=crm-mobile-1" />
+    <link rel="stylesheet" href="/admin/assets/crm-theme.css?v=anthracite-1" />
   </head>
-  <body>
+  <body class="crm-theme">
     <div class="loading-screen" id="loading-screen" aria-live="polite"><strong>HEAV</strong><span>Portal wird geladen …</span></div>
     <div class="portal" id="portal" hidden>
       <header class="site-header"><a class="brand" href="/" aria-label="Zur HEAV Website">HEAV</a><div class="header-actions"><span class="secure-label">GESCHÜTZTES KUNDENPORTAL</span><button class="text-button" id="logout-button" type="button">Abmelden</button></div></header>
       <main>
-        <section class="portal-hero" aria-labelledby="portal-title"><span class="eyebrow">HEAV · PRIVATE DELIVERY</span><h1 id="portal-title">Everything for<br /><em>your project.</em></h1><p id="portal-intro">Deine Projekte, Dateien und Dokumente an einem geschützten Ort.</p></section>
+        <section class="portal-hero" aria-labelledby="portal-title"><span class="eyebrow">DEIN KUNDENBEREICH</span><h1 id="portal-title">Gemeinsam zum Ergebnis.</h1><p id="portal-intro">Vereinbarungen, Dateien und Rechnungen. Alles für unsere Zusammenarbeit.</p></section>
+        <section id="portal-next-step" class="portal-next-step" aria-label="Nächster Schritt"></section>
+        <nav class="portal-nav" aria-label="Projektbereiche"><a href="#projects-heading">Projekte</a><a href="#offers-heading">Offerten</a><a href="#invoices-heading">Rechnungen</a><a href="#files-heading">Dateien</a></nav>
         <section class="portal-section" aria-labelledby="projects-heading"><div class="section-head"><div><span class="eyebrow">PROJEKTE</span><h2 id="projects-heading">Aktuelle Arbeit</h2></div><span class="count" id="project-count"></span></div><div class="project-grid" id="portal-projects"></div></section>
         <section class="portal-section" aria-labelledby="offers-heading"><div class="section-head"><div><span class="eyebrow">OFFERTEN</span><h2 id="offers-heading">Deine Offerten</h2></div></div><div class="offer-list" id="portal-offers"></div></section>
         <section class="portal-section split-section"><div class="section-block" aria-labelledby="invoices-heading"><div class="section-head"><div><span class="eyebrow">RECHNUNGEN</span><h2 id="invoices-heading">Abrechnung</h2></div></div><div class="record-list" id="portal-invoices"></div></div><div class="section-block" aria-labelledby="files-heading"><div class="section-head"><div><span class="eyebrow">DELIVERY</span><h2 id="files-heading">Dateien & Dokumente</h2></div></div><div class="file-list" id="portal-files"></div></div></section>
@@ -27,6 +31,6 @@
     </div>
     <dialog class="invoice-preview-dialog" id="invoice-preview-dialog" aria-labelledby="invoice-preview-title"><section class="invoice-preview-shell"><header><div><span class="eyebrow">RECHNUNG</span><h2 id="invoice-preview-title">PDF-Vorschau</h2></div><form method="dialog"><button class="invoice-preview-close" aria-label="PDF-Vorschau schliessen" title="Schliessen">×</button></form></header><div class="invoice-preview-stage"><p class="invoice-preview-loading" id="invoice-preview-loading" role="status">PDF wird geladen …</p><iframe id="invoice-preview-frame" title="Rechnungs-PDF Vorschau"></iframe></div><footer><button class="secondary-button" id="invoice-preview-download" type="button" disabled>PDF herunterladen</button><form method="dialog"><button class="text-button" type="submit">Schliessen</button></form></footer></section></dialog>
     <dialog class="offer-accept-dialog" id="offer-accept-dialog" aria-labelledby="offer-accept-title" aria-describedby="offer-accept-copy"><form method="dialog" class="offer-accept-shell"><span class="eyebrow">VERBINDLICHE ANNAHME</span><h2 id="offer-accept-title">Offerte annehmen?</h2><p id="offer-accept-copy">Mit der Annahme bestätigst du verbindlich die aufgeführten Leistungen, Beträge und Bedingungen.</p><p class="offer-legal-copy">Der Zeitpunkt und dein Kundenportal-Konto werden bei der Annahme protokolliert.</p><footer><button class="secondary-button" value="cancel">Abbrechen</button><button class="primary-button" type="button" id="offer-accept-confirm">Offerte verbindlich annehmen <span aria-hidden="true">↗</span></button></footer></form></dialog>
-    <script type="module" src="/portal/assets/portal.js?v=20260910-offers"></script>
+    <script type="module" src="/portal/assets/portal.js?v=crm-mobile-1"></script>
   </body>
 </html>

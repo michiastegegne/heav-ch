@@ -6,7 +6,7 @@ const button = form.querySelector("button");
 const successMarkup = (title, copy) => `<span class="send-plane" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M21 3 10 14"/><path d="m21 3-7 18-4-7-7-4Z"/></svg></span><span class="send-success-copy"><strong>${title}</strong><small>${copy}</small></span><span class="send-check" aria-hidden="true">✓</span>`;
 
 if (!isBackendConfigured()) {
-  message.textContent = "Secure backend access is currently being configured.";
+  message.textContent = "Der sichere Zugang wird gerade eingerichtet.";
   form.querySelectorAll('input, button[type="submit"]').forEach((element) => {
     element.disabled = true;
   });
@@ -55,14 +55,14 @@ if (!isBackendConfigured()) {
       },
     });
     if (error) {
-      message.textContent = "Sign-in could not be started. Please try again later.";
+      message.textContent = "Die Anmeldung konnte nicht gestartet werden. Bitte versuche es später erneut.";
       button.disabled = false;
       button.classList.remove("is-loading");
       button.removeAttribute("aria-busy");
       return;
     }
     message.className = "form-message success is-dispatch-success";
-    message.innerHTML = successMarkup("Sign-in link sent", "A secure link is on its way to your inbox.");
+    message.innerHTML = successMarkup("Anmeldelink gesendet", "Prüfe dein Postfach. Dein sicherer Link ist unterwegs.");
     button.disabled = false;
     button.classList.remove("is-loading");
     button.removeAttribute("aria-busy");

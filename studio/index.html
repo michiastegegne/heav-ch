@@ -4,24 +4,26 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
     <meta name="robots" content="noindex,nofollow,noarchive" />
-    <meta name="theme-color" content="#090a08" />
+    <meta name="theme-color" content="#111214" />
     <title>Studio – HEAV</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/admin/assets/admin.css?v=20260830-discount-edit" />
     <link rel="stylesheet" href="/admin/assets/admin-enhancements.css?v=20260910-dashboard-context" />
     <link rel="stylesheet" href="/admin/assets/admin-actions.css?v=20260910-layout" />
+    <link rel="stylesheet" href="/admin/assets/workspace.css?v=20260913-mobile-workspace" />
+    <link rel="stylesheet" href="/admin/assets/crm-theme.css?v=anthracite-1" />
   </head>
-  <body>
+  <body class="crm-theme">
     <div class="loading-screen" id="loading-screen" aria-live="polite"><strong>HEAV</strong><span>Studio wird geladen …</span></div>
     <div class="admin-shell" id="admin-shell" hidden>
       <aside class="sidebar" id="sidebar" aria-label="Studio Navigation">
         <div class="sidebar-head"><a class="brand" href="/" aria-label="Zur HEAV Website">HEAV</a><button class="nav-close icon-button" type="button" aria-label="Menü schliessen" data-close-nav>×</button></div>
         <nav class="main-nav" aria-label="Studio Navigation">
           <button class="nav-link is-active" data-view="dashboard"><span>01</span>Übersicht</button>
-          <button class="nav-link" data-view="customers"><span>02</span>Kunden</button>
-          <button class="nav-link" data-view="projects"><span>03</span>Projekte</button>
-          <button class="nav-link" data-view="invoices"><span>04</span>Rechnungen</button>
-          <button class="nav-link" data-view="offers"><span>05</span>Offerten</button>
+          <button class="nav-link" data-view="projects"><span aria-hidden="true">02</span>Projekte</button>
+          <button class="nav-link" data-view="customers"><span aria-hidden="true">03</span>Kunden</button>
+          <button class="nav-link" data-view="invoices"><span aria-hidden="true">04</span>Finanzen</button>
+          <span class="nav-section-label">Verwaltung</span>
           <button class="nav-link" data-view="settings"><span>06</span>Einstellungen</button>
           <button class="nav-link" data-view="portal-requests"><span>07</span>Portal-Anfragen</button>
         </nav>
@@ -30,9 +32,15 @@
       <div class="nav-scrim" data-close-nav></div>
       <section class="workspace"><header class="topbar"><button class="menu-button icon-button" type="button" aria-label="Menü öffnen" aria-controls="sidebar" aria-expanded="false" data-open-nav>Menü</button><div><span class="kicker">HEAV STUDIO</span><h1 id="view-title">Übersicht</h1></div><button class="primary-action" type="button" data-create="invoice">Neue Rechnung <span aria-hidden="true">+</span></button></header><main id="app-content" tabindex="-1"></main></section>
     </div>
+    <nav class="bottom-nav" aria-label="Hauptnavigation">
+      <button class="bottom-link" data-view="dashboard" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg>Übersicht</button>
+      <button class="bottom-link" data-view="projects"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h7l2 3h9v11H3z"/></svg>Projekte</button>
+      <button class="bottom-link" data-view="customers"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M4 21v-3a8 8 0 0 1 16 0v3"/></svg>Kunden</button>
+      <button class="bottom-link" data-view="invoices"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14v18l-3-2-4 2-4-2-3 2zM9 8h6M9 12h6"/></svg>Finanzen</button>
+    </nav>
     <dialog class="editor-dialog" id="editor-dialog" aria-labelledby="dialog-title"><form method="dialog" class="dialog-shell" id="editor-form"><header><div><span class="kicker" id="dialog-kicker">NEU</span><h2 id="dialog-title">Eintrag</h2></div><button class="icon-button" value="cancel" type="submit" formnovalidate aria-label="Dialog schliessen">×</button></header><div class="dialog-body" id="dialog-body"></div><footer><p class="form-error" id="form-error" role="alert"></p><button class="secondary-button" value="cancel" type="submit" formnovalidate>Abbrechen</button><button class="primary-action" value="save" type="submit">Speichern</button></footer></form></dialog>
     <dialog class="action-confirm-dialog" id="action-confirm-dialog" aria-labelledby="action-confirm-title" aria-describedby="action-confirm-copy"><form method="dialog" class="action-confirm-shell" id="action-confirm-form"><div class="action-confirm-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M21 3 10 14"/><path d="m21 3-7 18-4-7-7-4Z"/></svg></div><div><span class="kicker" id="action-confirm-kicker">BESTÄTIGEN</span><h2 id="action-confirm-title">Aktion bestätigen</h2><p id="action-confirm-copy"></p></div><footer><button class="secondary-button" value="cancel" type="submit" formnovalidate>Abbrechen</button><button class="primary-action" id="action-confirm-button" value="confirm" type="submit">Jetzt senden <span aria-hidden="true">↗</span></button></footer></form></dialog>
     <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-    <script type="module" src="/admin/assets/app.js?v=20260910-dashboard-context"></script>
+    <script type="module" src="/admin/assets/app.js?v=20260913-mobile-workspace"></script>
   </body>
 </html>

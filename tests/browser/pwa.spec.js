@@ -11,7 +11,7 @@ async function mockLoggedOutSupabase(page) {
 test("Login zeigt nur den authentifizierten Zugang", async ({ page }) => {
   await mockLoggedOutSupabase(page);
   await page.goto(`${base}/login/`);
-  await expect(page.getByRole("button", { name: /Send sign-in link/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Anmeldelink senden/ })).toBeVisible();
   await expect(page.getByText(/Vorschau|Musterrechnung/i)).toHaveCount(0);
   await expect(page.getByRole("button", { name: /installieren/i })).toHaveCount(0);
   await expect(page.locator('link[rel="manifest"]')).toHaveCount(0);
@@ -22,7 +22,7 @@ test("Öffentliche Preview- und Demo-Parameter führen ohne Sitzung zum Login", 
   for (const query of ["preview=1", "demo=1"]) {
     await page.goto(`${base}/admin/?${query}`);
     await expect(page).toHaveURL(`${base}/login/`);
-    await expect(page.getByRole("heading", { name: /Welcome/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Dein Studio/i })).toBeVisible();
   }
 });
 

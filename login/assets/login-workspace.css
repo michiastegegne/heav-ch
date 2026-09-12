@@ -1,0 +1,49 @@
+/* Compact access surface shared in tone with the Studio workspace. */
+.login-shell,.login-card,.login-copy,#login-form,.brand,.legal { animation:none!important; }
+html,body { background:#f5f5f0; color:#20241e; }
+body { background-image:none; }
+.login-shell { padding:24px max(24px,calc((100vw - 1180px)/2)); padding-top:max(24px,env(safe-area-inset-top)); padding-bottom:max(24px,env(safe-area-inset-bottom)); overflow:visible; gap:20px; }
+.brand { display:inline-flex; align-items:center; justify-self:start; gap:14px; min-height:44px; color:#20241e; font-size:26px; }
+.brand span { padding-left:14px; border-left:1px solid #c7cec0; font:600 10px "DM Sans",Arial,sans-serif; letter-spacing:.15em; }
+.login-card { grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr); align-items:stretch; gap:0; margin:24px auto; max-width:1060px; border:1px solid #dce0d6; border-radius:20px; background:white; box-shadow:0 15px 60px #20241e08; }
+.login-copy { padding:56px 44px; border-radius:19px 0 0 19px; background:#171c16; color:#f5f7ef; display:flex; flex-direction:column; justify-content:center; }
+.login-copy .eyebrow { color:#bdcb9f; font-size:10px; letter-spacing:.12em; }
+.login-copy h1 { margin:24px 0 18px; font:600 clamp(32px,3.5vw,46px)/1.12 "DM Sans",Arial,sans-serif; letter-spacing:-.045em; }
+.login-copy p { color:#b5bfa9; font-size:15px; line-height:1.7; max-width:30ch; }
+.login-workflow { display:grid; margin-top:34px; }
+.login-workflow>span { display:grid; grid-template-columns:28px 1fr; gap:4px 12px; padding:15px 0; border-top:1px solid #ffffff18; font-size:14px; }
+.login-workflow b { grid-row:1/3; font-size:10px; color:#d7ff38; padding-top:3px; font-weight:500; }
+.login-workflow small { grid-column:2; color:#9da993; font-size:12px; }
+#login-form { border:0; padding:48px 38px; align-self:center; min-width:0; }
+.login-form-heading { margin-bottom:28px; }
+.login-form-heading .eyebrow { color:#727c65; font-size:10px; font-weight:600; letter-spacing:.12em; }
+.login-form-heading h2 { font-size:28px; font-weight:600; letter-spacing:-.035em; margin:10px 0; }
+.login-form-heading p { color:#68705f; font-size:13px; line-height:1.6; margin:0; }
+#login-form label { margin-bottom:14px; gap:10px; }
+#login-form label span { font-size:12px; color:#434c3a; text-transform:none; letter-spacing:0; font-weight:600; }
+#login-form input { background:#fafbf7; color:#20241e; border:1px solid #cbd2c1; border-radius:9px; min-height:50px; padding:12px 14px; font-size:16px; line-height:1.4; }
+#login-form input::placeholder { color:#8b9481; }
+#login-form button { width:100%; display:flex; justify-content:space-between; align-items:center; gap:12px; min-height:50px; padding:13px 17px; border:1px solid #20271c; border-radius:9px; background:#20271c; color:#f7f8f2; font-size:14px; font-weight:600; box-shadow:none; }
+#login-form button:hover { background:#34442a; transform:none; box-shadow:none; }
+#login-form button:disabled { opacity:.6; cursor:wait; }
+.login-security { font-size:12px; line-height:1.65; color:#68705f; }
+#login-message:empty { display:none; }
+#login-message { margin:16px 0; color:#8b3525; font-size:13px; }
+.login-access { margin:16px 0 0; }
+.login-access a { display:inline-flex; align-items:center; min-height:44px; color:#434c3a; text-decoration:underline; text-underline-offset:4px; }
+.legal { color:#747d6b; font-size:11px; letter-spacing:0; text-align:center; }
+button:focus-visible,a:focus-visible,input:focus-visible { outline:3px solid #7d914b; outline-offset:3px; }
+@media(max-width:760px) {
+ .login-shell { padding:16px; padding-top:max(16px,env(safe-area-inset-top)); padding-bottom:max(16px,env(safe-area-inset-bottom)); gap:12px; }
+ .login-card { display:block; margin:0 auto; max-width:460px; border-radius:16px; }
+ .login-copy { padding:26px 24px; border-radius:15px 15px 0 0; }
+ .login-copy h1 { font-size:32px; margin:16px 0 10px; }
+ .login-copy p { font-size:13px; line-height:1.6; margin:0; max-width:32ch; }
+ .login-workflow { display:none; }
+ #login-form { padding:26px 24px; }
+ .login-form-heading { margin-bottom:20px; }
+ .login-form-heading h2 { font-size:24px; margin:0 0 8px; }
+ .login-form-heading .eyebrow { display:none; }
+ .legal { margin:8px 0 0; }
+}
+@media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none!important; transition:none!important; } }
