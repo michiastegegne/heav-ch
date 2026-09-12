@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 
+import { assertDarkTheme } from './theme-assertions.js';
 const base = "http://127.0.0.1:4180";
 
 async function assertHealthy(page, errors) {
@@ -13,7 +14,7 @@ async function assertHealthy(page, errors) {
   expect(errors).toEqual([]);
 }
 
-async function mockStudioSupabase(page) {
+async function mockStudioSupabase(page, overrides = {}) {
   await page.addInitScript(() => localStorage.setItem("__heavStudioSession", "1"));
   await page.route("https://bkazlpqjvbuhwmjcwexn.supabase.co/functions/v1/invoice-document", async (route) => {
     await route.fulfill({ status: 200, contentType: "application/pdf", body: "%PDF-1.4\\n% HEAV test PDF\\n%%EOF" });
@@ -46,6 +47,7 @@ async function mockStudioSupabase(page) {
         customer_portal_memberships: [],
         customer_portal_requests: [{ id: "r1", company: "Studio Nord", contact_name: "Lea Meier", email: "lea@studio-nord.example", phone: "+41 79 123 45 67", message: "Zugang für die Filmabnahme 2026.", status: "pending", created_at: "2026-09-09T10:00:00Z" }]
       };
+      Object.assign(store, ${JSON.stringify(overrides)});
       const result = (data) => ({ data, error: null });
       export function createClient() {
         return {
@@ -106,6 +108,154 @@ async function mockStudioSupabase(page) {
   });
 }
 
+test("Workspace: Privatkunden bleiben in Projekten und Rechnungen erkennbar", async ({ page }) => {
+  const customer = { id: 'c-private', company: '', contact_name: 'Noah Frei' };
+  await mockStudioSupabase(page, {
+    customers: [customer],
+    projects: [{ id: 'p-private', customer_id: customer.id, customer, title: 'Privates Shooting', status: 'active' }],
+    invoices: [{ id: 'i-private', customer_id: customer.id, customer, invoice_number: 'PRIVATE-001', status: 'draft', total_rappen: 10000, invoice_items: [] }],
+    offers: []
+  });
+  await page.goto(`${base}/studio/`);
+  for (const view of ['projects', 'invoices']) {
+    await page.locator(`.nav-link[data-view="${view}"]`).click();
+    await expect(page.locator('.data-table tbody tr')).toContainText('Noah Frei');
+    await expect(page.locator('.mobile-card-list')).toContainText('Noah Frei');
+    await expect(page.locator('#app-content')).not.toContainText('Ohne Kunde');
+  }
+});
+
+test("Workspace: mobile bottom navigation opens finance and every primary route", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 360, height: 800 }, isMobile: true, hasTouch: true });
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  await expect(page.locator('#admin-shell')).toBeVisible();
+  const nav = page.getByRole('navigation', { name: 'Hauptnavigation' });
+  await expect(nav).toBeVisible();
+  for (const [label, heading] of [['Projekte', 'Projekte'], ['Kunden', 'Kunden'], ['Finanzen', 'Rechnungen'], ['Übersicht', 'Übersicht']]) {
+    const button = nav.getByRole('button', { name: label, exact: true });
+    await button.click();
+    await expect(page.locator('#view-title')).toHaveText(heading);
+    await expect(button).toHaveAttribute('aria-current', 'page');
+    const box = await button.boundingBox();
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    await assertHealthy(page, []);
+  }
+  await nav.getByRole('button', { name: 'Finanzen', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Finanzen' }).getByRole('button', { name: 'Offerten', exact: true }).click();
+  await expect(page.locator('#view-title')).toHaveText('Offerten');
+  await expect(nav.getByRole('button', { name: 'Finanzen' })).toHaveAttribute('aria-current', 'page');
+  await page.close();
+});
+
+for (const width of [360, 390, 768, 1440]) {
+  test(`Workspace: populated routes fit ${width}px without clipped content`, async ({ browser }) => {
+    const page = await browser.newPage({ viewport: { width, height: 900 }, isMobile: width < 821, hasTouch: width < 821 });
+    await mockStudioSupabase(page);
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+    await page.goto(`${base}/studio/`);
+    await expect(page.getByRole('heading', { name: 'Dein Arbeitsbereich', exact: true })).toBeVisible();
+    expect((await page.locator('.dashboard-intro').boundingBox()).height).toBeLessThan(100);
+    await expect(page.locator('.dashboard-metrics')).toHaveCount(0);
+    const navigate = async (view) => {
+      if (width < 821) await page.getByRole('button', { name: 'Menü öffnen' }).click();
+      await page.locator(`.nav-link[data-view="${view}"]`).click();
+    };
+    for (const view of ['dashboard', 'projects', 'customers', 'invoices', 'offers', 'portal-requests', 'settings']) {
+      if (view === 'offers') await page.getByRole('navigation', { name: 'Finanzen' }).getByRole('button', { name: 'Offerten' }).click();
+      else await navigate(view);
+      if (width < 821 && ['projects', 'customers', 'invoices', 'offers', 'portal-requests'].includes(view)) {
+        await expect(page.locator('.mobile-card-list').first()).toBeVisible();
+        expect(await page.locator('.mobile-card-list button:visible').count()).toBeGreaterThan(0);
+      }
+      const clipping = await page.locator('#app-content').evaluate(root => [...root.querySelectorAll('*')].filter(e => {
+        if (!e.getClientRects().length || e.closest('.sr-only')) return false;
+        const b = e.getBoundingClientRect();
+        return b.width > 0 && (b.left < -1 || b.right > innerWidth + 1 || (e.clientWidth > 0 && e.scrollWidth > e.clientWidth + 2));
+      }).map(e => ({ tag: e.tagName, class: e.className, text: e.textContent.slice(0, 60), width: e.clientWidth, scroll: e.scrollWidth })));
+      expect(clipping, `${view} at ${width}`).toEqual([]);
+      await assertDarkTheme(page);
+      await assertHealthy(page, errors);
+      await page.screenshot({ path: `qa/workspace-${view}-${width}.png`, fullPage: true });
+    }
+    await page.close();
+  });
+}
+
+test("Workspace: project documents distinguish drafts from payment and retain create context", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true });
+  await mockStudioSupabase(page, { invoices: [
+    { id:'draft', customer_id:'c1', project_id:'p1', invoice_number:'DRAFT-001', status:'draft', total_rappen:10000, invoice_items:[] },
+    { id:'paid', customer_id:'c1', project_id:'p1', invoice_number:'PAID-001', status:'paid', total_rappen:20000, invoice_items:[] },
+    { id:'open', customer_id:'c1', project_id:'p1', invoice_number:'OPEN-001', status:'sent', total_rappen:30000, invoice_items:[] }
+  ] });
+  await page.goto(`${base}/studio/`);
+  await expect(page.locator('.dashboard-money')).toContainText('CHF 300.00');
+  await page.getByRole('button', { name: 'Projekt-Canvas öffnen' }).click();
+  const canvas = page.locator('.project-canvas');
+  await expect(canvas.locator('[data-project-money="paid"]')).toContainText('CHF 200.00');
+  await expect(canvas.locator('[data-project-money="open"]')).toContainText('CHF 300.00');
+  await expect(canvas.locator('[data-project-money="draft"]')).toContainText('CHF 100.00');
+  await expect(canvas).toContainText('Vereinbarung');
+  await expect(canvas).toContainText('HEAV-O-2026-001');
+  await expect(canvas).toContainText('DRAFT-001');
+  await canvas.getByRole('button', { name: 'Offerte per E-Mail senden' }).click();
+  await expect(page.locator('#action-confirm-dialog')).toContainText('anna@nordlicht.example');
+  await page.keyboard.press('Escape');
+  await expect(canvas.getByRole('button', { name: 'Offerte per E-Mail senden' })).toBeFocused();
+  await page.getByLabel('Projekt auswählen').selectOption('p2');
+  await expect(canvas).toContainText('Campaign Content');
+  for (const type of ['offer', 'invoice']) {
+    const trigger = canvas.locator(`[data-create="${type}"]`);
+    await trigger.click();
+    await expect(page.locator('select[name="customer_id"]')).toHaveValue('c2');
+    await expect(page.locator('select[name="project_id"]')).toHaveValue('p2');
+    await page.keyboard.press('Escape');
+    await expect(trigger).toBeFocused();
+  }
+  await assertHealthy(page, []);
+  await page.close();
+});
+
+for (const width of [360, 390, 768, 1440]) {
+  test(`Workspace: editors fit ${width}px with accessible focus and safe dismissal`, async ({ browser }) => {
+    const page = await browser.newPage({ viewport: { width, height: 844 }, isMobile: width < 821, hasTouch: width < 821 });
+    await mockStudioSupabase(page);
+    await page.goto(`${base}/studio/`);
+    const navigate = async view => {
+      if (width < 821) await page.getByRole('button', { name:'Menü öffnen' }).click();
+      await page.locator(`.nav-link[data-view="${view}"]`).click();
+    };
+    for (const [view, type] of [['customers','customer'], ['projects','project'], ['invoices','invoice'], ['offers','offer'], ['settings','settings']]) {
+      if (view === 'offers') await page.getByRole('navigation', { name:'Finanzen' }).getByRole('button', { name:'Offerten' }).click();
+      else await navigate(view);
+      const trigger = page.locator(`[data-create="${type}"]:visible`).first();
+      await trigger.click();
+      const modal = page.locator('#editor-dialog');
+      await expect(modal).toBeVisible();
+      await assertDarkTheme(page);
+      const bounds = await modal.boundingBox();
+      if (width < 821) { expect(bounds.x).toBe(0); expect(bounds.y).toBe(0); expect(bounds.width).toBe(width); expect(bounds.height).toBe(844); }
+      const metrics = await modal.evaluate(el => ({ inside:el.contains(document.activeElement), clipped:[...el.querySelectorAll('*')].filter(e => e.clientWidth && e.scrollWidth > e.clientWidth + 2).map(e => e.className) }));
+      expect(metrics.inside).toBe(true); expect(metrics.clipped).toEqual([]);
+      await modal.getByRole('button', { name:'Speichern', exact:true }).focus();
+      await page.keyboard.press('Tab');
+      await expect(modal.getByRole('button', { name:'Dialog schliessen' })).toBeFocused();
+      await page.keyboard.press('Shift+Tab');
+      await expect(modal.getByRole('button', { name:'Speichern', exact:true })).toBeFocused();
+      const controls = await modal.locator('button,input,select,textarea').evaluateAll(elements => elements.filter(e => e.getClientRects().length).map(e => ({w:e.getBoundingClientRect().width,h:e.getBoundingClientRect().height})));
+      for (const b of controls) { expect(b.w).toBeGreaterThanOrEqual(44); expect(b.h).toBeGreaterThanOrEqual(44); }
+      await page.screenshot({path:`qa/workspace-editor-${type}-${width}.png`});
+      await page.keyboard.press('Escape');
+      await expect(modal).toBeHidden();
+      await expect(trigger).toBeFocused();
+    }
+    await page.close();
+  });
+}
+
 async function mockClientSupabase(page) {
   await page.route("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm", async (route) => {
     await route.fulfill({
@@ -140,8 +290,8 @@ test("Desktop: Dashboard und vollständiger Erfassungsfluss", async ({ browser }
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
   await page.goto(`${base}/admin/`);
   await expect(page.getByRole("heading", { name: "Übersicht" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Everything, in its place." })).toBeVisible();
-  await expect(page.getByText("MONEY FLOW", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dein Arbeitsbereich" })).toBeVisible();
+  await expect(page.getByText("AUSSTEHENDE ZAHLUNGEN", { exact: true })).toBeVisible();
   await expect(page.locator(".dashboard-focus").getByRole("heading", { name: "Brand Film 2026" })).toBeVisible();
   await page.getByRole("button", { name: "Projekt-Canvas öffnen" }).click();
   await expect(page.getByRole("heading", { name: "Brand Film 2026" })).toBeVisible();
@@ -406,16 +556,16 @@ test("Login: sendet einen Magic-Link nur für bestehende Benutzer und ohne Vorsc
     });
   });
   await page.goto(`${base}/login/`);
-  await expect(page).toHaveTitle("Sign in – HEAV Studio");
+  await expect(page).toHaveTitle("Anmelden – HEAV Studio");
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
   await expect(page.locator('input[type="password"]')).toHaveCount(0);
-  await page.getByLabel("Email").fill("admin@heav.ch");
-  await page.getByRole("button", { name: /Send sign-in link/ }).click();
+  await page.getByLabel("E-Mail-Adresse").fill("admin@heav.ch");
+  await page.getByRole("button", { name: /Anmeldelink senden/ }).click();
   await expect.poll(() => page.evaluate(() => window.__heavOtpPayload)).toEqual({
     email: "admin@heav.ch",
     options: { emailRedirectTo: `${base}/login/`, shouldCreateUser: false },
   });
-  await expect(page.getByText(/Sign-in link sent/)).toBeVisible();
+  await expect(page.getByText(/Anmeldelink gesendet/)).toBeVisible();
   await expect(page.locator("#login-message")).toHaveClass(/is-dispatch-success/);
   await expect(page.locator("#login-message .send-plane")).toBeVisible();
   await expect(page.locator("#login-message .send-check")).toBeVisible();
@@ -506,7 +656,8 @@ test("Studio: Offerte wird erstellt und per geschütztem Portal-Link versendet",
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   await mockStudioSupabase(page);
   await page.goto(`${base}/studio/`);
-  await page.locator('.nav-link[data-view="offers"]').click();
+  await page.locator('.nav-link[data-view="invoices"]').click();
+  await page.getByRole("navigation", { name: "Finanzen" }).getByRole("button", { name: "Offerten" }).click();
   await expect(page.getByRole("heading", { name: "Offerten" })).toBeVisible();
   await page.getByRole("button", { name: /Neue Offerte/ }).click();
   await page.locator('select[name="customer_id"]').selectOption("c1");
@@ -514,8 +665,9 @@ test("Studio: Offerte wird erstellt und per geschütztem Portal-Link versendet",
   await page.locator(".invoice-item").first().getByLabel("Leistung").fill("Schnitt");
   await page.locator(".invoice-item").first().getByLabel("Einzelpreis in CHF").fill("1200");
   await page.getByRole("button", { name: "Speichern" }).click();
-  await expect(page.getByText("Social Cutdowns")).toBeVisible();
-  await page.getByRole("button", { name: "Offerte per E-Mail senden" }).first().click();
+  const newOfferRow = page.locator(".data-table tbody tr").filter({ hasText: "Social Cutdowns" });
+  await expect(newOfferRow).toBeVisible();
+  await newOfferRow.getByRole("button", { name: "Offerte per E-Mail senden" }).click();
   await page.getByRole("button", { name: "Jetzt senden" }).click();
   await expect.poll(() => page.evaluate(() => window.__lastOfferEmail)).toMatchObject({ offerId: expect.any(String) });
   await expect(page.locator(".data-table tbody tr").first()).toContainText("Versendet");

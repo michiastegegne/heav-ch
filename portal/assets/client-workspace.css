@@ -1,0 +1,112 @@
+/* Private client workspace. Deliberately isolated from request/public pages. */
+:root { --client-paper:#f5f5f0; --client-surface:#fff; --client-ink:#20241e; --client-muted:#656b61; --client-line:#dce0d6; --portal-focus:#6b8422; }
+html, body { background:var(--client-paper); color:var(--client-ink); }
+html { scroll-behavior:auto; scroll-padding-top:86px; }
+.portal [hidden] { display:none!important; }
+.portal { padding-bottom:env(safe-area-inset-bottom); }
+.portal .site-header { background:#171c16; color:#f7f8f2; padding:12px max(24px,calc((100vw - 1120px)/2)); padding-top:max(12px,env(safe-area-inset-top)); border:0; }
+.brand { display:inline-flex; align-items:center; min-height:44px; }
+.portal .site-header .text-button { color:#f7f8f2; }
+.portal main { max-width:1120px; padding:0 24px; margin:auto; }
+.portal-hero { display:block; padding:38px 0 24px; margin:0; max-width:none; }
+.portal .eyebrow { display:block; color:var(--client-muted); font-size:10px; font-weight:600; letter-spacing:.11em; }
+.portal h1,.portal h2,.portal h3,.offer-accept-shell h2,.invoice-preview-shell>header h2 { font-family:"DM Sans",Arial,sans-serif; font-weight:600; letter-spacing:-.035em; line-height:1.2; }
+.portal-hero h1 { margin:10px 0; font-size:clamp(28px,3vw,40px); }
+.portal-hero p { margin:0; font-size:14px; line-height:1.6; max-width:60ch; color:var(--client-muted); }
+.portal-next-step { display:flex; align-items:center; justify-content:space-between; gap:24px; background:#eaf0dc; border:1px solid #d4dfbf; border-radius:16px; padding:26px; }
+.portal-next-step>div { min-width:0; }
+.portal-next-step h2 { font-size:23px; margin:9px 0; }
+.portal-next-step p { color:#526047; font-size:14px; line-height:1.5; margin:0; overflow-wrap:anywhere; }
+.portal-next-step .primary-button { flex-shrink:0; }
+.portal-nav { position:sticky; top:0; z-index:2; display:flex; gap:8px; padding:12px 0; margin:16px 0 6px; background:var(--client-paper); border-bottom:1px solid var(--client-line); }
+.portal-nav a { display:inline-flex; justify-content:center; align-items:center; min-height:44px; padding:0 16px; border-radius:9px; font-size:13px; font-weight:600; color:var(--client-ink); text-decoration:none; }
+.portal-nav a:hover,.portal-nav a:focus-visible { background:#e5e9de; }
+.portal-section { max-width:none; padding:26px 0; margin:0; border:0; }
+.portal .section-head { gap:16px; margin:0 0 18px; align-items:center; }
+.portal .section-head h2,.portal .feedback-section h2 { font-size:23px; line-height:1.2; margin:5px 0 0; }
+.portal .count { color:var(--client-muted); font-size:11px; letter-spacing:0; white-space:nowrap; }
+.project-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.project-card { min-height:190px; padding:22px; background:var(--client-surface); border:1px solid var(--client-line); border-radius:12px; }
+.project-card:hover { transform:none; box-shadow:none; border-color:var(--client-line); }
+.project-card span,.file-kind { color:#586c2d; }
+.project-card h3 { font-size:20px; line-height:1.3; margin:12px 0 10px; overflow-wrap:anywhere; }
+.project-card p,.project-meta { color:var(--client-muted); }
+.project-meta { margin-top:20px; flex-wrap:wrap; }
+.project-meta span { color:var(--client-muted); font-size:11px; letter-spacing:0; }
+.offer-card { background:var(--client-surface); border:1px solid var(--client-line); border-radius:12px; padding:24px; }
+.offer-card.is-selected { border-color:#819658; box-shadow:0 0 0 1px #819658; }
+.offer-card-head>div { min-width:0; }
+.offer-card h3 { font-size:21px; line-height:1.3; margin:8px 0; overflow-wrap:anywhere; }
+.offer-card .offer-reference,.offer-card p,.offer-card .offer-item small,.offer-legal-copy { color:var(--client-muted); line-height:1.6; }
+.offer-item { grid-template-columns:minmax(0,1fr) auto; }
+.offer-item span { overflow-wrap:anywhere; }
+.offer-item small { display:block; margin-top:5px; font-size:12px; }
+.offer-item strong { white-space:nowrap; }
+.offer-items { border-color:var(--client-line); }
+.offer-total { display:flex; align-items:baseline; font-size:14px; }
+.offer-total strong { font-size:20px; white-space:nowrap; }
+.offer-accepted { color:#446427; }
+.portal .status { border:1px solid var(--client-line); color:#535e49; background:#f1f4eb; border-radius:6px; min-width:0; padding:6px 9px; font-size:10px; letter-spacing:.03em; flex-shrink:0; }
+.portal .status.paid,.portal .status.accepted { background:#e8f0df; color:#3c5d27; border-color:#cdddc0; }
+.portal .status.overdue { background:#f9ede6; color:#8c431e; border-color:#edcbbb; }
+.split-section { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:24px; }
+.section-block { min-width:0; }
+.section-block+.section-block { margin-top:0; }
+.record-list,.file-list { border:0; display:grid; gap:10px; }
+.record,.file-row { background:var(--client-surface); border:1px solid var(--client-line); padding:18px; border-radius:12px; align-items:flex-start; flex-wrap:wrap; }
+.record>div,.file-row>div { min-width:0; flex:1 1 190px; }
+.record strong,.file-row strong { overflow-wrap:anywhere; font-size:14px; }
+.record small,.file-row small { color:var(--client-muted); overflow-wrap:anywhere; line-height:1.5; }
+.record:hover,.file-row:hover { background:var(--client-surface); }
+.file-kind { display:block; margin-bottom:8px; }
+.portal-document-actions { display:flex; flex-wrap:wrap; gap:4px 12px; margin-top:8px; }
+.text-button { display:inline-flex; align-items:center; justify-content:center; min-width:44px; min-height:44px; padding:6px 2px; color:var(--client-ink); font-size:13px; }
+.primary-button,.download-button { display:inline-flex; align-items:center; justify-content:center; gap:16px; min-height:46px; border-radius:9px; padding:11px 16px; font-size:13px; font-weight:600; text-decoration:none; box-shadow:none; line-height:1.4; }
+.primary-button { color:#f7f8f2; background:#20271c; border:1px solid #20271c; }
+.primary-button:hover { color:#f7f8f2; background:#34442a; border-color:#34442a; transform:none; box-shadow:none; }
+.download-button { color:var(--client-ink); background:transparent; border:1px solid var(--client-line); }
+.download-button:hover { background:#eaf0dc; color:var(--client-ink); border-color:#c2d2ad; transform:none; }
+.portal .empty { padding:20px; margin:0; border:1px dashed #cbd1c3; border-radius:12px; font-size:14px; color:var(--client-muted); }
+.portal .feedback-section { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:32px; background:transparent; border-top:1px solid var(--client-line); margin-top:20px; padding:30px 0; }
+.review-form { margin:0; gap:14px; }
+.review-form input,.review-form select,.review-form textarea { min-height:46px; font-size:16px; padding:12px; border:1px solid #cbd1c3; border-radius:8px; background:white; }
+.review-form textarea { min-height:110px; }
+.review-form label span { font-size:11px; letter-spacing:.03em; color:var(--client-muted); }
+.portal>footer { max-width:1120px; margin:auto; padding:24px; color:var(--client-muted); border-top:1px solid var(--client-line); }
+.offer-accept-dialog { width:min(560px,calc(100vw - 32px)); max-width:none; max-height:calc(100dvh - 32px); margin:auto; border:1px solid var(--client-line); border-radius:16px; background:var(--client-paper); color:var(--client-ink); }
+.offer-accept-shell { padding:28px; }
+.offer-accept-shell .eyebrow { color:var(--client-muted); }
+.offer-accept-shell h2 { font-size:26px; line-height:1.2; }
+.offer-accept-shell p { font-size:14px; line-height:1.6; }
+.offer-accept-shell footer { padding:0; }
+.offer-accept-shell .secondary-button { min-height:46px; border:1px solid #b8c1ad; border-radius:9px; color:var(--client-ink); font-size:13px; }
+.invoice-preview-shell>header h2 { font-size:20px; overflow-wrap:anywhere; }
+.invoice-preview-close,.invoice-preview-shell .text-button { min-width:44px; min-height:44px; }
+.invoice-preview-shell>footer { padding-bottom:max(14px,env(safe-area-inset-bottom)); }
+.invoice-preview-shell>header { padding-top:max(14px,env(safe-area-inset-top)); }
+@media (max-width:760px) {
+  .portal main { padding-inline:max(16px,env(safe-area-inset-left)) max(16px,env(safe-area-inset-right)); }
+  .portal .site-header { padding:10px 16px; padding-top:max(10px,env(safe-area-inset-top)); }
+  .portal-hero { padding:26px 0 20px; }
+  .portal-hero h1 { font-size:29px; max-width:18ch; }
+  .portal-hero p { margin:10px 0 0; font-size:14px; }
+  .portal-next-step { display:block; padding:20px; border-radius:12px; }
+  .portal-next-step h2 { font-size:21px; }
+  .portal-next-step .primary-button { margin-top:18px; width:100%; }
+  .portal-nav { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0; padding:8px 0; margin-top:12px; }
+  .portal-nav a { padding:0 3px; font-size:12px; }
+  .portal-section { padding:24px 0; }
+  .project-grid,.split-section,.portal .feedback-section { grid-template-columns:minmax(0,1fr); }
+  .project-card { min-height:0; padding:20px; }
+  .offer-card { padding:20px; }
+  .offer-card h3 { font-size:20px; }
+  .offer-card-head { display:flex; flex-wrap:wrap; gap:10px; }
+  .offer-card-head .status { margin-top:0; }
+  .offer-item { grid-template-columns:minmax(0,1fr) auto; gap:12px; font-size:13px; }
+  .offer-card .primary-button { width:100%; }
+  .split-section { gap:30px; }
+  .offer-accept-shell { padding:22px; }
+  .offer-accept-shell footer { flex-direction:column-reverse; }
+  .invoice-preview-shell>footer { flex-wrap:wrap; gap:8px; }
+}
+@media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; } }

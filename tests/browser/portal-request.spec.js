@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { assertDarkTheme } from './theme-assertions.js';
 
 const base = "http://127.0.0.1:4180";
 
@@ -13,6 +14,7 @@ test("Portal-Anfrage: Versand zeigt Erfolgsmoment und bleibt mobil bedienbar", a
 
   await page.goto(`${base}/portal/request/`);
   await page.getByLabel("Your name").fill("Mira Muster");
+  await assertDarkTheme(page);
   await page.getByLabel("Email").fill("mira@example.com");
   await page.getByRole("button", { name: /Send request/ }).click();
 
@@ -20,6 +22,7 @@ test("Portal-Anfrage: Versand zeigt Erfolgsmoment und bleibt mobil bedienbar", a
   await expect(page.locator("#request-message .send-plane")).toBeVisible();
   await expect(page.locator("#request-message .send-check")).toBeVisible();
   await page.waitForTimeout(800);
+  await assertDarkTheme(page);
   await page.screenshot({ path: "qa/portal-request-success-mobile.png", fullPage: true });
   await expect(page.getByLabel("Your name")).toHaveValue("");
   const metrics = await page.evaluate(() => ({
