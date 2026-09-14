@@ -505,6 +505,19 @@ test("Mobile: echte 390px-Ansicht, Navigation und Rechnungsdialog", async ({ bro
   await menuButton.click();
   await page.locator('.nav-link[data-view="invoices"]').click();
   await expect(page.locator("#view-title")).toHaveText("Rechnungen");
+  await expect(page.locator('.sidebar')).toHaveCSS('visibility', 'hidden');
+  const financeLayout = await page.evaluate(() => {
+    const nav = document.querySelector('.finance-nav');
+    const toolbar = document.querySelector('.view .toolbar');
+    const buttons = [...nav.querySelectorAll('button')].map(button => button.getBoundingClientRect());
+    return {
+      gap: toolbar.getBoundingClientRect().top - nav.getBoundingClientRect().bottom,
+      buttonHeights: buttons.map(button => button.height),
+    };
+  });
+  expect(financeLayout.gap).toBeLessThanOrEqual(12);
+  expect(financeLayout.buttonHeights.every(height => height >= 44 && height <= 46)).toBe(true);
+  await page.screenshot({ path: "qa/admin-finance-mobile-compact.png", fullPage: true });
   const filterMetrics = await page.locator(".filter-tabs").evaluate((element) => ({
     clientWidth: element.clientWidth,
     scrollWidth: element.scrollWidth,
@@ -539,6 +552,27 @@ test("Mobile: Portal-Anfragen bleiben als handlungsfähige Karten erreichbar", a
   const actionMetrics = await card.getByRole("button", { name: "Akzeptieren" }).evaluate((element) => ({ width: element.getBoundingClientRect().width, height: element.getBoundingClientRect().height }));
   expect(actionMetrics.height).toBeGreaterThanOrEqual(44);
   await assertHealthy(page, errors);
+  await page.close();
+});
+
+test("Studio: Portal-Einladung und Status haben einen klaren Aktionsabstand", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await mockStudioSupabase(page, { customer_portal_requests: [
+    { id: "r-accepted", customer_id: "c1", company: "Studio Nord", contact_name: "Lea Meier", email: "lea@studio-nord.example", status: "accepted", created_at: "2026-09-09T10:00:00Z" },
+  ] });
+  await page.goto(`${base}/studio/`);
+  await page.locator('.nav-link[data-view="portal-requests"]').click();
+  const row = page.locator('.data-table tbody tr').filter({ hasText: 'Studio Nord' });
+  const layout = await row.locator('.table-actions').evaluate(element => {
+    const button = element.querySelector('[data-portal-request-action="invite"]').getBoundingClientRect();
+    const status = element.querySelector('.status').getBoundingClientRect();
+    return { gap: status.left - button.right, buttonHeight: button.height, statusHeight: status.height };
+  });
+  expect(layout.gap).toBeGreaterThanOrEqual(12);
+  expect(layout.buttonHeight).toBeGreaterThanOrEqual(44);
+  expect(layout.buttonHeight).toBeLessThanOrEqual(48);
+  expect(layout.statusHeight).toBeLessThanOrEqual(32);
+  await page.screenshot({ path: "qa/admin-portal-actions-desktop.png", fullPage: true });
   await page.close();
 });
 
@@ -652,7 +686,7 @@ test("Studio: Projekt-Canvas verbindet Produktion, Kunde und Finanzschritte", as
   await expect(page.locator('select[name="project_id"]')).toHaveValue("p2");
   await page.getByRole("button", { name: "Dialog schliessen" }).click();
   const desktopPanelHeights = await canvas.locator('.project-canvas-track > header,.project-canvas-track > .project-module-grid > article,.project-canvas-track > section').evaluateAll(items => items.map(item => Math.round(item.getBoundingClientRect().height)));
-  expect(desktopPanelHeights.every(height => height >= 480 && height <= 520)).toBe(true);
+  expect(desktopPanelHeights.every(height => height >= 330 && height <= 355)).toBe(true);
   await assertHealthy(page, errors);
   await page.evaluate(() => scrollTo(0, 0));
   await canvas.evaluate(element => element.scrollTo({ left: 0, behavior: 'auto' }));
@@ -685,7 +719,7 @@ test("Studio: Projekt-Canvas bleibt in echter 390px-Ansicht vollständig bedienb
   expect(metrics.snapType).toContain('x');
   expect(metrics.panelWidths).toHaveLength(6);
   expect(metrics.panelWidths.every(width => width >= 300 && width < 390)).toBe(true);
-  expect(metrics.panelHeights.every(height => height >= 480 && height <= 530)).toBe(true);
+  expect(metrics.panelHeights.every(height => height >= 330 && height <= 355)).toBe(true);
   await canvas.evaluate(element => element.scrollTo({ left: element.scrollWidth, behavior: 'auto' }));
   await expect.poll(() => canvas.evaluate(element => Math.round(element.scrollLeft + element.clientWidth))).toBeGreaterThanOrEqual(metrics.scrollWidth - 2);
   const action = canvas.locator('[data-create="invoice"]');
