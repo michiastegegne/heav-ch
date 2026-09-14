@@ -248,7 +248,7 @@ function renderProjectCanvas(project) {
   const sum = statuses => invoices.filter(item => statuses.includes(item.status)).reduce((total,item) => total + (item.total_rappen || 0), 0);
   const customer = project.customer || state.data.customers.find(item => item.id === project.customer_id);
   const accepted = offers.filter(item => item.status === "accepted");
-  return `<section class="project-canvas" aria-label="Projekt-Canvas" tabindex="-1">
+  return `<section class="project-canvas" aria-label="Projekt-Canvas" tabindex="-1"><div class="project-canvas-track">
     <header class="project-canvas-head"><div><span class="kicker">PROJEKT-CANVAS</span><h3>${esc(project.title)}</h3>${project.description ? `<p>${esc(project.description)}</p>` : ''}</div>${actionIconButton("edit", `Projekt bearbeiten: ${project.title}`, `data-edit="project" data-id="${esc(project.id)}"`)}</header>
     <div class="project-module-grid">
       <article class="project-module"><div><span class="project-module-label">KUNDE</span><strong>${esc(customerLabel(customer))}</strong><p>${esc(customer?.email || "Keine E-Mail hinterlegt")}</p>${customer ? `<button class="project-module-link" data-edit="customer" data-id="${esc(customer.id)}">Kundendaten bearbeiten <span aria-hidden="true">→</span></button>` : ''}</div></article>
@@ -259,7 +259,7 @@ function renderProjectCanvas(project) {
     ${offers.map(item => `<article class="workspace-action"><div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span><strong>${esc(item.offer_number)} · ${esc(item.title)}</strong><small>${formatCHF(item.total_rappen)} · gültig bis ${formatDate(item.valid_until)}</small></div>${offerActions(item)}</article>`).join("") || '<p class="document-empty">Noch keine Offerte verknüpft. Bereite die Leistungen für diesen Kunden vor.</p>'}</section>
     <section class="project-documents"><div class="panel-head"><div><h4>Rechnungen</h4><p>Dokumente und Zahlungsstatus zu diesem Projekt</p></div><button class="primary-action" data-create="invoice" data-project-id="${esc(project.id)}">Rechnung <span aria-hidden="true">+</span></button></div>
     ${invoices.map(item => `<article class="workspace-action"><div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span><strong>${esc(item.invoice_number)}</strong><small>${formatCHF(item.total_rappen)} · ${item.status === "draft" ? "Entwurf, noch nicht fällig" : `fällig ${formatDate(item.due_date)}`}</small></div>${invoiceActions(item)}</article>`).join("") || '<p class="document-empty">Noch keine Rechnung verknüpft.</p>'}</section>
-  </section>`;
+  </div></section>`;
 }
 
 function renderProjects() {

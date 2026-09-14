@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-import { assertDarkTheme } from './theme-assertions.js';
+import { assertStudioCanvasTheme } from './theme-assertions.js';
 const base = "http://127.0.0.1:4180";
 
 async function assertHealthy(page, errors) {
@@ -162,6 +162,7 @@ for (const width of [360, 390, 768, 1440]) {
     const navigate = async (view) => {
       if (width < 821) await page.getByRole('button', { name: 'Menü öffnen' }).click();
       await page.locator(`.nav-link[data-view="${view}"]`).click();
+      if (width < 821) await expect(page.locator('.sidebar')).toHaveCSS('visibility', 'hidden');
     };
     for (const view of ['dashboard', 'projects', 'customers', 'invoices', 'offers', 'portal-requests', 'settings']) {
       if (view === 'offers') await page.getByRole('navigation', { name: 'Finanzen' }).getByRole('button', { name: 'Offerten' }).click();
@@ -171,12 +172,28 @@ for (const width of [360, 390, 768, 1440]) {
         expect(await page.locator('.mobile-card-list button:visible').count()).toBeGreaterThan(0);
       }
       const clipping = await page.locator('#app-content').evaluate(root => [...root.querySelectorAll('*')].filter(e => {
-        if (!e.getClientRects().length || e.closest('.sr-only')) return false;
+        if (!e.getClientRects().length || e.closest('.sr-only') || e.matches('.project-canvas,.project-canvas-track')) return false;
         const b = e.getBoundingClientRect();
+        const actionScroller = e.closest('.table-actions');
+        if (actionScroller) {
+          const scrollerStyle = getComputedStyle(actionScroller);
+          const intentionallyScrollable = ['auto', 'scroll'].includes(scrollerStyle.overflowX);
+          const ownOverflow = e.clientWidth > 0 && e.scrollWidth > e.clientWidth + 2;
+          if (e === actionScroller) return ownOverflow && !intentionallyScrollable;
+          const scrollerBounds = actionScroller.getBoundingClientRect();
+          return !intentionallyScrollable && b.width > 0 && (b.left < scrollerBounds.left - 1 || b.right > scrollerBounds.right + 1 || ownOverflow);
+        }
+        const panel = e.closest('.project-canvas-head,.project-module,.project-finances,.project-documents');
+        if (panel) {
+          const panelBounds = panel.getBoundingClientRect();
+          const style = getComputedStyle(e);
+          const intentionalEllipsis = style.textOverflow === 'ellipsis' || (style.overflowX === 'hidden' && style.whiteSpace === 'nowrap');
+          return b.width > 0 && (b.left < panelBounds.left - 1 || b.right > panelBounds.right + 1 || (!intentionalEllipsis && e.clientWidth > 0 && e.scrollWidth > e.clientWidth + 2));
+        }
         return b.width > 0 && (b.left < -1 || b.right > innerWidth + 1 || (e.clientWidth > 0 && e.scrollWidth > e.clientWidth + 2));
       }).map(e => ({ tag: e.tagName, class: e.className, text: e.textContent.slice(0, 60), width: e.clientWidth, scroll: e.scrollWidth })));
       expect(clipping, `${view} at ${width}`).toEqual([]);
-      await assertDarkTheme(page);
+      await assertStudioCanvasTheme(page);
       await assertHealthy(page, errors);
       await page.screenshot({ path: `qa/workspace-${view}-${width}.png`, fullPage: true });
     }
@@ -235,7 +252,7 @@ for (const width of [360, 390, 768, 1440]) {
       await trigger.click();
       const modal = page.locator('#editor-dialog');
       await expect(modal).toBeVisible();
-      await assertDarkTheme(page);
+      await assertStudioCanvasTheme(page);
       const bounds = await modal.boundingBox();
       if (width < 821) { expect(bounds.x).toBe(0); expect(bounds.y).toBe(0); expect(bounds.width).toBe(width); expect(bounds.height).toBe(844); }
       const metrics = await modal.evaluate(el => ({ inside:el.contains(document.activeElement), clipped:[...el.querySelectorAll('*')].filter(e => e.clientWidth && e.scrollWidth > e.clientWidth + 2).map(e => e.className) }));
@@ -622,7 +639,12 @@ test("Studio: Projekt-Canvas verbindet Produktion, Kunde und Finanzschritte", as
   await expect(page.locator('select[name="customer_id"]')).toHaveValue("c2");
   await expect(page.locator('select[name="project_id"]')).toHaveValue("p2");
   await page.getByRole("button", { name: "Dialog schliessen" }).click();
+  const desktopPanelHeights = await canvas.locator('.project-canvas-track > header,.project-canvas-track > .project-module-grid > article,.project-canvas-track > section').evaluateAll(items => items.map(item => Math.round(item.getBoundingClientRect().height)));
+  expect(desktopPanelHeights.every(height => height >= 480 && height <= 520)).toBe(true);
   await assertHealthy(page, errors);
+  await page.evaluate(() => scrollTo(0, 0));
+  await canvas.evaluate(element => element.scrollTo({ left: 0, behavior: 'auto' }));
+  await expect.poll(() => canvas.evaluate(element => Math.round(element.scrollLeft))).toBe(0);
   await page.screenshot({ path: "qa/admin-project-canvas-desktop.png", fullPage: true });
   await page.close();
 });
@@ -640,13 +662,28 @@ test("Studio: Projekt-Canvas bleibt in echter 390px-Ansicht vollständig bedienb
   await page.waitForTimeout(350);
   const canvas = page.locator(".project-canvas");
   await expect(canvas).toBeVisible();
-  const metrics = await canvas.evaluate((element) => ({ clientWidth: element.clientWidth, scrollWidth: element.scrollWidth }));
-  expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth);
+  const metrics = await canvas.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+    snapType: getComputedStyle(element).scrollSnapType,
+    panelWidths: [...element.querySelectorAll('.project-canvas-track > header,.project-canvas-track > .project-module-grid > article,.project-canvas-track > section')].map(item => Math.round(item.getBoundingClientRect().width)),
+    panelHeights: [...element.querySelectorAll('.project-canvas-track > header,.project-canvas-track > .project-module-grid > article,.project-canvas-track > section')].map(item => Math.round(item.getBoundingClientRect().height)),
+  }));
+  expect(metrics.scrollWidth).toBeGreaterThan(metrics.clientWidth);
+  expect(metrics.snapType).toContain('x');
+  expect(metrics.panelWidths).toHaveLength(6);
+  expect(metrics.panelWidths.every(width => width >= 300 && width < 390)).toBe(true);
+  expect(metrics.panelHeights.every(height => height >= 480 && height <= 530)).toBe(true);
+  await canvas.evaluate(element => element.scrollTo({ left: element.scrollWidth, behavior: 'auto' }));
+  await expect.poll(() => canvas.evaluate(element => Math.round(element.scrollLeft + element.clientWidth))).toBeGreaterThanOrEqual(metrics.scrollWidth - 2);
   const action = canvas.locator('[data-create="invoice"]');
   const box = await action.boundingBox();
   expect(box.width).toBeGreaterThanOrEqual(44);
   expect(box.height).toBeGreaterThanOrEqual(44);
   await assertHealthy(page, errors);
+  await page.evaluate(() => scrollTo(0, 0));
+  await canvas.evaluate(element => element.scrollTo({ left: 0, behavior: 'auto' }));
+  await expect.poll(() => canvas.evaluate(element => Math.round(element.scrollLeft))).toBe(0);
   await page.screenshot({ path: "qa/admin-project-canvas-mobile.png", fullPage: true });
   await page.close();
 });

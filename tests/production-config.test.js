@@ -9,6 +9,11 @@ const contactSource = await readFile(new URL("../contact/index.html", import.met
 const studioHtml = await readFile(new URL("../studio/index.html", import.meta.url), "utf8");
 const invoiceDocumentSource = await readFile(new URL("../supabase/functions/invoice-document/index.ts", import.meta.url), "utf8");
 const actionCss = await readFile(new URL("../admin/assets/admin-actions.css", import.meta.url), "utf8");
+const privateBaseCss = await Promise.all([
+  readFile(new URL("../admin/assets/admin.css", import.meta.url), "utf8"),
+  readFile(new URL("../login/assets/login.css", import.meta.url), "utf8"),
+  readFile(new URL("../portal/assets/portal.css", import.meta.url), "utf8"),
+]);
 const offerSendSource = await readFile(new URL("../supabase/functions/offer-send/index.ts", import.meta.url), "utf8").catch(() => "");
 
 test("Produktionsfrontend ist mit dem HEAV-Supabase-Projekt verbunden", () => {
@@ -32,19 +37,39 @@ test("Kontaktformular nutzt die HEAV-eigene Edge Function statt eines sichtbaren
   assert.match(contactSource, /data-form-status/);
 });
 
-test("Studio lädt Rabatt-, UI- und Projekt-Canvas-Assets mit Cache-Versionen", () => {
-  assert.match(studioHtml, /href="\/admin\/assets\/admin\.css\?v=20260830-discount-edit"/);
-  assert.match(studioHtml, /href="\/admin\/assets\/admin-enhancements\.css\?v=20260910-dashboard-context"/);
+test("Studio lädt das vollständige helle Canvas-Designsystem in stabiler Reihenfolge", () => {
+  const expectedAssets = [
+    "/admin/assets/admin.css?v=20260830-discount-edit",
+    "/admin/assets/admin-enhancements.css?v=20260910-dashboard-context",
+    "/admin/assets/admin-actions.css?v=20260910-layout",
+    "/admin/assets/workspace.css?v=20260913-mobile-workspace",
+    "/admin/assets/crm-theme.css?v=anthracite-1",
+    "/admin/assets/studio-canvas.css?v=canvas-1",
+  ];
+  const positions = expectedAssets.map((asset) => studioHtml.indexOf(`href="${asset}"`));
+  assert.ok(positions.every((position) => position >= 0), "alle Studio-Stylesheets sind versioniert eingebunden");
+  assert.deepEqual(positions, [...positions].sort((a, b) => a - b), "Canvas-Overrides werden zuletzt geladen");
+  assert.match(studioHtml, /<meta name="theme-color" content="#f8f9fc"/);
+  assert.match(studioHtml, /<body class="crm-theme studio-canvas-theme">/);
   assert.match(studioHtml, /src="\/admin\/assets\/app\.js\?v=20260913-mobile-workspace"/);
-  assert.match(studioHtml, /href="\/admin\/assets\/workspace\.css\?v=20260913-mobile-workspace"/);
+});
+
+test("Alle referenzierten privaten Schriftdateien sind lokal gebündelt", async () => {
+  const references = [...new Set(privateBaseCss.flatMap(source => [...source.matchAll(/url\("(\/assets\/fonts\/[^\"]+\.woff2)"\)/g)].map(match => match[1])))];
+  assert.ok(references.length >= 4, "erwartete lokale Schriftfamilien wurden gefunden");
+  for (const reference of references) {
+    const font = await readFile(new URL(`..${reference}`, import.meta.url));
+    assert.ok(font.length > 1024, `${reference} ist keine gültige gebündelte Schriftdatei`);
+  }
 });
 
 test("Studio-Aktionen verwenden kompakte, zugängliche SVG-Icons", () => {
+  assert.match(studioHtml, /class="menu-button icon-button"[^>]*aria-label="Menü öffnen"[^>]*><svg[^>]*viewBox="0 0 24 24"/);
   assert.match(adminSource, /function actionIconButton/);
   assert.match(adminSource, /actionIconButton\("edit", "Bearbeiten"/);
   assert.match(adminSource, /paper-plane/);
   assert.match(adminSource, /customer-contact/);
-  assert.match(studioHtml, /admin-actions\.css\?v=20260910-layout/);
+  assert.match(studioHtml, /href="\/admin\/assets\/crm-theme\.css\?v=anthracite-1"/);
 });
 
 test("Studio-Iconleisten bleiben in einer kompakten Reihe", () => {
@@ -59,10 +84,18 @@ test("Offerten können zuverlässig kopiert und per HEAV-Mail versendet werden",
   assert.match(adminSource, /sendOffer\(id\)/);
   assert.match(adminSource, /navigator\.clipboard\.writeText/);
   assert.match(adminSource, /document\.execCommand\("copy"\)/);
-  assert.match(offerSendSource, /RESEND_API_KEY/);
-  assert.match(offerSendSource, /offerId/);
+  assert.match(offerSendSource, /const allowedOrigins = new Set/);
+  assert.match(offerSendSource, /origin && !allowedOrigins\.has\(origin\)/);
+  assert.match(offerSendSource, /authorization\.startsWith\("Bearer "\)/);
+  assert.match(offerSendSource, /caller\.auth\.getUser\(\)/);
+  assert.match(offerSendSource, /\.eq\("id", offerId\)\.eq\("owner_id", identity\.user\.id\)/);
+  assert.match(offerSendSource, /offer\.status !== "sent"/);
+  assert.match(offerSendSource, /offer\.valid_until < new Date\(\)/);
   assert.match(offerSendSource, /customer_portal_memberships/);
+  assert.match(offerSendSource, /\.eq\("status", "active"\)/);
   assert.match(offerSendSource, /offer_events/);
+  assert.match(offerSendSource, /kind: "emailed"/);
+  assert.match(offerSendSource, /RESEND_API_KEY/);
 });
 
 test("Portal bietet owner-geschützte Bearbeitung für Kunden, Projekte, Rechnungen und manuelle Statuswahl", () => {
