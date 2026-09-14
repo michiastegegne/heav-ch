@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-import { assertStudioCanvasTheme } from './theme-assertions.js';
+import { assertStudioEditorialTheme } from './theme-assertions.js';
 const base = "http://127.0.0.1:4180";
 
 async function assertHealthy(page, errors) {
@@ -193,7 +193,7 @@ for (const width of [360, 390, 768, 1440]) {
         return b.width > 0 && (b.left < -1 || b.right > innerWidth + 1 || (e.clientWidth > 0 && e.scrollWidth > e.clientWidth + 2));
       }).map(e => ({ tag: e.tagName, class: e.className, text: e.textContent.slice(0, 60), width: e.clientWidth, scroll: e.scrollWidth })));
       expect(clipping, `${view} at ${width}`).toEqual([]);
-      await assertStudioCanvasTheme(page);
+      await assertStudioEditorialTheme(page);
       await assertHealthy(page, errors);
       await page.screenshot({ path: `qa/workspace-${view}-${width}.png`, fullPage: true });
     }
@@ -252,7 +252,7 @@ for (const width of [360, 390, 768, 1440]) {
       await trigger.click();
       const modal = page.locator('#editor-dialog');
       await expect(modal).toBeVisible();
-      await assertStudioCanvasTheme(page);
+      await assertStudioEditorialTheme(page);
       const bounds = await modal.boundingBox();
       if (width < 821) { expect(bounds.x).toBe(0); expect(bounds.y).toBe(0); expect(bounds.width).toBe(width); expect(bounds.height).toBe(844); }
       const metrics = await modal.evaluate(el => ({ inside:el.contains(document.activeElement), clipped:[...el.querySelectorAll('*')].filter(e => e.clientWidth && e.scrollWidth > e.clientWidth + 2).map(e => e.className) }));
@@ -264,6 +264,14 @@ for (const width of [360, 390, 768, 1440]) {
       await expect(modal.getByRole('button', { name:'Speichern', exact:true })).toBeFocused();
       const controls = await modal.locator('button,input,select,textarea').evaluateAll(elements => elements.filter(e => e.getClientRects().length).map(e => ({w:e.getBoundingClientRect().width,h:e.getBoundingClientRect().height})));
       for (const b of controls) { expect(b.w).toBeGreaterThanOrEqual(44); expect(b.h).toBeGreaterThanOrEqual(44); }
+      const controlContrast = await modal.locator('input,select,textarea').evaluateAll(elements => elements.filter(element => element.getClientRects().length).map(element => {
+        const parse = color => (color.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+        const luminance = color => color.map(value => value / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4).reduce((sum, value, index) => sum + value * [.2126, .7152, .0722][index], 0);
+        const style = getComputedStyle(element), values = [luminance(parse(style.backgroundColor)), luminance(parse(style.borderTopColor))];
+        return (Math.max(...values) + .05) / (Math.min(...values) + .05);
+      }));
+      expect(controlContrast.length).toBeGreaterThan(0);
+      expect(controlContrast.every(ratio => ratio >= 3)).toBe(true);
       await page.screenshot({path:`qa/workspace-editor-${type}-${width}.png`});
       await page.keyboard.press('Escape');
       await expect(modal).toBeHidden();
@@ -354,6 +362,8 @@ test("Desktop: Dashboard und vollständiger Erfassungsfluss", async ({ browser }
 
   await newInvoiceRow.getByRole("button", { name: /Rechnung löschen/ }).click();
   await expect(page.locator("#action-confirm-dialog")).toBeVisible();
+  await expect(page.locator("#action-confirm-dialog").getByRole("button", { name: "Löschen" })).toHaveCSS("background-color", "rgb(112, 60, 64)");
+  await expect(page.locator("#action-confirm-dialog").getByRole("button", { name: "Löschen" })).toHaveCSS("color", "rgb(255, 240, 237)");
   await page.locator("#action-confirm-dialog").getByRole("button", { name: "Löschen" }).click();
   await expect(newInvoiceRow).toHaveCount(0);
 
@@ -629,6 +639,8 @@ test("Studio: Projekt-Canvas verbindet Produktion, Kunde und Finanzschritte", as
   await page.locator('.nav-link[data-view="projects"]').click();
   const canvas = page.locator(".project-canvas");
   await expect(canvas).toBeVisible();
+  await expect(canvas).toHaveAttribute('aria-describedby', 'project-canvas-guide');
+  await expect(page.locator('#project-canvas-guide')).toHaveText('6 Bereiche · horizontal erkunden →');
   await expect(canvas).toContainText("Brand Film 2026");
   await expect(canvas).toContainText("CHF 9’188.50");
   await page.locator('[data-project-focus="p2"]').first().click();

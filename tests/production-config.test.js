@@ -37,21 +37,22 @@ test("Kontaktformular nutzt die HEAV-eigene Edge Function statt eines sichtbaren
   assert.match(contactSource, /data-form-status/);
 });
 
-test("Studio lädt das vollständige helle Canvas-Designsystem in stabiler Reihenfolge", () => {
+test("Studio lädt das isolierte Editorial-Designsystem in stabiler Reihenfolge", () => {
   const expectedAssets = [
     "/admin/assets/admin.css?v=20260830-discount-edit",
     "/admin/assets/admin-enhancements.css?v=20260910-dashboard-context",
     "/admin/assets/admin-actions.css?v=20260910-layout",
     "/admin/assets/workspace.css?v=20260913-mobile-workspace",
     "/admin/assets/crm-theme.css?v=anthracite-1",
-    "/admin/assets/studio-canvas.css?v=canvas-1",
+    "/admin/assets/studio-editorial.css?v=editorial-1",
   ];
   const positions = expectedAssets.map((asset) => studioHtml.indexOf(`href="${asset}"`));
   assert.ok(positions.every((position) => position >= 0), "alle Studio-Stylesheets sind versioniert eingebunden");
-  assert.deepEqual(positions, [...positions].sort((a, b) => a - b), "Canvas-Overrides werden zuletzt geladen");
-  assert.match(studioHtml, /<meta name="theme-color" content="#f8f9fc"/);
-  assert.match(studioHtml, /<body class="crm-theme studio-canvas-theme">/);
-  assert.match(studioHtml, /src="\/admin\/assets\/app\.js\?v=20260913-mobile-workspace"/);
+  assert.deepEqual(positions, [...positions].sort((a, b) => a - b), "Editorial-Overrides werden zuletzt geladen");
+  assert.match(studioHtml, /<html lang="de-CH" class="studio-editorial-root">/);
+  assert.match(studioHtml, /<meta name="theme-color" content="#000000"/);
+  assert.match(studioHtml, /<body class="crm-theme studio-editorial-theme">/);
+  assert.match(studioHtml, /src="\/admin\/assets\/app\.js\?v=20260914-editorial-1"/);
 });
 
 test("Alle referenzierten privaten Schriftdateien sind lokal gebündelt", async () => {

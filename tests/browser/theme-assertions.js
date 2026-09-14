@@ -27,11 +27,12 @@ export async function assertDarkTheme(page) {
   expect(lowContrast).toEqual([]);
 }
 
-export async function assertStudioCanvasTheme(page) {
-  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(248, 249, 252)');
-  await expect(page.locator('body')).toHaveCSS('color', 'rgb(17, 21, 38)');
-  await expect(page.locator('html')).toHaveCSS('color-scheme', 'light');
-  await expect(page.locator('.workspace')).toHaveCSS('background-color', 'rgb(248, 249, 252)');
+export async function assertStudioEditorialTheme(page) {
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(0, 0, 0)');
+  await expect(page.locator('body')).toHaveCSS('color', 'rgb(240, 240, 240)');
+  await expect(page.locator('html')).toHaveCSS('color-scheme', 'dark');
+  await expect(page.locator('.workspace')).toHaveCSS('background-color', 'rgb(0, 0, 0)');
+  await expect(page.locator('.topbar h1')).toHaveCSS('font-family', /Instrument Serif/);
 
   const surfaces = await page.locator('.dashboard-focus,.dashboard-money,.panel,.project-canvas-head,.project-module,.project-finances,.project-documents,.mobile-card,.settings-card,.data-table,dialog[open]').evaluateAll(elements => elements.filter(el => el.getClientRects().length).map(el => ({
     className: el.className,
@@ -40,13 +41,14 @@ export async function assertStudioCanvasTheme(page) {
     fullScreenEditor: el.matches('.editor-dialog') && innerWidth < 821,
   })));
   expect(surfaces.length).toBeGreaterThan(0);
-  expect(surfaces.every(surface => surface.background !== 'rgb(17, 18, 20)' && (surface.radius >= 12 || surface.fullScreenEditor))).toBe(true);
+  const editorialSurfaces = ['rgb(5, 6, 7)', 'rgb(9, 11, 13)'];
+  expect(surfaces.every(surface => editorialSurfaces.includes(surface.background) && (surface.radius <= 18 || surface.fullScreenEditor))).toBe(true);
 
   const lowContrast = await page.locator('body').evaluate(root => {
     const rgb = color => (color.match(/[\d.]+/g) || []).map(Number);
     const blend = (top, bottom) => top.slice(0, 3).map((value, index) => value * (top[3] ?? 1) + bottom[index] * (1 - (top[3] ?? 1)));
     const background = element => {
-      if (!element) return [248, 249, 252];
+      if (!element) return [0, 0, 0];
       const color = rgb(getComputedStyle(element).backgroundColor);
       return (color[3] ?? 1) === 1 ? color : blend(color, background(element.parentElement));
     };
