@@ -44,7 +44,7 @@ test("Studio lädt das isolierte Editorial-Designsystem in stabiler Reihenfolge"
     "/admin/assets/admin-actions.css?v=20260910-layout",
     "/admin/assets/workspace.css?v=20260913-mobile-workspace",
     "/admin/assets/crm-theme.css?v=anthracite-1",
-    "/admin/assets/studio-editorial.css?v=editorial-1",
+    "/admin/assets/studio-editorial.css?v=editorial-2",
   ];
   const positions = expectedAssets.map((asset) => studioHtml.indexOf(`href="${asset}"`));
   assert.ok(positions.every((position) => position >= 0), "alle Studio-Stylesheets sind versioniert eingebunden");
