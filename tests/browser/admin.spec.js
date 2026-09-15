@@ -156,14 +156,14 @@ test("Workspace: mobile HEAV menu replaces duplicate bottom navigation and traps
   await expect(sidebar).toHaveAttribute('role', 'dialog');
   await expect(sidebar).toHaveAttribute('aria-modal', 'true');
   await expect(page.locator('.workspace')).toHaveAttribute('inert', '');
-  await expect(sidebar).toHaveCSS('background-color', 'rgb(215, 255, 56)');
+  await expect(sidebar).toHaveCSS('background-color', 'rgb(232, 228, 220)');
   await page.waitForTimeout(700);
   const menuGeometry = await sidebar.evaluate((element) => {
     const box = element.getBoundingClientRect();
     const style = getComputedStyle(element);
     return { left: box.left, top: box.top, width: box.width, height: box.height, background: style.backgroundColor };
   });
-  expect(menuGeometry).toEqual({ left: 0, top: 0, width: 360, height: 800, background: 'rgb(215, 255, 56)' });
+  expect(menuGeometry).toEqual({ left: 0, top: 0, width: 360, height: 800, background: 'rgb(232, 228, 220)' });
   const nav = page.getByRole('navigation', { name: 'Studio Navigation' });
   const active = nav.getByRole('button', { name: 'Übersicht', exact: true });
   await expect(active).toBeFocused();
@@ -171,10 +171,18 @@ test("Workspace: mobile HEAV menu replaces duplicate bottom navigation and traps
     color: getComputedStyle(element).color,
     radius: getComputedStyle(element).borderRadius,
     fontSize: parseFloat(getComputedStyle(element).fontSize),
+    labelFontSize: parseFloat(getComputedStyle(element.querySelector('.nav-label')).fontSize),
   }));
   expect(activeStyle.color).toBe('rgb(9, 10, 8)');
   expect(activeStyle.radius).toBe('0px');
   expect(activeStyle.fontSize).toBeGreaterThanOrEqual(32);
+  expect(activeStyle.labelFontSize).toBeGreaterThanOrEqual(32);
+  const indicatorAlignment = await nav.evaluate((element) => {
+    const indicator = element.querySelector('.nav-active-indicator');
+    const label = element.querySelector('.nav-link.is-active .nav-label');
+    return { indicatorWidth: indicator.getBoundingClientRect().width, labelWidth: label.getBoundingClientRect().width };
+  });
+  expect(Math.abs(indicatorAlignment.indicatorWidth - indicatorAlignment.labelWidth)).toBeLessThanOrEqual(1);
   await page.keyboard.press('Escape');
   await expect(sidebar).toHaveCSS('visibility', 'hidden');
   await expect(trigger).toBeFocused();
@@ -409,7 +417,7 @@ test("Workspace: finance navigation uses one stable HEAV line state instead of a
       background: style.backgroundColor,
       color: style.color,
       radius: style.borderRadius,
-      borderBottom: style.borderBottomColor,
+      borderBottomWidth: style.borderBottomWidth,
       outline: style.outlineStyle,
     };
   });
@@ -417,7 +425,7 @@ test("Workspace: finance navigation uses one stable HEAV line state instead of a
     background: 'rgba(0, 0, 0, 0)',
     color: 'rgb(240, 240, 240)',
     radius: '0px',
-    borderBottom: 'rgb(215, 255, 56)',
+    borderBottomWidth: '0px',
     outline: 'none',
   });
   const surface = await page.evaluate(() => {
@@ -425,14 +433,16 @@ test("Workspace: finance navigation uses one stable HEAV line state instead of a
     const table = getComputedStyle(document.querySelector('.data-table'));
     const selectedNav = document.querySelector('.nav-link.is-active');
     const nav = getComputedStyle(selectedNav);
-    const marker = getComputedStyle(selectedNav, '::after');
+    const marker = getComputedStyle(document.querySelector('.nav-active-indicator'));
+    const financeMarker = getComputedStyle(document.querySelector('.finance-nav-indicator'));
     return {
       toolbarRadius: toolbar.borderRadius,
       toolbarSides: [toolbar.borderLeftWidth, toolbar.borderRightWidth],
       tableRadius: table.borderRadius,
       navBackground: nav.backgroundColor,
       navRadius: nav.borderRadius,
-      navMarker: [marker.width, marker.backgroundColor],
+      navMarker: [marker.height, marker.backgroundColor, marker.transitionDuration],
+      financeMarker: [financeMarker.height, financeMarker.backgroundColor, financeMarker.transitionDuration],
     };
   });
   expect(surface).toEqual({
@@ -441,8 +451,159 @@ test("Workspace: finance navigation uses one stable HEAV line state instead of a
     tableRadius: '0px',
     navBackground: 'rgba(0, 0, 0, 0)',
     navRadius: '0px',
-    navMarker: ['5px', 'rgb(215, 255, 56)'],
+    navMarker: ['1px', 'rgb(232, 228, 220)', '0.36s, 0.36s'],
+    financeMarker: ['1px', 'rgb(232, 228, 220)', '0.36s, 0.36s'],
   });
+});
+
+test("Workspace: invoices default to newest creation and support sent and due sorting", async ({ page }) => {
+  const customer = { id: 'c1', company: 'Nordlicht AG', contact_name: 'Anna Keller' };
+  const invoice = (id, invoice_number, status, created_at, sent_at, due_date) => ({
+    id, invoice_number, status, created_at, sent_at, due_date,
+    customer_id: customer.id,
+    customer,
+    issue_date: created_at.slice(0, 10),
+    total_rappen: 10000,
+    payment_reference: `RF-${id}`,
+    invoice_items: [],
+  });
+  await mockStudioSupabase(page, {
+    customers: [customer],
+    projects: [],
+    invoices: [
+      invoice('a', 'INV-OLDEST', 'sent', '2026-09-01T08:00:00Z', '2026-09-12T08:00:00Z', '2026-09-20'),
+      invoice('b', 'INV-NEWEST', 'draft', '2026-09-10T08:00:00Z', null, '2026-09-30'),
+      invoice('c', 'INV-URGENT', 'overdue', '2026-09-05T08:00:00Z', '2026-09-10T08:00:00Z', '2026-09-16'),
+      invoice('d', 'INV-PAID', 'paid', '2026-09-06T08:00:00Z', '2026-09-11T08:00:00Z', '2026-09-14'),
+      invoice('e', 'INV-NO-DUE', 'sent', '2026-08-01T08:00:00Z', '2026-08-02T08:00:00Z', null),
+    ],
+    offers: [],
+  });
+  await page.goto(`${base}/studio/`);
+  await page.locator('.nav-link[data-view="invoices"]').click();
+  const numbers = page.locator('.data-table tbody tr > td:first-child > strong');
+  const sort = page.getByRole('combobox', { name: 'Rechnungen sortieren' });
+  await expect(sort).toHaveValue('created_desc');
+  await expect(numbers).toHaveText(['INV-NEWEST', 'INV-PAID', 'INV-URGENT', 'INV-OLDEST', 'INV-NO-DUE']);
+
+  await sort.selectOption('sent_desc');
+  await expect(numbers).toHaveText(['INV-OLDEST', 'INV-PAID', 'INV-URGENT', 'INV-NO-DUE', 'INV-NEWEST']);
+
+  await sort.selectOption('due_asc');
+  await expect(numbers).toHaveText(['INV-URGENT', 'INV-OLDEST', 'INV-NO-DUE', 'INV-PAID', 'INV-NEWEST']);
+});
+
+test("Workspace: invoice row actions reveal on hover or click and close accessibly", async ({ page }) => {
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  await page.locator('.nav-link[data-view="invoices"]').click();
+  const row = page.locator('.data-table tbody [data-invoice-record]').filter({ hasText: 'HEAV-2026-002' });
+  const reveal = row.locator('[data-invoice-actions]');
+  const trigger = reveal.getByRole('button', { name: /Aktionen für HEAV-2026-002/ });
+  const panel = reveal.locator('.invoice-actions-panel');
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await expect(panel).toHaveAttribute('aria-hidden', 'true');
+  await expect(panel).toHaveAttribute('inert', '');
+
+  await row.hover();
+  await expect(panel).toHaveAttribute('aria-hidden', 'false');
+  await expect(panel).not.toHaveAttribute('inert', '');
+  await expect(panel).toHaveCSS('opacity', '1');
+  const actionClearance = await row.evaluate((element) => {
+    const total = element.querySelector('td:nth-child(4)').getBoundingClientRect();
+    const actions = element.querySelector('.invoice-actions-panel').getBoundingClientRect();
+    return actions.left - total.right;
+  });
+  expect(actionClearance).toBeGreaterThanOrEqual(0);
+
+  await page.mouse.move(1, 1);
+  await expect(panel).toHaveAttribute('aria-hidden', 'true');
+  await trigger.click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  await expect(panel).toHaveAttribute('aria-hidden', 'false');
+  await page.keyboard.press('Escape');
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await expect(trigger).toBeFocused();
+});
+
+test("Workspace: mobile invoice actions stay collapsed until a deliberate tap", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  await page.getByRole('button', { name: 'Menü öffnen' }).click();
+  await page.locator('.nav-link[data-view="invoices"]').click();
+  await expect(page.locator('#sidebar')).toHaveCSS('visibility', 'hidden');
+
+  const card = page.locator('.invoice-card').first();
+  const trigger = card.getByRole('button', { name: /Aktionen für/ });
+  const panel = card.locator('.invoice-actions-panel');
+  const actionPanelIds = await page.locator('[id^="invoice-actions-"]').evaluateAll((panels) => panels.map((item) => item.id));
+  expect(new Set(actionPanelIds).size).toBe(actionPanelIds.length);
+  const controlledPanelId = await trigger.getAttribute('aria-controls');
+  await expect(panel).toHaveAttribute('id', controlledPanelId);
+  await expect(page.locator(`#${controlledPanelId}`)).toHaveCount(1);
+  await expect(panel).toHaveAttribute('aria-hidden', 'true');
+  expect((await trigger.boundingBox()).height).toBeGreaterThanOrEqual(44);
+  await trigger.click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  await expect(panel).toHaveAttribute('aria-hidden', 'false');
+  const targets = await panel.locator('button').evaluateAll((buttons) => buttons.map((button) => {
+    const box = button.getBoundingClientRect();
+    return { width: box.width, height: box.height };
+  }));
+  expect(targets.every(({ width, height }) => width >= 44 && height >= 44)).toBe(true);
+  await assertHealthy(page, []);
+  await page.close();
+});
+
+test("Workspace: menu and finance indicators slide without replacing their track", async ({ page }) => {
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  const menuIndicator = page.locator('.nav-active-indicator');
+  const menuBefore = await menuIndicator.evaluate((element) => element.style.transform);
+  await page.locator('.nav-link[data-view="customers"]').click();
+  const menuAfter = await menuIndicator.evaluate((element) => element.style.transform);
+  expect(menuAfter).not.toBe(menuBefore);
+  const menuTransitionDurations = await menuIndicator.evaluate((element) => getComputedStyle(element).transitionDuration.split(',').map((value) => value.trim()));
+  expect(menuTransitionDurations).toEqual(['0.36s', '0.36s']);
+
+  await page.locator('.nav-link[data-view="invoices"]').click();
+  const finance = page.getByRole('navigation', { name: 'Finanzen' });
+  await finance.evaluate((element) => { element.dataset.trackInstance = 'preserved'; });
+  const indicator = finance.locator('.finance-nav-indicator');
+  const financeBefore = await indicator.evaluate((element) => element.style.transform);
+  await finance.getByRole('button', { name: 'Offerten', exact: true }).click();
+  await expect(finance).toHaveAttribute('data-track-instance', 'preserved');
+  const financeAfter = await indicator.evaluate((element) => element.style.transform);
+  expect(financeAfter).not.toBe(financeBefore);
+  const financeTransitionDurations = await indicator.evaluate((element) => getComputedStyle(element).transitionDuration.split(',').map((value) => value.trim()));
+  expect(financeTransitionDurations).toEqual(['0.36s', '0.36s']);
+});
+
+test("Workspace: invoice editor uses one harmonious rounded geometry", async ({ page }) => {
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  await page.getByRole('button', { name: 'Neue Rechnung' }).click();
+  const dialog = page.locator('#editor-dialog');
+  await expect(dialog).toBeVisible();
+  const corners = await dialog.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return [style.borderTopLeftRadius, style.borderTopRightRadius, style.borderBottomRightRadius, style.borderBottomLeftRadius];
+  });
+  expect(corners).toEqual(['18px', '18px', '18px', '18px']);
+  await expect(dialog.locator('.invoice-item').first()).toHaveCSS('border-radius', '12px');
+  await expect(dialog.locator('.form-field input').first()).toHaveCSS('border-radius', '12px');
+});
+
+test("Workspace: invoice search and sorting controls share one utility radius", async ({ page }) => {
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/admin/`);
+  await page.locator('.nav-link[data-view="invoices"]').click();
+  const radii = await page.locator('.invoice-toolbar').evaluate((toolbar) => ({
+    search: getComputedStyle(toolbar.querySelector('.search-field input')).borderRadius,
+    sort: getComputedStyle(toolbar.querySelector('[data-invoice-sort]')).borderRadius,
+  }));
+  expect(radii).toEqual({ search: '12px', sort: '12px' });
 });
 
 test("Workspace: desktop topbar, finance nav and content share one left gutter", async ({ browser }) => {
@@ -726,6 +887,7 @@ test("Desktop: Dashboard und vollständiger Erfassungsfluss", async ({ browser }
   await page.getByRole("button", { name: "Speichern" }).click();
   await expect(page.locator(".data-table").getByText("HEAV-2026-003", { exact: true })).toBeVisible();
   const newInvoiceRow = page.locator(".data-table tbody tr").filter({ hasText: "HEAV-2026-003" });
+  await newInvoiceRow.getByRole("button", { name: "Aktionen für HEAV-2026-003" }).click();
   const downloadPromise = page.waitForEvent("download");
   await newInvoiceRow.getByRole("button", { name: "PDF herunterladen", exact: true }).click();
   const download = await downloadPromise;
@@ -812,6 +974,7 @@ test("Bestehende negative Rabattposition lässt sich ohne native Zahlenfeld-Sper
   await page.goto(`${base}/admin/`);
   await page.locator('.nav-link[data-view="invoices"]').click();
   const invoiceRow = page.locator(".data-table tbody tr").filter({ hasText: "HEAV-2026-002" });
+  await invoiceRow.getByRole("button", { name: "Aktionen für HEAV-2026-002" }).click();
   await invoiceRow.getByRole("button", { name: "Bearbeiten" }).click();
 
   const discountRow = page.locator(".invoice-item").nth(1);
@@ -1124,7 +1287,8 @@ test("Studio: Rechnungen, Kunden und Projekte verwenden klare Icon-Aktionen", as
   expect(editBounds.width).toBeGreaterThanOrEqual(38);
   expect(editBounds.height).toBeGreaterThanOrEqual(38);
   await page.locator('.nav-link[data-view="invoices"]').click();
-  const invoiceRow = page.locator(".data-table tbody tr").first();
+  const invoiceRow = page.locator(".data-table tbody tr").filter({ hasText: "HEAV-2026-001" });
+  await invoiceRow.getByRole("button", { name: "Aktionen für HEAV-2026-001" }).click();
   await expect(invoiceRow.getByRole("button", { name: "Rechnung senden" }).locator("svg")).toBeVisible();
   const actionLayout = await invoiceRow.locator(".table-actions").evaluate((toolbar) => {
     const buttons = [...toolbar.querySelectorAll("button")].map((button) => button.getBoundingClientRect());
@@ -1134,7 +1298,7 @@ test("Studio: Rechnungen, Kunden und Projekte verwenden klare Icon-Aktionen", as
       actionTopSpread: Math.max(...buttons.map(({ top }) => top)) - Math.min(...buttons.map(({ top }) => top)),
     };
   });
-  expect(actionLayout.display).toBe("inline-flex");
+  expect(actionLayout.display).toBe("flex");
   expect(actionLayout.flexWrap).toBe("nowrap");
   expect(actionLayout.actionTopSpread).toBeLessThanOrEqual(1);
   await page.close();

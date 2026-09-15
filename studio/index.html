@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="/admin/assets/admin-actions.css?v=20260910-layout" />
     <link rel="stylesheet" href="/admin/assets/workspace.css?v=20260913-mobile-workspace" />
     <link rel="stylesheet" href="/admin/assets/crm-theme.css?v=anthracite-1" />
-    <link rel="stylesheet" href="/admin/assets/studio-editorial.css?v=editorial-6" />
+    <link rel="stylesheet" href="/admin/assets/studio-editorial.css?v=editorial-7" />
   </head>
   <body class="crm-theme studio-editorial-theme">
     <div class="loading-screen" id="loading-screen" aria-live="polite"><strong>HEAV</strong><span>Studio wird geladen …</span></div>
@@ -20,13 +20,14 @@
       <aside class="sidebar" id="sidebar" aria-label="Studio Navigation">
         <div class="sidebar-head"><a class="brand" href="/" aria-label="Zur HEAV Website">HEAV</a><button class="nav-close" type="button" aria-label="Menü schliessen" data-close-nav>Schliessen</button></div>
         <nav class="main-nav" aria-label="Studio Navigation">
-          <button class="nav-link is-active" data-view="dashboard"><span aria-hidden="true">01</span>Übersicht</button>
-          <button class="nav-link" data-view="projects"><span aria-hidden="true">02</span>Projekte</button>
-          <button class="nav-link" data-view="customers"><span aria-hidden="true">03</span>Kunden</button>
-          <button class="nav-link" data-view="invoices"><span aria-hidden="true">04</span>Finanzen</button>
+          <button class="nav-link is-active" data-view="dashboard"><span class="nav-index" aria-hidden="true">01</span><span class="nav-label">Übersicht</span></button>
+          <button class="nav-link" data-view="projects"><span class="nav-index" aria-hidden="true">02</span><span class="nav-label">Projekte</span></button>
+          <button class="nav-link" data-view="customers"><span class="nav-index" aria-hidden="true">03</span><span class="nav-label">Kunden</span></button>
+          <button class="nav-link" data-view="invoices"><span class="nav-index" aria-hidden="true">04</span><span class="nav-label">Finanzen</span></button>
           <span class="nav-section-label">Verwaltung</span>
-          <button class="nav-link" data-view="settings"><span aria-hidden="true">05</span>Einstellungen</button>
-          <button class="nav-link" data-view="portal-requests"><span aria-hidden="true">06</span>Portal-Anfragen</button>
+          <button class="nav-link" data-view="settings"><span class="nav-index" aria-hidden="true">05</span><span class="nav-label">Einstellungen</span></button>
+          <button class="nav-link" data-view="portal-requests"><span class="nav-index" aria-hidden="true">06</span><span class="nav-label">Portal-Anfragen</span></button>
+          <span class="nav-active-indicator" aria-hidden="true"></span>
         </nav>
         <div class="sidebar-foot"><span class="connection-dot" aria-hidden="true"></span><span id="connection-label">Sicher verbunden</span><button id="logout-button" type="button">Abmelden</button></div>
       </aside>
@@ -37,6 +38,6 @@
     <dialog class="editor-dialog" id="editor-dialog" aria-labelledby="dialog-title"><form method="dialog" class="dialog-shell" id="editor-form"><header><div><span class="kicker" id="dialog-kicker">NEU</span><h2 id="dialog-title">Eintrag</h2></div><button class="icon-button" value="cancel" type="submit" formnovalidate aria-label="Dialog schliessen">×</button></header><div class="dialog-body" id="dialog-body"></div><footer><p class="form-error" id="form-error" role="alert"></p><button class="secondary-button" value="cancel" type="submit" formnovalidate>Abbrechen</button><button class="primary-action" value="save" type="submit">Speichern</button></footer></form></dialog>
     <dialog class="action-confirm-dialog" id="action-confirm-dialog" aria-labelledby="action-confirm-title" aria-describedby="action-confirm-copy"><form method="dialog" class="action-confirm-shell" id="action-confirm-form"><div class="action-confirm-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M21 3 10 14"/><path d="m21 3-7 18-4-7-7-4Z"/></svg></div><div><span class="kicker" id="action-confirm-kicker">BESTÄTIGEN</span><h2 id="action-confirm-title">Aktion bestätigen</h2><p id="action-confirm-copy"></p></div><footer><button class="secondary-button" value="cancel" type="submit" formnovalidate>Abbrechen</button><button class="primary-action" id="action-confirm-button" value="confirm" type="submit">Jetzt senden <span aria-hidden="true">↗</span></button></footer></form></dialog>
     <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-    <script type="module" src="/admin/assets/app.js?v=20260915-heav-polish-4"></script>
+    <script type="module" src="/admin/assets/app.js?v=20260915-invoice-sort-1"></script>
   </body>
 </html>
