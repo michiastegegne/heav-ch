@@ -44,7 +44,7 @@ test("Studio lädt das isolierte Editorial-Designsystem in stabiler Reihenfolge"
     "/admin/assets/admin-actions.css?v=20260910-layout",
     "/admin/assets/workspace.css?v=20260913-mobile-workspace",
     "/admin/assets/crm-theme.css?v=anthracite-1",
-    "/admin/assets/studio-editorial.css?v=editorial-3",
+    "/admin/assets/studio-editorial.css?v=editorial-6",
   ];
   const positions = expectedAssets.map((asset) => studioHtml.indexOf(`href="${asset}"`));
   assert.ok(positions.every((position) => position >= 0), "alle Studio-Stylesheets sind versioniert eingebunden");
@@ -52,7 +52,7 @@ test("Studio lädt das isolierte Editorial-Designsystem in stabiler Reihenfolge"
   assert.match(studioHtml, /<html lang="de-CH" class="studio-editorial-root">/);
   assert.match(studioHtml, /<meta name="theme-color" content="#000000"/);
   assert.match(studioHtml, /<body class="crm-theme studio-editorial-theme">/);
-  assert.match(studioHtml, /src="\/admin\/assets\/app\.js\?v=20260915-visual-system-1"/);
+  assert.match(studioHtml, /src="\/admin\/assets\/app\.js\?v=20260915-heav-polish-4"/);
 });
 
 test("Alle referenzierten privaten Schriftdateien sind lokal gebündelt", async () => {
@@ -64,8 +64,9 @@ test("Alle referenzierten privaten Schriftdateien sind lokal gebündelt", async 
   }
 });
 
-test("Studio-Aktionen verwenden kompakte, zugängliche SVG-Icons", () => {
-  assert.match(studioHtml, /class="menu-button icon-button"[^>]*aria-label="Menü öffnen"[^>]*><svg[^>]*viewBox="0 0 24 24"/);
+test("Studio verwendet das HEAV-Menü und zugängliche Aktionsicons", () => {
+  assert.match(studioHtml, /class="menu-button"[^>]*aria-label="Menü öffnen"[^>]*>Menü<\/button>/);
+  assert.match(studioHtml, /class="nav-close"[^>]*aria-label="Menü schliessen"[^>]*>Schliessen<\/button>/);
   assert.match(adminSource, /function actionIconButton/);
   assert.match(adminSource, /actionIconButton\("edit", "Bearbeiten"/);
   assert.match(adminSource, /paper-plane/);

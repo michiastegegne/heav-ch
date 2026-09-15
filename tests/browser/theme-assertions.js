@@ -38,11 +38,16 @@ export async function assertStudioEditorialTheme(page) {
     className: el.className,
     background: getComputedStyle(el).backgroundColor,
     radius: parseFloat(getComputedStyle(el).borderRadius),
+    flatLineSurface: el.matches('.mobile-card') && getComputedStyle(el).backgroundColor === 'rgba(0, 0, 0, 0)',
     fullScreenEditor: el.matches('.editor-dialog') && innerWidth < 821,
   })));
   expect(surfaces.length).toBeGreaterThan(0);
   const editorialSurfaces = ['rgb(5, 6, 7)', 'rgb(9, 11, 13)'];
-  expect(surfaces.every(surface => editorialSurfaces.includes(surface.background) && (surface.radius <= 18 || surface.fullScreenEditor))).toBe(true);
+  const invalidSurfaces = surfaces.filter(surface =>
+    (!editorialSurfaces.includes(surface.background) && !surface.flatLineSurface)
+    || (surface.radius > 18 && !surface.fullScreenEditor)
+  );
+  expect(invalidSurfaces).toEqual([]);
 
   const lowContrast = await page.locator('body').evaluate(root => {
     const rgb = color => (color.match(/[\d.]+/g) || []).map(Number);
