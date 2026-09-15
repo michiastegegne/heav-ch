@@ -102,9 +102,11 @@ body.studio-editorial-theme .main-nav {
   margin: 38px 0 auto;
 }
 body.studio-editorial-theme .nav-link {
-  grid-template-columns: 27px 1fr;
-  min-height: 45px;
-  padding: 0 14px;
+  width: fit-content;
+  max-width: 100%;
+  grid-template-columns: 24px auto;
+  min-height: 40px;
+  padding: 0 12px;
   border: 1px solid transparent;
   border-radius: 999px;
   color: #a1a4a5;
@@ -218,14 +220,16 @@ body.studio-editorial-theme .view {
 }
 
 body.studio-editorial-theme :is(.primary-action, .primary-button) {
-  min-height: 44px;
-  padding: 0 17px;
+  width: auto;
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 12px;
   border: 1px solid #f0f0f0;
   border-radius: 999px;
   color: #000000 !important;
   background: #f0f0f0 !important;
   box-shadow: none !important;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
 }
 body.studio-editorial-theme :is(.primary-action, .primary-button):is(:hover, :focus-visible) {
@@ -246,13 +250,15 @@ body.studio-editorial-theme .action-confirm-shell .primary-action.is-destructive
   border-color: #ad7478 !important;
 }
 body.studio-editorial-theme .secondary-button {
-  min-height: 44px;
-  padding: 0 16px;
+  width: auto;
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 12px;
   border: 1px solid rgba(214, 235, 253, .22);
   border-radius: 999px;
   color: #f0f0f0;
   background: transparent;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
 }
 body.studio-editorial-theme .secondary-button:is(:hover, :focus-visible) {
@@ -286,6 +292,9 @@ body.studio-editorial-theme :is(.text-button, .project-module-link) {
   text-decoration-thickness: 1px;
   text-underline-offset: 5px;
 }
+body.studio-editorial-theme .topbar .primary-action[hidden] { display: none; }
+body.studio-editorial-theme .topbar .primary-action { min-width: 0; }
+body.studio-editorial-theme .dashboard-quick-actions button { flex: 0 0 auto; }
 
 body.studio-editorial-theme :is(.dashboard-intro, .hero-row) { margin-bottom: 23px; }
 body.studio-editorial-theme :is(.dashboard-intro h2, .hero-row h2, .project-view-intro h2) {
@@ -425,11 +434,11 @@ body.studio-editorial-theme .panel-footer { border-color: rgba(214, 235, 253, .1
 
 body.studio-editorial-theme .toolbar {
   display: flex;
-  min-height: 55px;
+  min-height: 48px;
   align-items: center;
   gap: 10px;
   margin-bottom: 15px;
-  padding: 5px;
+  padding: 4px;
   border: 1px solid rgba(214, 235, 253, .18);
   border-radius: 999px;
   background: #050607;
@@ -440,7 +449,7 @@ body.studio-editorial-theme .search-field input,
 body.studio-editorial-theme :is(input, select, textarea),
 body.studio-editorial-theme .form-field :is(input, select, textarea),
 body.studio-editorial-theme .invoice-item input {
-  min-height: 44px;
+  min-height: 40px;
   border: 1px solid #646a70 !important;
   border-radius: 12px;
   color: #f0f0f0;
@@ -460,8 +469,8 @@ body.studio-editorial-theme .search-field input {
 body.studio-editorial-theme .filter-tabs { display: flex; gap: 5px; flex-wrap: wrap; }
 body.studio-editorial-theme .filter-tab,
 body.studio-editorial-theme .finance-nav button {
-  min-height: 44px;
-  padding: 0 13px;
+  min-height: 38px;
+  padding: 0 11px;
   border: 1px solid transparent;
   border-radius: 999px;
   color: #a1a4a5;
@@ -500,7 +509,7 @@ body.studio-editorial-theme .data-table {
   box-shadow: none;
 }
 body.studio-editorial-theme .data-table th {
-  padding: 14px 16px;
+  padding: 12px 14px;
   border-color: rgba(214, 235, 253, .15);
   color: #a1a4a5;
   background: #090b0d;
@@ -509,7 +518,7 @@ body.studio-editorial-theme .data-table th {
   letter-spacing: .11em;
 }
 body.studio-editorial-theme .data-table td {
-  padding: 16px;
+  padding: 11px 14px;
   border-color: rgba(214, 235, 253, .13);
   color: #d5d7d8;
   background: #050607;
@@ -518,11 +527,18 @@ body.studio-editorial-theme .data-table tbody tr:hover td,
 body.studio-editorial-theme .data-table tr.is-selected td { background: #0b0d0f; }
 body.studio-editorial-theme .data-table strong { color: #f0f0f0; }
 body.studio-editorial-theme .data-table small { color: #a1a4a5; }
-body.studio-editorial-theme .customer-contact { color: #f0f0f0; background: #171a1c; }
+body.studio-editorial-theme .customer-name { gap: 0; }
+body.studio-editorial-theme .customer-contact {
+  width: 22px;
+  height: 22px;
+  margin-right: 11px;
+  color: #f0f0f0;
+  background: #171a1c;
+}
 
 body.studio-editorial-theme .status {
-  min-height: 27px;
-  padding: 0 10px;
+  min-height: 24px;
+  padding: 0 8px;
   border: 1px solid rgba(214, 235, 253, .16);
   border-radius: 999px;
   color: #c4c8ca !important;
@@ -561,7 +577,7 @@ body.studio-editorial-theme .project-picker {
   font-weight: 500;
 }
 body.studio-editorial-theme .project-picker select {
-  min-height: 46px;
+  min-height: 40px;
   padding: 0 14px;
   border-radius: 999px;
   background: #050607;
@@ -733,6 +749,7 @@ body.studio-editorial-theme .mobile-card p { color: #a1a4a5; }
 body.studio-editorial-theme .settings-grid { gap: 14px; }
 body.studio-editorial-theme .settings-card { padding: 25px; }
 body.studio-editorial-theme .settings-card p { color: #a1a4a5; }
+body.studio-editorial-theme .settings-card > .primary-action { margin-top: 18px !important; }
 body.studio-editorial-theme .settings-list,
 body.studio-editorial-theme .settings-list div { border-color: rgba(214, 235, 253, .14); }
 body.studio-editorial-theme .settings-list span { color: #a1a4a5; }
@@ -833,7 +850,7 @@ body.studio-editorial-theme .bottom-nav { display: none; }
   body.studio-editorial-theme .dashboard-focus-modules > div:last-child { border-bottom: 0; }
   body.studio-editorial-theme .dashboard-focus-footer { display: block; }
   body.studio-editorial-theme .dashboard-focus-footer > div { width: 100%; margin-top: 10px; }
-  body.studio-editorial-theme .dashboard-focus-footer > div button { flex: 1; }
+  body.studio-editorial-theme .dashboard-focus-footer > div button { flex: 0 0 auto; }
   body.studio-editorial-theme .dashboard-money { padding: 23px 18px; }
   body.studio-editorial-theme .dashboard-panel .panel-head,
   body.studio-editorial-theme .workspace-action-list,
@@ -846,11 +863,19 @@ body.studio-editorial-theme .bottom-nav { display: none; }
   }
   body.studio-editorial-theme .search-field { width: 100%; max-width: none; }
   body.studio-editorial-theme .filter-tabs { gap: 6px; }
-  body.studio-editorial-theme .filter-tab { min-height: 44px; }
+  body.studio-editorial-theme .filter-tab,
+  body.studio-editorial-theme .finance-nav button { min-height: 44px; }
+  body.studio-editorial-theme :is(.primary-action, .primary-button, .secondary-button) { min-height: 44px; }
+  body.studio-editorial-theme :is(input, select, textarea),
+  body.studio-editorial-theme .project-picker select { min-height: 44px; }
+  body.studio-editorial-theme .nav-link { min-height: 44px; }
   body.studio-editorial-theme .finance-nav { padding: 10px 12px 0; }
   body.studio-editorial-theme .finance-nav + .view { padding-top: 10px; }
   body.studio-editorial-theme .mobile-card-list { display: grid; }
-  body.studio-editorial-theme .mobile-card { display: flex; min-height: 0; }
+  body.studio-editorial-theme .mobile-card { display: flex; min-height: 0; padding: 14px; }
+  body.studio-editorial-theme .customer-name { gap: 0; }
+  body.studio-editorial-theme .customer-contact { width: 26px; height: 26px; }
+  body.studio-editorial-theme .mobile-card .table-actions { margin-top: 10px; }
   body.studio-editorial-theme .data-table { display: none; }
   body.studio-editorial-theme .project-canvas {
     --canvas-panel: calc(100vw - 54px);
@@ -960,8 +985,8 @@ body.studio-editorial-theme .bottom-nav { display: none; }
   body.studio-editorial-theme .settings-card { padding: 21px 18px; }
   body.studio-editorial-theme .project-picker { max-width: none; }
   body.studio-editorial-theme .workspace-action { align-items: flex-start; }
-  body.studio-editorial-theme .dashboard-quick-actions { display: grid; grid-template-columns: 1fr 1fr; }
-  body.studio-editorial-theme .dashboard-quick-actions .primary-action { grid-column: 1 / -1; }
+  body.studio-editorial-theme .dashboard-quick-actions { display: flex; flex-wrap: wrap; }
+  body.studio-editorial-theme .dashboard-quick-actions .primary-action { grid-column: auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {
