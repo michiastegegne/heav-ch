@@ -9,6 +9,7 @@ const contactSource = await readFile(new URL("../contact/index.html", import.met
 const studioHtml = await readFile(new URL("../studio/index.html", import.meta.url), "utf8");
 const invoiceDocumentSource = await readFile(new URL("../supabase/functions/invoice-document/index.ts", import.meta.url), "utf8");
 const actionCss = await readFile(new URL("../admin/assets/admin-actions.css", import.meta.url), "utf8");
+const studioCss = await readFile(new URL("../admin/assets/studio-editorial.css", import.meta.url), "utf8");
 const privateBaseCss = await Promise.all([
   readFile(new URL("../admin/assets/admin.css", import.meta.url), "utf8"),
   readFile(new URL("../login/assets/login.css", import.meta.url), "utf8"),
@@ -44,7 +45,7 @@ test("Studio lädt das isolierte Editorial-Designsystem in stabiler Reihenfolge"
     "/admin/assets/admin-actions.css?v=20260910-layout",
     "/admin/assets/workspace.css?v=20260913-mobile-workspace",
     "/admin/assets/crm-theme.css?v=anthracite-1",
-    "/admin/assets/studio-editorial.css?v=editorial-6",
+    "/admin/assets/studio-editorial.css?v=editorial-7",
   ];
   const positions = expectedAssets.map((asset) => studioHtml.indexOf(`href="${asset}"`));
   assert.ok(positions.every((position) => position >= 0), "alle Studio-Stylesheets sind versioniert eingebunden");
@@ -52,7 +53,10 @@ test("Studio lädt das isolierte Editorial-Designsystem in stabiler Reihenfolge"
   assert.match(studioHtml, /<html lang="de-CH" class="studio-editorial-root">/);
   assert.match(studioHtml, /<meta name="theme-color" content="#000000"/);
   assert.match(studioHtml, /<body class="crm-theme studio-editorial-theme">/);
-  assert.match(studioHtml, /src="\/admin\/assets\/app\.js\?v=20260915-heav-polish-4"/);
+  assert.match(studioHtml, /src="\/admin\/assets\/app\.js\?v=20260915-invoice-sort-1"/);
+  assert.match(studioCss, /--studio-accent:\s*#e8e4dc/);
+  assert.doesNotMatch(studioCss, /#d7ff38|--studio-acid/);
+  assert.doesNotMatch(adminSource, /#d7ff38/);
 });
 
 test("Alle referenzierten privaten Schriftdateien sind lokal gebündelt", async () => {

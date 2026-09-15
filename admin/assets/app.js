@@ -18,6 +18,7 @@ const navMenuButton = document.querySelector("[data-open-nav]");
 const navigationPanel = document.querySelector("#sidebar");
 const mobileNavigationQuery = window.matchMedia("(max-width: 820px)");
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+const preciseHoverQuery = window.matchMedia("(hover: hover) and (pointer: fine)");
 const actionConfirmDialog = document.querySelector("#action-confirm-dialog");
 const actionConfirmKicker = document.querySelector("#action-confirm-kicker");
 const actionConfirmTitle = document.querySelector("#action-confirm-title");
@@ -42,7 +43,7 @@ const viewNames = {
   settings: "Einstellungen",
   "portal-requests": "Portal-Anfragen",
 };
-const state = { view: "dashboard", query: "", filter: "all", selectedProjectId: null, data: null, supabase: null, sendRequestKeys: new Map() };
+const state = { view: "dashboard", query: "", filter: "all", invoiceSort: "created_desc", selectedProjectId: null, data: null, supabase: null, sendRequestKeys: new Map() };
 const esc = (value = "") => String(value).replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
 const formatDate = (value) => value ? new Intl.DateTimeFormat("de-CH").format(new Date(`${value}T12:00:00`)) : "–";
 const today = () => new Date().toISOString().slice(0, 10);
@@ -55,7 +56,7 @@ const validVatNumber = (value = "") => /^CHE-\d{3}\.\d{3}\.\d{3} (MWST|TVA|IVA)$
 function showToast(message, tone = "default") {
   toast.className = "toast";
   toast.textContent = message;
-  toast.style.borderLeft = `4px solid ${tone === "error" ? "#ff5b35" : "#d7ff38"}`;
+  toast.style.borderLeft = `4px solid ${tone === "error" ? "#ff5b35" : "#e8e4dc"}`;
   toast.hidden = false;
   clearTimeout(showToast.timer);
   showToast.timer = setTimeout(() => { toast.hidden = true; }, 4200);
@@ -63,7 +64,7 @@ function showToast(message, tone = "default") {
 
 function showDispatchSuccess(title = "Rechnung versendet", copy = "Der sichere Versand wurde bestätigt.") {
   toast.className = "toast is-dispatch-success";
-  toast.style.borderLeft = "4px solid #d7ff38";
+  toast.style.borderLeft = "4px solid #e8e4dc";
   toast.innerHTML = `<span class="dispatch-plane" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M21 3 10 14"/><path d="m21 3-7 18-4-7-7-4Z"/></svg></span><span><strong>${esc(title)}</strong><small>${esc(copy)}</small></span><span class="dispatch-check" aria-hidden="true">✓</span>`;
   toast.hidden = false;
   clearTimeout(showToast.timer);
@@ -242,8 +243,45 @@ function renderDashboard() {
 }
 
 function filtered(items, fields) { const query = state.query.trim().toLowerCase(); return items.filter((item) => !query || fields.some((field) => String(item[field] || "").toLowerCase().includes(query))); }
-function toolbar(type, placeholder, filters = []) { return `<div class="toolbar"><label class="search-field"><span class="sr-only">Suchen</span><input type="search" data-search placeholder="${esc(placeholder)}" value="${esc(state.query)}"></label>${filters.length ? `<div class="filter-tabs">${filters.map(([value,label]) => `<button class="filter-tab ${state.filter === value ? "is-active" : ""}" data-filter="${value}">${label}</button>`).join("")}</div>` : ""}</div>`; }
+function toolbar(type, placeholder, filters = [], trailing = "") { return `<div class="toolbar ${type === "invoice" ? "invoice-toolbar" : ""}"><label class="search-field"><span class="sr-only">Suchen</span><input type="search" data-search placeholder="${esc(placeholder)}" value="${esc(state.query)}"></label>${filters.length ? `<div class="filter-tabs">${filters.map(([value,label]) => `<button class="filter-tab ${state.filter === value ? "is-active" : ""}" data-filter="${value}">${label}</button>`).join("")}</div>` : ""}${trailing}</div>`; }
 function filterToolbar(placeholder, filters) { return `<div class="toolbar"><label class="search-field"><span class="sr-only">Suchen</span><input type="search" data-search placeholder="${esc(placeholder)}" value="${esc(state.query)}"></label><div class="filter-tabs">${filters.map(([value,label]) => `<button class="filter-tab ${state.filter === value ? "is-active" : ""}" data-filter="${value}">${label}</button>`).join("")}</div></div>`; }
+
+function invoiceTimestamp(item, field, fallback = "") {
+  const value = item[field] || fallback;
+  const timestamp = value ? Date.parse(value) : 0;
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+function newestInvoiceFirst(a, b) {
+  const difference = invoiceTimestamp(b, "created_at", b.issue_date) - invoiceTimestamp(a, "created_at", a.issue_date);
+  return difference || String(b.invoice_number || "").localeCompare(String(a.invoice_number || ""), "de-CH", { numeric: true });
+}
+function sortInvoices(items) {
+  const sorted = [...items];
+  if (state.invoiceSort === "sent_desc") {
+    return sorted.sort((a, b) => {
+      const aSent = invoiceTimestamp(a, "sent_at");
+      const bSent = invoiceTimestamp(b, "sent_at");
+      if (Boolean(aSent) !== Boolean(bSent)) return bSent ? 1 : -1;
+      return bSent - aSent || newestInvoiceFirst(a, b);
+    });
+  }
+  if (state.invoiceSort === "due_asc") {
+    return sorted.sort((a, b) => {
+      const aOpen = ["sent", "overdue"].includes(a.status) ? 0 : 1;
+      const bOpen = ["sent", "overdue"].includes(b.status) ? 0 : 1;
+      if (aOpen !== bOpen) return aOpen - bOpen;
+      const aDue = invoiceTimestamp(a, "due_date");
+      const bDue = invoiceTimestamp(b, "due_date");
+      if (Boolean(aDue) !== Boolean(bDue)) return aDue ? -1 : 1;
+      return aDue - bDue || newestInvoiceFirst(a, b);
+    });
+  }
+  return sorted.sort(newestInvoiceFirst);
+}
+function invoiceSortControl() {
+  const options = [["created_desc", "Zuletzt erstellt"], ["sent_desc", "Zuletzt versendet"], ["due_asc", "Nächste Fälligkeit"]];
+  return `<label class="invoice-sort-field"><span>Sortieren</span><select data-invoice-sort aria-label="Rechnungen sortieren">${options.map(([value, label]) => `<option value="${value}" ${state.invoiceSort === value ? "selected" : ""}>${label}</option>`).join("")}</select></label>`;
+}
 
 function renderCustomers() {
   const items = filtered(state.data.customers, ["company", "contact_name", "email", "city"]);
@@ -284,21 +322,24 @@ function renderProjects() {
   return `<section class="view">${toolbar("project", "Projekte durchsuchen …", [["all","Alle"],["planning","Planung"],["active","Aktiv"],["completed","Abgeschlossen"]])}${selected ? `<label class="project-picker"><span>Projekt auswählen</span><select data-project-picker>${items.map(item => `<option value="${esc(item.id)}" ${item.id === selected.id ? "selected" : ""}>${esc(item.title)} · ${esc(customerLabel(item.customer))}</option>`).join("")}</select></label><p class="project-canvas-guide" id="project-canvas-guide"><span>6 Bereiche · horizontal erkunden →</span></p>` : ""}${selected ? renderProjectCanvas(selected) : `<div class="empty-state"><h3>Keine Projekte in diesem Filter.</h3><p>Wähle einen anderen Status oder passe die Suche an.</p></div>`}<div class="project-register"><div class="panel-head"><h3>PROJEKTREGISTER</h3><span>${items.length} ${items.length === 1 ? "Projekt" : "Projekte"}</span></div><table class="data-table"><thead><tr><th>Projekt</th><th>Status</th><th>Deadline</th><th>Budget</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list">${cards}</div></div></section>`;
 }
 
-function invoiceActions(invoice) {
+function invoiceActions(invoice, reveal = false, instance = "record") {
   const buttons = [actionIconButton("edit", "Bearbeiten", `data-edit="invoice" data-id="${esc(invoice.id)}"`)];
   if (!invoice.is_legacy && invoice.status !== "cancelled") buttons.push(actionIconButton("document", "PDF herunterladen", `data-invoice-action="download" data-id="${esc(invoice.id)}"`));
   if (!invoice.is_legacy && ["draft", "sent", "overdue"].includes(invoice.status)) buttons.push(actionIconButton("paper-plane", "Rechnung senden", `data-invoice-action="send" data-id="${esc(invoice.id)}"`));
   if (!invoice.is_legacy && ["sent", "overdue"].includes(invoice.status)) buttons.push(actionIconButton("paid", "Als bezahlt markieren", `data-invoice-action="mark_paid" data-id="${esc(invoice.id)}"`), actionIconButton("cancel", "Rechnung stornieren", `data-invoice-action="cancel" data-id="${esc(invoice.id)}"`, "is-danger"));
   if (!invoice.is_legacy && invoice.status === "draft") buttons.push(actionIconButton("trash", "Rechnung löschen", `data-delete-record="invoice" data-id="${esc(invoice.id)}"`, "is-danger"));
-  return `<div class="table-actions">${buttons.join("")}</div>`;
+  const actions = buttons.join("");
+  if (!reveal) return `<div class="table-actions">${actions}</div>`;
+  const panelId = `invoice-actions-${String(invoice.id).replace(/[^a-zA-Z0-9_-]/g, "-")}-${String(instance).replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+  return `<div class="invoice-action-reveal" data-invoice-actions><button class="invoice-action-trigger" type="button" data-invoice-actions-toggle aria-expanded="false" aria-controls="${esc(panelId)}" aria-label="Aktionen für ${esc(invoice.invoice_number)}"><span aria-hidden="true">•••</span></button><div class="table-actions invoice-actions-panel" id="${esc(panelId)}" aria-hidden="true" inert>${actions}</div></div>`;
 }
 function renderInvoices() {
   const all = state.data.invoices;
-  const items = filtered(all.filter((item) => state.filter === "all" || item.status === state.filter), ["invoice_number"]);
+  const items = sortInvoices(filtered(all.filter((item) => state.filter === "all" || item.status === state.filter), ["invoice_number"]));
   if (!all.length) return `<section class="view">${emptyState("Noch keine Rechnungen", "Erstelle deine erste HEAV-Rechnung als PDF und sende sie direkt an den Kunden.", "invoice")}</section>`;
-  const rows = items.map((item) => `<tr><td><strong>${esc(item.invoice_number)}</strong><small>${formatDate(item.issue_date)} · ${item.is_legacy ? "Historisch archiviert" : esc(formatReference(item.payment_reference))}</small></td><td>${esc(customerLabel(item.customer))}</td><td><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></td><td><strong>${formatCHF(item.total_rappen)}</strong><small>fällig ${formatDate(item.due_date)}</small></td><td>${invoiceActions(item)}</td></tr>`).join("");
-  const cards = items.map((item) => `<article class="mobile-card"><div><strong>${esc(item.invoice_number)} · ${formatCHF(item.total_rappen)}</strong><small>${esc(customerLabel(item.customer))} · fällig ${formatDate(item.due_date)}</small>${invoiceActions(item)}</div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></article>`).join("");
-  return `<section class="view">${toolbar("invoice", "Rechnungen durchsuchen …", [["all","Alle"], ...["draft","sent","paid","overdue","cancelled"].map((status) => [status,statusLabel(status)])])}<table class="data-table"><thead><tr><th>Rechnung</th><th>Kunde</th><th>Status</th><th>Total</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list">${cards}</div></section>`;
+  const rows = items.map((item) => `<tr class="invoice-record" data-invoice-record><td><strong>${esc(item.invoice_number)}</strong><small>${formatDate(item.issue_date)} · ${item.is_legacy ? "Historisch archiviert" : esc(formatReference(item.payment_reference))}</small></td><td>${esc(customerLabel(item.customer))}</td><td><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></td><td><strong>${formatCHF(item.total_rappen)}</strong><small>fällig ${formatDate(item.due_date)}</small></td><td>${invoiceActions(item, true, "desktop")}</td></tr>`).join("");
+  const cards = items.map((item) => `<article class="mobile-card invoice-card invoice-record" data-invoice-record><div><strong>${esc(item.invoice_number)} · ${formatCHF(item.total_rappen)}</strong><small>${esc(customerLabel(item.customer))} · fällig ${formatDate(item.due_date)}</small>${invoiceActions(item, true, "mobile")}</div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></article>`).join("");
+  return `<section class="view">${toolbar("invoice", "Rechnungen durchsuchen …", [["all","Alle"], ...["draft","sent","paid","overdue","cancelled"].map((status) => [status,statusLabel(status)])], invoiceSortControl())}<table class="data-table invoice-table"><thead><tr><th>Rechnung</th><th>Kunde</th><th>Status</th><th>Total</th><th><span class="sr-only">Aktionen</span></th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list invoice-card-list">${cards}</div></section>`;
 }
 
 function offerActions(offer) {
@@ -350,19 +391,54 @@ function syncTopbarAction() {
   topbarCreate.innerHTML = `${label} <span aria-hidden="true">+</span>`;
 }
 function financeNavigation() {
-  return `<nav class="finance-nav" aria-label="Finanzen">${[["invoices", "Rechnungen"], ["offers", "Offerten"]].map(([view, label]) => `<button type="button" data-view="${view}" ${state.view === view ? 'aria-current="page"' : ''}>${label}</button>`).join("")}</nav>`;
+  return `<nav class="finance-nav" aria-label="Finanzen">${[["invoices", "Rechnungen"], ["offers", "Offerten"]].map(([view, label]) => `<button type="button" data-view="${view}" ${state.view === view ? 'aria-current="page"' : ''}>${label}</button>`).join("")}<span class="finance-nav-indicator" aria-hidden="true"></span></nav>`;
+}
+function activateIndicator(indicator, transform, width) {
+  if (!indicator) return;
+  indicator.style.width = `${Math.max(1, Math.round(width))}px`;
+  indicator.style.transform = transform;
+  if (!indicator.classList.contains("is-ready")) requestAnimationFrame(() => indicator.classList.add("is-ready"));
+}
+function syncMainNavigationIndicator() {
+  const nav = document.querySelector(".main-nav");
+  const active = nav?.querySelector(".nav-link.is-active");
+  const label = active?.querySelector(".nav-label");
+  const indicator = nav?.querySelector(".nav-active-indicator");
+  if (!active || !label || !indicator) return;
+  const x = active.offsetLeft + label.offsetLeft;
+  const y = active.offsetTop + active.offsetHeight - 1;
+  activateIndicator(indicator, `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`, label.offsetWidth);
+}
+function syncFinanceNavigation(nav) {
+  if (!nav) return;
+  nav.querySelectorAll("button[data-view]").forEach((button) => {
+    if (button.dataset.view === state.view) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
+  });
+  const active = nav.querySelector("button[aria-current]");
+  activateIndicator(nav.querySelector(".finance-nav-indicator"), `translate3d(${Math.round(active?.offsetLeft || 0)}px, 0, 0)`, active?.offsetWidth || 1);
 }
 function render() {
   content.classList.remove("is-view-entering");
   title.textContent = viewNames[state.view];
   syncTopbarAction();
   const finance = ["invoices", "offers"].includes(state.view);
-  content.innerHTML = (finance ? financeNavigation() : "") + renderers[state.view]();
+  const viewMarkup = renderers[state.view]();
+  const currentFinanceNavigation = content.querySelector(":scope > .finance-nav");
+  if (finance && currentFinanceNavigation) {
+    const currentView = content.querySelector(":scope > .view");
+    if (currentView) currentView.outerHTML = viewMarkup;
+    else currentFinanceNavigation.insertAdjacentHTML("afterend", viewMarkup);
+  } else {
+    content.innerHTML = (finance ? financeNavigation() : "") + viewMarkup;
+  }
   document.querySelectorAll(".nav-link,.bottom-link").forEach((item) => {
     const active = item.dataset.view === state.view || (finance && item.dataset.view === "invoices");
     item.classList.toggle("is-active", active);
     if (active) item.setAttribute("aria-current", "page"); else item.removeAttribute("aria-current");
   });
+  syncMainNavigationIndicator();
+  if (finance) syncFinanceNavigation(content.querySelector(":scope > .finance-nav"));
   content.focus({ preventScroll: true });
 }
 async function refresh() { state.data = await adapter.loadAll(); render(); }
@@ -418,7 +494,10 @@ function openNavigation() {
   if (mobileNavigationQuery.matches) lockNavigationScroll();
   setNavigationSemantics(true);
   navRestoreFocus = document.activeElement;
-  requestAnimationFrame(() => navigationPanel.querySelector(".nav-link.is-active")?.focus({ preventScroll: true }));
+  requestAnimationFrame(() => {
+    syncMainNavigationIndicator();
+    navigationPanel.querySelector(".nav-link.is-active")?.focus({ preventScroll: true });
+  });
 }
 function beginNavigationClose({ restoreFocus = true } = {}) {
   const shouldAnimate = shell.classList.contains("nav-open") && mobileNavigationQuery.matches && !reducedMotionQuery.matches;
@@ -673,7 +752,48 @@ async function sendOffer(id, button) {
   finally { button.disabled = false; }
 }
 
+function setInvoiceActionReveal(reveal, visible, persistent = false) {
+  if (!reveal) return;
+  reveal.classList.toggle("is-actions-visible", visible);
+  reveal.classList.toggle("is-actions-open", visible && persistent);
+  const trigger = reveal.querySelector("[data-invoice-actions-toggle]");
+  const panel = reveal.querySelector(".invoice-actions-panel");
+  trigger?.setAttribute("aria-expanded", String(visible && persistent));
+  if (panel) {
+    panel.inert = !visible;
+    panel.setAttribute("aria-hidden", String(!visible));
+  }
+}
+function closeInvoiceActionReveals(except = null) {
+  content.querySelectorAll("[data-invoice-actions].is-actions-visible").forEach((reveal) => {
+    if (reveal !== except) setInvoiceActionReveal(reveal, false);
+  });
+}
+
+content.addEventListener("pointerover", (event) => {
+  if (!preciseHoverQuery.matches || event.pointerType === "touch") return;
+  const record = event.target.closest("[data-invoice-record]");
+  if (!record || !content.contains(record)) return;
+  const reveal = record.querySelector("[data-invoice-actions]");
+  if (reveal && !reveal.classList.contains("is-actions-open")) setInvoiceActionReveal(reveal, true);
+});
+content.addEventListener("pointerout", (event) => {
+  const record = event.target.closest("[data-invoice-record]");
+  if (!record || record.contains(event.relatedTarget)) return;
+  const reveal = record.querySelector("[data-invoice-actions]");
+  if (reveal && !reveal.classList.contains("is-actions-open")) setInvoiceActionReveal(reveal, false);
+});
+
 content.addEventListener("click", async (event) => {
+  const actionToggle = event.target.closest("[data-invoice-actions-toggle]");
+  if (actionToggle) {
+    const reveal = actionToggle.closest("[data-invoice-actions]");
+    const open = !reveal.classList.contains("is-actions-open");
+    closeInvoiceActionReveals(reveal);
+    setInvoiceActionReveal(reveal, open, open);
+    return;
+  }
+  if (!event.target.closest("[data-invoice-actions]")) closeInvoiceActionReveals();
   const create = event.target.closest("[data-create]"); if (create) openEditor(create.dataset.create, null, { projectId: create.dataset.projectId || "" });
   const view = event.target.closest("[data-view]"); if (view) setView(view.dataset.view);
   const filter = event.target.closest("[data-filter]"); if (filter) { state.filter = filter.dataset.filter; render(); }
@@ -687,10 +807,17 @@ content.addEventListener("click", async (event) => {
   const remove = event.target.closest("[data-delete-record]"); if (remove) deleteRecord(remove.dataset.deleteRecord, remove.dataset.id, remove);
 });
 content.addEventListener("change", event => {
-  if (!event.target.matches("[data-project-picker]")) return;
-  state.selectedProjectId = event.target.value;
-  render();
-  document.querySelector("[data-project-picker]")?.focus({ preventScroll: true });
+  if (event.target.matches("[data-invoice-sort]")) {
+    state.invoiceSort = event.target.value;
+    render();
+    document.querySelector("[data-invoice-sort]")?.focus({ preventScroll: true });
+    return;
+  }
+  if (event.target.matches("[data-project-picker]")) {
+    state.selectedProjectId = event.target.value;
+    render();
+    document.querySelector("[data-project-picker]")?.focus({ preventScroll: true });
+  }
 });
 content.addEventListener("input", (event) => { if (event.target.matches("[data-search]")) { state.query = event.target.value; const position = event.target.selectionStart; render(); const next = document.querySelector("[data-search]"); next.focus(); next.setSelectionRange(position, position); } });
 dialogBody.addEventListener("click", (event) => { if (event.target.closest("[data-add-item]")) addInvoiceItem(); if (event.target.closest("[data-add-discount]")) addInvoiceItem(null, "discount"); if (event.target.closest("[data-remove-item]")) { if (document.querySelectorAll(".invoice-item").length > 1) event.target.closest(".invoice-item").remove(); updateInvoiceTotal(); } });
@@ -705,6 +832,14 @@ document.addEventListener("keydown", (event) => {
     const first = controls[0], last = controls.at(-1);
     if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    return;
+  }
+  const openInvoiceActions = !modal && content.querySelector("[data-invoice-actions].is-actions-open");
+  if (openInvoiceActions && event.key === "Escape") {
+    event.preventDefault();
+    const trigger = openInvoiceActions.querySelector("[data-invoice-actions-toggle]");
+    setInvoiceActionReveal(openInvoiceActions, false);
+    trigger?.focus({ preventScroll: true });
     return;
   }
   if (!shell.classList.contains("nav-open")) return;
@@ -746,7 +881,7 @@ async function boot() {
     state.data = await adapter.loadAll();
     loading.remove(); shell.hidden = false; render();
   } catch (error) {
-    loading.innerHTML = `<strong>HEAV</strong><span>${esc(error.message)}</span><a href="/login/" style="color:#d7ff38">Zum Login</a>`;
+    loading.innerHTML = `<strong>HEAV</strong><span>${esc(error.message)}</span><a href="/login/" style="color:#e8e4dc">Zum Login</a>`;
   }
 }
 boot();
