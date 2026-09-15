@@ -263,7 +263,8 @@ for (const width of [360, 390, 768, 1440]) {
       await page.keyboard.press('Shift+Tab');
       await expect(modal.getByRole('button', { name:'Speichern', exact:true })).toBeFocused();
       const controls = await modal.locator('button,input,select,textarea').evaluateAll(elements => elements.filter(e => e.getClientRects().length).map(e => ({w:e.getBoundingClientRect().width,h:e.getBoundingClientRect().height})));
-      for (const b of controls) { expect(b.w).toBeGreaterThanOrEqual(44); expect(b.h).toBeGreaterThanOrEqual(44); }
+      const minimumTarget = width < 821 ? 44 : 38;
+      for (const b of controls) { expect(b.w).toBeGreaterThanOrEqual(minimumTarget); expect(b.h).toBeGreaterThanOrEqual(minimumTarget); }
       const controlContrast = await modal.locator('input,select,textarea').evaluateAll(elements => elements.filter(element => element.getClientRects().length).map(element => {
         const parse = color => (color.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
         const luminance = color => color.map(value => value / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4).reduce((sum, value, index) => sum + value * [.2126, .7152, .0722][index], 0);
@@ -569,10 +570,107 @@ test("Studio: Portal-Einladung und Status haben einen klaren Aktionsabstand", as
     return { gap: status.left - button.right, buttonHeight: button.height, statusHeight: status.height };
   });
   expect(layout.gap).toBeGreaterThanOrEqual(12);
-  expect(layout.buttonHeight).toBeGreaterThanOrEqual(44);
-  expect(layout.buttonHeight).toBeLessThanOrEqual(48);
+  expect(layout.buttonHeight).toBeGreaterThanOrEqual(38);
+  expect(layout.buttonHeight).toBeLessThanOrEqual(40);
   expect(layout.statusHeight).toBeLessThanOrEqual(32);
   await page.screenshot({ path: "qa/admin-portal-actions-desktop.png", fullPage: true });
+  await page.close();
+});
+
+test("Studio: Navigation und Textaktionen bleiben inhaltsnah statt gestreckt", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+
+  await page.locator('.nav-link[data-view="customers"]').click();
+  const geometry = await page.evaluate(() => {
+    const bounds = selector => document.querySelector(selector).getBoundingClientRect();
+    const style = selector => getComputedStyle(document.querySelector(selector));
+    const name = document.querySelector('.customer-name');
+    const mark = name.querySelector('.customer-contact').getBoundingClientRect();
+    const textNode = [...name.childNodes].find(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+    const range = document.createRange();
+    range.selectNodeContents(textNode);
+    const text = range.getBoundingClientRect();
+    return {
+      activeNavWidth: bounds('.nav-link.is-active').width,
+      topbarActionWidth: bounds('.topbar .primary-action').width,
+      topbarActionHeight: bounds('.topbar .primary-action').height,
+      primaryPadding: parseFloat(style('.topbar .primary-action').paddingLeft),
+      customerGap: text.left - mark.right,
+      customerRowHeight: bounds('.data-table tbody tr').height,
+    };
+  });
+  expect(geometry.activeNavWidth).toBeLessThan(135);
+  expect(geometry.topbarActionWidth).toBeLessThan(150);
+  expect(geometry.topbarActionHeight).toBeLessThanOrEqual(40);
+  expect(geometry.primaryPadding).toBeLessThanOrEqual(13);
+  expect(geometry.customerGap).toBeGreaterThanOrEqual(10);
+  expect(geometry.customerGap).toBeLessThanOrEqual(14);
+  expect(geometry.customerRowHeight).toBeLessThanOrEqual(66);
+
+  await page.locator('.nav-link[data-view="dashboard"]').click();
+  const quickActionWidths = await page.locator('.dashboard-quick-actions button').evaluateAll(buttons => buttons.map(button => button.getBoundingClientRect().width));
+  expect(quickActionWidths.every(width => width < 150)).toBe(true);
+
+  for (const view of ['settings', 'portal-requests']) {
+    await page.locator(`.nav-link[data-view="${view}"]`).click();
+    await expect(page.locator('.topbar .primary-action')).toBeHidden();
+  }
+  await page.close();
+});
+
+test("Studio: mobile Kundenkarten priorisieren Identität ohne losgelöste Ortszeile", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  await page.getByRole('button', { name: 'Menü öffnen' }).click();
+  await page.locator('.nav-link[data-view="customers"]').click();
+  const card = page.locator('.mobile-card').first();
+  await expect(card.locator(':scope > span')).toHaveCount(0);
+  const geometry = await card.evaluate(element => {
+    const name = element.querySelector('.customer-name');
+    const mark = name.querySelector('.customer-contact').getBoundingClientRect();
+    const textNode = [...name.childNodes].find(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+    const range = document.createRange();
+    range.selectNodeContents(textNode);
+    const text = range.getBoundingClientRect();
+    const meta = element.querySelector('small').getBoundingClientRect();
+    const actions = element.querySelector('.table-actions').getBoundingClientRect();
+    return {
+      height: element.getBoundingClientRect().height,
+      customerGap: text.left - mark.right,
+      actionGap: actions.top - meta.bottom,
+    };
+  });
+  expect(geometry.height).toBeLessThanOrEqual(145);
+  expect(geometry.customerGap).toBeGreaterThanOrEqual(10);
+  expect(geometry.customerGap).toBeLessThanOrEqual(14);
+  expect(geometry.actionGap).toBeLessThanOrEqual(14);
+  await page.close();
+});
+
+test("Studio: mobile Portal-Aktionen zeigen Status nur einmal und bleiben kompakt", async ({ browser }) => {
+  const requests = [
+    { id: "r-accepted", customer_id: "c1", company: "Studio Nord", contact_name: "Lea Meier", email: "lea@studio-nord.example", status: "accepted", statusLabel: "Akzeptiert", created_at: "2026-09-09T10:00:00Z" },
+    { id: "r-declined", customer_id: "c2", company: "Atelier Süd", contact_name: "Mara Frei", email: "mara@atelier-sued.example", status: "declined", statusLabel: "Abgelehnt", created_at: "2026-09-10T10:00:00Z" },
+  ];
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await mockStudioSupabase(page, { customer_portal_requests: requests });
+  await page.goto(`${base}/studio/`);
+  await page.getByRole('button', { name: 'Menü öffnen' }).click();
+  await page.locator('.nav-link[data-view="portal-requests"]').click();
+  for (const request of requests) {
+    const card = page.locator('.portal-request-card').filter({ hasText: request.company });
+    await expect(card).toBeVisible();
+    await expect(card.locator('.status')).toHaveCount(1);
+    await expect(card.locator('.status')).toHaveText(request.statusLabel);
+  }
+  const acceptedCard = page.locator('.portal-request-card').filter({ hasText: "Studio Nord" });
+  const invite = await acceptedCard.getByRole('button', { name: 'Einladung senden' }).boundingBox();
+  expect(invite.height).toBeGreaterThanOrEqual(44);
+  expect(invite.width).toBeLessThanOrEqual(140);
+  await expect(page.locator('.topbar .primary-action')).toBeHidden();
   await page.close();
 });
 
