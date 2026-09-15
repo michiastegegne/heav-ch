@@ -108,6 +108,21 @@ async function mockStudioSupabase(page, overrides = {}) {
   });
 }
 
+async function setDeterministicScrollPosition(page, preferredY = 320) {
+  await expect(page.locator('#admin-shell')).toBeVisible();
+  await page.waitForFunction(() => document.documentElement.scrollHeight > innerHeight);
+  const targetY = await page.evaluate((requestedY) => {
+    document.documentElement.style.scrollBehavior = 'auto';
+    document.body.style.scrollBehavior = 'auto';
+    const maxY = document.documentElement.scrollHeight - innerHeight;
+    const boundedY = Math.max(1, Math.min(requestedY, maxY));
+    window.scrollTo(0, boundedY);
+    return boundedY;
+  }, preferredY);
+  await page.waitForFunction((expectedY) => window.scrollY === expectedY, targetY);
+  return targetY;
+}
+
 test("Workspace: Privatkunden bleiben in Projekten und Rechnungen erkennbar", async ({ page }) => {
   const customer = { id: 'c-private', company: '', contact_name: 'Noah Frei' };
   await mockStudioSupabase(page, {
@@ -125,26 +140,388 @@ test("Workspace: Privatkunden bleiben in Projekten und Rechnungen erkennbar", as
   }
 });
 
-test("Workspace: mobile bottom navigation opens finance and every primary route", async ({ browser }) => {
+test("Workspace: mobile HEAV menu replaces duplicate bottom navigation and traps focus", async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 360, height: 800 }, isMobile: true, hasTouch: true });
   await mockStudioSupabase(page);
   await page.goto(`${base}/studio/`);
   await expect(page.locator('#admin-shell')).toBeVisible();
-  const nav = page.getByRole('navigation', { name: 'Hauptnavigation' });
-  await expect(nav).toBeVisible();
-  for (const [label, heading] of [['Projekte', 'Projekte'], ['Kunden', 'Kunden'], ['Finanzen', 'Rechnungen'], ['Übersicht', 'Übersicht']]) {
-    const button = nav.getByRole('button', { name: label, exact: true });
-    await button.click();
-    await expect(page.locator('#view-title')).toHaveText(heading);
-    await expect(button).toHaveAttribute('aria-current', 'page');
-    const box = await button.boundingBox();
-    expect(box.height).toBeGreaterThanOrEqual(44);
-    await assertHealthy(page, []);
-  }
-  await nav.getByRole('button', { name: 'Finanzen', exact: true }).click();
-  await page.getByRole('navigation', { name: 'Finanzen' }).getByRole('button', { name: 'Offerten', exact: true }).click();
-  await expect(page.locator('#view-title')).toHaveText('Offerten');
-  await expect(nav.getByRole('button', { name: 'Finanzen' })).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('navigation', { name: 'Hauptnavigation' })).toBeHidden();
+  const trigger = page.getByRole('button', { name: 'Menü öffnen' });
+  await expect(trigger).toBeVisible();
+  await expect(trigger).toContainText('Menü');
+  expect((await trigger.boundingBox()).height).toBeGreaterThanOrEqual(44);
+  await trigger.click();
+  const sidebar = page.locator('#sidebar');
+  await expect(sidebar).toBeVisible();
+  await expect(sidebar).toHaveAttribute('role', 'dialog');
+  await expect(sidebar).toHaveAttribute('aria-modal', 'true');
+  await expect(page.locator('.workspace')).toHaveAttribute('inert', '');
+  await expect(sidebar).toHaveCSS('background-color', 'rgb(215, 255, 56)');
+  await page.waitForTimeout(700);
+  const menuGeometry = await sidebar.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    return { left: box.left, top: box.top, width: box.width, height: box.height, background: style.backgroundColor };
+  });
+  expect(menuGeometry).toEqual({ left: 0, top: 0, width: 360, height: 800, background: 'rgb(215, 255, 56)' });
+  const nav = page.getByRole('navigation', { name: 'Studio Navigation' });
+  const active = nav.getByRole('button', { name: 'Übersicht', exact: true });
+  await expect(active).toBeFocused();
+  const activeStyle = await active.evaluate((element) => ({
+    color: getComputedStyle(element).color,
+    radius: getComputedStyle(element).borderRadius,
+    fontSize: parseFloat(getComputedStyle(element).fontSize),
+  }));
+  expect(activeStyle.color).toBe('rgb(9, 10, 8)');
+  expect(activeStyle.radius).toBe('0px');
+  expect(activeStyle.fontSize).toBeGreaterThanOrEqual(32);
+  await page.keyboard.press('Escape');
+  await expect(sidebar).toHaveCSS('visibility', 'hidden');
+  await expect(trigger).toBeFocused();
+  await assertHealthy(page, []);
+  await page.close();
+});
+
+test("Workspace: mobile HEAV menu locks background scroll and restores the exact position", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 640 }, isMobile: true, hasTouch: true });
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  const targetY = await setDeterministicScrollPosition(page);
+  const initialScrollY = await page.evaluate(() => window.scrollY);
+  expect(initialScrollY).toBe(targetY);
+
+  await page.getByRole('button', { name: 'Menü öffnen' }).click();
+  const locked = await page.evaluate(() => ({
+    htmlOverflow: getComputedStyle(document.documentElement).overflow,
+    bodyOverflow: getComputedStyle(document.body).overflow,
+    sidebarOverscroll: getComputedStyle(document.querySelector('#sidebar')).overscrollBehaviorY,
+    scrollY: window.scrollY,
+  }));
+  expect(locked).toEqual({
+    htmlOverflow: 'hidden',
+    bodyOverflow: 'hidden',
+    sidebarOverscroll: 'contain',
+    scrollY: initialScrollY,
+  });
+
+  await page.mouse.wheel(0, 900);
+  await page.waitForTimeout(100);
+  expect(await page.evaluate(() => window.scrollY)).toBe(initialScrollY);
+
+  await page.getByRole('button', { name: 'Menü schliessen' }).click();
+  await expect(page.locator('#sidebar')).toHaveCSS('visibility', 'hidden');
+  expect(await page.evaluate(() => window.scrollY)).toBe(initialScrollY);
+  await page.close();
+});
+
+test("Workspace: mobile menu keeps its original scroll lock through closing, reopen, and completed exit", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 640 }, isMobile: true, hasTouch: true });
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  const originalScrollY = await setDeterministicScrollPosition(page, 280);
+  const shell = page.locator('#admin-shell');
+  const sidebar = page.locator('#sidebar');
+  const trigger = page.getByRole('button', { name: 'Menü öffnen' });
+
+  await trigger.click();
+  await page.getByRole('button', { name: 'Menü schliessen' }).click();
+  await expect(shell).toHaveClass(/nav-closing/);
+  await expect(page.locator('html')).toHaveClass(/nav-scroll-locked/);
+  await expect(page.locator('body')).toHaveClass(/nav-scroll-locked/);
+  await page.mouse.wheel(0, 900);
+  await page.waitForTimeout(100);
+  expect(await page.evaluate(() => window.scrollY)).toBe(originalScrollY);
+
+  await trigger.click();
+  await expect(shell).toHaveClass(/nav-open/);
+  await expect(shell).not.toHaveClass(/nav-closing/);
+  await expect(page.locator('html')).toHaveClass(/nav-scroll-locked/);
+  expect(await page.evaluate(() => window.scrollY)).toBe(originalScrollY);
+
+  await page.getByRole('button', { name: 'Menü schliessen' }).click();
+  await expect(shell).toHaveClass(/nav-closing/);
+  await page.mouse.wheel(0, 900);
+  await page.waitForTimeout(100);
+  expect(await page.evaluate(() => window.scrollY)).toBe(originalScrollY);
+  await expect(sidebar).toHaveCSS('visibility', 'hidden', { timeout: 1500 });
+  await expect(shell).not.toHaveClass(/nav-closing/);
+  await expect(page.locator('html')).not.toHaveClass(/nav-scroll-locked/);
+  await expect(page.locator('body')).not.toHaveClass(/nav-scroll-locked/);
+  expect(await page.evaluate(() => window.scrollY)).toBe(originalScrollY);
+  await page.close();
+});
+
+test("Workspace: crossing to desktop normalizes an open mobile menu", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  await page.getByRole('button', { name: 'Menü öffnen' }).click();
+  const sidebar = page.locator('#sidebar');
+  const close = page.getByRole('button', { name: 'Menü schliessen' });
+  await expect(sidebar.locator('.nav-link.is-active')).toBeFocused();
+  await close.focus();
+  await expect(close).toBeFocused();
+
+  await page.setViewportSize({ width: 900, height: 844 });
+  await expect(page.locator('#admin-shell')).not.toHaveClass(/nav-open|nav-closing/);
+  await expect(page.locator('.workspace')).not.toHaveAttribute('inert', '');
+  await expect(sidebar).not.toHaveAttribute('role', 'dialog');
+  await expect(sidebar).not.toHaveAttribute('aria-modal', 'true');
+  const desktopTrigger = page.locator('[data-open-nav]');
+  await expect(desktopTrigger).toHaveAttribute('aria-expanded', 'false');
+  await expect(desktopTrigger).toBeHidden();
+  await expect(close).toBeHidden();
+  await expect(sidebar.locator('.nav-link.is-active')).toBeFocused();
+  await page.close();
+});
+
+test("Workspace: crossing to desktop during mobile menu closing cancels finalization and restores the exact scroll position", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 640 }, isMobile: true, hasTouch: true });
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  const originalScrollY = await setDeterministicScrollPosition(page, 240);
+  const shell = page.locator('#admin-shell');
+  const sidebar = page.locator('#sidebar');
+
+  await page.getByRole('button', { name: 'Menü öffnen' }).click();
+  await page.getByRole('button', { name: 'Menü schliessen' }).click();
+  await expect(shell).toHaveClass(/nav-closing/);
+  await expect(sidebar).toHaveAttribute('inert', '');
+  await expect(page.locator('html')).toHaveClass(/nav-scroll-locked/);
+
+  await page.setViewportSize({ width: 900, height: 640 });
+  await expect(shell).not.toHaveClass(/nav-open|nav-closing/);
+  await expect(page.locator('.workspace')).not.toHaveAttribute('inert', '');
+  await expect(sidebar).not.toHaveAttribute('inert', '');
+  await expect(sidebar).not.toHaveAttribute('aria-hidden', 'true');
+  await expect(sidebar).not.toHaveAttribute('role', 'dialog');
+  await expect(page.locator('html')).not.toHaveClass(/nav-scroll-locked/);
+  await expect(page.locator('body')).not.toHaveClass(/nav-scroll-locked/);
+  expect(await page.evaluate(() => window.scrollY)).toBe(originalScrollY);
+  await page.waitForTimeout(700);
+  await expect(shell).not.toHaveClass(/nav-open|nav-closing/);
+  expect(await page.evaluate(() => window.scrollY)).toBe(originalScrollY);
+  await expect(sidebar.locator('.nav-link.is-active')).toBeFocused();
+  await page.close();
+});
+
+test("Workspace: mobile menu exit keeps the departing sidebar out of keyboard and accessibility navigation", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  const shell = page.locator('#admin-shell');
+  const sidebar = page.locator('#sidebar');
+  const trigger = page.getByRole('button', { name: 'Menü öffnen' });
+
+  await trigger.click();
+  await expect(sidebar.locator('.nav-link.is-active')).toBeFocused();
+  await page.getByRole('button', { name: 'Menü schliessen' }).click();
+  await expect(shell).toHaveClass(/nav-closing/);
+  await expect(shell).not.toHaveClass(/nav-open/);
+  await expect(sidebar).toHaveCSS('visibility', 'visible');
+  await expect(sidebar).toHaveCSS('pointer-events', 'none');
+  await expect(sidebar).toHaveAttribute('inert', '');
+  await expect(sidebar).toHaveAttribute('aria-hidden', 'true');
+  await expect(sidebar).not.toHaveAttribute('aria-modal', 'true');
+  await expect(page.locator('.workspace')).not.toHaveAttribute('inert', '');
+  await expect(trigger).toBeFocused();
+
+  await page.keyboard.press('Shift+Tab');
+  expect(await sidebar.evaluate((element) => element.contains(document.activeElement))).toBe(false);
+  await trigger.focus();
+  await page.keyboard.press('Tab');
+  expect(await sidebar.evaluate((element) => element.contains(document.activeElement))).toBe(false);
+
+  await trigger.click();
+  await expect(shell).toHaveClass(/nav-open/);
+  await expect(shell).not.toHaveClass(/nav-closing/);
+  await expect(sidebar).toHaveCSS('pointer-events', 'auto');
+  await expect(sidebar).toHaveAttribute('aria-modal', 'true');
+
+  await page.getByRole('button', { name: 'Menü schliessen' }).click();
+  await expect(shell).toHaveClass(/nav-closing/);
+  await page.waitForTimeout(700);
+  await expect(shell).not.toHaveClass(/nav-closing/);
+  await expect(sidebar).toHaveCSS('visibility', 'hidden');
+  await trigger.click();
+  await expect(shell).toHaveClass(/nav-open/);
+  await page.close();
+});
+
+test("Workspace: entering mobile hides and deactivates the desktop sidebar atomically", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 900, height: 700 } });
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  const sidebar = page.locator('#sidebar');
+  await expect(page.locator('#admin-shell')).toBeVisible();
+  await sidebar.locator('.nav-link.is-active').focus();
+
+  await page.setViewportSize({ width: 390, height: 700 });
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
+  const state = await page.evaluate(() => {
+    const panel = document.querySelector('#sidebar');
+    const bounds = panel.getBoundingClientRect();
+    return {
+      visibility: getComputedStyle(panel).visibility,
+      bottom: Math.round(bounds.bottom),
+      inert: panel.inert,
+      ariaHidden: panel.getAttribute('aria-hidden'),
+      activeInside: panel.contains(document.activeElement),
+    };
+  });
+  expect(state).toEqual({
+    visibility: 'hidden',
+    bottom: -14,
+    inert: true,
+    ariaHidden: 'true',
+    activeInside: false,
+  });
+  await expect(page.getByRole('button', { name: 'Menü öffnen' })).toBeFocused();
+  await page.close();
+});
+
+test("Workspace: mobile HEAV menu opens without motion when reduced motion is requested", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  const trigger = page.getByRole('button', { name: 'Menü öffnen' });
+  await trigger.click();
+  const sidebar = page.locator('#sidebar');
+  await expect(sidebar).toBeVisible();
+  await expect(sidebar).toHaveCSS('transition-duration', '0s');
+  await expect(sidebar.getByRole('button', { name: 'Übersicht', exact: true })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(sidebar).toHaveCSS('visibility', 'hidden');
+  await expect(trigger).toBeFocused();
+  await page.close();
+});
+
+test("Workspace: finance navigation uses one stable HEAV line state instead of a focus pill", async ({ page }) => {
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  await page.locator('.nav-link[data-view="invoices"]').click();
+  const active = page.getByRole('navigation', { name: 'Finanzen' }).getByRole('button', { name: 'Rechnungen', exact: true });
+  await expect(active).toHaveAttribute('aria-current', 'page');
+  const state = await active.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      background: style.backgroundColor,
+      color: style.color,
+      radius: style.borderRadius,
+      borderBottom: style.borderBottomColor,
+      outline: style.outlineStyle,
+    };
+  });
+  expect(state).toEqual({
+    background: 'rgba(0, 0, 0, 0)',
+    color: 'rgb(240, 240, 240)',
+    radius: '0px',
+    borderBottom: 'rgb(215, 255, 56)',
+    outline: 'none',
+  });
+  const surface = await page.evaluate(() => {
+    const toolbar = getComputedStyle(document.querySelector('.toolbar'));
+    const table = getComputedStyle(document.querySelector('.data-table'));
+    const selectedNav = document.querySelector('.nav-link.is-active');
+    const nav = getComputedStyle(selectedNav);
+    const marker = getComputedStyle(selectedNav, '::after');
+    return {
+      toolbarRadius: toolbar.borderRadius,
+      toolbarSides: [toolbar.borderLeftWidth, toolbar.borderRightWidth],
+      tableRadius: table.borderRadius,
+      navBackground: nav.backgroundColor,
+      navRadius: nav.borderRadius,
+      navMarker: [marker.width, marker.backgroundColor],
+    };
+  });
+  expect(surface).toEqual({
+    toolbarRadius: '0px',
+    toolbarSides: ['0px', '0px'],
+    tableRadius: '0px',
+    navBackground: 'rgba(0, 0, 0, 0)',
+    navRadius: '0px',
+    navMarker: ['5px', 'rgb(215, 255, 56)'],
+  });
+});
+
+test("Workspace: desktop topbar, finance nav and content share one left gutter", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  await page.locator('.nav-link[data-view="invoices"]').click();
+  const gutters = await page.evaluate(() => {
+    const left = (selector) => document.querySelector(selector).getBoundingClientRect().left;
+    const padding = (selector) => parseFloat(getComputedStyle(document.querySelector(selector)).paddingLeft);
+    return {
+      topbarContentLeft: left('.topbar > div'),
+      financeContentLeft: left('.finance-nav button'),
+      viewContentLeft: left('.view') + padding('.view'),
+      topbarPadding: padding('.topbar'),
+      financePadding: padding('.finance-nav'),
+      viewPadding: padding('.view'),
+    };
+  });
+  expect(gutters).toEqual({
+    topbarContentLeft: 278,
+    financeContentLeft: 278,
+    viewContentLeft: 278,
+    topbarPadding: 48,
+    financePadding: 48,
+    viewPadding: 48,
+  });
+  await page.close();
+});
+
+test("Workspace: route changes use the restrained HEAV entrance motion", async ({ page }) => {
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  await page.locator('.nav-link[data-view="customers"]').click();
+  const motion = await page.locator('.view').evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      name: style.animationName,
+      duration: style.animationDuration,
+      timing: style.animationTimingFunction,
+      opacity: Number(style.opacity),
+    };
+  });
+  expect(motion.name).toBe('studio-view-enter');
+  expect(motion.duration).toBe('0.38s');
+  expect(motion.timing).toBe('cubic-bezier(0.22, 1, 0.36, 1)');
+  expect(motion.opacity).toBeGreaterThanOrEqual(0.8);
+});
+
+test("Workspace: reduced motion clears route entrance state without animationend", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  await page.locator('.nav-link[data-view="customers"]').click();
+  const content = page.locator('#app-content');
+  await expect(content).not.toHaveClass(/is-view-entering/);
+  await expect(page.locator('.view')).toHaveCSS('animation-name', 'none');
+  expect(await page.evaluate(() => document.getAnimations().filter(animation => animation.effect?.target?.closest?.('#app-content')).length)).toBe(0);
+  await page.close();
+});
+
+test("Workspace: rerendering during route motion clears the entrance state", async ({ page }) => {
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  await page.locator('.nav-link[data-view="customers"]').click();
+  const content = page.locator('#app-content');
+  await expect(content).toHaveClass(/is-view-entering/);
+  await page.locator('[data-search]').fill('Nord');
+  await expect(content).not.toHaveClass(/is-view-entering/);
+  await expect(page.locator('.view')).toHaveCSS('animation-name', 'none');
+});
+
+test("Workspace: mobile toast uses a compact safe-area bottom offset", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  const bottom = await page.locator('#toast').evaluate(element => getComputedStyle(element).bottom);
+  expect(bottom).toBe('16px');
   await page.close();
 });
 
@@ -195,6 +572,7 @@ for (const width of [360, 390, 768, 1440]) {
       expect(clipping, `${view} at ${width}`).toEqual([]);
       await assertStudioEditorialTheme(page);
       await assertHealthy(page, errors);
+      await page.waitForFunction(() => !document.querySelector('#app-content')?.classList.contains('is-view-entering'));
       await page.screenshot({ path: `qa/workspace-${view}-${width}.png`, fullPage: true });
     }
     await page.close();

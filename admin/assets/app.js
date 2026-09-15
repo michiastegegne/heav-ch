@@ -15,12 +15,23 @@ const toast = document.querySelector("#toast");
 const topbarCreate = document.querySelector(".topbar .primary-action");
 const workspace = document.querySelector(".workspace");
 const navMenuButton = document.querySelector("[data-open-nav]");
+const navigationPanel = document.querySelector("#sidebar");
+const mobileNavigationQuery = window.matchMedia("(max-width: 820px)");
+const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 const actionConfirmDialog = document.querySelector("#action-confirm-dialog");
 const actionConfirmKicker = document.querySelector("#action-confirm-kicker");
 const actionConfirmTitle = document.querySelector("#action-confirm-title");
 const actionConfirmCopy = document.querySelector("#action-confirm-copy");
 const actionConfirmButton = document.querySelector("#action-confirm-button");
 let navRestoreFocus = null;
+let navLockedScrollY = null;
+let navCloseTimer = null;
+let navigationWasLastFocusContext = false;
+const NAV_EXIT_DURATION_MS = 680;
+
+document.addEventListener("focusin", (event) => {
+  navigationWasLastFocusContext = navigationPanel.contains(event.target);
+});
 
 const viewNames = {
   dashboard: "Übersicht",
@@ -342,6 +353,7 @@ function financeNavigation() {
   return `<nav class="finance-nav" aria-label="Finanzen">${[["invoices", "Rechnungen"], ["offers", "Offerten"]].map(([view, label]) => `<button type="button" data-view="${view}" ${state.view === view ? 'aria-current="page"' : ''}>${label}</button>`).join("")}</nav>`;
 }
 function render() {
+  content.classList.remove("is-view-entering");
   title.textContent = viewNames[state.view];
   syncTopbarAction();
   const finance = ["invoices", "offers"].includes(state.view);
@@ -355,21 +367,100 @@ function render() {
 }
 async function refresh() { state.data = await adapter.loadAll(); render(); }
 function navigationFocusable() { return [...document.querySelectorAll("#sidebar a[href],#sidebar button:not([disabled])")].filter((element) => element.getClientRects().length); }
-function setNavigationOpen(open, { restoreFocus = true } = {}) {
-  const isOpen = Boolean(open);
-  shell.classList.toggle("nav-open", isOpen);
+function clearNavigationCloseTimer() {
+  clearTimeout(navCloseTimer);
+  navCloseTimer = null;
+}
+function lockNavigationScroll() {
+  if (navLockedScrollY !== null) {
+    window.scrollTo({ top: navLockedScrollY, left: 0, behavior: "auto" });
+    return;
+  }
+  navLockedScrollY = window.scrollY;
+  document.documentElement.classList.add("nav-scroll-locked");
+  document.body.classList.add("nav-scroll-locked");
+}
+function releaseNavigationScroll() {
+  if (navLockedScrollY === null) return;
+  const scrollY = navLockedScrollY;
+  navLockedScrollY = null;
+  document.documentElement.classList.remove("nav-scroll-locked");
+  document.body.classList.remove("nav-scroll-locked");
+  window.scrollTo({ top: scrollY, left: 0, behavior: "auto" });
+}
+function setNavigationSemantics(isOpen) {
   navMenuButton.setAttribute("aria-expanded", String(isOpen));
   workspace.inert = isOpen;
-  document.querySelector(".bottom-nav").inert = isOpen;
+  navigationPanel.inert = !isOpen && mobileNavigationQuery.matches;
   if (isOpen) {
-    navRestoreFocus = document.activeElement;
-    requestAnimationFrame(() => document.querySelector(".nav-link.is-active")?.focus());
-  } else if (restoreFocus && navRestoreFocus === navMenuButton) {
-    navMenuButton.focus({ preventScroll: true });
+    navigationPanel.removeAttribute("aria-hidden");
+    navigationPanel.setAttribute("role", "dialog");
+    navigationPanel.setAttribute("aria-modal", "true");
+  } else {
+    if (mobileNavigationQuery.matches) navigationPanel.setAttribute("aria-hidden", "true");
+    else navigationPanel.removeAttribute("aria-hidden");
+    navigationPanel.removeAttribute("role");
+    navigationPanel.removeAttribute("aria-modal");
   }
 }
+function finalizeNavigationClose({ restoreFocus = true } = {}) {
+  clearNavigationCloseTimer();
+  shell.classList.remove("nav-open", "nav-closing");
+  setNavigationSemantics(false);
+  releaseNavigationScroll();
+  if (restoreFocus && navRestoreFocus === navMenuButton) navMenuButton.focus({ preventScroll: true });
+  navRestoreFocus = null;
+}
+function openNavigation() {
+  clearNavigationCloseTimer();
+  shell.classList.remove("nav-closing");
+  shell.classList.add("nav-open");
+  if (mobileNavigationQuery.matches) lockNavigationScroll();
+  setNavigationSemantics(true);
+  navRestoreFocus = document.activeElement;
+  requestAnimationFrame(() => navigationPanel.querySelector(".nav-link.is-active")?.focus({ preventScroll: true }));
+}
+function beginNavigationClose({ restoreFocus = true } = {}) {
+  const shouldAnimate = shell.classList.contains("nav-open") && mobileNavigationQuery.matches && !reducedMotionQuery.matches;
+  if (!shouldAnimate) {
+    finalizeNavigationClose({ restoreFocus });
+    return;
+  }
+  clearNavigationCloseTimer();
+  shell.classList.remove("nav-open");
+  shell.classList.add("nav-closing");
+  setNavigationSemantics(false);
+  if (restoreFocus && navRestoreFocus === navMenuButton) navMenuButton.focus({ preventScroll: true });
+  navCloseTimer = setTimeout(() => finalizeNavigationClose({ restoreFocus: false }), NAV_EXIT_DURATION_MS);
+}
+function setNavigationOpen(open, options = {}) {
+  if (open) openNavigation();
+  else beginNavigationClose(options);
+}
 
-function setView(view) { state.view = view; state.query = ""; state.filter = "all"; document.querySelectorAll(".nav-link").forEach((item) => item.classList.toggle("is-active", item.dataset.view === view)); setNavigationOpen(false, { restoreFocus: false }); render(); }
+mobileNavigationQuery.addEventListener("change", (event) => {
+  const hadModalState = shell.matches(".nav-open, .nav-closing");
+  const focusWasInNavigation = navigationPanel.contains(document.activeElement) || navigationWasLastFocusContext;
+  if (hadModalState) finalizeNavigationClose({ restoreFocus: false });
+  else setNavigationSemantics(false);
+  if (event.matches && focusWasInNavigation) {
+    requestAnimationFrame(() => navMenuButton.focus({ preventScroll: true }));
+  } else if (!event.matches && hadModalState) {
+    navigationPanel.querySelector(".nav-link.is-active")?.focus({ preventScroll: true });
+  }
+});
+
+if (mobileNavigationQuery.matches) setNavigationSemantics(false);
+
+function animateViewEntrance() {
+  content.classList.remove("is-view-entering");
+  if (reducedMotionQuery.matches) return;
+  void content.offsetWidth;
+  content.classList.add("is-view-entering");
+  content.querySelector(".view")?.addEventListener("animationend", () => content.classList.remove("is-view-entering"), { once: true });
+}
+
+function setView(view) { state.view = view; state.query = ""; state.filter = "all"; document.querySelectorAll(".nav-link").forEach((item) => item.classList.toggle("is-active", item.dataset.view === view)); setNavigationOpen(false, { restoreFocus: false }); render(); animateViewEntrance(); }
 
 function customerOptions(selected = "") { return state.data.customers.map((item) => `<option value="${esc(item.id)}" ${item.id === selected ? "selected" : ""}>${esc(customerLabel(item))}</option>`).join(""); }
 function projectOptions(customerId = "", selected = "") { return state.data.projects.filter((item) => item.customer_id === customerId).map((item) => `<option value="${esc(item.id)}" ${item.id === selected ? "selected" : ""}>${esc(item.title)}</option>`).join(""); }
