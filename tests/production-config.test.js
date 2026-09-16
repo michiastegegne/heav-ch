@@ -38,26 +38,26 @@ test("Kontaktformular nutzt die HEAV-eigene Edge Function statt eines sichtbaren
   assert.match(contactSource, /data-form-status/);
 });
 
-test("Studio lädt das isolierte Editorial-Designsystem in stabiler Reihenfolge", () => {
+test("Studio lädt das helle Referenz-Designsystem in stabiler Reihenfolge", () => {
   const expectedAssets = [
     "/admin/assets/admin.css?v=20260830-discount-edit",
     "/admin/assets/admin-enhancements.css?v=20260910-dashboard-context",
     "/admin/assets/admin-actions.css?v=20260910-layout",
-    "/admin/assets/workspace.css?v=20260913-mobile-workspace",
+    "/admin/assets/workspace.css?v=20260916-reference-status",
     "/admin/assets/crm-theme.css?v=anthracite-1",
-    "/admin/assets/studio-editorial.css?v=editorial-9",
+    "/admin/assets/studio-editorial.css?v=reference-10",
   ];
   const positions = expectedAssets.map((asset) => studioHtml.indexOf(`href="${asset}"`));
   assert.ok(positions.every((position) => position >= 0), "alle Studio-Stylesheets sind versioniert eingebunden");
-  assert.deepEqual(positions, [...positions].sort((a, b) => a - b), "Editorial-Overrides werden zuletzt geladen");
+  assert.deepEqual(positions, [...positions].sort((a, b) => a - b), "Referenz-Overrides werden zuletzt geladen");
   assert.match(studioHtml, /<html lang="de-CH" class="studio-editorial-root" data-assistant-enabled="false">/);
-  assert.match(studioHtml, /<meta name="theme-color" content="#000000"/);
+  assert.match(studioHtml, /<meta name="theme-color" content="#f0efe8"/);
   assert.match(studioHtml, /<body class="crm-theme studio-editorial-theme">/);
   assert.match(studioHtml, /src="\/admin\/assets\/app\.js\?v=20260916-assistant-security-3"/);
   assert.match(adminSource, /dashboard\.js\?v=20260916-revenue-1/);
-  assert.match(studioCss, /--studio-accent:\s*#e8e4dc/);
-  assert.doesNotMatch(studioCss, /#d7ff38|--studio-acid/);
-  assert.doesNotMatch(adminSource, /#d7ff38/);
+  assert.match(studioCss, /September reference: warm paper, ink sidebar, lime action surface/);
+  assert.match(studioCss, /--acid:#d4ed80/);
+  assert.match(adminSource, /invoiceStatusControl/);
 });
 
 test("Alle referenzierten privaten Schriftdateien sind lokal gebündelt", async () => {

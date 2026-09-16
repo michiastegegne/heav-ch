@@ -1629,6 +1629,55 @@ body.studio-editorial-theme .bottom-nav { display: none; }
 }
 
 /* Keep the assistant implementation dormant until API billing is enabled. */
-html[data-assistant-enabled="false"] :is([data-open-assistant], #assistant-dialog) {
-  display: none !important;
-}
+html[data-assistant-enabled="false"] :is([data-open-assistant], #assistant-dialog) { display: none !important; }
+
+/* September reference: warm paper, ink sidebar, lime action surface. */
+.studio-editorial-root{color-scheme:light;--crm-bg:#f0f1eb;--crm-panel:#ffffff;--crm-raised:#ffffff;--crm-input:#ffffff;--crm-text:#171c18;--crm-muted:#5f695e;--crm-line:#dce0d5;--crm-accent:#171c18;--crm-positive:#42601d;--crm-danger:#8b4a3b;--night:#171c18;--paper:#f0f1eb;--ink:#171c18;--acid:#d4ed80;--ember:#a34b3e;--sage:#5f695e;--muted:#5f695e;--line:#dce0d5;--white-line:#dce0d5;--surface:#fafbf7;--surface-raised:#fff;--focus:#608326;--studio-accent:#608326;--studio-night:#171c18;--shadow:0 12px 36px #15201012}
+body.studio-editorial-theme{color:#171c18;background:#f0f1eb}
+body.studio-editorial-theme :is(h1,h2,h3,h4,.brand){color:#171c18}
+body.studio-editorial-theme .loading-screen{background:#f0f1eb;color:#171c18}
+body.studio-editorial-theme .loading-screen strong{color:#171c18}
+body.studio-editorial-theme .loading-screen span{color:#5f695e}
+body.studio-editorial-theme .admin-shell,body.studio-editorial-theme .workspace{background:#f0f1eb}
+body.studio-editorial-theme .sidebar{background:#171c18}
+body.studio-editorial-theme .sidebar :is(.brand,.nav-link,.sidebar-foot,#logout-button){color:#eef2e9}
+body.studio-editorial-theme .nav-link.is-active{background:#303d27;color:#e1f8b4;box-shadow:inset 3px 0 #d4ed80}
+body.studio-editorial-theme .topbar{background:#fafbf7;border-color:#dce0d5}
+body.studio-editorial-theme :is(.panel,.settings-card,.project-canvas,.data-table,.mobile-card,.empty-state,.dashboard-focus){background:#fff;border-color:#dce0d5;box-shadow:none}
+body.studio-editorial-theme :is(.dashboard-money,.project-module--next){background:#e8eedc;color:#171c18;border-color:#cdd7bf}
+body.studio-editorial-theme :is(.dashboard-money,.project-module--next) :is(h1,h2,h3,h4,strong){color:#171c18}
+body.studio-editorial-theme :is(.primary-action,.assistant-send){background:#d4ed80;color:#171c18;border-color:#d4ed80}
+body.studio-editorial-theme :is(.secondary-button,.filter-tab,.search-field input,.form-field input,.form-field select,.form-field textarea,.project-picker select){background:#fff;color:#171c18;border-color:#dce0d5}
+body.studio-editorial-theme :is(.kicker,.panel-head p,.dashboard-intro p,.hero-row p,.data-table small,.mobile-card small){color:#5f695e}
+body.studio-editorial-theme .data-table :is(th,td){border-color:#dce0d5;color:#171c18}
+body.studio-editorial-theme .data-table th{color:#5f695e}
+body.studio-editorial-theme :is(.status.draft,.status.planning,.status.on_hold){background:#eceee7;color:#5b6357}
+body.studio-editorial-theme :is(.status.sent,.status.active){background:#e1ebdd;color:#38512b}
+body.studio-editorial-theme :is(.status.paid,.status.accepted){background:#dcefc8;color:#31501c}
+body.studio-editorial-theme .status.overdue{background:#fae5d8;color:#854321}
+body.studio-editorial-theme :is(.status.cancelled,.status.declined){background:#f2ddd8;color:#783e36}
+body.studio-editorial-theme :is(.editor-dialog,.action-confirm-dialog,.assistant-dialog,.dialog-shell,.action-confirm-shell,.assistant-shell){background:#fff;color:#171c18;border-color:#dce0d5}
+body.studio-editorial-theme :is(.editor-dialog,.action-confirm-dialog,.assistant-dialog,.dialog-shell,.action-confirm-shell,.assistant-shell) :is(h1,h2,h3,h4){color:#171c18}
+/* Keep every readable surface on the paper palette; navigation remains ink. */
+body.studio-editorial-theme .workspace :is(h1,h2,h3,h4,strong,button,label,th,td,p){color:#171c18!important}
+body.studio-editorial-theme .workspace :is(.kicker,small,.panel-head p,.dashboard-intro p,.hero-row p){color:#5f695e!important}
+body.studio-editorial-theme .topbar .menu-button{background:#171c18!important;color:#f0f1eb!important;border-color:#171c18!important}
+body.studio-editorial-theme .workspace .status{color:#38512b!important}
+body.studio-editorial-theme .workspace .status.paid{color:#31501c!important}
+body.studio-editorial-theme .workspace .status.overdue{color:#854321!important}
+body.studio-editorial-theme .workspace :is(.status.cancelled,.status.declined){color:#783e36!important}
+body.studio-editorial-theme .sidebar :is(.brand,.nav-link,.sidebar-foot,#logout-button){color:#eef2e9!important}
+body.studio-editorial-theme .sidebar .nav-link.is-active{color:#e1f8b4!important}
+body.studio-editorial-theme .admin-shell.nav-open .sidebar{background:#171c18!important}
+body.studio-editorial-theme .workspace .dashboard-revenue{background:#fff!important;border-color:#dce0d5!important}
+body.studio-editorial-theme .workspace .dashboard-revenue-summary{border-color:#dce0d5!important}
+body.studio-editorial-theme .workspace .dashboard-revenue-chart{border-color:#dce0d5!important}
+body.studio-editorial-theme .workspace .dashboard-revenue-bar{background:linear-gradient(to top,#91a66f,#d4ed80)!important}
+body.studio-editorial-theme .workspace :is(.dashboard-revenue-figure figcaption,.dashboard-revenue-month small,.dashboard-revenue-empty){color:#465342!important}
+body.studio-editorial-theme .workspace [class*="dashboard-"]{background:#fff!important;color:#171c18!important;border-color:#dce0d5!important}
+body.studio-editorial-theme .workspace [class*="dashboard-"] :is(strong,p,small,span,dt,dd,h1,h2,h3,h4){color:#171c18!important}
+body.studio-editorial-theme .workspace [class*="dashboard-"] :is(.kicker,small,dt){color:#465342!important}
+body.studio-editorial-theme .workspace .dashboard-revenue-bar{background:linear-gradient(to top,#91a66f,#d4ed80)!important}
+body.studio-editorial-theme .workspace :is(.mobile-card,.mobile-card>div,.data-table,.data-table tr,.data-table td,.workspace-action,.settings-card,.project-module,.project-canvas-head,.project-finances,.project-documents,.file-row,.record){background:#fff!important}
+body.studio-editorial-theme :is(.editor-dialog,.dialog-shell,.dialog-body,.action-confirm-dialog,.action-confirm-shell,.editor-form){background:#fff!important}
+body.studio-editorial-theme :is(.form-hint,.dialog-shell .kicker){color:#465342!important}
