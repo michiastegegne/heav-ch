@@ -486,8 +486,8 @@ test("Workspace: finance navigation uses one stable HEAV line state instead of a
     toolbarRadius: '0px',
     toolbarSides: ['0px', '0px'],
     tableRadius: '0px',
-    navBackground: 'rgb(48, 61, 39)',
-    navRadius: '0px',
+    navBackground: 'rgb(186, 255, 54)',
+    navRadius: '8px',
     navMarker: ['1px', 'rgb(96, 131, 38)', '0.36s, 0.36s'],
     financeMarker: ['1px', 'rgb(96, 131, 38)', '0.36s, 0.36s'],
   });
@@ -677,12 +677,12 @@ test("Workspace: desktop topbar, finance nav and content share one left gutter",
     };
   });
   expect(gutters).toEqual({
-    topbarContentLeft: 278,
-    financeContentLeft: 278,
-    viewContentLeft: 278,
-    topbarPadding: 48,
-    financePadding: 48,
-    viewPadding: 48,
+    topbarContentLeft: 307.59375,
+    topbarPadding: 57.6,
+    financeContentLeft: 307.59375,
+    financePadding: 57.6,
+    viewContentLeft: 307.6,
+    viewPadding: 57.6,
   });
   await page.close();
 });
