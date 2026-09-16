@@ -38,7 +38,7 @@ test("Kontaktformular nutzt die HEAV-eigene Edge Function statt eines sichtbaren
   assert.match(contactSource, /data-form-status/);
 });
 
-test("Studio lädt die exakte September-Referenzbasis mit versionierten Statusfeldern", () => {
+test("Studio lädt das helle Referenz-Designsystem in stabiler Reihenfolge", () => {
   const expectedAssets = [
     "/admin/assets/admin.css?v=20260830-discount-edit",
     "/admin/assets/admin-enhancements.css?v=20260910-dashboard-context",
@@ -46,18 +46,18 @@ test("Studio lädt die exakte September-Referenzbasis mit versionierten Statusfe
     "/admin/assets/workspace.css?v=20260916-reference-status",
     "/admin/assets/crm-theme.css?v=anthracite-1",
     "/admin/assets/studio-editorial.css?v=reference-10",
-    "/admin/assets/studio-reference.css?v=20260916-reference-exact-2",
   ];
   const positions = expectedAssets.map((asset) => studioHtml.indexOf(`href="${asset}"`));
   assert.ok(positions.every((position) => position >= 0), "alle Studio-Stylesheets sind versioniert eingebunden");
-  assert.deepEqual(positions, [...positions].sort((a, b) => a - b), "die Referenzbasis wird vor den Statusfeldern geladen");
+  assert.deepEqual(positions, [...positions].sort((a, b) => a - b), "Referenz-Overrides werden zuletzt geladen");
   assert.match(studioHtml, /<html lang="de-CH" class="studio-editorial-root" data-assistant-enabled="false">/);
   assert.match(studioHtml, /<meta name="theme-color" content="#f0efe8"/);
   assert.match(studioHtml, /<body class="crm-theme studio-editorial-theme">/);
   assert.match(studioHtml, /src="\/admin\/assets\/app\.js\?v=20260916-assistant-security-3"/);
   assert.match(adminSource, /dashboard\.js\?v=20260916-revenue-1/);
+  assert.match(studioCss, /September reference: warm paper, ink sidebar, lime action surface/);
+  assert.match(studioCss, /--acid:#d4ed80/);
   assert.match(adminSource, /invoiceStatusControl/);
-  assert.match(studioHtml, /studio-reference\.css\?v=20260916-reference-exact-2/);
 });
 
 test("Alle referenzierten privaten Schriftdateien sind lokal gebündelt", async () => {
@@ -76,7 +76,7 @@ test("Studio verwendet das HEAV-Menü und zugängliche Aktionsicons", () => {
   assert.match(adminSource, /actionIconButton\("edit", "Bearbeiten"/);
   assert.match(adminSource, /paper-plane/);
   assert.match(adminSource, /customer-contact/);
-  assert.match(studioHtml, /href="\/admin\/assets\/studio-reference\.css\?v=20260916-reference-exact-2"/);
+  assert.match(studioHtml, /href="\/admin\/assets\/crm-theme\.css\?v=anthracite-1"/);
 });
 
 test("Studio-Iconleisten bleiben in einer kompakten Reihe", () => {
