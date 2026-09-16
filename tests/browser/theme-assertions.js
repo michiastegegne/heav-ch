@@ -28,12 +28,10 @@ export async function assertDarkTheme(page) {
 }
 
 export async function assertStudioEditorialTheme(page) {
-  const desktopReference = await page.evaluate(() => innerWidth >= 821);
-  const base = desktopReference ? 'rgb(238, 234, 224)' : 'rgb(240, 241, 235)';
-  await expect(page.locator('body')).toHaveCSS('background-color', base);
-  await expect(page.locator('body')).toHaveCSS('color', desktopReference ? 'rgb(23, 25, 20)' : 'rgb(23, 28, 24)');
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(240, 241, 235)');
+  await expect(page.locator('body')).toHaveCSS('color', 'rgb(23, 28, 24)');
   await expect(page.locator('html')).toHaveCSS('color-scheme', 'light');
-  await expect(page.locator('.workspace')).toHaveCSS('background-color', base);
+  await expect(page.locator('.workspace')).toHaveCSS('background-color', 'rgb(240, 241, 235)');
   await expect(page.locator('.topbar h1')).toHaveCSS('font-family', /Instrument Serif/);
 
   const surfaces = await page.locator('.dashboard-focus,.dashboard-money,.panel,.project-canvas-head,.project-module,.project-finances,.project-documents,.mobile-card,.settings-card,.data-table,dialog[open]').evaluateAll(elements => elements.filter(el => el.getClientRects().length).map(el => ({
@@ -44,7 +42,7 @@ export async function assertStudioEditorialTheme(page) {
     fullScreenEditor: el.matches('.editor-dialog') && innerWidth < 821,
   })));
   expect(surfaces.length).toBeGreaterThan(0);
-  const referenceSurfaces = ['rgb(255, 255, 255)', 'rgb(245, 242, 234)', 'rgb(238, 234, 224)', 'rgb(250, 251, 247)'];
+  const referenceSurfaces = ['rgb(255, 255, 255)', 'rgb(232, 238, 220)', 'rgb(250, 251, 247)'];
   const invalidSurfaces = surfaces.filter(surface =>
     (!referenceSurfaces.includes(surface.background) && !surface.flatLineSurface)
     || (surface.radius > 18 && !surface.fullScreenEditor)
