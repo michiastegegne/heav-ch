@@ -358,9 +358,25 @@ function renderProjects() {
   if (!all.length) return `<section class="view">${emptyState("Noch keine Projekte", "Lege das erste Projekt an und halte Status, Kunde und Budget im Blick.", "project")}</section>`;
   const selected = items.find((item) => item.id === state.selectedProjectId) || items[0] || null;
   if (selected) state.selectedProjectId = selected.id;
-  const rows = items.map((item) => `<tr class="${item.id === state.selectedProjectId ? "is-selected" : ""}"><td><button class="project-record" type="button" data-project-focus="${esc(item.id)}" aria-pressed="${String(item.id === state.selectedProjectId)}"><strong>${esc(item.title)}</strong><small>${esc(customerLabel(item.customer))}</small></button></td><td><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></td><td>${formatDate(item.due_date)}</td><td>${formatCHF(item.budget_rappen || 0)}</td><td><div class="table-actions">${actionIconButton("edit", "Bearbeiten", `data-edit="project" data-id="${esc(item.id)}"`)}${actionIconButton("trash", `Projekt löschen: ${item.title}`, `data-delete-record="project" data-id="${esc(item.id)}"`, "is-danger")}</div></td></tr>`).join("");
-  const cards = items.map((item) => `<article class="mobile-card ${item.id === state.selectedProjectId ? "is-selected" : ""}"><div><button class="project-record" type="button" data-project-focus="${esc(item.id)}" aria-pressed="${String(item.id === state.selectedProjectId)}"><strong>${esc(item.title)}</strong><small>${esc(customerLabel(item.customer))} · ${formatDate(item.due_date)}</small></button><div class="table-actions">${actionIconButton("edit", "Bearbeiten", `data-edit="project" data-id="${esc(item.id)}"`)}${actionIconButton("trash", `Projekt löschen: ${item.title}`, `data-delete-record="project" data-id="${esc(item.id)}"`, "is-danger")}</div></div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></article>`).join("");
+  const rows = items.map((item) => `<tr class="${item.id === state.selectedProjectId ? "is-selected" : ""}"><td><button class="project-record" type="button" data-project-focus="${esc(item.id)}" aria-pressed="${String(item.id === state.selectedProjectId)}"><strong>${esc(item.title)}</strong><small>${esc(customerLabel(item.customer))}</small></button></td><td>${projectStatusControl(item)}</td><td>${formatDate(item.due_date)}</td><td>${formatCHF(item.budget_rappen || 0)}</td><td><div class="table-actions">${actionIconButton("edit", "Bearbeiten", `data-edit="project" data-id="${esc(item.id)}"`)}${actionIconButton("trash", `Projekt löschen: ${item.title}`, `data-delete-record="project" data-id="${esc(item.id)}"`, "is-danger")}</div></td></tr>`).join("");
+  const cards = items.map((item) => `<article class="mobile-card ${item.id === state.selectedProjectId ? "is-selected" : ""}"><div><button class="project-record" type="button" data-project-focus="${esc(item.id)}" aria-pressed="${String(item.id === state.selectedProjectId)}"><strong>${esc(item.title)}</strong><small>${esc(customerLabel(item.customer))} · ${formatDate(item.due_date)}</small></button><div class="table-actions">${actionIconButton("edit", "Bearbeiten", `data-edit="project" data-id="${esc(item.id)}"`)}${actionIconButton("trash", `Projekt löschen: ${item.title}`, `data-delete-record="project" data-id="${esc(item.id)}"`, "is-danger")}</div></div>${projectStatusControl(item)}</article>`).join("");
   return `<section class="view">${toolbar("project", "Projekte durchsuchen …", [["all","Alle"],["planning","Planung"],["active","Aktiv"],["completed","Abgeschlossen"]])}${selected ? `<label class="project-picker"><span>Projekt auswählen</span><select data-project-picker>${items.map(item => `<option value="${esc(item.id)}" ${item.id === selected.id ? "selected" : ""}>${esc(item.title)} · ${esc(customerLabel(item.customer))}</option>`).join("")}</select></label><p class="project-canvas-guide" id="project-canvas-guide"><span>6 Bereiche · horizontal erkunden →</span></p>` : ""}${selected ? renderProjectCanvas(selected) : `<div class="empty-state"><h3>Keine Projekte in diesem Filter.</h3><p>Wähle einen anderen Status oder passe die Suche an.</p></div>`}<div class="project-register"><div class="panel-head"><h3>PROJEKTREGISTER</h3><span>${items.length} ${items.length === 1 ? "Projekt" : "Projekte"}</span></div><table class="data-table"><thead><tr><th>Projekt</th><th>Status</th><th>Deadline</th><th>Budget</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list">${cards}</div></div></section>`;
+}
+
+function invoiceStatusControl(invoice) {
+  const transitions = {
+    draft: [["draft", "Entwurf"], ["sent", "Rechnung senden …"]],
+    sent: [["sent", "Versendet"], ["paid", "Als bezahlt markieren …"], ["cancelled", "Stornieren …"]],
+    overdue: [["overdue", "Überfällig"], ["paid", "Als bezahlt markieren …"], ["cancelled", "Stornieren …"]],
+    paid: [["paid", "Bezahlt"]],
+    cancelled: [["cancelled", "Storniert"]],
+  };
+  const options = transitions[invoice.status] || [[invoice.status, statusLabel(invoice.status)]];
+  return `<label class="status-control invoice-status-control"><span class="sr-only">Status von ${esc(invoice.invoice_number)}</span><select data-invoice-status data-id="${esc(invoice.id)}" aria-label="Status von ${esc(invoice.invoice_number)}">${options.map(([value, label]) => `<option value="${esc(value)}" ${value === invoice.status ? "selected" : ""}>${esc(label)}</option>`).join("")}</select></label>`;
+}
+function projectStatusControl(project) {
+  const options = [["planning", "Planung"], ["active", "Aktiv"], ["on_hold", "Pausiert"], ["completed", "Abgeschlossen"]];
+  return `<label class="status-control project-status-control"><span class="sr-only">Status von ${esc(project.title)}</span><select data-project-status data-id="${esc(project.id)}" aria-label="Status von ${esc(project.title)}">${options.map(([value, label]) => `<option value="${value}" ${value === project.status ? "selected" : ""}>${label}</option>`).join("")}</select></label>`;
 }
 
 function invoiceActions(invoice, reveal = false, instance = "record") {
@@ -378,8 +394,8 @@ function renderInvoices() {
   const all = state.data.invoices;
   const items = sortInvoices(filtered(all.filter((item) => state.filter === "all" || item.status === state.filter), ["invoice_number"]));
   if (!all.length) return `<section class="view">${emptyState("Noch keine Rechnungen", "Erstelle deine erste HEAV-Rechnung als PDF und sende sie direkt an den Kunden.", "invoice")}</section>`;
-  const rows = items.map((item) => `<tr class="invoice-record" data-invoice-record><td><strong>${esc(item.invoice_number)}</strong><small>${formatDate(item.issue_date)} · ${item.is_legacy ? "Historisch archiviert" : esc(formatReference(item.payment_reference))}</small></td><td>${esc(customerLabel(item.customer))}</td><td><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></td><td><strong>${formatCHF(item.total_rappen)}</strong><small>fällig ${formatDate(item.due_date)}</small></td><td>${invoiceActions(item, true, "desktop")}</td></tr>`).join("");
-  const cards = items.map((item) => `<article class="mobile-card invoice-card invoice-record" data-invoice-record><div><strong>${esc(item.invoice_number)} · ${formatCHF(item.total_rappen)}</strong><small>${esc(customerLabel(item.customer))} · fällig ${formatDate(item.due_date)}</small>${invoiceActions(item, true, "mobile")}</div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></article>`).join("");
+  const rows = items.map((item) => `<tr class="invoice-record" data-invoice-record><td><strong>${esc(item.invoice_number)}</strong><small>${formatDate(item.issue_date)} · ${item.is_legacy ? "Historisch archiviert" : esc(formatReference(item.payment_reference))}</small></td><td>${esc(customerLabel(item.customer))}</td><td>${invoiceStatusControl(item)}</td><td><strong>${formatCHF(item.total_rappen)}</strong><small>fällig ${formatDate(item.due_date)}</small></td><td>${invoiceActions(item, true, "desktop")}</td></tr>`).join("");
+  const cards = items.map((item) => `<article class="mobile-card invoice-card invoice-record" data-invoice-record><div><strong>${esc(item.invoice_number)} · ${formatCHF(item.total_rappen)}</strong><small>${esc(customerLabel(item.customer))} · fällig ${formatDate(item.due_date)}</small>${invoiceActions(item, true, "mobile")}</div>${invoiceStatusControl(item)}</article>`).join("");
   return `<section class="view">${toolbar("invoice", "Rechnungen durchsuchen …", [["all","Alle"], ...["draft","sent","paid","overdue","cancelled"].map((status) => [status,statusLabel(status)])], invoiceSortControl())}<table class="data-table invoice-table"><thead><tr><th>Rechnung</th><th>Kunde</th><th>Status</th><th>Total</th><th><span class="sr-only">Aktionen</span></th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list invoice-card-list">${cards}</div></section>`;
 }
 
@@ -703,9 +719,9 @@ async function invoiceAction(id, action, button) {
   if (action === "send") {
     const recipient = current?.customer?.email || "unbekannte Adresse";
     const total = formatCHF(current?.total_rappen || 0);
-    if (!await confirmAction({ kicker: "RECHNUNG VERSENDEN", title: "Rechnung jetzt senden?", copy: `${current?.invoice_number || "Diese Rechnung"} über ${total} wird an ${recipient} gesendet.`, confirmLabel: "Jetzt senden" })) return;
+    if (!await confirmAction({ kicker: "RECHNUNG VERSENDEN", title: "Rechnung jetzt senden?", copy: `${current?.invoice_number || "Diese Rechnung"} über ${total} wird an ${recipient} gesendet.`, confirmLabel: "Jetzt senden" })) return false;
   }
-  if (action === "cancel" && !await confirmAction({ kicker: "RECHNUNG STORNIEREN", title: "Rechnung wirklich stornieren?", copy: `${current?.invoice_number || "Diese Rechnung"} kann danach weder versendet noch als bezahlt markiert werden.`, confirmLabel: "Stornieren", destructive: true })) return;
+  if (action === "cancel" && !await confirmAction({ kicker: "RECHNUNG STORNIEREN", title: "Rechnung wirklich stornieren?", copy: `${current?.invoice_number || "Diese Rechnung"} kann danach weder versendet noch als bezahlt markiert werden.`, confirmLabel: "Stornieren", destructive: true })) return false;
   button.disabled = true;
   try {
     const requestKey = action === "send" ? (state.sendRequestKeys.get(id) || crypto.randomUUID()) : null;
@@ -716,8 +732,42 @@ async function invoiceAction(id, action, button) {
       const url = URL.createObjectURL(result); const link = document.createElement("a"); link.href = url; link.download = `${state.data.invoices.find((item) => item.id === id)?.invoice_number || "HEAV-Rechnung"}.pdf`; link.click(); URL.revokeObjectURL(url); showToast("PDF wurde erstellt.");
     } else if (action === "send") { showDispatchSuccess(); await refresh(); }
     else { showToast(action === "cancel" ? "Rechnung wurde storniert." : "Rechnung als bezahlt markiert."); await refresh(); }
-  } catch (error) { showToast(error.message || "Aktion fehlgeschlagen.", "error"); }
+    return true;
+  } catch (error) { showToast(error.message || "Aktion fehlgeschlagen.", "error"); return false; }
   finally { button.disabled = false; }
+}
+
+async function updateProjectStatus(id, status, control) {
+  const project = state.data.projects.find((item) => item.id === id);
+  if (!project || project.status === status) return;
+  control.disabled = true;
+  try {
+    await adapter.updateProject(id, {
+      customer_id: project.customer_id,
+      title: project.title,
+      description: project.description || "",
+      status,
+      budget_rappen: project.budget_rappen ?? 0,
+      start_date: project.start_date || null,
+      due_date: project.due_date || null,
+    });
+    await refresh();
+    showToast(`Projektstatus: ${statusLabel(status)}.`);
+  } catch (error) {
+    render();
+    showToast(error.message || "Projektstatus konnte nicht geändert werden.", "error");
+  } finally {
+    control.disabled = false;
+  }
+}
+
+async function updateInvoiceStatus(id, status, control) {
+  const invoice = state.data.invoices.find((item) => item.id === id);
+  if (!invoice || invoice.status === status) return;
+  const action = { sent: "send", paid: "mark_paid", cancelled: "cancel" }[status];
+  if (!action) { render(); return; }
+  const changed = await invoiceAction(id, action, control);
+  if (!changed) render();
 }
 
 async function deleteRecord(type, id, button) {
@@ -1113,6 +1163,12 @@ content.addEventListener("change", event => {
   }
 });
 content.addEventListener("input", (event) => { if (event.target.matches("[data-search]")) { state.query = event.target.value; const position = event.target.selectionStart; render(); const next = document.querySelector("[data-search]"); next.focus(); next.setSelectionRange(position, position); } });
+content.addEventListener("change", async (event) => {
+  const invoiceStatus = event.target.closest("[data-invoice-status]");
+  if (invoiceStatus) { await updateInvoiceStatus(invoiceStatus.dataset.id, invoiceStatus.value, invoiceStatus); return; }
+  const projectStatus = event.target.closest("[data-project-status]");
+  if (projectStatus) await updateProjectStatus(projectStatus.dataset.id, projectStatus.value, projectStatus);
+});
 dialogBody.addEventListener("click", (event) => { if (event.target.closest("[data-add-item]")) addInvoiceItem(); if (event.target.closest("[data-add-discount]")) addInvoiceItem(null, "discount"); if (event.target.closest("[data-remove-item]")) { if (document.querySelectorAll(".invoice-item").length > 1) event.target.closest(".invoice-item").remove(); updateInvoiceTotal(); } });
 dialogBody.addEventListener("input", (event) => { if (event.target.matches('[name="item_quantity"],[name="item_price"],[name="discount_value"],[name="tax_rate"]')) updateInvoiceTotal(); });
 dialogBody.addEventListener("change", (event) => { if (event.target.matches('[name="customer_id"]') && ["invoice", "offer"].includes(dialogForm.dataset.type)) { const projects = dialogForm.elements.project_id; projects.innerHTML = `<option value="">Kein Projekt</option>${projectOptions(event.target.value)}`; } });

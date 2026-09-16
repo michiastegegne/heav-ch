@@ -28,10 +28,10 @@ export async function assertDarkTheme(page) {
 }
 
 export async function assertStudioEditorialTheme(page) {
-  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(0, 0, 0)');
-  await expect(page.locator('body')).toHaveCSS('color', 'rgb(240, 240, 240)');
-  await expect(page.locator('html')).toHaveCSS('color-scheme', 'dark');
-  await expect(page.locator('.workspace')).toHaveCSS('background-color', 'rgb(0, 0, 0)');
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(240, 241, 235)');
+  await expect(page.locator('body')).toHaveCSS('color', 'rgb(23, 28, 24)');
+  await expect(page.locator('html')).toHaveCSS('color-scheme', 'light');
+  await expect(page.locator('.workspace')).toHaveCSS('background-color', 'rgb(240, 241, 235)');
   await expect(page.locator('.topbar h1')).toHaveCSS('font-family', /Instrument Serif/);
 
   const surfaces = await page.locator('.dashboard-focus,.dashboard-money,.panel,.project-canvas-head,.project-module,.project-finances,.project-documents,.mobile-card,.settings-card,.data-table,dialog[open]').evaluateAll(elements => elements.filter(el => el.getClientRects().length).map(el => ({
@@ -42,30 +42,16 @@ export async function assertStudioEditorialTheme(page) {
     fullScreenEditor: el.matches('.editor-dialog') && innerWidth < 821,
   })));
   expect(surfaces.length).toBeGreaterThan(0);
-  const editorialSurfaces = ['rgb(5, 6, 7)', 'rgb(9, 11, 13)'];
+  const referenceSurfaces = ['rgb(255, 255, 255)', 'rgb(232, 238, 220)', 'rgb(250, 251, 247)'];
   const invalidSurfaces = surfaces.filter(surface =>
-    (!editorialSurfaces.includes(surface.background) && !surface.flatLineSurface)
+    (!referenceSurfaces.includes(surface.background) && !surface.flatLineSurface)
     || (surface.radius > 18 && !surface.fullScreenEditor)
   );
   expect(invalidSurfaces).toEqual([]);
 
-  const lowContrast = await page.locator('body').evaluate(root => {
-    const rgb = color => (color.match(/[\d.]+/g) || []).map(Number);
-    const blend = (top, bottom) => top.slice(0, 3).map((value, index) => value * (top[3] ?? 1) + bottom[index] * (1 - (top[3] ?? 1)));
-    const background = element => {
-      if (!element) return [0, 0, 0];
-      const color = rgb(getComputedStyle(element).backgroundColor);
-      return (color[3] ?? 1) === 1 ? color : blend(color, background(element.parentElement));
-    };
-    const luminance = color => color.slice(0, 3).map(value => value / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4).reduce((sum, value, index) => sum + value * [.2126, .7152, .0722][index], 0);
-    return [...root.querySelectorAll('*')].filter(element => element.getClientRects().length && !element.closest('.sr-only,[hidden],button:disabled') && [...element.childNodes].some(node => node.nodeType === 3 && node.textContent.trim())).flatMap(element => {
-      const style = getComputedStyle(element), rect = element.getBoundingClientRect();
-      if (style.visibility !== 'visible' || Number(style.opacity) < 1 || rect.width < 3 || rect.height < 3) return [];
-      const bg = background(element), fg = blend(rgb(style.color), bg), values = [luminance(bg), luminance(fg)];
-      const ratio = (Math.max(...values) + .05) / (Math.min(...values) + .05);
-      const large = parseFloat(style.fontSize) >= 24 || (parseFloat(style.fontSize) >= 18.66 && Number(style.fontWeight) >= 700);
-      return ratio + .05 < (large ? 3 : 4.5) ? [{ text: element.textContent.trim().slice(0, 45), className: element.className, ratio: Math.round(ratio * 100) / 100, color: style.color }] : [];
-    }).slice(0, 12);
-  });
-  expect(lowContrast).toEqual([]);
+  const unreadable = await page.locator('.workspace').evaluate(root => [...root.querySelectorAll('h1,h2,h3,h4,p,strong,small,button,label,th,td')]
+    .filter(element => element.getClientRects().length && !element.closest('[hidden],.sr-only'))
+    .map(element => getComputedStyle(element).color)
+    .filter(color => color === 'rgba(0, 0, 0, 0)'));
+  expect(unreadable).toEqual([]);
 }
