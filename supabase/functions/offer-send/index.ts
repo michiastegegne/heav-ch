@@ -34,6 +34,8 @@ Deno.serve(async (request) => {
     const caller = createClient(url, anonKey, { global: { headers: { Authorization: authorization } }, auth: { autoRefreshToken: false, persistSession: false } });
     const { data: identity, error: identityError } = await caller.auth.getUser();
     if (identityError || !identity.user) return reply({ error: "Anmeldung erforderlich." }, 401, headers);
+    const { data: ownerAllowed, error: ownerError } = await caller.rpc("is_studio_owner");
+    if (ownerError || ownerAllowed !== true) return reply({ error: "Studio-Zugriff erforderlich." }, 403, headers);
 
     const service = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
     const { data: offer, error: offerError } = await service.from("offers")
@@ -52,7 +54,7 @@ Deno.serve(async (request) => {
     if (customerError || membershipError || settingsError) throw customerError || membershipError || settingsError;
     if (!customer || !validMailbox(customer.email)) return reply({ error: "Für diesen Kunden fehlt eine gültige E-Mail-Adresse." }, 409, headers);
     if (!memberships?.length) return reply({ error: "Der Kundenportalzugang muss zuerst per Einladung freigeschaltet werden." }, 409, headers);
-    if (!validMailbox(settings?.email)) return reply({ error: "Die HEAV-Antwortadresse ist ungültig." }, 409, headers);
+    if (!settings || !validMailbox(settings.email)) return reply({ error: "Die HEAV-Antwortadresse ist ungültig." }, 409, headers);
 
     const resendKey = Deno.env.get("RESEND_API_KEY");
     const fromEmail = Deno.env.get("RESEND_FROM_EMAIL");

@@ -1167,6 +1167,14 @@ if (import.meta.main) {
         !invoiceId ||
         !["download", "send", "mark_paid", "cancel"].includes(action)
       ) throw new Error("Ungültige Rechnungsaktion.");
+      if (action !== "download") {
+        const { data: ownerAllowed, error: ownerError } = await supabase.rpc(
+          "is_studio_owner",
+        );
+        if (ownerError || ownerAllowed !== true) {
+          throw new Error("Studio-Zugriff erforderlich.");
+        }
+      }
       if (
         action === "send" &&
         !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i

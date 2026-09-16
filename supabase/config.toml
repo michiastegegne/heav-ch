@@ -30,6 +30,9 @@ static_files = ["./functions/_shared/fonts/*.ttf", "./functions/_shared/assets/*
 [functions.contact-enquiry]
 verify_jwt = false
 
+[functions.assistant-chat]
+verify_jwt = true
+
 [functions.portal-access-request]
 verify_jwt = false
 

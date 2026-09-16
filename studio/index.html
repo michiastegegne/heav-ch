@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="de-CH" class="studio-editorial-root">
+<html lang="de-CH" class="studio-editorial-root" data-assistant-enabled="false">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="/admin/assets/admin-actions.css?v=20260910-layout" />
     <link rel="stylesheet" href="/admin/assets/workspace.css?v=20260913-mobile-workspace" />
     <link rel="stylesheet" href="/admin/assets/crm-theme.css?v=anthracite-1" />
-    <link rel="stylesheet" href="/admin/assets/studio-editorial.css?v=editorial-7" />
+    <link rel="stylesheet" href="/admin/assets/studio-editorial.css?v=editorial-9" />
   </head>
   <body class="crm-theme studio-editorial-theme">
     <div class="loading-screen" id="loading-screen" aria-live="polite"><strong>HEAV</strong><span>Studio wird geladen …</span></div>
@@ -32,12 +32,13 @@
         <div class="sidebar-foot"><span class="connection-dot" aria-hidden="true"></span><span id="connection-label">Sicher verbunden</span><button id="logout-button" type="button">Abmelden</button></div>
       </aside>
       <div class="nav-scrim" data-close-nav></div>
-      <section class="workspace"><header class="topbar"><button class="menu-button" type="button" aria-label="Menü öffnen" aria-controls="sidebar" aria-expanded="false" data-open-nav>Menü</button><div><span class="kicker">HEAV STUDIO</span><h1 id="view-title">Übersicht</h1></div><button class="primary-action" type="button" data-create="invoice">Neue Rechnung <span aria-hidden="true">+</span></button></header><main id="app-content" tabindex="-1"></main></section>
+      <section class="workspace"><header class="topbar"><button class="menu-button" type="button" aria-label="Menü öffnen" aria-controls="sidebar" aria-expanded="false" data-open-nav>Menü</button><div><span class="kicker">HEAV STUDIO</span><h1 id="view-title">Übersicht</h1></div><button class="assistant-launcher" type="button" aria-label="HEAV Assistent öffnen" data-open-assistant><span aria-hidden="true">✦</span><b>Assistent</b></button><button class="primary-action" type="button" data-create="invoice">Neue Rechnung <span aria-hidden="true">+</span></button></header><main id="app-content" tabindex="-1"></main></section>
     </div>
 
     <dialog class="editor-dialog" id="editor-dialog" aria-labelledby="dialog-title"><form method="dialog" class="dialog-shell" id="editor-form"><header><div><span class="kicker" id="dialog-kicker">NEU</span><h2 id="dialog-title">Eintrag</h2></div><button class="icon-button" value="cancel" type="submit" formnovalidate aria-label="Dialog schliessen">×</button></header><div class="dialog-body" id="dialog-body"></div><footer><p class="form-error" id="form-error" role="alert"></p><button class="secondary-button" value="cancel" type="submit" formnovalidate>Abbrechen</button><button class="primary-action" value="save" type="submit">Speichern</button></footer></form></dialog>
     <dialog class="action-confirm-dialog" id="action-confirm-dialog" aria-labelledby="action-confirm-title" aria-describedby="action-confirm-copy"><form method="dialog" class="action-confirm-shell" id="action-confirm-form"><div class="action-confirm-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M21 3 10 14"/><path d="m21 3-7 18-4-7-7-4Z"/></svg></div><div><span class="kicker" id="action-confirm-kicker">BESTÄTIGEN</span><h2 id="action-confirm-title">Aktion bestätigen</h2><p id="action-confirm-copy"></p></div><footer><button class="secondary-button" value="cancel" type="submit" formnovalidate>Abbrechen</button><button class="primary-action" id="action-confirm-button" value="confirm" type="submit">Jetzt senden <span aria-hidden="true">↗</span></button></footer></form></dialog>
+    <dialog class="assistant-dialog" id="assistant-dialog" aria-labelledby="assistant-title"><section class="assistant-shell"><header><div><span class="kicker">HEAV INTELLIGENCE</span><h2 id="assistant-title">HEAV Assistent</h2></div><div class="assistant-header-actions"><button class="assistant-delete" type="button" aria-label="Chat löschen" data-delete-assistant-thread hidden>Löschen</button><button class="assistant-close" type="button" aria-label="HEAV Assistent schliessen" data-close-assistant>Schliessen</button></div></header><div class="assistant-messages" id="assistant-messages" role="log" aria-live="polite" aria-relevant="additions"><article class="assistant-message is-assistant"><p>Schick mir Kundendaten als Screenshot oder plane ein Projekt im Chat. Ich bereite prüfbare Entwürfe vor – gespeichert oder versendet wird erst nach deiner Bestätigung.</p></article></div><form class="assistant-composer" id="assistant-form"><div class="assistant-attachment" id="assistant-attachment" hidden></div><label class="assistant-upload"><input id="assistant-image" type="file" accept="image/png,image/jpeg,image/webp"><span aria-hidden="true">＋</span><b>Screenshot</b></label><label class="assistant-prompt"><span class="sr-only">Nachricht an HEAV Assistent</span><textarea id="assistant-input" aria-label="Nachricht an HEAV Assistent" maxlength="6000" placeholder="Zum Beispiel: Erstelle aus diesem Briefing einen Kunden und ein Projekt …"></textarea></label><button class="primary-action assistant-send" type="submit">Senden <span aria-hidden="true">↗</span></button><p class="assistant-privacy">Screenshots werden verkleinert und nur für diese Anfrage verarbeitet. Jede CRM-Aktion bleibt bestätigungspflichtig.</p></form></section></dialog>
     <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-    <script type="module" src="/admin/assets/app.js?v=20260915-invoice-sort-1"></script>
+    <script type="module" src="/admin/assets/app.js?v=20260916-assistant-security-3"></script>
   </body>
 </html>

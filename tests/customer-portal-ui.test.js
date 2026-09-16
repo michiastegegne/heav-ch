@@ -69,8 +69,9 @@ test("Studio und Kundenportal haben klare kanonische URLs mit Legacy-Weiterleitu
 
 test("Login leitet aktive Kundenaccounts zum Kundenportal und Owner ins Studio", async () => {
   const script = await read("../login/assets/login.js");
-  assert.match(script, /company_settings/);
-  assert.match(script, /owner_id/);
+  assert.match(script, /rpc\("is_studio_owner"\)/);
+  assert.match(script, /if \(ownerError\) throw new Error/);
+  assert.match(script, /if \(isOwner\) return "\/studio\/"/);
   assert.match(script, /\.eq\("user_id", user\.id\)/);
   assert.match(script, /return "\/client\/"/);
   assert.match(script, /return "\/studio\/"/);
