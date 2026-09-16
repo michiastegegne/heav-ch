@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 
 import { assertStudioEditorialTheme } from './theme-assertions.js';
 const base = "http://127.0.0.1:4180";
@@ -16,6 +17,11 @@ async function assertHealthy(page, errors) {
 
 async function mockStudioSupabase(page, overrides = {}) {
   await page.addInitScript(() => localStorage.setItem("__heavStudioSession", "1"));
+  await page.route(`${base}/studio/`, async (route) => {
+    const response = await route.fetch();
+    const html = (await response.text()).replace('data-assistant-enabled="false"', 'data-assistant-enabled="true"');
+    await route.fulfill({ response, body: html });
+  });
   await page.route("https://bkazlpqjvbuhwmjcwexn.supabase.co/functions/v1/invoice-document", async (route) => {
     await route.fulfill({ status: 200, contentType: "application/pdf", body: "%PDF-1.4\\n% HEAV test PDF\\n%%EOF" });
   });
@@ -68,6 +74,7 @@ async function mockStudioSupabase(page, overrides = {}) {
             return builder;
           },
           rpc: async (name, payload) => {
+            if (name === "is_studio_owner") return result(true);
             if (name === "update_invoice") {
               window.__lastUpdatedInvoiceItems = payload.p_items;
             }
@@ -94,11 +101,36 @@ async function mockStudioSupabase(page, overrides = {}) {
             if (name === "delete_customer") {
               store.customers = store.customers.filter((item) => item.id !== payload.p_customer_id);
             }
+            if (name === "delete_assistant_thread") window.__deletedAssistantThread = payload.p_thread_id;
             return result(null);
           },
           functions: {
             invoke: async (name, { body }) => {
               if (name === "offer-send") window.__lastOfferEmail = body;
+              if (name === "assistant-chat") {
+                window.__lastAssistantRequest = body;
+                window.__assistantRequests = [...(window.__assistantRequests || []), body];
+                if (Number(store.assistantFailures || 0) > 0) {
+                  store.assistantFailures -= 1;
+                  const status = Number(store.assistantFailureStatus || 404);
+                  return { data: null, error: { context: { status, json: async () => ({ error: status === 404 ? "Chat nicht gefunden." : "KI-Dienst ist vorübergehend nicht erreichbar." }) } } };
+                }
+                const sendProposal = /\\bsend(?:e|en)\\b/.test(String(body.message || "").toLowerCase());
+                const unknownTaxProposal = String(body.message || "").includes("__unknown_tax__");
+                const xssProposal = String(body.message || "").includes("__xss__");
+                const proposals = xssProposal
+                  ? [{ id: "proposal-xss", kind: "customer", label: '<img src=x onerror="window.__assistantXss=1">', payload: { company: '<script>window.__assistantXss=1</script>', contact_name: "Test" } }]
+                  : sendProposal
+                  ? [{ id: "proposal-send", kind: "send_invoice", label: "HEAV-2026-001 senden", payload: { invoice_id: "i1" } }]
+                  : unknownTaxProposal
+                    ? [{ id: "proposal-invoice", kind: "invoice", label: "Rechnung prüfen", payload: { customer_id: "c1", items: [{ description: "Produktion", quantity: 1, unit_price_rappen: 100000 }] } }]
+                    : [{ id: "proposal-customer", kind: "customer", label: "Nordstern GmbH anlegen", payload: { company: "Nordstern GmbH", contact_name: "Mila Stern", email: "mila@nordstern.example", phone: "+41 79 555 44 33", address_line1: "Sternweg 8", postal_code: "8004", city: "Zürich", country: "Schweiz" } }];
+                return { data: {
+                  threadId: body.threadId,
+                  message: xssProposal ? '<img src=x onerror="window.__assistantXss=1">' : sendProposal ? "Ich habe die Rechnung gefunden. Prüfe den Versand." : unknownTaxProposal ? "Ich habe einen Rechnungsentwurf vorbereitet." : "Ich habe die Kundendaten als Entwurf vorbereitet.",
+                  proposals,
+                }, error: null };
+              }
               return { data: { recipient: "anna@nordlicht.example" }, error: null };
             }
           }
@@ -677,6 +709,183 @@ test("Workspace: rerendering during route motion clears the entrance state", asy
   await expect(page.locator('.view')).toHaveCSS('animation-name', 'none');
 });
 
+test("HEAV Assistent: Screenshot und Chat erzeugen nur prüfbare Entwürfe", async ({ page }) => {
+  await mockStudioSupabase(page);
+  const invoiceRequests = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/functions/v1/invoice-document") && request.method() === "POST") invoiceRequests.push(request.postDataJSON());
+  });
+  await page.goto(`${base}/studio/`);
+
+  await page.getByRole("button", { name: "HEAV Assistent öffnen" }).click();
+  const assistant = page.locator("#assistant-dialog");
+  await expect(assistant).toBeVisible();
+  await expect(assistant.getByRole("heading", { name: "HEAV Assistent" })).toBeVisible();
+  await assistant.locator('input[type="file"]').setInputFiles({
+    name: "kundendaten.png",
+    mimeType: "image/png",
+    buffer: await readFile(new URL("../../qa/workspace-dashboard-390.png", import.meta.url)),
+  });
+  await expect(assistant).toContainText("kundendaten.png");
+  await assistant.getByLabel("Nachricht an HEAV Assistent").fill("Erstelle aus diesem Screenshot einen Kundenentwurf.");
+  await assistant.getByRole("button", { name: "Senden", exact: true }).click();
+  await expect(assistant).toContainText("Kundendaten als Entwurf vorbereitet");
+  await page.screenshot({ path: "qa/admin-assistant-desktop.png" });
+  const request = await page.evaluate(() => window.__lastAssistantRequest);
+  expect(request.message).toContain("Kundenentwurf");
+  expect(request.image.dataUrl).toMatch(/^data:image\/webp;base64,/);
+  expect(request.image.mimeType).toBe("image/webp");
+
+  await assistant.getByRole("button", { name: "Kundenentwurf prüfen" }).click();
+  await expect(assistant).toBeHidden();
+  const editor = page.locator("#editor-dialog");
+  await expect(editor).toBeVisible();
+  await expect(editor.locator('[name="company"]')).toHaveValue("Nordstern GmbH");
+  await expect(editor.locator('[name="contact_name"]')).toHaveValue("Mila Stern");
+  await expect(editor.locator('[name="email"]')).toHaveValue("mila@nordstern.example");
+  await editor.getByRole("button", { name: "Abbrechen" }).click();
+
+  await page.getByRole("button", { name: "HEAV Assistent öffnen" }).click();
+  await assistant.getByLabel("Nachricht an HEAV Assistent").fill("Sende die Rechnung HEAV-2026-001.");
+  await assistant.getByRole("button", { name: "Senden", exact: true }).click();
+  await assistant.getByRole("button", { name: "Versand prüfen" }).click();
+  await expect(page.locator("#action-confirm-dialog")).toContainText("HEAV-2026-001");
+  await expect(page.locator("#action-confirm-dialog")).toContainText("anna@nordlicht.example");
+  await page.locator("#action-confirm-dialog").getByRole("button", { name: "Abbrechen" }).click();
+  expect(invoiceRequests).toEqual([]);
+});
+
+test("HEAV Assistent: unbekannte MWST übernimmt den geprüften Studio-Standard statt null als null Prozent", async ({ page }) => {
+  await mockStudioSupabase(page, {
+    company_settings: [{ company_name: "HEAV", owner_name: "Michias Tegegne", email: "hello@heav.ch", iban: "", vat_number: "CHE-123.456.789 MWST", default_tax_rate: 8.1, default_due_days: 30 }],
+  });
+  await page.goto(`${base}/studio/`);
+  await page.getByRole("button", { name: "HEAV Assistent öffnen" }).click();
+  const assistant = page.locator("#assistant-dialog");
+  await assistant.getByLabel("Nachricht an HEAV Assistent").fill("__unknown_tax__");
+  await assistant.getByRole("button", { name: "Senden", exact: true }).click();
+  await assistant.getByRole("button", { name: "Rechnungsentwurf prüfen" }).click();
+  await expect(page.locator("#editor-dialog")).toBeVisible();
+  await expect(page.locator('#editor-dialog [name="tax_rate"]')).toHaveValue("8.1");
+});
+
+test("HEAV Assistent: Modelltexte, Vorschläge und Dateinamen bleiben als Text XSS-sicher", async ({ page }) => {
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  await page.getByRole("button", { name: "HEAV Assistent öffnen" }).click();
+  const assistant = page.locator("#assistant-dialog");
+  await assistant.locator('input[type="file"]').setInputFiles({
+    name: '<img src=x onerror="window.__assistantXss=1">.png',
+    mimeType: "image/png",
+    buffer: await readFile(new URL("../../qa/workspace-dashboard-390.png", import.meta.url)),
+  });
+  await assistant.getByLabel("Nachricht an HEAV Assistent").fill("__xss__");
+  await assistant.getByRole("button", { name: "Senden", exact: true }).click();
+  await expect(assistant).toContainText('<img src=x onerror="window.__assistantXss=1">');
+  await expect(assistant.locator('img[src="x"], script')).toHaveCount(0);
+  expect(await page.evaluate(() => window.__assistantXss)).toBeUndefined();
+  await assistant.getByRole("button", { name: "Kundenentwurf prüfen" }).click();
+  await expect(page.locator('#editor-dialog [name="company"]')).toHaveValue("<script>window.__assistantXss=1</script>");
+  await expect(page.locator("#editor-dialog script")).toHaveCount(0);
+  expect(await page.evaluate(() => window.__assistantXss)).toBeUndefined();
+});
+
+test("HEAV Assistent: bleibt ohne aktivierte API aus der Studio-Oberfläche verborgen", async ({ page }) => {
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  await page.evaluate(() => document.documentElement.setAttribute("data-assistant-enabled", "false"));
+  await expect(page.getByRole("button", { name: "HEAV Assistent öffnen" })).toBeHidden();
+  await expect(page.locator("#assistant-dialog")).toBeHidden();
+});
+
+test("HEAV Assistent: bleibt bei 390px vollständig bedienbar", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  await page.getByRole("button", { name: "HEAV Assistent öffnen" }).click();
+  const assistant = page.locator("#assistant-dialog");
+  const bounds = await assistant.boundingBox();
+  expect(bounds.x).toBe(0);
+  expect(bounds.y).toBe(0);
+  expect(bounds.width).toBe(390);
+  expect(bounds.height).toBe(844);
+  const controls = await assistant.locator("button,input,textarea").evaluateAll((elements) => elements.filter((element) => element.getClientRects().length).map((element) => ({ width: element.getBoundingClientRect().width, height: element.getBoundingClientRect().height })));
+  expect(controls.every((control) => control.width >= 44 && control.height >= 44)).toBe(true);
+  const visual = await assistant.evaluate((dialog) => {
+    const textarea = getComputedStyle(dialog.querySelector("textarea"));
+    const privacy = getComputedStyle(dialog.querySelector(".assistant-privacy"));
+    return { boxShadow: textarea.boxShadow, outlineWidth: parseFloat(textarea.outlineWidth), privacySize: parseFloat(privacy.fontSize) };
+  });
+  expect(visual.boxShadow).toBe("none");
+  expect(visual.outlineWidth).toBeLessThanOrEqual(2);
+  expect(visual.privacySize).toBeGreaterThanOrEqual(10);
+  await page.screenshot({ path: "qa/admin-assistant-mobile.png" });
+  await assertHealthy(page, []);
+  await page.close();
+});
+
+test("HEAV Assistent: ein Chat wird auf Mobile nur nach Bestätigung vollständig gelöscht", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  await page.getByRole("button", { name: "HEAV Assistent öffnen" }).click();
+  const assistant = page.locator("#assistant-dialog");
+  await assistant.getByLabel("Nachricht an HEAV Assistent").fill("Plane ein Kundenprofil.");
+  await assistant.getByRole("button", { name: "Senden", exact: true }).click();
+  await expect(assistant.getByRole("button", { name: "Chat löschen" })).toBeVisible();
+
+  await assistant.getByRole("button", { name: "Chat löschen" }).click();
+  const confirm = page.locator("#action-confirm-dialog");
+  await expect(confirm).toContainText("Chatverlauf wirklich löschen?");
+  await confirm.getByRole("button", { name: "Abbrechen" }).click();
+  expect(await page.evaluate(() => window.__deletedAssistantThread || null)).toBeNull();
+
+  await assistant.getByRole("button", { name: "Chat löschen" }).click();
+  await confirm.getByRole("button", { name: "Löschen", exact: true }).click();
+  const activeThread = await page.evaluate(() => window.__assistantRequests[0].threadId);
+  await expect.poll(() => page.evaluate(() => window.__deletedAssistantThread)).toBe(activeThread);
+  await expect(assistant.locator(".assistant-message")).toHaveCount(1);
+  await expect(assistant).toContainText("Schick mir Kundendaten als Screenshot");
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+  await page.close();
+});
+
+test("HEAV Assistent: ersetzt einen fremden oder gelöschten Chat automatisch und kontogebunden", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("heav-assistant-thread:owner-test", "90000000-0000-4000-8000-000000000099"));
+  await mockStudioSupabase(page, { assistantFailures: 1, assistantFailureStatus: 404 });
+  await page.goto(`${base}/studio/`);
+  await page.getByRole("button", { name: "HEAV Assistent öffnen" }).click();
+  const assistant = page.locator("#assistant-dialog");
+  await assistant.getByLabel("Nachricht an HEAV Assistent").fill("Plane ein neues Projekt.");
+  await assistant.getByRole("button", { name: "Senden", exact: true }).click();
+  await expect(assistant).toContainText("Kundendaten als Entwurf vorbereitet");
+
+  const recovery = await page.evaluate(() => ({
+    requests: window.__assistantRequests,
+    scoped: localStorage.getItem("heav-assistant-thread:owner-test"),
+    legacy: localStorage.getItem("heav-assistant-thread"),
+  }));
+  expect(recovery.requests).toHaveLength(2);
+  expect(recovery.requests[0]).toMatchObject({ threadId: "90000000-0000-4000-8000-000000000099", newThread: false });
+  expect(recovery.requests[1].newThread).toBe(true);
+  expect(recovery.requests[1].threadId).not.toBe(recovery.requests[0].threadId);
+  expect(recovery.scoped).toBe(recovery.requests[1].threadId);
+  expect(recovery.legacy).toBeNull();
+});
+
+test("HEAV Assistent: ein Providerfehler lässt den neuen Chat löschbar statt verwaist zurück", async ({ page }) => {
+  await mockStudioSupabase(page, { assistantFailures: 1, assistantFailureStatus: 502 });
+  await page.goto(`${base}/studio/`);
+  await page.getByRole("button", { name: "HEAV Assistent öffnen" }).click();
+  const assistant = page.locator("#assistant-dialog");
+  await assistant.getByLabel("Nachricht an HEAV Assistent").fill("Plane ein neues Projekt.");
+  await assistant.getByRole("button", { name: "Senden", exact: true }).click();
+  await expect(assistant.getByRole("button", { name: "Chat löschen" })).toBeVisible();
+  const retained = await page.evaluate(() => ({ request: window.__assistantRequests[0], scoped: localStorage.getItem("heav-assistant-thread:owner-test") }));
+  expect(retained.request.newThread).toBe(true);
+  expect(retained.scoped).toBe(retained.request.threadId);
+});
+
 test("Workspace: mobile toast uses a compact safe-area bottom offset", async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   await mockStudioSupabase(page);
@@ -739,6 +948,39 @@ for (const width of [360, 390, 768, 1440]) {
     await page.close();
   });
 }
+
+test("Dashboard: zeigt zwölf Monate bezahlten Nettoumsatz mit echten Zahlungsdaten", async ({ page }) => {
+  const now = new Date();
+  const paidAt = (monthsBack, day = 12) => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - monthsBack, day, 12)).toISOString();
+  await mockStudioSupabase(page, { invoices: [
+    { id: "paid-current", customer_id: "c1", project_id: "p1", invoice_number: "PAID-CURRENT", status: "paid", paid_at: paidAt(0), subtotal_rappen: 100000, tax_rappen: 8100, total_rappen: 108100, invoice_items: [] },
+    { id: "paid-previous", customer_id: "c2", project_id: "p2", invoice_number: "PAID-PREVIOUS", status: "paid", paid_at: paidAt(1), subtotal_rappen: 25000, tax_rappen: 0, total_rappen: 25000, invoice_items: [] },
+    { id: "paid-undated", customer_id: "c1", project_id: "p1", invoice_number: "PAID-UNDATED", status: "paid", paid_at: null, subtotal_rappen: 5000, tax_rappen: 0, total_rappen: 5000, invoice_items: [] },
+    { id: "open", customer_id: "c1", project_id: "p1", invoice_number: "OPEN", status: "sent", due_date: "2099-12-01", subtotal_rappen: 80000, tax_rappen: 6480, total_rappen: 86480, invoice_items: [] },
+  ] });
+
+  await page.goto(`${base}/studio/`);
+  const revenue = page.locator(".dashboard-revenue");
+  await expect(revenue.getByRole("heading", { name: "Bezahlter Rechnungsumsatz" })).toBeVisible();
+  await expect(revenue.locator("[data-revenue-month]" )).toHaveCount(12);
+  await expect(revenue.locator("[data-revenue-net]")).toContainText("CHF 1’250.00");
+  await expect(revenue.locator("[data-revenue-tax]")).toContainText("CHF 81.00");
+  await expect(revenue.locator("[data-revenue-gross]")).toContainText("CHF 1’331.00");
+  await expect(revenue.locator("[data-revenue-missing-date]")).toContainText("1 bezahlte Rechnung ohne Zahlungsdatum");
+  const labels = await revenue.locator("[data-revenue-month]").evaluateAll((bars) => bars.map((bar) => bar.getAttribute("aria-label")));
+  expect(labels.every(Boolean)).toBe(true);
+  expect(labels.some((label) => label.includes("CHF 1’000.00"))).toBe(true);
+  await expect(revenue.locator(".dashboard-revenue-empty")).toHaveCount(0);
+  await assertHealthy(page, []);
+});
+
+test("Dashboard: erklärt einen echten Nullzeitraum statt eine leere Chartfläche zu zeigen", async ({ page }) => {
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  const empty = page.locator(".dashboard-revenue-empty");
+  await expect(empty).toBeVisible();
+  await expect(empty).toHaveText("Noch keine Zahlungen in diesem Zeitraum.");
+});
 
 test("Workspace: project documents distinguish drafts from payment and retain create context", async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true });
@@ -829,6 +1071,7 @@ async function mockClientSupabase(page) {
       export function createClient() {
         return {
           auth: { getSession: async () => ({ data: { session: { access_token: "client-test", user: { id: "client-test" } } }, error: null }) },
+          rpc: async (name) => result(name === "is_studio_owner" ? false : null),
           from(table) {
             const builder = {
               select() { return builder; }, eq() { return builder; }, order: async () => result([]), maybeSingle: async () => result(null), limit: async () => result(table === "customer_portal_memberships" ? [{ id: "membership-test" }] : [])
@@ -1223,6 +1466,7 @@ test("Login: ein Owner mit Kundenmitgliedschaft landet im HEAV Studio", async ({
       export function createClient() {
         return {
           auth: { getSession: async () => ({ data: { session: { user: { id: "owner-test" } } }, error: null }) },
+          rpc: async (name) => result(name === "is_studio_owner"),
           from(table) {
             const builder = {
               select() { return builder; },
@@ -1238,6 +1482,49 @@ test("Login: ein Owner mit Kundenmitgliedschaft landet im HEAV Studio", async ({
   });
   await page.goto(`${base}/login/`);
   await page.waitForURL(/\/studio\/$/);
+});
+
+test("Login: ein authentifiziertes Konto ohne Rolle wird ohne Redirect-Schleife abgemeldet", async ({ page }) => {
+  await page.route("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm", async (route) => {
+    await route.fulfill({
+      contentType: "application/javascript",
+      body: `const result = (data) => ({ data, error: null });
+      export function createClient() {
+        return {
+          auth: {
+            getSession: async () => ({ data: { session: { user: { id: "no-role" } } }, error: null }),
+            signOut: async () => { window.__signedOut = true; return { error: null }; }
+          },
+          rpc: async () => result(false),
+          from() { const builder = { select() { return builder; }, eq() { return builder; }, limit: async () => result([]) }; return builder; }
+        };
+      }`,
+    });
+  });
+  await page.goto(`${base}/login/`);
+  await expect(page).toHaveURL(/\/login\/$/);
+  await expect(page.locator("#login-message")).toContainText("kein freigegebener Zugang");
+  await expect.poll(() => page.evaluate(() => window.__signedOut)).toBe(true);
+});
+
+test("Login: ein Fehler der Owner-Prüfung darf nicht ins Kundenportal fehlleiten", async ({ page }) => {
+  await page.route("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm", async (route) => {
+    await route.fulfill({
+      contentType: "application/javascript",
+      body: `const result = (data) => ({ data, error: null });
+      export function createClient() {
+        return {
+          auth: { getSession: async () => ({ data: { session: { user: { id: "dual-role" } } }, error: null }) },
+          rpc: async () => ({ data: null, error: { message: "owner lookup unavailable" } }),
+          from() { window.__membershipQueried = true; const builder = { select() { return builder; }, eq() { return builder; }, limit: async () => result([{ id: "membership" }]) }; return builder; }
+        };
+      }`,
+    });
+  });
+  await page.goto(`${base}/login/`);
+  await expect(page).toHaveURL(/\/login\/$/);
+  await expect(page.locator("#login-message")).toContainText("Berechtigung konnte nicht geprüft werden");
+  expect(await page.evaluate(() => window.__membershipQueried || false)).toBe(false);
 });
 
 test("Login: sendet einen Magic-Link nur für bestehende Benutzer und ohne Vorschau", async ({ page }) => {

@@ -31,6 +31,8 @@ Deno.serve(async (request) => {
     });
     const { data: identity, error: identityError } = await caller.auth.getUser();
     if (identityError || !identity.user) return reply({ error: "Authentication required" }, 401, headers);
+    const { data: ownerAllowed, error: ownerError } = await caller.rpc("is_studio_owner");
+    if (ownerError || ownerAllowed !== true) return reply({ error: "Studio-Zugriff erforderlich." }, 403, headers);
 
     const { customerId } = await request.json();
     if (typeof customerId !== "string" || !uuidPattern.test(customerId)) return reply({ error: "Invalid customer" }, 400, headers);

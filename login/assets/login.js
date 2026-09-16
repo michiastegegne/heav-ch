@@ -20,11 +20,9 @@ if (!isBackendConfigured()) {
   );
   async function workspaceDestination(session) {
     const user = session.user;
-    const { data: settings, error: settingsError } = await supabase
-      .from("company_settings")
-      .select("owner_id")
-      .maybeSingle();
-    if (!settingsError && settings?.owner_id === user.id) return "/studio/";
+    const { data: isOwner, error: ownerError } = await supabase.rpc("is_studio_owner");
+    if (ownerError) throw new Error("Die Berechtigung konnte nicht geprüft werden. Bitte versuche es später erneut.");
+    if (isOwner) return "/studio/";
 
     const { data: memberships, error } = await supabase
       .from("customer_portal_memberships")
@@ -32,11 +30,24 @@ if (!isBackendConfigured()) {
       .eq("user_id", user.id)
       .eq("status", "active")
       .limit(1);
-    if (!error && memberships?.length) return "/client/";
-    return "/studio/";
+    if (error) throw new Error("Die Berechtigung konnte nicht geprüft werden. Bitte versuche es später erneut.");
+    if (memberships?.length) return "/client/";
+    return null;
   }
   const { data } = await supabase.auth.getSession();
-  if (data.session) window.location.replace(await workspaceDestination(data.session));
+  if (data.session) {
+    try {
+      const destination = await workspaceDestination(data.session);
+      if (destination) {
+        window.location.replace(destination);
+      } else {
+        await supabase.auth.signOut();
+        message.textContent = "Für dieses Konto besteht kein freigegebener Zugang.";
+      }
+    } catch (error) {
+      message.textContent = error.message || "Die Berechtigung konnte nicht geprüft werden. Bitte versuche es später erneut.";
+    }
+  }
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();

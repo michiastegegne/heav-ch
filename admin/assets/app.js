@@ -1,5 +1,6 @@
 import { HEAV_ADMIN_CONFIG, isBackendConfigured } from "/admin/config.js";
 import { calculateInvoice, formatCHF, statusLabel, validateCustomer, validateInvoice } from "/admin/assets/domain.js";
+import { buildPaidRevenueSeries } from "/admin/assets/dashboard.js?v=20260916-revenue-1";
 
 const shell = document.querySelector("#admin-shell");
 const loading = document.querySelector("#loading-screen");
@@ -24,6 +25,14 @@ const actionConfirmKicker = document.querySelector("#action-confirm-kicker");
 const actionConfirmTitle = document.querySelector("#action-confirm-title");
 const actionConfirmCopy = document.querySelector("#action-confirm-copy");
 const actionConfirmButton = document.querySelector("#action-confirm-button");
+const assistantDialog = document.querySelector("#assistant-dialog");
+const assistantLauncher = document.querySelector("[data-open-assistant]");
+const assistantForm = document.querySelector("#assistant-form");
+const assistantInput = document.querySelector("#assistant-input");
+const assistantImage = document.querySelector("#assistant-image");
+const assistantAttachment = document.querySelector("#assistant-attachment");
+const assistantMessages = document.querySelector("#assistant-messages");
+const assistantDelete = document.querySelector("[data-delete-assistant-thread]");
 let navRestoreFocus = null;
 let navLockedScrollY = null;
 let navCloseTimer = null;
@@ -44,6 +53,7 @@ const viewNames = {
   "portal-requests": "Portal-Anfragen",
 };
 const state = { view: "dashboard", query: "", filter: "all", invoiceSort: "created_desc", selectedProjectId: null, data: null, supabase: null, sendRequestKeys: new Map() };
+const assistantState = { ownerId: null, threadId: null, image: null, busy: false, proposals: new Map() };
 const esc = (value = "") => String(value).replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
 const formatDate = (value) => value ? new Intl.DateTimeFormat("de-CH").format(new Date(`${value}T12:00:00`)) : "–";
 const today = () => new Date().toISOString().slice(0, 10);
@@ -157,6 +167,20 @@ function createSupabaseAdapter(supabase, session) {
       }
       return data;
     },
+    async askAssistant(payload) {
+      const { data, error } = await supabase.functions.invoke("assistant-chat", { body: payload });
+      if (error) {
+        const details = await error.context?.json?.().catch(() => null);
+        const requestError = new Error(details?.error || "Der HEAV Assistent ist gerade nicht erreichbar.");
+        requestError.status = Number(error.context?.status || 0);
+        throw requestError;
+      }
+      return data;
+    },
+    async deleteAssistantThread(id) {
+      const result = await supabase.rpc("delete_assistant_thread", { p_thread_id: id });
+      fail(result.error);
+    },
     async updateInvoice(id, payload) {
       const result = await supabase.rpc("update_invoice", { p_invoice_id: id, p_customer_id: payload.customer_id, p_project_id: payload.project_id, p_issue_date: payload.issue_date, p_due_date: payload.due_date, p_status: payload.status, p_tax_rate: payload.tax_rate, p_notes: payload.notes, p_items: payload.items });
       fail(result.error);
@@ -214,6 +238,22 @@ function actionIconButton(icon, label, attributes, tone = "") {
 }
 function contactMark() { return `<span class="customer-contact" title="Kunde" aria-label="Kunde">${actionIcons["customer-contact"]}</span>`; }
 
+function renderRevenueChart(invoices) {
+  const revenue = buildPaidRevenueSeries(invoices);
+  const bars = revenue.months.map((month) => {
+    const height = revenue.maxNetRappen ? Math.max(2, Math.round((month.netRappen / revenue.maxNetRappen) * 100)) : 0;
+    const ariaLabel = `${month.longLabel}: ${formatCHF(month.netRappen)} Nettoumsatz aus ${month.invoiceCount} ${month.invoiceCount === 1 ? "Rechnung" : "Rechnungen"}`;
+    return `<div class="dashboard-revenue-month" data-revenue-month="${esc(month.key)}" role="img" aria-label="${esc(ariaLabel)}"><span class="dashboard-revenue-bar" style="--revenue-height:${height}%"></span><small>${esc(month.label)}</small></div>`;
+  }).join("");
+  const missing = revenue.missingPaidAt.count
+    ? `${revenue.missingPaidAt.count} ${revenue.missingPaidAt.count === 1 ? "bezahlte Rechnung" : "bezahlte Rechnungen"} ohne Zahlungsdatum · ${formatCHF(revenue.missingPaidAt.grossRappen)}`
+    : "Alle bezahlten Rechnungen haben ein Zahlungsdatum.";
+  return `<section class="dashboard-revenue" aria-labelledby="dashboard-revenue-title">
+    <div class="dashboard-revenue-summary"><span class="kicker">LETZTE 12 MONATE</span><h3 id="dashboard-revenue-title">Bezahlter Rechnungsumsatz</h3><strong data-revenue-net>${formatCHF(revenue.totals.netRappen)}</strong><p>exkl. MWST · ${revenue.totals.invoiceCount} ${revenue.totals.invoiceCount === 1 ? "Zahlung" : "Zahlungen"}</p><dl><div><dt>MWST</dt><dd data-revenue-tax>${formatCHF(revenue.totals.taxRappen)}</dd></div><div><dt>Zahlungseingang brutto</dt><dd data-revenue-gross>${formatCHF(revenue.totals.grossRappen)}</dd></div></dl><small data-revenue-missing-date>${esc(missing)}</small></div>
+    <figure class="dashboard-revenue-figure"><figcaption><span>NETTO PRO MONAT</span><span>CHF</span></figcaption><div class="dashboard-revenue-chart">${revenue.totals.invoiceCount ? "" : '<p class="dashboard-revenue-empty">Noch keine Zahlungen in diesem Zeitraum.</p>'}${bars}</div></figure>
+  </section>`;
+}
+
 function renderDashboard() {
   const { customers, projects, invoices, offers = [] } = state.data;
   const activeProjects = projects.filter(item => ["planning", "active"].includes(item.status)).sort((a,b) => String(a.due_date || "9999").localeCompare(String(b.due_date || "9999")));
@@ -230,7 +270,8 @@ function renderDashboard() {
     <div class="dashboard-focus-modules"><div><span>KUNDE</span><strong>${esc(customerLabel(projectCustomer))}</strong><small>${esc(projectCustomer?.email || "Keine E-Mail hinterlegt")}</small></div><div><span>ABGABE</span><strong>${formatDate(focusProject.due_date)}</strong><small>${focusProject.start_date ? `Start ${formatDate(focusProject.start_date)}` : "Start nicht festgelegt"}</small></div><div><span>BEZAHLT</span><strong>${formatCHF(sum(projectPaid))}</strong><small>Als bezahlt erfasst</small></div></div>
     <footer class="dashboard-focus-footer"><button class="project-module-link" type="button" data-dashboard-project-focus="${esc(focusProject.id)}">Projekt-Canvas öffnen <span aria-hidden="true">→</span></button><div><button class="secondary-button" type="button" data-create="offer" data-project-id="${esc(focusProject.id)}">Offerte</button><button class="primary-action" type="button" data-create="invoice" data-project-id="${esc(focusProject.id)}">Rechnung <span aria-hidden="true">+</span></button></div></footer>
   </article>` : `<article class="dashboard-focus dashboard-focus--empty"><span class="kicker">PRODUKTION</span><h3>Kein laufendes Projekt</h3><p>Erfasse den nächsten Auftrag mit Kunde und Produktionsterminen.</p><button class="primary-action" data-create="project">Projekt anlegen</button></article>`;
-  return `<section class="view dashboard-view"><header class="dashboard-intro"><div><h2>Dein Arbeitsbereich</h2><p>Produktionen und nächste Schritte auf einen Blick.</p></div></header>
+  return `<section class="view dashboard-view"><header class="dashboard-intro"><div><h2>Dein Arbeitsbereich</h2><p>Einnahmen, offene Zahlungen und Produktionen in einem ruhigen Überblick.</p></div></header>
+    ${renderRevenueChart(invoices)}
     <section class="dashboard-stage">${focusSurface}<aside class="dashboard-money"><span class="kicker">AUSSTEHENDE ZAHLUNGEN</span><strong>${formatCHF(sum(openInvoices))}</strong><p>${openInvoices.length} versendete / überfällige Rechnungen</p><div class="dashboard-money-list"><div><span>Bezahlt erfasst</span><b>${formatCHF(sum(paid))}</b></div><div><span>Entwürfe · nicht fällig</span><b>${formatCHF(sum(drafts))}</b></div></div><button class="project-module-link" data-view="invoices">Rechnungen öffnen <span aria-hidden="true">→</span></button></aside></section>
     <section class="dashboard-grid"><section class="panel dashboard-panel"><div class="panel-head"><h3>Nächste Finanzschritte</h3><span class="kicker">${drafts.length + openOffers.length + openInvoices.length} EINTRÄGE</span></div><div class="workspace-action-list">
       ${drafts.slice(0,3).map(item => `<article class="workspace-action"><div><span class="status draft">Entwurf</span><strong>${esc(item.invoice_number)}</strong><small>${esc(customerLabel(item.customer))} · ${formatCHF(item.total_rappen)} · noch nicht fällig</small></div>${invoiceActions(item)}</article>`).join("")}
@@ -545,29 +586,31 @@ function customerOptions(selected = "") { return state.data.customers.map((item)
 function projectOptions(customerId = "", selected = "") { return state.data.projects.filter((item) => item.customer_id === customerId).map((item) => `<option value="${esc(item.id)}" ${item.id === selected ? "selected" : ""}>${esc(item.title)}</option>`).join(""); }
 function field(label, name, type = "text", value = "", wide = false, extra = "") { return `<label class="form-field ${wide ? "wide" : ""}"><span>${esc(label)}</span><input type="${type}" name="${name}" value="${esc(value)}" ${extra}></label>`; }
 function openEditor(type, existing = null, context = {}) {
-  const contextProject = context.projectId ? state.data.projects.find((item) => item.id === context.projectId) : null;
+  const prefill = !existing && context.prefill && typeof context.prefill === "object" ? context.prefill : {};
+  const contextProjectId = context.projectId || prefill.project_id || "";
+  const contextProject = contextProjectId ? state.data.projects.find((item) => item.id === contextProjectId) : null;
   formError.textContent = "";
   dialogForm.dataset.type = type;
   dialogForm.dataset.editId = existing?.id || "";
   dialogKicker.textContent = existing ? "BEARBEITEN" : "NEU";
   if (type === "customer") {
-    const item = existing || {};
+    const item = existing || prefill;
     dialogTitle.textContent = existing ? "Kunde bearbeiten" : "Kunde erfassen";
     dialogBody.innerHTML = `<p class="form-hint">Firma oder Kontaktperson genügt. Adresse, E-Mail und Telefon kannst du später ergänzen.</p><div class="form-grid">${field("Firma","company","text",item.company || "")}${field("Kontaktperson","contact_name","text",item.contact_name || "")}${field("E-Mail","email","email",item.email || "")}${field("Telefon","phone","tel",item.phone || "")}${field("Strasse / Nr.","address_line1","text",item.address_line1 || "",true)}${field("PLZ","postal_code","text",item.postal_code || "")}${field("Ort","city","text",item.city || "")}${field("Land","country","text",item.country || "Schweiz",true)}</div>`;
   } else if (type === "project") {
     if (!state.data.customers.length) { showToast("Bitte zuerst einen Kunden erfassen.", "error"); setView("customers"); return; }
-    const item = existing || {};
+    const item = existing || prefill;
     dialogTitle.textContent = existing ? "Projekt bearbeiten" : "Projekt anlegen";
     dialogBody.innerHTML = `<div class="form-grid"><label class="form-field wide"><span>Kunde *</span><select name="customer_id" required><option value="">Bitte wählen</option>${customerOptions(item.customer_id)}</select></label>${field("Projekttitel *","title","text",item.title || "",true,"required")}<label class="form-field"><span>Status</span><select name="status">${[["planning","Planung"],["active","Aktiv"],["completed","Abgeschlossen"],["on_hold","Pausiert"]].map(([v,l]) => `<option value="${v}" ${item.status === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>${field("Budget CHF","budget","number",item.budget_rappen != null ? item.budget_rappen / 100 : "",false,'min="0" step="0.05"')}${field("Start","start_date","date",item.start_date || "")}${field("Deadline","due_date","date",item.due_date || "")}<label class="form-field wide"><span>Beschreibung</span><textarea name="description">${esc(item.description || "")}</textarea></label></div>`;
   } else if (type === "invoice") {
     if (!state.data.customers.length) { showToast("Bitte zuerst einen Kunden erfassen.", "error"); setView("customers"); return; }
-    const item = existing || {};
+    const item = existing || prefill;
     dialogTitle.textContent = existing ? `Rechnung bearbeiten · ${item.invoice_number}` : "Rechnung erstellen";
     const vatRegistered = validVatNumber(state.data.settings?.vat_number);
     const customerId = item.customer_id || contextProject?.customer_id || "";
     const projectId = item.project_id || contextProject?.id || "";
     dialogBody.innerHTML = `<div class="form-grid"><label class="form-field"><span>Kunde *</span><select name="customer_id" required><option value="">Bitte wählen</option>${customerOptions(customerId)}</select></label><label class="form-field"><span>Projekt</span><select name="project_id"><option value="">Kein Projekt</option>${projectOptions(customerId,projectId)}</select></label>${existing ? `<label class="form-field wide"><span>Versand- und Zahlungsstatus · auch für manuell versandte PDFs</span><select name="status">${["draft","sent","paid","overdue","cancelled"].map((status) => `<option value="${status}" ${item.status === status ? "selected" : ""}>${statusLabel(status)}</option>`).join("")}</select></label>` : ""}${!existing ? `<div class="sequence-note wide"><strong>Automatische Referenz</strong><span>Die Zahlungsreferenz wird beim Speichern fortlaufend und buchhaltungssicher vergeben.</span></div>` : ""}${field(vatRegistered ? "MWST %" : "MWST % · nicht registriert","tax_rate","number",item.tax_rate ?? (vatRegistered ? (state.data.settings?.default_tax_rate ?? 0) : 0),false,vatRegistered ? 'min="0" step="0.1"' : 'readonly aria-readonly="true"')}${field("Rechnungsdatum *","issue_date","date",item.issue_date || today(),false,"required")}${field("Fällig am *","due_date","date",item.due_date || plusDays(today(),state.data.settings?.default_due_days || 30),false,"required")}<div class="invoice-items"><span class="items-label">Positionen *</span><div id="invoice-item-list"></div><div class="invoice-add-actions"><button class="secondary-button" type="button" data-add-item>Position hinzufügen</button><button class="secondary-button" type="button" data-add-discount>Rabatt hinzufügen</button></div></div><label class="form-field wide"><span>Hinweis auf Rechnung</span><textarea name="notes">${esc(item.notes || "")}</textarea></label><div class="invoice-total" id="invoice-total">TOTAL&nbsp;&nbsp; CHF 0.00</div></div>`;
-    (existing ? item.items : [null]).forEach((invoiceItem) => addInvoiceItem(invoiceItem));
+    (item.items?.length ? item.items : [null]).forEach((invoiceItem) => addInvoiceItem(invoiceItem));
   } else if (type === "offer") {
     if (!state.data.customers.length) { showToast("Bitte zuerst einen Kunden erfassen.", "error"); setView("customers"); return; }
     const vatRegistered = validVatNumber(state.data.settings?.vat_number);
@@ -752,6 +795,163 @@ async function sendOffer(id, button) {
   finally { button.disabled = false; }
 }
 
+function assistantText(value, maxLength = 1000) {
+  return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
+}
+function assistantCustomerId(payload = {}) {
+  const direct = state.data.customers.find((customer) => customer.id === payload.customer_id);
+  if (direct) return direct.id;
+  const email = assistantText(payload.customer_email || payload.email, 320).toLowerCase();
+  if (email) {
+    const byEmail = state.data.customers.find((customer) => String(customer.email || "").trim().toLowerCase() === email);
+    if (byEmail) return byEmail.id;
+  }
+  const label = assistantText(payload.customer_company || payload.company || payload.customer_contact_name || payload.contact_name, 160).toLowerCase();
+  return state.data.customers.find((customer) => customerLabel(customer).trim().toLowerCase() === label)?.id || "";
+}
+function normalizeAssistantProposal(raw) {
+  if (!raw || typeof raw !== "object" || !["customer", "project", "invoice", "send_invoice"].includes(raw.kind)) return null;
+  const id = assistantText(raw.id, 100) || crypto.randomUUID();
+  const payload = raw.payload && typeof raw.payload === "object" && !Array.isArray(raw.payload) ? raw.payload : {};
+  if (raw.kind === "customer") {
+    const customer = {
+      company: assistantText(payload.company, 160), contact_name: assistantText(payload.contact_name, 160), email: assistantText(payload.email, 320),
+      phone: assistantText(payload.phone, 80), address_line1: assistantText(payload.address_line1, 240), postal_code: assistantText(payload.postal_code, 40),
+      city: assistantText(payload.city, 120), country: assistantText(payload.country, 120) || "Schweiz",
+    };
+    if (!customer.company && !customer.contact_name) return null;
+    return { id, kind: raw.kind, label: assistantText(raw.label, 180) || "Kundenentwurf", payload: customer };
+  }
+  if (raw.kind === "project") {
+    const project = {
+      customer_id: assistantCustomerId(payload), customer_email: assistantText(payload.customer_email, 320), customer_company: assistantText(payload.customer_company, 160),
+      title: assistantText(payload.title, 200), description: assistantText(payload.description, 6000), status: ["planning", "active", "completed", "on_hold"].includes(payload.status) ? payload.status : "planning",
+      start_date: assistantText(payload.start_date, 10), due_date: assistantText(payload.due_date, 10),
+    };
+    const budget = Number(payload.budget_rappen);
+    if (payload.budget_rappen != null && payload.budget_rappen !== "" && Number.isFinite(budget)) project.budget_rappen = Math.max(0, Math.round(budget));
+    if (!project.title) return null;
+    return { id, kind: raw.kind, label: assistantText(raw.label, 180) || "Projektentwurf", payload: project };
+  }
+  if (raw.kind === "invoice") {
+    const items = Array.isArray(payload.items) ? payload.items.slice(0, 10).map((item) => ({
+      description: assistantText(item?.description, 1000), quantity: Math.max(.01, Number(item?.quantity) || 1), unit_price_rappen: Math.round(Number(item?.unit_price_rappen) || 0),
+    })).filter((item) => item.description && item.unit_price_rappen >= 0) : [];
+    if (!items.length) return null;
+    const invoicePayload = {
+      customer_id: assistantCustomerId(payload), customer_email: assistantText(payload.customer_email, 320), customer_company: assistantText(payload.customer_company, 160),
+      project_id: assistantText(payload.project_id, 80), issue_date: assistantText(payload.issue_date, 10) || today(), due_date: assistantText(payload.due_date, 10) || plusDays(today(), state.data.settings?.default_due_days || 30),
+      notes: assistantText(payload.notes, 6000), items,
+    };
+    const taxRate = Number(payload.tax_rate);
+    if (payload.tax_rate != null && payload.tax_rate !== "" && Number.isFinite(taxRate)) invoicePayload.tax_rate = Math.max(0, taxRate);
+    return { id, kind: raw.kind, label: assistantText(raw.label, 180) || "Rechnungsentwurf", payload: invoicePayload };
+  }
+  const invoice = state.data.invoices.find((item) => item.id === payload.invoice_id || item.invoice_number === payload.invoice_number);
+  if (!invoice || !["draft", "sent", "overdue"].includes(invoice.status)) return null;
+  return { id, kind: raw.kind, label: assistantText(raw.label, 180) || `${invoice.invoice_number} senden`, payload: { invoice_id: invoice.id } };
+}
+function assistantProposalButton(proposal) {
+  const labels = { customer: "Kundenentwurf prüfen", project: "Projektentwurf prüfen", invoice: "Rechnungsentwurf prüfen", send_invoice: "Versand prüfen" };
+  const detail = proposal.label ? `<span>${esc(proposal.label)}</span>` : "";
+  return `<article class="assistant-proposal"><div><span class="kicker">VORSCHLAG</span>${detail}</div><button class="secondary-button" type="button" data-assistant-proposal="${esc(proposal.id)}">${labels[proposal.kind]}</button></article>`;
+}
+function appendAssistantMessage(role, copy, proposals = [], attachmentName = "") {
+  const article = document.createElement("article");
+  article.className = `assistant-message ${role === "assistant" ? "is-assistant" : "is-user"}`;
+  const normalized = proposals.map(normalizeAssistantProposal).filter(Boolean);
+  normalized.forEach((proposal) => assistantState.proposals.set(proposal.id, proposal));
+  article.innerHTML = `${attachmentName ? `<small>${esc(attachmentName)}</small>` : ""}<p>${esc(copy)}</p>${normalized.length ? `<div class="assistant-proposals">${normalized.map(assistantProposalButton).join("")}</div>` : ""}`;
+  assistantMessages.append(article);
+  assistantMessages.scrollTop = assistantMessages.scrollHeight;
+}
+function updateAssistantAttachment() {
+  if (!assistantState.image) {
+    assistantAttachment.hidden = true;
+    assistantAttachment.innerHTML = "";
+    return;
+  }
+  assistantAttachment.hidden = false;
+  assistantAttachment.innerHTML = `<span>${esc(assistantState.image.name)}</span><button type="button" data-remove-assistant-image aria-label="Screenshot entfernen">×</button>`;
+}
+function readAsDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Screenshot konnte nicht gelesen werden."));
+    reader.readAsDataURL(blob);
+  });
+}
+async function prepareAssistantImage(file) {
+  const allowed = new Set(["image/png", "image/jpeg", "image/webp"]);
+  if (!allowed.has(file.type)) throw new Error("Bitte PNG, JPEG oder WebP verwenden.");
+  if (file.size > 5 * 1024 * 1024) throw new Error("Der Screenshot darf höchstens 5 MB gross sein.");
+  const bitmap = await createImageBitmap(file);
+  if (bitmap.width < 1 || bitmap.height < 1 || bitmap.width * bitmap.height > 24000000) { bitmap.close(); throw new Error("Der Screenshot hat ungültige Abmessungen."); }
+  const scale = Math.min(1, 2000 / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  canvas.getContext("2d", { alpha: false }).drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", .84));
+  if (!blob) throw new Error("Screenshot konnte nicht vorbereitet werden.");
+  return { name: file.name.slice(0, 160), mimeType: "image/webp", dataUrl: await readAsDataUrl(blob) };
+}
+function openAssistant() {
+  if (assistantDialog.open) return;
+  assistantDialog.showModal();
+  requestAnimationFrame(() => assistantInput.focus({ preventScroll: true }));
+}
+function closeAssistant() {
+  if (assistantDialog.open) assistantDialog.close();
+}
+function assistantThreadStorageKey() {
+  return assistantState.ownerId ? `heav-assistant-thread:${assistantState.ownerId}` : null;
+}
+function setAssistantThread(id) {
+  assistantState.threadId = id;
+  const key = assistantThreadStorageKey();
+  if (key) localStorage.setItem(key, id);
+  assistantDelete.hidden = false;
+}
+function configureAssistantOwner(ownerId) {
+  assistantState.ownerId = ownerId;
+  localStorage.removeItem("heav-assistant-thread");
+  assistantState.threadId = localStorage.getItem(assistantThreadStorageKey());
+  assistantDelete.hidden = !assistantState.threadId;
+}
+function resetAssistantThread() {
+  assistantState.threadId = null;
+  assistantState.image = null;
+  assistantState.proposals.clear();
+  const key = assistantThreadStorageKey();
+  if (key) localStorage.removeItem(key);
+  localStorage.removeItem("heav-assistant-thread");
+  assistantImage.value = "";
+  assistantDelete.hidden = true;
+  updateAssistantAttachment();
+  assistantMessages.innerHTML = '<article class="assistant-message is-assistant"><p>Schick mir Kundendaten als Screenshot oder plane ein Projekt im Chat. Ich bereite prüfbare Entwürfe vor – gespeichert oder versendet wird erst nach deiner Bestätigung.</p></article>';
+}
+async function openAssistantProposal(proposal, button) {
+  if (!proposal) return;
+  if (proposal.kind === "send_invoice") {
+    const invoice = state.data.invoices.find((item) => item.id === proposal.payload.invoice_id);
+    if (!invoice) { showToast("Die vorgeschlagene Rechnung wurde nicht gefunden.", "error"); return; }
+    closeAssistant();
+    await invoiceAction(invoice.id, "send", button);
+    return;
+  }
+  const payload = { ...proposal.payload };
+  if (["project", "invoice"].includes(proposal.kind)) {
+    payload.customer_id = assistantCustomerId(payload);
+    if (!payload.customer_id) { showToast("Bitte zuerst den vorgeschlagenen Kunden speichern.", "error"); return; }
+  }
+  if (proposal.kind === "invoice" && payload.project_id && !state.data.projects.some((project) => project.id === payload.project_id && project.customer_id === payload.customer_id)) payload.project_id = "";
+  closeAssistant();
+  openEditor(proposal.kind, null, { prefill: payload });
+}
+
 function setInvoiceActionReveal(reveal, visible, persistent = false) {
   if (!reveal) return;
   reveal.classList.toggle("is-actions-visible", visible);
@@ -769,6 +969,99 @@ function closeInvoiceActionReveals(except = null) {
     if (reveal !== except) setInvoiceActionReveal(reveal, false);
   });
 }
+
+assistantLauncher.addEventListener("click", openAssistant);
+assistantDelete.hidden = !assistantState.threadId;
+assistantDelete.addEventListener("click", async () => {
+  if (!assistantState.threadId) return;
+  const confirmed = await confirmAction({
+    kicker: "CHAT LÖSCHEN",
+    title: "Chatverlauf wirklich löschen?",
+    copy: "Alle Nachrichten und Entwürfe in diesem Chat werden dauerhaft entfernt.",
+    confirmLabel: "Löschen",
+    destructive: true,
+  });
+  if (!confirmed) return;
+  assistantDelete.disabled = true;
+  try {
+    await adapter.deleteAssistantThread(assistantState.threadId);
+    resetAssistantThread();
+    showToast("Chat wurde gelöscht.");
+  } catch (error) {
+    if (/Chat nicht gefunden/i.test(error.message || "")) {
+      resetAssistantThread();
+      showToast("Der nicht mehr vorhandene Chat wurde lokal entfernt.");
+    } else {
+      showToast(error.message || "Chat konnte nicht gelöscht werden.", "error");
+    }
+  } finally {
+    assistantDelete.disabled = false;
+  }
+});
+assistantDialog.addEventListener("click", async (event) => {
+  if (event.target.closest("[data-close-assistant]")) { closeAssistant(); return; }
+  if (event.target.closest("[data-remove-assistant-image]")) {
+    assistantState.image = null;
+    assistantImage.value = "";
+    updateAssistantAttachment();
+    return;
+  }
+  const trigger = event.target.closest("[data-assistant-proposal]");
+  if (trigger) await openAssistantProposal(assistantState.proposals.get(trigger.dataset.assistantProposal), trigger);
+});
+assistantImage.addEventListener("change", async () => {
+  const file = assistantImage.files?.[0];
+  if (!file) return;
+  try {
+    assistantState.image = await prepareAssistantImage(file);
+    updateAssistantAttachment();
+  } catch (error) {
+    assistantState.image = null;
+    assistantImage.value = "";
+    updateAssistantAttachment();
+    showToast(error.message || "Screenshot konnte nicht vorbereitet werden.", "error");
+  }
+});
+assistantForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (assistantState.busy) return;
+  const message = assistantInput.value.trim();
+  if (!message && !assistantState.image) { showToast("Schreibe eine Nachricht oder füge einen Screenshot hinzu.", "error"); return; }
+  const image = assistantState.image;
+  appendAssistantMessage("user", message || "Bitte lies die Kundendaten aus diesem Screenshot.", [], image?.name || "");
+  assistantInput.value = "";
+  assistantState.busy = true;
+  const submit = assistantForm.querySelector(".assistant-send");
+  submit.disabled = true;
+  submit.setAttribute("aria-busy", "true");
+  try {
+    let newThread = !assistantState.threadId;
+    if (newThread) setAssistantThread(crypto.randomUUID());
+    const request = () => adapter.askAssistant({ threadId: assistantState.threadId, newThread, message: message || "Bitte lies die Kundendaten aus diesem Screenshot.", image });
+    let result;
+    try {
+      result = await request();
+    } catch (error) {
+      if (error.status !== 404 || newThread) throw error;
+      setAssistantThread(crypto.randomUUID());
+      newThread = true;
+      result = await request();
+    }
+    if (!result || typeof result.message !== "string") throw new Error("Der Assistent hat keine gültige Antwort geliefert.");
+    if (typeof result.threadId === "string") setAssistantThread(result.threadId);
+    appendAssistantMessage("assistant", result.message, Array.isArray(result.proposals) ? result.proposals : []);
+    assistantState.image = null;
+    assistantImage.value = "";
+    updateAssistantAttachment();
+  } catch (error) {
+    appendAssistantMessage("assistant", error.message || "Der HEAV Assistent ist gerade nicht erreichbar.");
+  } finally {
+    assistantState.busy = false;
+    submit.disabled = false;
+    submit.removeAttribute("aria-busy");
+    assistantInput.focus({ preventScroll: true });
+  }
+});
 
 content.addEventListener("pointerover", (event) => {
   if (!preciseHoverQuery.matches || event.pointerType === "touch") return;
@@ -864,8 +1157,8 @@ async function boot() {
     if (error || !data.session) { window.location.replace("/login/"); return; }
 
     const userId = data.session.user.id;
-    const { data: settings } = await state.supabase.from("company_settings").select("owner_id").maybeSingle();
-    const isOwner = settings?.owner_id === userId;
+    const { data: isOwner, error: ownerError } = await state.supabase.rpc("is_studio_owner");
+    if (ownerError) throw ownerError;
 
     if (!isOwner) {
       const { data: memberships, error: membershipError } = await state.supabase
@@ -875,8 +1168,10 @@ async function boot() {
         .eq("status", "active")
         .limit(1);
       if (!membershipError && memberships?.length) { window.location.replace("/client/"); return; }
+      throw new Error("Für dieses Konto ist kein Studio-Zugriff freigeschaltet.");
     }
 
+    configureAssistantOwner(userId);
     adapter = createSupabaseAdapter(state.supabase, data.session);
     state.data = await adapter.loadAll();
     loading.remove(); shell.hidden = false; render();
