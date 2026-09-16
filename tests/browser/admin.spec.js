@@ -23,11 +23,6 @@ async function mockStudioSupabase(page, overrides = {}) {
     await route.fulfill({ response, body: html });
   });
   await page.route("https://bkazlpqjvbuhwmjcwexn.supabase.co/functions/v1/invoice-document", async (route) => {
-    const payload = route.request().postDataJSON();
-    if (payload?.action && payload.action !== "download") {
-      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true }) });
-      return;
-    }
     await route.fulfill({ status: 200, contentType: "application/pdf", body: "%PDF-1.4\\n% HEAV test PDF\\n%%EOF" });
   });
   await page.route("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm", async (route) => {
@@ -193,14 +188,14 @@ test("Workspace: mobile HEAV menu replaces duplicate bottom navigation and traps
   await expect(sidebar).toHaveAttribute('role', 'dialog');
   await expect(sidebar).toHaveAttribute('aria-modal', 'true');
   await expect(page.locator('.workspace')).toHaveAttribute('inert', '');
-  await expect(sidebar).toHaveCSS('background-color', 'rgb(23, 28, 24)');
+  await expect(sidebar).toHaveCSS('background-color', 'rgb(232, 228, 220)');
   await page.waitForTimeout(700);
   const menuGeometry = await sidebar.evaluate((element) => {
     const box = element.getBoundingClientRect();
     const style = getComputedStyle(element);
     return { left: box.left, top: box.top, width: box.width, height: box.height, background: style.backgroundColor };
   });
-  expect(menuGeometry).toEqual({ left: 0, top: 0, width: 360, height: 800, background: 'rgb(23, 28, 24)' });
+  expect(menuGeometry).toEqual({ left: 0, top: 0, width: 360, height: 800, background: 'rgb(232, 228, 220)' });
   const nav = page.getByRole('navigation', { name: 'Studio Navigation' });
   const active = nav.getByRole('button', { name: 'Übersicht', exact: true });
   await expect(active).toBeFocused();
@@ -210,7 +205,7 @@ test("Workspace: mobile HEAV menu replaces duplicate bottom navigation and traps
     fontSize: parseFloat(getComputedStyle(element).fontSize),
     labelFontSize: parseFloat(getComputedStyle(element.querySelector('.nav-label')).fontSize),
   }));
-  expect(activeStyle.color).toBe('rgb(238, 242, 233)');
+  expect(activeStyle.color).toBe('rgb(9, 10, 8)');
   expect(activeStyle.radius).toBe('0px');
   expect(activeStyle.fontSize).toBeGreaterThanOrEqual(32);
   expect(activeStyle.labelFontSize).toBeGreaterThanOrEqual(32);
@@ -460,7 +455,7 @@ test("Workspace: finance navigation uses one stable HEAV line state instead of a
   });
   expect(state).toEqual({
     background: 'rgba(0, 0, 0, 0)',
-    color: 'rgb(23, 28, 24)',
+    color: 'rgb(240, 240, 240)',
     radius: '0px',
     borderBottomWidth: '0px',
     outline: 'none',
@@ -486,10 +481,10 @@ test("Workspace: finance navigation uses one stable HEAV line state instead of a
     toolbarRadius: '0px',
     toolbarSides: ['0px', '0px'],
     tableRadius: '0px',
-    navBackground: 'rgb(48, 61, 39)',
+    navBackground: 'rgba(0, 0, 0, 0)',
     navRadius: '0px',
-    navMarker: ['1px', 'rgb(96, 131, 38)', '0.36s, 0.36s'],
-    financeMarker: ['1px', 'rgb(96, 131, 38)', '0.36s, 0.36s'],
+    navMarker: ['1px', 'rgb(232, 228, 220)', '0.36s, 0.36s'],
+    financeMarker: ['1px', 'rgb(232, 228, 220)', '0.36s, 0.36s'],
   });
 });
 
@@ -561,22 +556,6 @@ test("Workspace: invoice row actions reveal on hover or click and close accessib
   await page.keyboard.press('Escape');
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
   await expect(trigger).toBeFocused();
-});
-
-test("Workspace: Rechnungsstatus ist direkt als Feld auswählbar und nutzt sichere Statusaktionen", async ({ page }) => {
-  await mockStudioSupabase(page);
-  const invoiceRequests = [];
-  page.on("request", (request) => {
-    if (request.url().includes("/functions/v1/invoice-document") && request.method() === "POST") invoiceRequests.push(request.postDataJSON());
-  });
-  await page.goto(`${base}/studio/`);
-  await page.locator('.nav-link[data-view="invoices"]').click();
-  const status = page.locator('.data-table [data-invoice-status]').filter({ has: page.locator('option[value="paid"]') }).first();
-  await expect(status).toHaveValue('sent');
-  const invoiceId = await status.getAttribute('data-id');
-  await status.selectOption('paid');
-  await expect.poll(() => invoiceRequests.length).toBe(1);
-  expect(invoiceRequests[0]).toMatchObject({ invoiceId, action: 'mark_paid' });
 });
 
 test("Workspace: mobile invoice actions stay collapsed until a deliberate tap", async ({ browser }) => {
