@@ -41,7 +41,7 @@ jobs:
         run: npm test
 
       - name: Check Edge Functions
-        run: deno check supabase/functions/*/index.ts
+        run: deno check --config supabase/functions/deno.json supabase/functions/*/index.ts
 
       - name: Run Edge Function tests
         run: deno test --no-check --allow-env --allow-read --allow-write supabase/functions/*/*_test.ts
