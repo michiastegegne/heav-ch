@@ -14,7 +14,7 @@ async function fixture(page, { offers = true, invoices = true, empty = false, mu
   await page.route('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm', route => route.fulfill({ contentType: 'application/javascript', body: `const store = ${JSON.stringify(store)};
     export function createClient() { return {
       auth: { getSession: async () => ({ data: { session: { access_token: 'fixture-only', user: { id: 'client-1', user_metadata: {} } } } }), signOut: async () => ({ error: null }) },
-      from(table) { const q = { customerId: null, departmentId: null, ids: null, select() { return q; }, eq(column, value) { if (column === 'customer_id') q.customerId = value; if (column === 'department_id') q.departmentId = value; return q; }, in(column, values) { if (column === 'id') q.ids = values; return q; }, order() { return q; }, then(resolve) { const data = (store[table] || []).filter(item => (!q.customerId || item.customer_id === q.customerId) && (!q.departmentId || item.department_id === q.departmentId) && (!q.ids || q.ids.includes(item.id))); return Promise.resolve({ data, error: null }).then(resolve); } }; return q; },
+      from(table) { const q = { customerId: null, departmentId: null, ids: null, select() { return q; }, eq(column, value) { if (column === 'customer_id') q.customerId = value; if (column === 'department_id') q.departmentId = value; return q; }, in(column, values) { if (column === 'id') q.ids = values; return q; }, order() { return q; }, then(resolve) { const data = (store[table] || []).filter(item => (!q.customerId || item.customer_id === q.customerId) && (!q.departmentId || item.department_id === q.departmentId) && (!q.ids || q.ids.includes(item.id))); return new Promise(done => setTimeout(() => done({ data, error: null }), Number(window.__portalLoadDelay || 0))).then(resolve); } }; return q; },
       rpc: async () => ({ error: null }), storage: { from: () => ({ createSignedUrl: async () => ({ error: new Error('Fixture has no file download') }) }) }
     }; }` }));
 }
@@ -82,6 +82,19 @@ test('Kunden-Arbeitsplatz: mehrere aktive Kundenkonten können vollständig gewe
   await expect(page.locator('#portal-offers')).toContainText('Beta Kampagne');
   await expect(page.locator('#portal-offers')).not.toContainText('Eventfilm mit Social-Media-Versionen');
 });
+
+test('Kunden-Arbeitsplatz: Kontowechsel zeigt einen zugänglichen Ladezustand', async ({ page }) => {
+  await fixture(page, { multi: true });
+  await page.goto(`${base}/client/`);
+  await page.evaluate(() => { window.__portalLoadDelay = 150; });
+  await page.locator('#portal-customer-select').selectOption('membership-2');
+  await expect(page.locator('#portal-customer-loading')).toBeVisible();
+  await expect(page.locator('#portal')).toHaveAttribute('aria-busy', 'true');
+  await expect(page.locator('#portal-customer-loading')).toBeHidden();
+  await expect(page.locator('#portal')).not.toHaveAttribute('aria-busy', 'true');
+  await expect(page.locator('#portal-projects')).toContainText('Beta Kampagne');
+});
+
 
 test('Kunden-Arbeitsplatz: Offerten-Deep-Link wählt die richtige Abteilung', async ({ page }) => {
   await fixture(page, { multi: true });

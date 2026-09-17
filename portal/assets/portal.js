@@ -9,6 +9,7 @@ const filesEl = document.querySelector("#portal-files");
 const projectCount = document.querySelector("#project-count");
 const customerSwitcher = document.querySelector("#portal-customer-switcher");
 const customerSelect = document.querySelector("#portal-customer-select");
+const customerLoading = document.querySelector("#portal-customer-loading");
 const reviewForm = document.querySelector("#review-form");
 const reviewCustomerField = document.querySelector("#review-customer-field");
 const reviewCustomer = document.querySelector("#review-customer");
@@ -117,7 +118,16 @@ async function setActiveMembership(membershipId) {
   activeMembership = membership;
   activeCustomerId = membership.customer_id;
   if (customerSelect) customerSelect.value = membership.id;
-  renderCustomerData(await loadCustomerData(membership));
+  if (customerLoading) customerLoading.hidden = false;
+  if (portal) portal.setAttribute("aria-busy", "true");
+  if (customerSelect) customerSelect.disabled = true;
+  try {
+    renderCustomerData(await loadCustomerData(membership));
+  } finally {
+    if (customerLoading) customerLoading.hidden = true;
+    if (portal) portal.removeAttribute("aria-busy");
+    if (customerSelect) customerSelect.disabled = false;
+  }
 }
 
 async function downloadFile(file) {
@@ -202,10 +212,9 @@ async function loadPortal() {
   if (memberships.length === 1) reviewCustomer.innerHTML = `<option value="${esc(memberships[0].id)}">${esc(memberships[0].department.name)}</option>`;
   else { reviewCustomerField.hidden = false; reviewCustomer.innerHTML = memberships.map((membership, index) => `<option value="${esc(membership.id)}">${esc(membership.department?.name || `Abteilung ${index + 1}`)}</option>`).join(""); }
   if (customerSelect) customerSelect.addEventListener("change", async () => {
-    customerSelect.disabled = true;
+    const previousMembershipId = activeMembership?.id || "";
     try { await setActiveMembership(customerSelect.value); }
-    catch (error) { alert(error.message || "Abteilung konnte nicht geladen werden."); customerSelect.value = activeMembership?.id || ""; }
-    finally { customerSelect.disabled = false; }
+    catch (error) { alert(error.message || "Abteilung konnte nicht geladen werden."); customerSelect.value = previousMembershipId; }
   });
   loading.remove(); portal.hidden = false;
   if (targetOffer) document.querySelector(`#offer-${CSS.escape(targetOffer)}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
