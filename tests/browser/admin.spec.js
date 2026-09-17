@@ -1645,6 +1645,12 @@ test("Studio: Rechnungen, Kunden und Projekte verwenden klare Icon-Aktionen", as
   await expect(statusMenu.getByRole("menuitem", { name: "Storniert" })).toBeVisible();
   await expect(statusMenu.getByRole("menuitem", { name: "Nicht versendet" })).toBeVisible();
   await expect(statusMenu.getByRole("menuitem", { name: "Versendet", exact: true })).toBeVisible();
+  const secondStatusMenu = page.locator(".data-table tbody tr").filter({ hasText: "HEAV-2026-002" }).locator(".invoice-status-menu");
+  await secondStatusMenu.locator("summary").click();
+  await expect(statusMenu).not.toHaveAttribute("open", "");
+  await expect(secondStatusMenu.locator(".invoice-status-options")).toBeVisible();
+  await secondStatusMenu.locator("summary").click();
+  await statusMenu.locator("summary").click();
   await statusMenu.getByRole("menuitem", { name: "Überfällig" }).click();
   await expect.poll(() => page.evaluate(() => window.__lastUpdatedInvoiceStatus)).toBe("overdue");
   const actionLayout = await invoiceRow.locator(".table-actions").evaluate((toolbar) => {

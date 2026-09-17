@@ -1161,6 +1161,11 @@ if (import.meta.main) {
         Deno.env.get("SUPABASE_ANON_KEY")!,
         { global: { headers: { Authorization: authorization } } },
       );
+      const service = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+        { auth: { autoRefreshToken: false, persistSession: false } },
+      );
       const { data: userData, error: userError } = await supabase.auth
         .getUser();
       if (userError || !userData.user) throw new Error("Sitzung ungültig.");
@@ -1292,7 +1297,7 @@ if (import.meta.main) {
       let emailResponse: Response;
       let emailData: { id?: string; message?: string; [key: string]: unknown };
       const firstName = (customer.contact_name || customer.company || "Guten Tag").trim().split(/\s+/)[0];
-      const template = await loadEmailTemplate(supabase, invoice.owner_id, "invoice_send", {
+      const template = await loadEmailTemplate(service, invoice.owner_id, "invoice_send", {
         subject_template: "Rechnung {{invoice_number}} von {{company_name}}",
         text_template: buildInvoiceText(invoice, settings),
       });
@@ -1328,7 +1333,7 @@ if (import.meta.main) {
         throw sendError;
       }
       if (!emailResponse.ok) {
-        await logEmail(supabase, { owner_id: invoice.owner_id, template_key: "invoice_send", status: "failed", recipient_email: customer.email, recipient_name: firstName, customer_id: invoice.customer_id, invoice_id: invoice.id, subject, text_body: text, error_message: String(emailData.message || "provider error"), idempotency_key: idempotencyKey });
+        await logEmail(service, { owner_id: invoice.owner_id, template_key: "invoice_send", status: "failed", recipient_email: customer.email, recipient_name: firstName, customer_id: invoice.customer_id, invoice_id: invoice.id, subject, text_body: text, error_message: String(emailData.message || "provider error"), idempotency_key: idempotencyKey });
         const { error: completionError } = await supabase.rpc(
           "complete_invoice_send",
           {
@@ -1360,7 +1365,7 @@ if (import.meta.main) {
       if (completionError) {
         throw completionError;
       }
-      await logEmail(supabase, { owner_id: invoice.owner_id, template_key: "invoice_send", status: "sent", recipient_email: customer.email, recipient_name: firstName, customer_id: invoice.customer_id, invoice_id: invoice.id, subject, text_body: text, provider_id: emailData.id || null, idempotency_key: idempotencyKey });
+      await logEmail(service, { owner_id: invoice.owner_id, template_key: "invoice_send", status: "sent", recipient_email: customer.email, recipient_name: firstName, customer_id: invoice.customer_id, invoice_id: invoice.id, subject, text_body: text, provider_id: emailData.id || null, idempotency_key: idempotencyKey });
       return Response.json({ ok: true, emailId: emailData.id }, {
         headers: responseCors,
       });

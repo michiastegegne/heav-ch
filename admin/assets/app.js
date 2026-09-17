@@ -1240,6 +1240,17 @@ content.addEventListener("pointerout", (event) => {
 });
 
 content.addEventListener("click", async (event) => {
+  const statusSummary = event.target.closest(".invoice-status-menu > summary");
+  if (statusSummary) {
+    const currentMenu = statusSummary.parentElement;
+    const shouldOpen = !currentMenu.open;
+    event.preventDefault();
+    document.querySelectorAll(".invoice-status-menu[open]").forEach((menu) => {
+      if (menu !== currentMenu) menu.removeAttribute("open");
+    });
+    currentMenu.open = shouldOpen;
+    return;
+  }
   const actionToggle = event.target.closest("[data-invoice-actions-toggle]");
   if (actionToggle) {
     const reveal = actionToggle.closest("[data-invoice-actions]");
@@ -1268,6 +1279,10 @@ content.addEventListener("click", async (event) => {
   const sendOfferButton = event.target.closest("[data-send-offer]"); if (sendOfferButton) await sendOffer(sendOfferButton.dataset.sendOffer, sendOfferButton);
   const copyOffer = event.target.closest("[data-copy-offer]"); if (copyOffer) await copyOfferLink(copyOffer.dataset.copyOffer, copyOffer);
   const remove = event.target.closest("[data-delete-record]"); if (remove) deleteRecord(remove.dataset.deleteRecord, remove.dataset.id, remove);
+});
+document.addEventListener("click", (event) => {
+  if (event.target.closest(".invoice-status-menu")) return;
+  document.querySelectorAll(".invoice-status-menu[open]").forEach((menu) => menu.removeAttribute("open"));
 });
 content.addEventListener("change", event => {
   if (event.target.matches("[data-invoice-sort]")) {
