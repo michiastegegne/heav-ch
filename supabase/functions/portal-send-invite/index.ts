@@ -34,8 +34,9 @@ Deno.serve(async (request) => {
     const { data: ownerAllowed, error: ownerError } = await caller.rpc("is_studio_owner");
     if (ownerError || ownerAllowed !== true) return reply({ error: "Studio-Zugriff erforderlich." }, 403, headers);
 
-    const { customerId } = await request.json();
+    const { customerId, departmentId } = await request.json();
     if (typeof customerId !== "string" || !uuidPattern.test(customerId)) return reply({ error: "Invalid customer" }, 400, headers);
+    if (departmentId != null && (typeof departmentId !== "string" || !uuidPattern.test(departmentId))) return reply({ error: "Invalid department" }, 400, headers);
 
     const service = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
     const { data: customer, error: customerError } = await service
@@ -45,17 +46,30 @@ Deno.serve(async (request) => {
       .eq("owner_id", identity.user.id)
       .maybeSingle();
     if (customerError) throw customerError;
-    if (!customer?.email) return reply({ error: "Customer not found" }, 404, headers);
+    if (!customer) return reply({ error: "Customer not found" }, 404, headers);
 
-    const email = customer.email.trim().toLowerCase();
+    const { data: department, error: departmentError } = await service
+      .from("customer_departments")
+      .select("id, customer_id, owner_id, contact_email")
+      .eq("customer_id", customer.id)
+      .eq("owner_id", identity.user.id)
+      .eq(departmentId ? "id" : "is_default", departmentId || true)
+      .eq("active", true)
+      .maybeSingle();
+    if (departmentError) throw departmentError;
+    if (!department) return reply({ error: "Department not found" }, 404, headers);
+
+    const email = (department.contact_email || customer.email || "").trim().toLowerCase();
+    if (!email || !email.includes("@")) return reply({ error: "No valid department e-mail configured" }, 400, headers);
     const { data: existingMembership, error: existingMembershipError } = await service
       .from("customer_portal_memberships")
       .select("id")
       .eq("customer_id", customer.id)
+      .eq("department_id", department.id)
       .eq("status", "active")
       .limit(1);
     if (existingMembershipError) throw existingMembershipError;
-    if (existingMembership?.length) return reply({ error: "Portal access has already been created for this customer" }, 409, headers);
+    if (existingMembership?.length) return reply({ ok: true, email, alreadyActive: true }, 200, headers);
 
     // The server-owned allowlist is intentionally created before Auth. A client
     // cannot forge this prerequisite for an arbitrary e-mail address.
@@ -70,6 +84,7 @@ Deno.serve(async (request) => {
     const { data: allowlist, error: allowlistError } = await service.from("customer_portal_invites").insert({
       owner_id: identity.user.id,
       customer_id: customer.id,
+      department_id: department.id,
       email,
       expires_at: expiresAt,
     }).select("id").single();
@@ -87,6 +102,7 @@ Deno.serve(async (request) => {
     const { error: membershipError } = await service.from("customer_portal_memberships").insert({
       owner_id: identity.user.id,
       customer_id: customer.id,
+      department_id: department.id,
       user_id: invitation.user.id,
       role: "client",
       status: "active",

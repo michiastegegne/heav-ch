@@ -96,10 +96,12 @@ function confirmAction({ kicker = "BESTÄTIGEN", title, copy, confirmLabel = "Be
 
 function joinedData(data) {
   const customers = new Map(data.customers.map((item) => [item.id, item]));
+  const departments = new Map((data.departments || []).map((item) => [item.id, item]));
   return {
     ...data,
-    projects: data.projects.map((item) => ({ ...item, customer: customers.get(item.customer_id) })),
-    invoices: data.invoices.map((item) => ({ ...item, customer: item.customer_snapshot || customers.get(item.customer_id) })),
+    projects: data.projects.map((item) => ({ ...item, customer: customers.get(item.customer_id), department: departments.get(item.department_id) })),
+    invoices: data.invoices.map((item) => ({ ...item, customer: item.customer_snapshot || customers.get(item.customer_id), department: departments.get(item.department_id) })),
+    offers: (data.offers || []).map((item) => ({ ...item, customer: customers.get(item.customer_id), department: departments.get(item.department_id) })),
   };
 }
 
@@ -113,26 +115,29 @@ function createSupabaseAdapter(supabase, session) {
   const fail = (error) => { if (error) throw error; };
   return {
     async loadAll() {
-      const [customers, projects, invoices, offers, settings, portalRequests] = await Promise.all([
+      const [customers, departments, projects, invoices, offers, settings, portalRequests, activityEvents] = await Promise.all([
         supabase.from("customers").select("*").order("company"),
+        supabase.from("customer_departments").select("*").order("name"),
         supabase.from("projects").select("*").order("created_at", { ascending: false }),
         supabase.from("invoices").select("*, invoice_items(*)").order("issue_date", { ascending: false }),
         supabase.from("offers").select("*, offer_items(*) ").order("issue_date", { ascending: false }),
         supabase.from("company_settings").select("*").maybeSingle(),
         supabase.from("customer_portal_requests").select("*").order("created_at", { ascending: false }),
+        supabase.from("activity_events").select("*").limit(100).order("created_at", { ascending: false }),
       ]);
-      [customers, projects, invoices, offers, settings, portalRequests].forEach((result) => fail(result.error));
+      [customers, departments, projects, invoices, offers, settings, portalRequests, activityEvents].forEach((result) => fail(result.error));
       const normalizedInvoices = invoices.data.map((invoice) => ({ ...invoice, items: invoice.invoice_items || [] }));
       const normalizedOffers = (offers.data || []).map((offer) => ({ ...offer, items: offer.offer_items || [] }));
-      return joinedData({ customers: customers.data, projects: projects.data, invoices: normalizedInvoices, offers: normalizedOffers, settings: settings.data || {}, portalRequests: portalRequests.data || [] });
+      return joinedData({ customers: customers.data, departments: departments.data || [], projects: projects.data, invoices: normalizedInvoices, offers: normalizedOffers, settings: settings.data || {}, portalRequests: portalRequests.data || [], activityEvents: activityEvents.data || [] });
     },
     async saveCustomer(payload) { const result = await supabase.from("customers").insert({ ...payload, owner_id: ownerId }); fail(result.error); },
+    async saveDepartment(payload) { const result = await supabase.from("customer_departments").insert({ ...payload, owner_id: ownerId }); fail(result.error); },
     async updateCustomer(id, payload) { const result = await supabase.rpc("update_customer", { p_customer_id: id, p_company: payload.company, p_contact_name: payload.contact_name, p_email: payload.email, p_phone: payload.phone, p_address_line1: payload.address_line1, p_postal_code: payload.postal_code, p_city: payload.city, p_country: payload.country }); fail(result.error); },
     async saveProject(payload) { const result = await supabase.from("projects").insert({ ...payload, owner_id: ownerId }); fail(result.error); },
-    async updateProject(id, payload) { const result = await supabase.rpc("update_project", { p_project_id: id, p_customer_id: payload.customer_id, p_title: payload.title, p_description: payload.description, p_status: payload.status, p_budget_rappen: payload.budget_rappen, p_start_date: payload.start_date, p_due_date: payload.due_date }); fail(result.error); },
+    async updateProject(id, payload) { const result = await supabase.rpc("update_project", { p_project_id: id, p_customer_id: payload.customer_id, p_title: payload.title, p_description: payload.description, p_status: payload.status, p_budget_rappen: payload.budget_rappen, p_start_date: payload.start_date, p_due_date: payload.due_date }); fail(result.error); if (payload.department_id) { const department = await supabase.from("projects").update({ department_id: payload.department_id }).eq("id", id).eq("owner_id", ownerId); fail(department.error); } },
     async saveInvoice(payload) {
       const items = payload.items;
-      const result = await supabase.rpc("create_invoice", {
+      const result = await supabase.rpc(payload.department_id ? "create_invoice_in_department" : "create_invoice", {
         p_customer_id: payload.customer_id,
         p_project_id: payload.project_id,
         p_issue_date: payload.issue_date,
@@ -140,11 +145,12 @@ function createSupabaseAdapter(supabase, session) {
         p_tax_rate: payload.tax_rate,
         p_notes: payload.notes,
         p_items: items,
+        ...(payload.department_id ? { p_department_id: payload.department_id } : {}),
       });
       fail(result.error);
     },
     async saveOffer(payload) {
-      const result = await supabase.rpc("create_offer", {
+      const result = await supabase.rpc(payload.department_id ? "create_offer_in_department" : "create_offer", {
         p_customer_id: payload.customer_id,
         p_project_id: payload.project_id,
         p_title: payload.title,
@@ -154,13 +160,14 @@ function createSupabaseAdapter(supabase, session) {
         p_notes: payload.notes,
         p_terms: payload.terms,
         p_items: payload.items,
+        ...(payload.department_id ? { p_department_id: payload.department_id } : {}),
       });
       fail(result.error);
       return Array.isArray(result.data) ? result.data[0] : result.data;
     },
     async shareOffer(id) { const result = await supabase.rpc("share_customer_offer", { p_offer_id: id }); fail(result.error); },
-    async sendOffer(id) {
-      const { data, error } = await supabase.functions.invoke("offer-send", { body: { offerId: id } });
+    async sendOffer(id, requestKey) {
+      const { data, error } = await supabase.functions.invoke("offer-send", { body: { offerId: id, requestKey } });
       if (error) {
         const details = await error.context?.json?.().catch(() => null);
         throw new Error(details?.error || "Offerte konnte nicht per E-Mail gesendet werden.");
@@ -177,6 +184,14 @@ function createSupabaseAdapter(supabase, session) {
       }
       return data;
     },
+    async loadAssistantThread(id) {
+      const threadResult = await supabase.from("assistant_threads").select("id").eq("id", id).maybeSingle();
+      fail(threadResult.error);
+      if (!threadResult.data) return null;
+      const messagesResult = await supabase.from("assistant_messages").select("role,content,proposals,created_at").eq("thread_id", id).order("created_at", { ascending: true });
+      fail(messagesResult.error);
+      return messagesResult.data || [];
+    },
     async deleteAssistantThread(id) {
       const result = await supabase.rpc("delete_assistant_thread", { p_thread_id: id });
       fail(result.error);
@@ -186,8 +201,8 @@ function createSupabaseAdapter(supabase, session) {
       fail(result.error);
     },
     async deleteRecord(type, id) {
-      const rpcNames = { customer: "delete_customer", project: "delete_project", invoice: "delete_draft_invoice" };
-      const parameterNames = { customer: "p_customer_id", project: "p_project_id", invoice: "p_invoice_id" };
+      const rpcNames = { customer: "delete_customer", project: "delete_project", invoice: "delete_invoice", offer: "delete_offer", "portal-request": "delete_portal_request" };
+      const parameterNames = { customer: "p_customer_id", project: "p_project_id", invoice: "p_invoice_id", offer: "p_offer_id", "portal-request": "p_request_id" };
       const result = await supabase.rpc(rpcNames[type], { [parameterNames[type]]: id });
       fail(result.error);
     },
@@ -196,8 +211,8 @@ function createSupabaseAdapter(supabase, session) {
       fail(result.error);
       return result.data;
     },
-    async sendPortalInvite(customerId) {
-      const { data, error } = await supabase.functions.invoke("portal-send-invite", { body: { customerId } });
+    async sendPortalInvite(customerId, departmentId = null) {
+      const { data, error } = await supabase.functions.invoke("portal-send-invite", { body: { customerId, departmentId } });
       if (error) {
         const details = await error.context?.json?.().catch(() => null);
         throw new Error(details?.error || "Einladung konnte nicht versendet werden.");
@@ -224,7 +239,7 @@ let adapter;
 function metric(label, value) { return `<article class="metric"><span>${esc(label)}</span><strong>${esc(value)}</strong></article>`; }
 function emptyState(titleText, copy, type) { return `<section class="empty-state"><h3>${esc(titleText)}</h3><p>${esc(copy)}</p><button class="primary-action" data-create="${type}">Jetzt erfassen <span>+</span></button></section>`; }
 const actionIcons = {
-  edit: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 4.5 5 5M4 20l3.8-.8L19.5 7.5a2.1 2.1 0 0 0-3-3L4.8 16.2 4 20Z"/></svg>',
+  pencil: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 4.5 5 5M4 20l3.8-.8L19.5 7.5a2.1 2.1 0 0 0-3-3L4.8 16.2 4 20Z"/></svg>',
   "paper-plane": '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 3-7.4 18-4.2-7-6.4-3.7L21 3Z"/><path d="m9.4 14 4.2-4.2"/></svg>',
   document: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>',
   paid: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4.2 4.2L19.5 6"/></svg>',
@@ -254,6 +269,18 @@ function renderRevenueChart(invoices) {
   </section>`;
 }
 
+function renderActivityTimeline() {
+  const events = (state.data.activityEvents || []).slice(0, 12);
+  const rows = events.map((event) => {
+    const customer = state.data.customers.find((item) => item.id === event.customer_id);
+    const department = state.data.departments?.find((item) => item.id === event.department_id);
+    const when = event.created_at ? new Intl.DateTimeFormat("de-CH", { dateStyle: "medium", timeStyle: "short" }).format(new Date(event.created_at)) : "–";
+    const context = [customer && customerLabel(customer), department?.name].filter(Boolean).join(" · ");
+    return `<li class="activity-timeline-item"><span class="activity-timeline-dot" aria-hidden="true"></span><div><strong>${esc(event.summary || event.event_type || "Aktivität")}</strong><small>${esc(context || "System")} · ${esc(when)}</small></div></li>`;
+  }).join("");
+  return `<section class="panel dashboard-panel activity-timeline" aria-labelledby="activity-timeline-title"><div class="panel-head"><div><h3 id="activity-timeline-title">Aktivitäten</h3><p>Nachvollziehbare Ereignisse aus Kunden, Abteilungen und Projekten.</p></div></div>${rows ? `<ol>${rows}</ol>` : '<p class="document-empty">Noch keine Aktivitäten erfasst.</p>'}</section>`;
+}
+
 function renderDashboard() {
   const { customers, projects, invoices, offers = [] } = state.data;
   const activeProjects = projects.filter(item => ["planning", "active"].includes(item.status)).sort((a,b) => String(a.due_date || "9999").localeCompare(String(b.due_date || "9999")));
@@ -280,6 +307,7 @@ function renderDashboard() {
       ${!drafts.length && !openOffers.length && !openInvoices.length ? '<p>Keine offenen Finanzschritte.</p>' : ''}
     </div><div class="panel-footer"><button class="text-button" data-view="invoices">Alle Rechnungen</button><button class="text-button" data-view="offers">Alle Offerten</button></div></section>
     <aside class="panel dashboard-panel dashboard-productions"><div class="panel-head"><h3>Laufende Projekte</h3><button class="text-button" data-view="projects">Alle öffnen</button></div><div class="dashboard-production-list">${activeProjects.slice(0,3).map(project => `<button class="dashboard-production-row" data-dashboard-project-focus="${esc(project.id)}"><span class="status ${esc(project.status)}">${esc(statusLabel(project.status))}</span><strong>${esc(project.title)}</strong><small>${esc(customerLabel(project.customer))} · ${formatDate(project.due_date)}</small><b aria-hidden="true">→</b></button>`).join("") || '<p>Keine laufende Produktion.</p>'}</div><div class="dashboard-quick-actions"><button class="secondary-button" data-create="customer">Kunde erfassen</button><button class="primary-action" data-create="project">Projekt anlegen</button></div></aside></section>
+    ${renderActivityTimeline()}
   </section>`;
 }
 
@@ -327,8 +355,9 @@ function invoiceSortControl() {
 function renderCustomers() {
   const items = filtered(state.data.customers, ["company", "contact_name", "email", "city"]);
   if (!state.data.customers.length) return `<section class="view">${emptyState("Der erste Kontakt.", "Erfasse deinen ersten Kunden und verknüpfe danach Projekte und Rechnungen.", "customer")}</section>`;
-  const rows = items.map((item) => `<tr><td><strong class="customer-name">${contactMark()}${esc(customerLabel(item))}</strong><small>${esc(item.company && item.contact_name ? item.contact_name : item.company ? "" : "Privatkunde")}</small></td><td>${esc(item.email || "–")}</td><td>${esc(item.phone || "–")}</td><td>${esc([item.postal_code,item.city].filter(Boolean).join(" ") || "–")}</td><td><div class="table-actions">${actionIconButton("edit", "Bearbeiten", `data-edit="customer" data-id="${esc(item.id)}"`)}${actionIconButton("trash", `Kunde löschen: ${customerLabel(item)}`, `data-delete-record="customer" data-id="${esc(item.id)}"`, "is-danger")}</div></td></tr>`).join("");
-  const cards = items.map((item) => `<article class="mobile-card customer-card"><div><strong class="customer-name">${contactMark()}${esc(customerLabel(item))}</strong><small>${esc(item.company && item.contact_name ? item.contact_name : item.company ? "" : "Privatkunde")} · ${esc(item.email || "Keine E-Mail")}${item.city ? ` · ${esc(item.city)}` : ""}</small><div class="table-actions">${actionIconButton("edit", "Bearbeiten", `data-edit="customer" data-id="${esc(item.id)}"`)}${actionIconButton("trash", `Kunde löschen: ${customerLabel(item)}`, `data-delete-record="customer" data-id="${esc(item.id)}"`, "is-danger")}</div></div></article>`).join("");
+  const departmentActions = (item) => (state.data.departments || []).filter((department) => department.customer_id === item.id && department.active !== false).map((department) => `<button class="text-button department-invite" type="button" data-portal-invite="${esc(item.id)}" data-department-id="${esc(department.id)}">Portal: ${esc(department.name)}</button>`).join("");
+  const rows = items.map((item) => `<tr><td><strong class="customer-name">${contactMark()}${esc(customerLabel(item))}</strong><small>${esc(item.company && item.contact_name ? item.contact_name : item.company ? "" : "Privatkunde")}</small><div class="department-actions">${departmentActions(item)}</div></td><td>${esc(item.email || "–")}</td><td>${esc(item.phone || "–")}</td><td>${esc([item.postal_code,item.city].filter(Boolean).join(" ") || "–")}</td><td><div class="table-actions">${actionIconButton("pencil", "Bearbeiten", `data-edit="customer" data-id="${esc(item.id)}"`)}${actionIconButton("trash", `Kunde löschen: ${customerLabel(item)}`, `data-delete-record="customer" data-id="${esc(item.id)}"`, "is-danger")}</div></td></tr>`).join("");
+  const cards = items.map((item) => `<article class="mobile-card customer-card"><div><strong class="customer-name">${contactMark()}${esc(customerLabel(item))}</strong><small>${esc(item.company && item.contact_name ? item.contact_name : item.company ? "" : "Privatkunde")} · ${esc(item.email || "Keine E-Mail")}${item.city ? ` · ${esc(item.city)}` : ""}</small><div class="department-actions">${departmentActions(item)}</div><div class="table-actions">${actionIconButton("pencil", "Bearbeiten", `data-edit="customer" data-id="${esc(item.id)}"`)}${actionIconButton("trash", `Kunde löschen: ${customerLabel(item)}`, `data-delete-record="customer" data-id="${esc(item.id)}"`, "is-danger")}</div></div></article>`).join("");
   return `<section class="view">${toolbar("customer", "Kunden durchsuchen …")}<table class="data-table"><thead><tr><th>Kunde</th><th>E-Mail</th><th>Telefon</th><th>Ort</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list">${cards}</div></section>`;
 }
 
@@ -339,7 +368,7 @@ function renderProjectCanvas(project) {
   const customer = project.customer || state.data.customers.find(item => item.id === project.customer_id);
   const accepted = offers.filter(item => item.status === "accepted");
   return `<section class="project-canvas" aria-label="Projekt-Canvas" aria-describedby="project-canvas-guide" tabindex="-1"><div class="project-canvas-track">
-    <header class="project-canvas-head"><div><span class="kicker">PROJEKT-CANVAS</span><h3>${esc(project.title)}</h3>${project.description ? `<p>${esc(project.description)}</p>` : ''}</div>${actionIconButton("edit", `Projekt bearbeiten: ${project.title}`, `data-edit="project" data-id="${esc(project.id)}"`)}</header>
+    <header class="project-canvas-head"><div><span class="kicker">PROJEKT-CANVAS</span><h3>${esc(project.title)}</h3>${project.description ? `<p>${esc(project.description)}</p>` : ''}</div>${actionIconButton("pencil", `Projekt bearbeiten: ${project.title}`, `data-edit="project" data-id="${esc(project.id)}"`)}</header>
     <div class="project-module-grid">
       <article class="project-module"><div><span class="project-module-label">KUNDE</span><strong>${esc(customerLabel(customer))}</strong><p>${esc(customer?.email || "Keine E-Mail hinterlegt")}</p>${customer ? `<button class="project-module-link" data-edit="customer" data-id="${esc(customer.id)}">Kundendaten bearbeiten <span aria-hidden="true">→</span></button>` : ''}</div></article>
       <article class="project-module project-module--production"><div><span class="project-module-label">PRODUKTION</span><strong><span class="status ${esc(project.status)}">${esc(statusLabel(project.status))}</span></strong><p>Start: ${formatDate(project.start_date)}<br>Abgabe: ${formatDate(project.due_date)}</p><p>Projektbudget: ${formatCHF(project.budget_rappen || 0)}</p></div></article>
@@ -358,17 +387,17 @@ function renderProjects() {
   if (!all.length) return `<section class="view">${emptyState("Noch keine Projekte", "Lege das erste Projekt an und halte Status, Kunde und Budget im Blick.", "project")}</section>`;
   const selected = items.find((item) => item.id === state.selectedProjectId) || items[0] || null;
   if (selected) state.selectedProjectId = selected.id;
-  const rows = items.map((item) => `<tr class="${item.id === state.selectedProjectId ? "is-selected" : ""}"><td><button class="project-record" type="button" data-project-focus="${esc(item.id)}" aria-pressed="${String(item.id === state.selectedProjectId)}"><strong>${esc(item.title)}</strong><small>${esc(customerLabel(item.customer))}</small></button></td><td><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></td><td>${formatDate(item.due_date)}</td><td>${formatCHF(item.budget_rappen || 0)}</td><td><div class="table-actions">${actionIconButton("edit", "Bearbeiten", `data-edit="project" data-id="${esc(item.id)}"`)}${actionIconButton("trash", `Projekt löschen: ${item.title}`, `data-delete-record="project" data-id="${esc(item.id)}"`, "is-danger")}</div></td></tr>`).join("");
-  const cards = items.map((item) => `<article class="mobile-card ${item.id === state.selectedProjectId ? "is-selected" : ""}"><div><button class="project-record" type="button" data-project-focus="${esc(item.id)}" aria-pressed="${String(item.id === state.selectedProjectId)}"><strong>${esc(item.title)}</strong><small>${esc(customerLabel(item.customer))} · ${formatDate(item.due_date)}</small></button><div class="table-actions">${actionIconButton("edit", "Bearbeiten", `data-edit="project" data-id="${esc(item.id)}"`)}${actionIconButton("trash", `Projekt löschen: ${item.title}`, `data-delete-record="project" data-id="${esc(item.id)}"`, "is-danger")}</div></div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></article>`).join("");
+  const rows = items.map((item) => `<tr class="${item.id === state.selectedProjectId ? "is-selected" : ""}"><td><button class="project-record" type="button" data-project-focus="${esc(item.id)}" aria-pressed="${String(item.id === state.selectedProjectId)}"><strong>${esc(item.title)}</strong><small>${esc(customerLabel(item.customer))}</small></button></td><td><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></td><td>${formatDate(item.due_date)}</td><td>${formatCHF(item.budget_rappen || 0)}</td><td><div class="table-actions">${actionIconButton("pencil", "Bearbeiten", `data-edit="project" data-id="${esc(item.id)}"`)}${actionIconButton("trash", `Projekt löschen: ${item.title}`, `data-delete-record="project" data-id="${esc(item.id)}"`, "is-danger")}</div></td></tr>`).join("");
+  const cards = items.map((item) => `<article class="mobile-card ${item.id === state.selectedProjectId ? "is-selected" : ""}"><div><button class="project-record" type="button" data-project-focus="${esc(item.id)}" aria-pressed="${String(item.id === state.selectedProjectId)}"><strong>${esc(item.title)}</strong><small>${esc(customerLabel(item.customer))} · ${formatDate(item.due_date)}</small></button><div class="table-actions">${actionIconButton("pencil", "Bearbeiten", `data-edit="project" data-id="${esc(item.id)}"`)}${actionIconButton("trash", `Projekt löschen: ${item.title}`, `data-delete-record="project" data-id="${esc(item.id)}"`, "is-danger")}</div></div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></article>`).join("");
   return `<section class="view">${toolbar("project", "Projekte durchsuchen …", [["all","Alle"],["planning","Planung"],["active","Aktiv"],["completed","Abgeschlossen"]])}${selected ? `<label class="project-picker"><span>Projekt auswählen</span><select data-project-picker>${items.map(item => `<option value="${esc(item.id)}" ${item.id === selected.id ? "selected" : ""}>${esc(item.title)} · ${esc(customerLabel(item.customer))}</option>`).join("")}</select></label><p class="project-canvas-guide" id="project-canvas-guide"><span>6 Bereiche · horizontal erkunden →</span></p>` : ""}${selected ? renderProjectCanvas(selected) : `<div class="empty-state"><h3>Keine Projekte in diesem Filter.</h3><p>Wähle einen anderen Status oder passe die Suche an.</p></div>`}<div class="project-register"><div class="panel-head"><h3>PROJEKTREGISTER</h3><span>${items.length} ${items.length === 1 ? "Projekt" : "Projekte"}</span></div><table class="data-table"><thead><tr><th>Projekt</th><th>Status</th><th>Deadline</th><th>Budget</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list">${cards}</div></div></section>`;
 }
 
 function invoiceActions(invoice, reveal = false, instance = "record") {
-  const buttons = [actionIconButton("edit", "Bearbeiten", `data-edit="invoice" data-id="${esc(invoice.id)}"`)];
+  const buttons = [actionIconButton("pencil", "Bearbeiten", `data-edit="invoice" data-id="${esc(invoice.id)}"`)];
   if (!invoice.is_legacy && invoice.status !== "cancelled") buttons.push(actionIconButton("document", "PDF herunterladen", `data-invoice-action="download" data-id="${esc(invoice.id)}"`));
-  if (!invoice.is_legacy && ["draft", "sent", "overdue"].includes(invoice.status)) buttons.push(actionIconButton("paper-plane", "Rechnung senden", `data-invoice-action="send" data-id="${esc(invoice.id)}"`));
+  if (!invoice.is_legacy && ["draft", "sent", "overdue"].includes(invoice.status)) buttons.push(actionIconButton("paper-plane", invoice.status === "draft" ? "Rechnung senden" : "Rechnung erneut senden", `data-invoice-action="send" data-id="${esc(invoice.id)}"`));
   if (!invoice.is_legacy && ["sent", "overdue"].includes(invoice.status)) buttons.push(actionIconButton("paid", "Als bezahlt markieren", `data-invoice-action="mark_paid" data-id="${esc(invoice.id)}"`), actionIconButton("cancel", "Rechnung stornieren", `data-invoice-action="cancel" data-id="${esc(invoice.id)}"`, "is-danger"));
-  if (!invoice.is_legacy && invoice.status === "draft") buttons.push(actionIconButton("trash", "Rechnung löschen", `data-delete-record="invoice" data-id="${esc(invoice.id)}"`, "is-danger"));
+  if (!invoice.is_legacy) buttons.push(actionIconButton("trash", "Rechnung löschen", `data-delete-record="invoice" data-id="${esc(invoice.id)}"`, "is-danger"));
   const actions = buttons.join("");
   if (!reveal) return `<div class="table-actions">${actions}</div>`;
   const panelId = `invoice-actions-${String(invoice.id).replace(/[^a-zA-Z0-9_-]/g, "-")}-${String(instance).replace(/[^a-zA-Z0-9_-]/g, "-")}`;
@@ -384,7 +413,8 @@ function renderInvoices() {
 }
 
 function offerActions(offer) {
-  return `<div class="table-actions">${["draft", "sent"].includes(offer.status) ? actionIconButton("paper-plane", offer.status === "draft" ? "Offerte per E-Mail senden" : "Offerte erneut per E-Mail senden", `data-send-offer="${esc(offer.id)}"`) : ""}${actionIconButton("link", "Link kopieren", `data-copy-offer="${esc(offer.id)}"`)}</div>`;
+  const send = ["draft", "sent"].includes(offer.status) ? actionIconButton("paper-plane", offer.status === "draft" ? "Offerte per E-Mail senden" : "Offerte erneut per E-Mail senden", `data-send-offer="${esc(offer.id)}"`) : "";
+  return `<div class="table-actions">${send}${actionIconButton("link", "Link kopieren", `data-copy-offer="${esc(offer.id)}"`)}${actionIconButton("trash", "Offerte endgültig löschen", `data-delete-record="offer" data-id="${esc(offer.id)}"`, "is-danger")}</div>`;
 }
 function renderOffers() {
   const all = state.data.offers || [];
@@ -399,9 +429,9 @@ function renderPortalRequests() {
   const all = state.data.portalRequests || [];
   const items = filtered(all.filter((item) => state.filter === "all" || item.status === state.filter), ["contact_name", "company", "email", "message"]);
   const actions = (item, includeStatus = true) => {
-    if (item.status === "pending") return `<div class="table-actions"><button class="primary-action" data-portal-request-action="accept" data-id="${esc(item.id)}">Akzeptieren</button><button class="danger-button" data-portal-request-action="decline" data-id="${esc(item.id)}">Ablehnen</button></div>`;
-    if (item.status === "accepted") return `<div class="table-actions"><button class="primary-action" data-portal-request-action="invite" data-id="${esc(item.id)}">Einladung senden</button>${includeStatus ? '<span class="status paid">Akzeptiert</span>' : ''}</div>`;
-    return includeStatus ? `<span class="status cancelled">Abgelehnt</span>` : "";
+    if (item.status === "pending") return `<div class="table-actions"><button class="primary-action" data-portal-request-action="accept" data-id="${esc(item.id)}">Akzeptieren</button><button class="danger-button" data-portal-request-action="decline" data-id="${esc(item.id)}">Ablehnen</button><button class="action-icon is-danger" type="button" data-delete-record="portal-request" data-id="${esc(item.id)}" aria-label="Anfrage löschen" title="Anfrage löschen">${actionIcons.trash}</button></div>`;
+    if (item.status === "accepted") return `<div class="table-actions"><button class="primary-action" data-portal-request-action="invite" data-id="${esc(item.id)}">Einladung senden</button>${includeStatus ? '<span class="status paid">Akzeptiert</span>' : ''}<button class="action-icon is-danger" type="button" data-delete-record="portal-request" data-id="${esc(item.id)}" aria-label="Anfrage löschen" title="Anfrage löschen">${actionIcons.trash}</button></div>`;
+    return `<div class="table-actions">${includeStatus ? '<span class="status cancelled">Abgelehnt</span>' : ''}<button class="action-icon is-danger" type="button" data-delete-record="portal-request" data-id="${esc(item.id)}" aria-label="Anfrage löschen" title="Anfrage löschen">${actionIcons.trash}</button></div>`;
   };
   if (!all.length) return `<section class="view"><div class="empty-state"><h3>Keine Portal-Anfragen.</h3><p>Neue Anfragen aus dem Kundenportal erscheinen hier.</p></div></section>`;
   const rows = items.map((item) => `<tr><td><strong>${esc(item.company || item.contact_name)}</strong><small>${esc(item.contact_name)} · ${formatDate(item.created_at?.slice(0,10))}</small></td><td>${esc(item.email)}</td><td>${esc(item.phone || "–")}</td><td><small>${esc(item.message || "–")}</small></td><td>${actions(item)}</td></tr>`).join("");
@@ -583,6 +613,7 @@ function animateViewEntrance() {
 function setView(view) { state.view = view; state.query = ""; state.filter = "all"; document.querySelectorAll(".nav-link").forEach((item) => item.classList.toggle("is-active", item.dataset.view === view)); setNavigationOpen(false, { restoreFocus: false }); render(); animateViewEntrance(); }
 
 function customerOptions(selected = "") { return state.data.customers.map((item) => `<option value="${esc(item.id)}" ${item.id === selected ? "selected" : ""}>${esc(customerLabel(item))}</option>`).join(""); }
+function departmentOptions(customerId = "", selected = "") { return (state.data.departments || []).filter((item) => item.customer_id === customerId && item.active !== false).map((item) => `<option value="${esc(item.id)}" ${item.id === selected ? "selected" : ""}>${esc(item.name)}${item.contact_name ? ` · ${esc(item.contact_name)}` : ""}</option>`).join(""); }
 function projectOptions(customerId = "", selected = "") { return state.data.projects.filter((item) => item.customer_id === customerId).map((item) => `<option value="${esc(item.id)}" ${item.id === selected ? "selected" : ""}>${esc(item.title)}</option>`).join(""); }
 function field(label, name, type = "text", value = "", wide = false, extra = "") { return `<label class="form-field ${wide ? "wide" : ""}"><span>${esc(label)}</span><input type="${type}" name="${name}" value="${esc(value)}" ${extra}></label>`; }
 function openEditor(type, existing = null, context = {}) {
@@ -596,12 +627,12 @@ function openEditor(type, existing = null, context = {}) {
   if (type === "customer") {
     const item = existing || prefill;
     dialogTitle.textContent = existing ? "Kunde bearbeiten" : "Kunde erfassen";
-    dialogBody.innerHTML = `<p class="form-hint">Firma oder Kontaktperson genügt. Adresse, E-Mail und Telefon kannst du später ergänzen.</p><div class="form-grid">${field("Firma","company","text",item.company || "")}${field("Kontaktperson","contact_name","text",item.contact_name || "")}${field("E-Mail","email","email",item.email || "")}${field("Telefon","phone","tel",item.phone || "")}${field("Strasse / Nr.","address_line1","text",item.address_line1 || "",true)}${field("PLZ","postal_code","text",item.postal_code || "")}${field("Ort","city","text",item.city || "")}${field("Land","country","text",item.country || "Schweiz",true)}</div>`;
+    dialogBody.innerHTML = `<p class="form-hint">Firma oder Kontaktperson genügt. Adresse, E-Mail und Telefon kannst du später ergänzen.</p><div class="form-grid">${field("Firma","company","text",item.company || "")}${field("Kontaktperson","contact_name","text",item.contact_name || "")}${field("E-Mail","email","email",item.email || "")}${field("Telefon","phone","tel",item.phone || "")}${field("Strasse / Nr.","address_line1","text",item.address_line1 || "",true)}${field("PLZ","postal_code","text",item.postal_code || "")}${field("Ort","city","text",item.city || "")}${field("Land","country","text",item.country || "Schweiz",true)}${existing ? `<div class="form-section-heading wide"><strong>Neue Abteilung ergänzen</strong><span>Optional · für Berufsbildung, Jugend oder weitere Bereiche.</span></div>${field("Abteilungsname","department_name","text","",true)}${field("Abteilung · Kontaktperson","department_contact_name","text", "")}${field("Abteilung · E-Mail","department_contact_email","email", "")}` : ""}</div>`;
   } else if (type === "project") {
     if (!state.data.customers.length) { showToast("Bitte zuerst einen Kunden erfassen.", "error"); setView("customers"); return; }
     const item = existing || prefill;
     dialogTitle.textContent = existing ? "Projekt bearbeiten" : "Projekt anlegen";
-    dialogBody.innerHTML = `<div class="form-grid"><label class="form-field wide"><span>Kunde *</span><select name="customer_id" required><option value="">Bitte wählen</option>${customerOptions(item.customer_id)}</select></label>${field("Projekttitel *","title","text",item.title || "",true,"required")}<label class="form-field"><span>Status</span><select name="status">${[["planning","Planung"],["active","Aktiv"],["completed","Abgeschlossen"],["on_hold","Pausiert"]].map(([v,l]) => `<option value="${v}" ${item.status === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>${field("Budget CHF","budget","number",item.budget_rappen != null ? item.budget_rappen / 100 : "",false,'min="0" step="0.05"')}${field("Start","start_date","date",item.start_date || "")}${field("Deadline","due_date","date",item.due_date || "")}<label class="form-field wide"><span>Beschreibung</span><textarea name="description">${esc(item.description || "")}</textarea></label></div>`;
+    dialogBody.innerHTML = `<div class="form-grid"><label class="form-field wide"><span>Kunde *</span><select name="customer_id" required><option value="">Bitte wählen</option>${customerOptions(item.customer_id)}</select></label><label class="form-field wide"><span>Abteilung *</span><select name="department_id" required><option value="">Zuerst Kunde wählen</option>${departmentOptions(item.customer_id, item.department_id)}</select></label>${field("Projekttitel *","title","text",item.title || "",true,"required")}<label class="form-field"><span>Status</span><select name="status">${[["planning","Planung"],["active","Aktiv"],["completed","Abgeschlossen"],["on_hold","Pausiert"]].map(([v,l]) => `<option value="${v}" ${item.status === v ? "selected" : ""}>${l}</option>`).join("")}</select></label>${field("Budget CHF","budget","number",item.budget_rappen != null ? item.budget_rappen / 100 : "",false,'min="0" step="0.05"')}${field("Start","start_date","date",item.start_date || "")}${field("Deadline","due_date","date",item.due_date || "")}<label class="form-field wide"><span>Beschreibung</span><textarea name="description">${esc(item.description || "")}</textarea></label></div>`;
   } else if (type === "invoice") {
     if (!state.data.customers.length) { showToast("Bitte zuerst einen Kunden erfassen.", "error"); setView("customers"); return; }
     const item = existing || prefill;
@@ -609,7 +640,7 @@ function openEditor(type, existing = null, context = {}) {
     const vatRegistered = validVatNumber(state.data.settings?.vat_number);
     const customerId = item.customer_id || contextProject?.customer_id || "";
     const projectId = item.project_id || contextProject?.id || "";
-    dialogBody.innerHTML = `<div class="form-grid"><label class="form-field"><span>Kunde *</span><select name="customer_id" required><option value="">Bitte wählen</option>${customerOptions(customerId)}</select></label><label class="form-field"><span>Projekt</span><select name="project_id"><option value="">Kein Projekt</option>${projectOptions(customerId,projectId)}</select></label>${existing ? `<label class="form-field wide"><span>Versand- und Zahlungsstatus · auch für manuell versandte PDFs</span><select name="status">${["draft","sent","paid","overdue","cancelled"].map((status) => `<option value="${status}" ${item.status === status ? "selected" : ""}>${statusLabel(status)}</option>`).join("")}</select></label>` : ""}${!existing ? `<div class="sequence-note wide"><strong>Automatische Referenz</strong><span>Die Zahlungsreferenz wird beim Speichern fortlaufend und buchhaltungssicher vergeben.</span></div>` : ""}${field(vatRegistered ? "MWST %" : "MWST % · nicht registriert","tax_rate","number",item.tax_rate ?? (vatRegistered ? (state.data.settings?.default_tax_rate ?? 0) : 0),false,vatRegistered ? 'min="0" step="0.1"' : 'readonly aria-readonly="true"')}${field("Rechnungsdatum *","issue_date","date",item.issue_date || today(),false,"required")}${field("Fällig am *","due_date","date",item.due_date || plusDays(today(),state.data.settings?.default_due_days || 30),false,"required")}<div class="invoice-items"><span class="items-label">Positionen *</span><div id="invoice-item-list"></div><div class="invoice-add-actions"><button class="secondary-button" type="button" data-add-item>Position hinzufügen</button><button class="secondary-button" type="button" data-add-discount>Rabatt hinzufügen</button></div></div><label class="form-field wide"><span>Hinweis auf Rechnung</span><textarea name="notes">${esc(item.notes || "")}</textarea></label><div class="invoice-total" id="invoice-total">TOTAL&nbsp;&nbsp; CHF 0.00</div></div>`;
+    dialogBody.innerHTML = `<div class="form-grid"><label class="form-field"><span>Kunde *</span><select name="customer_id" required><option value="">Bitte wählen</option>${customerOptions(customerId)}</select></label><label class="form-field"><span>Abteilung *</span><select name="department_id" required><option value="">Zuerst Kunde wählen</option>${departmentOptions(customerId, item.department_id || contextProject?.department_id)}</select></label><label class="form-field"><span>Projekt</span><select name="project_id"><option value="">Kein Projekt</option>${projectOptions(customerId,projectId)}</select></label>${existing ? `<label class="form-field wide"><span>Versand- und Zahlungsstatus · auch für manuell versandte PDFs</span><select name="status">${["draft","sent","paid","overdue","cancelled"].map((status) => `<option value="${status}" ${item.status === status ? "selected" : ""}>${statusLabel(status)}</option>`).join("")}</select></label>` : ""}${!existing ? `<div class="sequence-note wide"><strong>Automatische Referenz</strong><span>Die Zahlungsreferenz wird beim Speichern fortlaufend und buchhaltungssicher vergeben.</span></div>` : ""}${field(vatRegistered ? "MWST %" : "MWST % · nicht registriert","tax_rate","number",item.tax_rate ?? (vatRegistered ? (state.data.settings?.default_tax_rate ?? 0) : 0),false,vatRegistered ? 'min="0" step="0.1"' : 'readonly aria-readonly="true"')}${field("Rechnungsdatum *","issue_date","date",item.issue_date || today(),false,"required")}${field("Fällig am *","due_date","date",item.due_date || plusDays(today(),state.data.settings?.default_due_days || 30),false,"required")}<div class="invoice-items"><span class="items-label">Positionen *</span><div id="invoice-item-list"></div><div class="invoice-add-actions"><button class="secondary-button" type="button" data-add-item>Position hinzufügen</button><button class="secondary-button" type="button" data-add-discount>Rabatt hinzufügen</button></div></div><label class="form-field wide"><span>Hinweis auf Rechnung</span><textarea name="notes">${esc(item.notes || "")}</textarea></label><div class="invoice-total" id="invoice-total">TOTAL&nbsp;&nbsp; CHF 0.00</div></div>`;
     (item.items?.length ? item.items : [null]).forEach((invoiceItem) => addInvoiceItem(invoiceItem));
   } else if (type === "offer") {
     if (!state.data.customers.length) { showToast("Bitte zuerst einen Kunden erfassen.", "error"); setView("customers"); return; }
@@ -618,12 +649,24 @@ function openEditor(type, existing = null, context = {}) {
     const customerId = contextProject?.customer_id || "";
     const projectId = contextProject?.id || "";
     const offerTitle = contextProject ? `Offerte · ${contextProject.title}` : "";
-    dialogBody.innerHTML = `<div class="form-grid"><label class="form-field"><span>Kunde *</span><select name="customer_id" required><option value="">Bitte wählen</option>${customerOptions(customerId)}</select></label><label class="form-field"><span>Projekt</span><select name="project_id"><option value="">Kein Projekt</option>${projectOptions(customerId,projectId)}</select></label>${field("Titel *","title","text",offerTitle,true,"required")}${field(vatRegistered ? "MWST %" : "MWST % · nicht registriert","tax_rate","number",vatRegistered ? (state.data.settings?.default_tax_rate ?? 0) : 0,false,vatRegistered ? 'min="0" step="0.1"' : 'readonly aria-readonly="true"')}${field("Offertdatum *","issue_date","date",today(),false,"required")}${field("Gültig bis *","valid_until","date",plusDays(today(),30),false,"required")}<div class="invoice-items"><span class="items-label">Leistungen *</span><div id="invoice-item-list"></div><div class="invoice-add-actions"><button class="secondary-button" type="button" data-add-item>Position hinzufügen</button><button class="secondary-button" type="button" data-add-discount>Rabatt hinzufügen</button></div></div><label class="form-field wide"><span>Hinweis für den Kunden</span><textarea name="notes"></textarea></label><label class="form-field wide"><span>Verbindlichkeit bei Annahme *</span><textarea name="terms" required>Mit der Annahme dieser Offerte bestätigst du verbindlich die aufgeführten Leistungen, Beträge und Bedingungen.</textarea></label><div class="invoice-total" id="invoice-total">TOTAL&nbsp;&nbsp; CHF 0.00</div></div>`;
+    dialogBody.innerHTML = `<div class="form-grid"><label class="form-field"><span>Kunde *</span><select name="customer_id" required><option value="">Bitte wählen</option>${customerOptions(customerId)}</select></label><label class="form-field"><span>Abteilung *</span><select name="department_id" required><option value="">Zuerst Kunde wählen</option>${departmentOptions(customerId, contextProject?.department_id)}</select></label><label class="form-field"><span>Projekt</span><select name="project_id"><option value="">Kein Projekt</option>${projectOptions(customerId,projectId)}</select></label>${field("Titel *","title","text",offerTitle,true,"required")}${field(vatRegistered ? "MWST %" : "MWST % · nicht registriert","tax_rate","number",vatRegistered ? (state.data.settings?.default_tax_rate ?? 0) : 0,false,vatRegistered ? 'min="0" step="0.1"' : 'readonly aria-readonly="true"')}${field("Offertdatum *","issue_date","date",today(),false,"required")}${field("Gültig bis *","valid_until","date",plusDays(today(),30),false,"required")}<div class="invoice-items"><span class="items-label">Leistungen *</span><div id="invoice-item-list"></div><div class="invoice-add-actions"><button class="secondary-button" type="button" data-add-item>Position hinzufügen</button><button class="secondary-button" type="button" data-add-discount>Rabatt hinzufügen</button></div></div><label class="form-field wide"><span>Hinweis für den Kunden</span><textarea name="notes"></textarea></label><label class="form-field wide"><span>Verbindlichkeit bei Annahme *</span><textarea name="terms" required>Mit der Annahme dieser Offerte bestätigst du verbindlich die aufgeführten Leistungen, Beträge und Bedingungen.</textarea></label><div class="invoice-total" id="invoice-total">TOTAL&nbsp;&nbsp; CHF 0.00</div></div>`;
     addInvoiceItem();
   } else {
     const settings = state.data.settings || {};
     dialogKicker.textContent = "EINSTELLUNGEN"; dialogTitle.textContent = "Rechnungsabsender";
-    dialogBody.innerHTML = `<div class="form-grid">${field("Firma *","company_name","text",settings.company_name || "HEAV",false,"required")}${field("Inhaber *","owner_name","text",settings.owner_name || "Michias Tegegne",false,"required")}${field("E-Mail *","email","email",settings.email || "hello@heav.ch",false,"required")}${field("Telefon","phone","tel",settings.phone || "")}${field("Website","website_url","url",settings.website_url || "https://heav.ch")}${field("Instagram URL","instagram_url","url",settings.instagram_url || "")}${field("Strasse / Nr. *","address_line1","text",settings.address_line1 || "",true,"required")}${field("PLZ *","postal_code","text",settings.postal_code || "",false,"required")}${field("Ort *","city","text",settings.city || "",false,"required")}${field("IBAN *","iban","text",settings.iban || "",true,"required")}${field("MWST-Nr. · leer lassen, wenn nicht registriert","vat_number","text",settings.vat_number || "",true)}${field("Standard-MWST %","default_tax_rate","number",settings.vat_number ? (settings.default_tax_rate ?? 0) : 0,false,'min="0" step="0.1"')}${field("Standard-Zahlungsfrist (Tage)","default_due_days","number",settings.default_due_days || 30,false,'min="1" step="1"')}</div>`;
+    dialogBody.innerHTML = `<div class="form-grid">${field("Firma *","company_name","text",settings.company_name || "HEAV",false,"required")}${field("Inhaber *","owner_name","text",settings.owner_name || "Michias Tegegne",false,"required")}${field("E-Mail *","email","email",settings.email || "hello@heav.ch",false,"required")}${field("Telefon","phone","tel",settings.phone || "")}${field("Website","website_url","url",settings.website_url || "https://heav.ch")}${field("Instagram URL","instagram_url","url",settings.instagram_url || "")}${field("Strasse / Nr. *","address_line1","text",settings.address_line1 || "",true,"required")}${field("PLZ *","postal_code","text",settings.postal_code || "",false,"required")}${field("Ort *","city","text",settings.city || "",false,"required")}${field("IBAN *","iban","text",settings.iban || "",true,"required")}${field("MWST-Nr. · leer lassen, wenn nicht registriert","vat_number","text",settings.vat_number || "",true)}${field("Standard-MWST %","default_tax_rate","number",settings.vat_number ? (settings.default_tax_rate ?? 0) : 0,false,'min="0" step="0.1"')}${field("Standard-Zahlungsfrist (Tage)","default_due_days","number",settings.default_due_days || 30,false,'min="1" step="1"')}${field("Zahlungserinnerung vor Fälligkeit (Tage)","invoice_reminder_days","number",settings.invoice_reminder_days || 7,false,'min="3" max="10" step="1"')}</div>`;
+  }
+  const customerField = dialogForm.elements.customer_id;
+  const departmentField = dialogForm.elements.department_id;
+  if (customerField && departmentField) {
+    const syncDepartments = () => {
+      const selected = departmentField.value;
+      departmentField.innerHTML = departmentOptions(customerField.value, selected) || '<option value="">Keine Abteilung vorhanden</option>';
+      departmentField.disabled = !customerField.value;
+      if (!departmentField.value && departmentField.options.length) departmentField.selectedIndex = 0;
+    };
+    customerField.addEventListener("change", syncDepartments);
+    syncDepartments();
   }
   dialog.showModal();
 }
@@ -671,21 +714,24 @@ async function saveEditor(type) {
     const payload = { company: data.company.trim(), contact_name: data.contact_name.trim(), email: data.email.trim(), phone: data.phone.trim(), address_line1: data.address_line1.trim(), postal_code: data.postal_code.trim(), city: data.city.trim(), country: data.country.trim() || "Schweiz" };
     const errors = validateCustomer({ company: payload.company, contactName: payload.contact_name, email: payload.email });
     if (Object.keys(errors).length) { formError.textContent = Object.values(errors)[0]; return false; }
-    if (dialogForm.dataset.editId) await adapter.updateCustomer(dialogForm.dataset.editId, payload); else await adapter.saveCustomer(payload);
+    if (dialogForm.dataset.editId) {
+      await adapter.updateCustomer(dialogForm.dataset.editId, payload);
+      if (data.department_name?.trim()) await adapter.saveDepartment({ customer_id: dialogForm.dataset.editId, name: data.department_name.trim(), contact_name: data.department_contact_name.trim(), contact_email: data.department_contact_email.trim(), is_default: false });
+    } else await adapter.saveCustomer(payload);
   }
-  if (type === "project") { const payload = { customer_id: data.customer_id, title: data.title.trim(), status: data.status, budget_rappen: Math.round(Number(data.budget || 0) * 100), start_date: data.start_date || null, due_date: data.due_date || null, description: data.description.trim() }; if (dialogForm.dataset.editId) await adapter.updateProject(dialogForm.dataset.editId, payload); else await adapter.saveProject(payload); }
+  if (type === "project") { const payload = { customer_id: data.customer_id, department_id: data.department_id, title: data.title.trim(), status: data.status, budget_rappen: Math.round(Number(data.budget || 0) * 100), start_date: data.start_date || null, due_date: data.due_date || null, description: data.description.trim() }; if (dialogForm.dataset.editId) await adapter.updateProject(dialogForm.dataset.editId, payload); else await adapter.saveProject(payload); }
   if (type === "invoice") {
     const editorItems = readInvoiceEditorItems();
     const items = editorItems.map((item) => ({ description: item.description, quantity: item.quantity, unit_price_rappen: Math.round(item.unitPrice * 100) }));
     const payload = { customerId: data.customer_id, issueDate: data.issue_date, dueDate: data.due_date, items: editorItems };
     const errors = validateInvoice(payload); if (Object.keys(errors).length) { formError.textContent = Object.values(errors)[0]; return false; }
-    const invoicePayload = { customer_id: data.customer_id, project_id: data.project_id || null, issue_date: data.issue_date, due_date: data.due_date, status: data.status || "draft", tax_rate: Number(data.tax_rate || 0), notes: data.notes.trim(), items }; if (dialogForm.dataset.editId) await adapter.updateInvoice(dialogForm.dataset.editId, invoicePayload); else await adapter.saveInvoice(invoicePayload);
+    const invoicePayload = { customer_id: data.customer_id, department_id: data.department_id, project_id: data.project_id || null, issue_date: data.issue_date, due_date: data.due_date, status: data.status || "draft", tax_rate: Number(data.tax_rate || 0), notes: data.notes.trim(), items }; if (dialogForm.dataset.editId) await adapter.updateInvoice(dialogForm.dataset.editId, invoicePayload); else await adapter.saveInvoice(invoicePayload);
   }
   if (type === "offer") {
     const editorItems = readInvoiceEditorItems();
     const items = editorItems.map((item) => ({ description: item.description, quantity: item.quantity, unit_price_rappen: Math.round(item.unitPrice * 100) }));
     if (!data.customer_id || !data.title.trim() || !data.issue_date || !data.valid_until || data.valid_until < data.issue_date || !items.length) { formError.textContent = "Bitte Kunde, Titel, gültige Daten und mindestens eine Leistung ausfüllen."; return false; }
-    await adapter.saveOffer({ customer_id: data.customer_id, project_id: data.project_id || null, title: data.title.trim(), issue_date: data.issue_date, valid_until: data.valid_until, tax_rate: Number(data.tax_rate || 0), notes: data.notes.trim(), terms: data.terms.trim(), items });
+    await adapter.saveOffer({ customer_id: data.customer_id, department_id: data.department_id, project_id: data.project_id || null, title: data.title.trim(), issue_date: data.issue_date, valid_until: data.valid_until, tax_rate: Number(data.tax_rate || 0), notes: data.notes.trim(), terms: data.terms.trim(), items });
   }
   if (type === "settings") {
     const vatNumber = normalizeVatNumber(data.vat_number);
@@ -693,7 +739,7 @@ async function saveEditor(type) {
       formError.textContent = "MWST-Nummer im Format CHE-123.456.789 MWST eingeben oder leer lassen.";
       return false;
     }
-    await adapter.saveSettings({ company_name: data.company_name.trim(), owner_name: data.owner_name.trim(), email: data.email.trim(), phone: data.phone.trim(), website_url: data.website_url.trim() || "https://heav.ch", instagram_url: data.instagram_url.trim(), address_line1: data.address_line1.trim(), postal_code: data.postal_code.trim(), city: data.city.trim(), iban: data.iban.trim(), vat_number: vatNumber, default_tax_rate: vatNumber ? Number(data.default_tax_rate || 0) : 0, default_due_days: Number(data.default_due_days || 30) });
+    await adapter.saveSettings({ company_name: data.company_name.trim(), owner_name: data.owner_name.trim(), email: data.email.trim(), phone: data.phone.trim(), website_url: data.website_url.trim() || "https://heav.ch", instagram_url: data.instagram_url.trim(), address_line1: data.address_line1.trim(), postal_code: data.postal_code.trim(), city: data.city.trim(), iban: data.iban.trim(), vat_number: vatNumber, default_tax_rate: vatNumber ? Number(data.default_tax_rate || 0) : 0, default_due_days: Number(data.default_due_days || 30), invoice_reminder_days: [3, 7, 10].includes(Number(data.invoice_reminder_days)) ? Number(data.invoice_reminder_days) : 7 });
   }
   return true;
 }
@@ -721,8 +767,8 @@ async function invoiceAction(id, action, button) {
 }
 
 async function deleteRecord(type, id, button) {
-  const labels = { customer: "diesen Kunden", project: "dieses Projekt", invoice: "diesen Rechnungsentwurf" };
-  if (!await confirmAction({ kicker: "LÖSCHEN", title: "Eintrag wirklich löschen?", copy: `Willst du ${labels[type]} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`, confirmLabel: "Löschen", destructive: true })) return;
+  const labels = { customer: "diesen Kunden und alle verknüpften Projekte, Rechnungen, Offerten und Portalzugänge", project: "dieses Projekt und die verknüpften Dokumente", invoice: "diese Rechnung endgültig", offer: "diese Offerte endgültig", "portal-request": "diese Portal-Anfrage" };
+  if (!await confirmAction({ kicker: "LÖSCHEN", title: "Eintrag wirklich endgültig löschen?", copy: `Willst du ${labels[type]} wirklich löschen? Verknüpfte Daten werden ebenfalls entfernt. Diese Aktion kann nicht rückgängig gemacht werden.`, confirmLabel: "Endgültig löschen", destructive: true })) return;
   button.disabled = true;
   try {
     await adapter.deleteRecord(type, id);
@@ -745,14 +791,28 @@ async function portalRequestAction(id, action, button) {
   try {
     if (action === "invite") {
       if (!request?.customer_id) throw new Error("Für diese Anfrage fehlt das Kundenprofil.");
-      await adapter.sendPortalInvite(request.customer_id);
-      showDispatchSuccess("Einladung versendet", "Der sichere Zugang wurde per E-Mail verschickt.");
+      const result = await adapter.sendPortalInvite(request.customer_id);
+      showDispatchSuccess(result?.alreadyActive ? "Portalzugang bereits aktiv" : "Einladung versendet", result?.alreadyActive ? "Diese Anfrage hat für den Kunden bereits einen aktiven Zugang." : "Der sichere Zugang wurde per E-Mail verschickt.");
     } else {
       await adapter.processPortalRequest(id, action);
       await refresh();
       showToast(action === "accept" ? "Anfrage akzeptiert. Kundenprofil wurde erstellt." : "Anfrage abgelehnt.");
     }
   } catch (error) { showToast(error.message || "Anfrage konnte nicht verarbeitet werden.", "error"); }
+  finally { button.disabled = false; }
+}
+
+async function departmentInviteAction(customerId, departmentId, button) {
+  const customer = state.data.customers.find((item) => item.id === customerId);
+  const department = state.data.departments.find((item) => item.id === departmentId);
+  if (!customer || !department) return;
+  const email = department.contact_email || customer.email || "keine hinterlegte E-Mail";
+  if (!await confirmAction({ kicker: "PORTAL-EINLADUNG", title: `${department.name} einladen?`, copy: `Die Einladung wird an ${email} gesendet und sieht nur diese Abteilung.`, confirmLabel: "Einladung senden" })) return;
+  button.disabled = true;
+  try {
+    const result = await adapter.sendPortalInvite(customer.id, department.id);
+    showDispatchSuccess(result?.alreadyActive ? "Portalzugang bereits aktiv" : "Einladung versendet", result?.alreadyActive ? `${department.name} hat bereits einen aktiven Portalzugang.` : `${department.name} ist jetzt für das eigene Portal freigeschaltet.`);
+  } catch (error) { showToast(error.message || "Einladung konnte nicht versendet werden.", "error"); }
   finally { button.disabled = false; }
 }
 
@@ -783,12 +843,15 @@ async function copyOfferLink(id, button) {
 async function sendOffer(id, button) {
   const offer = state.data.offers.find((item) => item.id === id);
   const customer = state.data.customers.find((item) => item.id === offer?.customer_id);
-  const recipient = customer?.email || "die Kunden-E-Mail";
+  const recipient = offer?.department?.contact_email || customer?.email || "die Abteilungs-E-Mail";
   if (!await confirmAction({ kicker: "OFFERTE VERSENDEN", title: "Offerte per E-Mail senden?", copy: `${offer?.offer_number || "Diese Offerte"} wird im Kundenportal freigegeben und an ${recipient} gesendet.`, confirmLabel: "Jetzt senden" })) return;
   button.disabled = true;
   try {
     await adapter.shareOffer(id);
-    const result = await adapter.sendOffer(id);
+    const requestKey = state.sendRequestKeys.get(id) || crypto.randomUUID();
+    state.sendRequestKeys.set(id, requestKey);
+    const result = await adapter.sendOffer(id, requestKey);
+    state.sendRequestKeys.delete(id);
     await refresh();
     showDispatchSuccess("Offerte versendet", `Der geschützte Portal-Link wurde an ${result?.recipient || recipient} gesendet.`);
   } catch (error) { showToast(error.message || "Offerte konnte nicht per E-Mail gesendet werden.", "error"); }
@@ -835,8 +898,11 @@ function normalizeAssistantProposal(raw) {
   }
   if (raw.kind === "invoice") {
     const items = Array.isArray(payload.items) ? payload.items.slice(0, 10).map((item) => ({
-      description: assistantText(item?.description, 1000), quantity: Math.max(.01, Number(item?.quantity) || 1), unit_price_rappen: Math.round(Number(item?.unit_price_rappen) || 0),
-    })).filter((item) => item.description && item.unit_price_rappen >= 0) : [];
+      description: assistantText(item?.description, 1000), quantity: Math.max(.01, Number(item?.quantity) || 1),
+      unit_price_rappen: item?.unit_price_rappen !== null && item?.unit_price_rappen !== undefined && item?.unit_price_rappen !== ""
+        ? Math.round(Number(item.unit_price_rappen))
+        : null,
+    })).filter((item) => item.description && item.unit_price_rappen !== null && Number.isFinite(item.unit_price_rappen) && item.unit_price_rappen >= 0) : [];
     if (!items.length) return null;
     const invoicePayload = {
       customer_id: assistantCustomerId(payload), customer_email: assistantText(payload.customer_email, 320), customer_company: assistantText(payload.customer_company, 160),
@@ -920,6 +986,20 @@ function configureAssistantOwner(ownerId) {
   localStorage.removeItem("heav-assistant-thread");
   assistantState.threadId = localStorage.getItem(assistantThreadStorageKey());
   assistantDelete.hidden = !assistantState.threadId;
+}
+async function restoreAssistantThread() {
+  if (!assistantState.threadId) return;
+  const messages = await adapter.loadAssistantThread(assistantState.threadId);
+  if (!messages) {
+    resetAssistantThread();
+    return;
+  }
+  assistantState.proposals.clear();
+  assistantMessages.innerHTML = "";
+  messages.filter((message) => ["user", "assistant"].includes(message.role)).forEach((message) => {
+    appendAssistantMessage(message.role, message.content, Array.isArray(message.proposals) ? message.proposals : []);
+  });
+  if (!messages.length) resetAssistantThread();
 }
 function resetAssistantThread() {
   assistantState.threadId = null;
@@ -1095,6 +1175,7 @@ content.addEventListener("click", async (event) => {
   const edit = event.target.closest("[data-edit]"); if (edit) { const collections = { customer: state.data.customers, project: state.data.projects, invoice: state.data.invoices }; openEditor(edit.dataset.edit, collections[edit.dataset.edit].find((item) => item.id === edit.dataset.id)); }
   const action = event.target.closest("[data-invoice-action]"); if (action) invoiceAction(action.dataset.id, action.dataset.invoiceAction, action);
   const requestAction = event.target.closest("[data-portal-request-action]"); if (requestAction) portalRequestAction(requestAction.dataset.id, requestAction.dataset.portalRequestAction, requestAction);
+  const departmentInvite = event.target.closest("[data-portal-invite]"); if (departmentInvite) await departmentInviteAction(departmentInvite.dataset.portalInvite, departmentInvite.dataset.departmentId, departmentInvite);
   const sendOfferButton = event.target.closest("[data-send-offer]"); if (sendOfferButton) await sendOffer(sendOfferButton.dataset.sendOffer, sendOfferButton);
   const copyOffer = event.target.closest("[data-copy-offer]"); if (copyOffer) await copyOfferLink(copyOffer.dataset.copyOffer, copyOffer);
   const remove = event.target.closest("[data-delete-record]"); if (remove) deleteRecord(remove.dataset.deleteRecord, remove.dataset.id, remove);
@@ -1173,7 +1254,9 @@ async function boot() {
 
     configureAssistantOwner(userId);
     adapter = createSupabaseAdapter(state.supabase, data.session);
+    void state.supabase.rpc("record_owner_login");
     state.data = await adapter.loadAll();
+    await restoreAssistantThread();
     loading.remove(); shell.hidden = false; render();
   } catch (error) {
     loading.innerHTML = `<strong>HEAV</strong><span>${esc(error.message)}</span><a href="/login/" style="color:#e8e4dc">Zum Login</a>`;

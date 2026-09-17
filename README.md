@@ -17,8 +17,29 @@ Official multi-page website for [heav.ch](https://heav.ch), including the privat
 - `/admin/` — customers, projects, invoices and company settings
 - `supabase/migrations/` — Postgres schema, constraints and owner-only RLS policies
 - `supabase/functions/invoice-document/` — branded PDF generation and Resend delivery
+- `supabase/functions/invoice-reminders/` — idempotent payment reminders before the due date
 
 The public pages and admin client are static and deploy through GitHub Pages. Sensitive data and operations never live in GitHub Pages: Supabase provides Auth/Postgres/RLS and the Edge Function keeps the Resend key server-side.
+
+### Invoice deletion and reminders
+
+Owner deletion is explicit and atomic: deleting a customer removes its CRM, project, offer, invoice, portal-request, membership and activity records. Legacy archived invoices remain protected. Sent invoices can be deleted individually through the confirmation dialog; the delete action is never a silent cascade.
+
+The setting `invoice_reminder_days` accepts 3, 7 or 10 days and defaults to 7. Migration `20260919_invoice_reminders.sql` claims each due reminder once and records the provider result idempotently. After deploying the migration and `invoice-reminders` function, configure `INVOICE_REMINDER_CRON_SECRET` as a server-side function secret and call the function once per day with that secret in `x-cron-secret`. The scheduler can be Supabase Cron, GitHub Actions or another private scheduler; it must not expose the secret in browser code. The reminder function does not run until this scheduler is configured.
+
+### Departments and activity timeline
+
+One legal customer can contain multiple departments. For example:
+
+- Customer: Heilsarmee Schweiz
+- Department: Berufsbildung — project: Lehrlingssuche
+- Department: Jugend — project: Jugendprojekt
+
+Projects, invoices, offers, files, reviews and portal memberships carry a `department_id`. Portal access is therefore scoped to the membership's department; the portal application remains shared. New customers receive an `Allgemein` department automatically. When a record is created through a project, the project's department is the default.
+
+`activity_events` is the central owner timeline. It records relevant business events such as customer/department/project creation, invoice and offer creation, offer acceptance, invoice state events, portal membership changes and customer logins. It is not a debug log: metadata must stay structured and must never contain passwords, tokens, API keys or other secrets. Customer-facing visibility is controlled separately from the owner's audit view.
+
+The migration is `supabase/migrations/20260918_departments_activity_log.sql`. Apply it only after reviewing the linked production database and test the Heilsarmee setup with one membership per department before inviting real contacts.
 
 ### Private access
 

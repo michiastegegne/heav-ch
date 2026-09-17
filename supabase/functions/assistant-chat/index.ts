@@ -42,12 +42,13 @@ function text(value: unknown, max: number): string {
 function number(value: unknown, minimum = 0): number | null {
   if (value === null || value === undefined || value === "") return null;
   const parsed = Number(value);
-  return Number.isFinite(parsed) ? Math.max(minimum, Math.round(parsed)) : null;
+  const rounded = Math.round(parsed);
+  return Number.isSafeInteger(rounded) && rounded >= minimum ? rounded : null;
 }
 function decimal(value: unknown, minimum = 0): number | null {
   if (value === null || value === undefined || value === "") return null;
   const parsed = Number(value);
-  return Number.isFinite(parsed) ? Math.max(minimum, parsed) : null;
+  return Number.isFinite(parsed) && parsed >= minimum ? parsed : null;
 }
 function date(value: unknown): string {
   const candidate = text(value, 10);

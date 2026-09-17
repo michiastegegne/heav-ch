@@ -13,6 +13,13 @@ html { scroll-behavior:auto; scroll-padding-top:86px; }
 .portal h1,.portal h2,.portal h3,.offer-accept-shell h2,.invoice-preview-shell>header h2 { font-family:"DM Sans",Arial,sans-serif; font-weight:600; letter-spacing:-.035em; line-height:1.2; }
 .portal-hero h1 { margin:10px 0; font-size:clamp(28px,3vw,40px); }
 .portal-hero p { margin:0; font-size:14px; line-height:1.6; max-width:60ch; color:var(--client-muted); }
+.portal-account-switcher { display:flex; align-items:center; justify-content:space-between; gap:24px; margin:0 0 16px; padding:18px 20px; background:var(--client-surface); border:1px solid var(--client-line); border-radius:12px; }
+.portal-account-switcher>div { min-width:0; }
+.portal-account-switcher h2 { margin:6px 0; font-size:19px; }
+.portal-account-switcher p { margin:0; color:var(--client-muted); font-size:13px; line-height:1.5; }
+.portal-account-switcher label { flex:0 1 260px; }
+.portal-account-switcher select { width:100%; min-height:46px; padding:10px 12px; border:1px solid #cbd1c3; border-radius:8px; background:white; color:var(--client-ink); font-size:16px; }
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 .portal-next-step { display:flex; align-items:center; justify-content:space-between; gap:24px; background:#eaf0dc; border:1px solid #d4dfbf; border-radius:16px; padding:26px; }
 .portal-next-step>div { min-width:0; }
 .portal-next-step h2 { font-size:23px; margin:9px 0; }
@@ -93,6 +100,8 @@ html { scroll-behavior:auto; scroll-padding-top:86px; }
   .portal-next-step { display:block; padding:20px; border-radius:12px; }
   .portal-next-step h2 { font-size:21px; }
   .portal-next-step .primary-button { margin-top:18px; width:100%; }
+  .portal-account-switcher { display:block; padding:18px; }
+  .portal-account-switcher label { display:block; margin-top:14px; }
   .portal-nav { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0; padding:8px 0; margin-top:12px; }
   .portal-nav a { padding:0 3px; font-size:12px; }
   .portal-section { padding:24px 0; }

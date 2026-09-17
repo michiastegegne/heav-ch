@@ -2,18 +2,19 @@ import { test, expect } from '@playwright/test';
 import { assertDarkTheme } from './theme-assertions.js';
 const base = process.env.HEAV_QA_BASE || 'http://127.0.0.1:4180';
 
-async function fixture(page, { offers = true, invoices = true, empty = false } = {}) {
+async function fixture(page, { offers = true, invoices = true, empty = false, multi = false } = {}) {
   const store = {
-    customer_portal_memberships: [{ customer_id: 'customer-1', role: 'client' }],
-    projects: empty ? [] : [{ id: 'project-1', title: 'Eventfilm – ein gemeinsamer Auftritt', description: 'Konzept und Filmproduktion für das Event.', status: 'active', start_date: '2026-09-20', due_date: '2026-10-10' }],
-    invoices: invoices && !empty ? [{ id: 'invoice-1', invoice_number: 'HEAV-2026-101', due_date: '2026-10-10', total_rappen: 49500, status: 'sent' }] : [],
-    offers: offers && !empty ? [{ id: 'offer-1', offer_number: '2026-010', title: 'Eventfilm mit Social-Media-Versionen', status: 'sent', valid_until: '2099-12-31', total_rappen: 49500, terms: 'Eine Korrekturrunde ist enthalten.', offer_items: [{ position: 1, description: 'Konzeption und Produktion des Eventfilms', quantity: 1, unit_price_rappen: 49500 }] }] : [],
-    customer_files: empty ? [] : [{ id: 'file-1', title: 'Finaler Eventfilm', original_filename: 'eventfilm-finale-version.mp4', kind: 'video', download_enabled: true }],
+    customer_portal_memberships: multi ? [{ id: 'membership-1', customer_id: 'customer-1', department_id: 'department-1', role: 'client' }, { id: 'membership-2', customer_id: 'customer-2', department_id: 'department-2', role: 'client' }] : [{ id: 'membership-1', customer_id: 'customer-1', department_id: 'department-1', role: 'client' }],
+    customer_departments: [{ id: 'department-1', customer_id: 'customer-1', name: 'Berufsbildung' }, ...(multi ? [{ id: 'department-2', customer_id: 'customer-2', name: 'Jugend' }] : [])],
+    projects: empty ? [] : [{ id: 'project-1', customer_id: 'customer-1', department_id: 'department-1', title: 'Eventfilm – ein gemeinsamer Auftritt', description: 'Konzept und Filmproduktion für das Event.', status: 'active', start_date: '2026-09-20', due_date: '2026-10-10' }, ...(multi ? [{ id: 'project-2', customer_id: 'customer-2', department_id: 'department-2', title: 'Beta Kampagne', description: 'Zweite Kundenproduktion.', status: 'planning', start_date: '2026-09-21', due_date: '2026-10-11' }] : [])],
+    invoices: invoices && !empty ? [{ id: 'invoice-1', customer_id: 'customer-1', department_id: 'department-1', invoice_number: 'HEAV-2026-101', due_date: '2026-10-10', total_rappen: 49500, status: 'sent' }, ...(multi ? [{ id: 'invoice-2', customer_id: 'customer-2', department_id: 'department-2', invoice_number: 'HEAV-2026-102', due_date: '2026-10-11', total_rappen: 65000, status: 'sent' }] : [])] : [],
+    offers: offers && !empty ? [{ id: 'offer-1', customer_id: 'customer-1', department_id: 'department-1', offer_number: '2026-010', title: 'Eventfilm mit Social-Media-Versionen', status: 'sent', valid_until: '2099-12-31', total_rappen: 49500, terms: 'Eine Korrekturrunde ist enthalten.', offer_items: [{ position: 1, description: 'Konzeption und Produktion des Eventfilms', quantity: 1, unit_price_rappen: 49500 }] }, ...(multi ? [{ id: 'offer-2', customer_id: 'customer-2', department_id: 'department-2', offer_number: '2026-011', title: 'Beta Kampagne', status: 'sent', valid_until: '2099-12-31', total_rappen: 65000, terms: 'Eine Korrekturrunde ist enthalten.', offer_items: [] }] : [])] : [],
+    customer_files: empty ? [] : [{ id: 'file-1', customer_id: 'customer-1', department_id: 'department-1', title: 'Finaler Eventfilm', original_filename: 'eventfilm-finale-version.mp4', kind: 'video', download_enabled: true }, ...(multi ? [{ id: 'file-2', customer_id: 'customer-2', department_id: 'department-2', title: 'Beta Dateien', original_filename: 'beta-dateien.zip', kind: 'document', download_enabled: true }] : [])],
   };
   await page.route('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm', route => route.fulfill({ contentType: 'application/javascript', body: `const store = ${JSON.stringify(store)};
     export function createClient() { return {
       auth: { getSession: async () => ({ data: { session: { access_token: 'fixture-only', user: { id: 'client-1', user_metadata: {} } } } }), signOut: async () => ({ error: null }) },
-      from(table) { const q = { select() { return q; }, eq() { return q; }, order() { return q; }, then(resolve) { return Promise.resolve({ data: store[table] || [], error: null }).then(resolve); } }; return q; },
+      from(table) { const q = { customerId: null, departmentId: null, ids: null, select() { return q; }, eq(column, value) { if (column === 'customer_id') q.customerId = value; if (column === 'department_id') q.departmentId = value; return q; }, in(column, values) { if (column === 'id') q.ids = values; return q; }, order() { return q; }, then(resolve) { const data = (store[table] || []).filter(item => (!q.customerId || item.customer_id === q.customerId) && (!q.departmentId || item.department_id === q.departmentId) && (!q.ids || q.ids.includes(item.id))); return Promise.resolve({ data, error: null }).then(resolve); } }; return q; },
       rpc: async () => ({ error: null }), storage: { from: () => ({ createSignedUrl: async () => ({ error: new Error('Fixture has no file download') }) }) }
     }; }` }));
 }
@@ -62,4 +63,29 @@ test('Kunden-Arbeitsplatz: Rechnung statt erfundener Aufgabe, leeres Konto bleib
   await page.reload();
   await expect(page.locator('#portal-next-step')).toContainText('Aktuell nichts zu bestätigen');
   await expect(page.locator('#portal-next-step a')).toHaveCount(0);
+});
+
+test('Kunden-Arbeitsplatz: mehrere aktive Kundenkonten können vollständig gewechselt werden', async ({ page }) => {
+  await fixture(page, { multi: true });
+  await page.goto(`${base}/client/`);
+  await expect(page.locator('#portal-customer-switcher')).toBeVisible();
+  const selector = page.locator('#portal-customer-select');
+  await expect(selector).toHaveValue('membership-1');
+  await expect(page.locator('#portal-projects')).toContainText('Eventfilm – ein gemeinsamer Auftritt');
+  await expect(page.locator('#portal-projects')).not.toContainText('Beta Kampagne');
+  await selector.selectOption('membership-2');
+  await expect(selector).toHaveValue('membership-2');
+  await expect(page.locator('#portal-projects')).toContainText('Beta Kampagne');
+  await expect(page.locator('#portal-projects')).not.toContainText('Eventfilm – ein gemeinsamer Auftritt');
+  await expect(page.locator('#portal-invoices')).toContainText('HEAV-2026-102');
+  await expect(page.locator('#portal-invoices')).not.toContainText('HEAV-2026-101');
+  await expect(page.locator('#portal-offers')).toContainText('Beta Kampagne');
+  await expect(page.locator('#portal-offers')).not.toContainText('Eventfilm mit Social-Media-Versionen');
+});
+
+test('Kunden-Arbeitsplatz: Offerten-Deep-Link wählt die richtige Abteilung', async ({ page }) => {
+  await fixture(page, { multi: true });
+  await page.goto(`${base}/client/?offer=offer-2`);
+  await expect(page.locator('#portal-customer-select')).toHaveValue('membership-2');
+  await expect(page.locator('#offer-offer-2')).toBeVisible();
 });

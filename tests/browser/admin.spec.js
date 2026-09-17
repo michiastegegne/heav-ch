@@ -33,13 +33,18 @@ async function mockStudioSupabase(page, overrides = {}) {
           { id: "c1", company: "Nordlicht AG", contact_name: "Anna Keller", email: "anna@nordlicht.example", phone: "", city: "Basel", postal_code: "4051", address_line1: "Teststrasse 1", country: "Schweiz" },
           { id: "c2", company: "Atelier Morgen", contact_name: "Noah Frei", email: "noah@morgen.example", phone: "", city: "Zürich", postal_code: "8004", address_line1: "Testweg 2", country: "Schweiz" }
         ],
+        customer_departments: [
+          { id: "d1", customer_id: "c1", owner_id: "owner-test", name: "Berufsbildung", code: "EDU", contact_name: "Anna Keller", contact_email: "anna@nordlicht.example", is_default: true, active: true },
+          { id: "d2", customer_id: "c1", owner_id: "owner-test", name: "Jugend", code: "YOUTH", contact_name: "Nina Jugend", contact_email: "jugend@nordlicht.example", is_default: false, active: true },
+          { id: "d3", customer_id: "c2", owner_id: "owner-test", name: "Allgemein", code: "GENERAL", contact_name: "Noah Frei", contact_email: "noah@morgen.example", is_default: true, active: true }
+        ],
         projects: [
-          { id: "p1", customer_id: "c1", title: "Brand Film 2026", status: "active", budget_rappen: 1850000, start_date: "2026-07-15", due_date: "2026-09-18", description: "Brand Film" },
-          { id: "p2", customer_id: "c2", title: "Campaign Content", status: "planning", budget_rappen: 920000, start_date: "2026-08-20", due_date: "2026-10-02", description: "Campaign" }
+          { id: "p1", customer_id: "c1", department_id: "d1", title: "Brand Film 2026", status: "active", budget_rappen: 1850000, start_date: "2026-07-15", due_date: "2026-09-18", description: "Brand Film" },
+          { id: "p2", customer_id: "c2", department_id: "d3", title: "Campaign Content", status: "planning", budget_rappen: 920000, start_date: "2026-08-20", due_date: "2026-10-02", description: "Campaign" }
         ],
         invoices: [
-          { id: "i1", customer_id: "c1", project_id: "p1", invoice_number: "HEAV-2026-001", payment_reference: "RF51HEAV2026000001", issue_date: "2026-07-28", due_date: "2026-08-27", status: "sent", subtotal_rappen: 850000, tax_rappen: 68850, total_rappen: 918850, tax_rate: 8.1, invoice_items: [] },
-          { id: "i2", customer_id: "c2", project_id: "p2", invoice_number: "HEAV-2026-002", payment_reference: "RF24HEAV2026000002", issue_date: "2026-08-01", due_date: "2026-08-31", status: "sent", subtotal_rappen: 50820, tax_rappen: 0, total_rappen: 50820, tax_rate: 0, invoice_items: [
+          { id: "i1", customer_id: "c1", department_id: "d1", project_id: "p1", invoice_number: "HEAV-2026-001", payment_reference: "RF51HEAV2026000001", issue_date: "2026-07-28", due_date: "2026-08-27", status: "sent", subtotal_rappen: 850000, tax_rappen: 68850, total_rappen: 918850, tax_rate: 8.1, invoice_items: [] },
+          { id: "i2", customer_id: "c2", department_id: "d3", project_id: "p2", invoice_number: "HEAV-2026-002", payment_reference: "RF24HEAV2026000002", issue_date: "2026-08-01", due_date: "2026-08-31", status: "sent", subtotal_rappen: 50820, tax_rappen: 0, total_rappen: 50820, tax_rate: 0, invoice_items: [
             { position: 1, description: "Foto- & Videoproduktion vor Ort", quantity: 2.75, unit_price_rappen: 15000 },
             { position: 2, description: "Persönlicher Sonderrabatt", quantity: 1, unit_price_rappen: -6190 },
             { position: 3, description: "Foto-/Equipment-Zuschlag", quantity: 1, unit_price_rappen: 10000 },
@@ -47,11 +52,14 @@ async function mockStudioSupabase(page, overrides = {}) {
           ] }
         ],
         offers: [
-          { id: "o1", customer_id: "c1", project_id: "p1", offer_number: "HEAV-O-2026-001", title: "Brand Film Produktion", issue_date: "2026-09-01", valid_until: "2026-10-01", status: "draft", subtotal_rappen: 500000, tax_rappen: 40500, total_rappen: 540500, tax_rate: 8.1, notes: "Produktion gemäss Briefing.", terms: "Mit der Annahme ist die Offerte verbindlich.", offer_items: [{ position: 1, description: "Produktion", quantity: 1, unit_price_rappen: 500000 }] }
+          { id: "o1", customer_id: "c1", department_id: "d1", project_id: "p1", offer_number: "HEAV-O-2026-001", title: "Brand Film Produktion", issue_date: "2026-09-01", valid_until: "2026-10-01", status: "draft", subtotal_rappen: 500000, tax_rappen: 40500, total_rappen: 540500, tax_rate: 8.1, notes: "Produktion gemäss Briefing.", terms: "Mit der Annahme ist die Offerte verbindlich.", offer_items: [{ position: 1, description: "Produktion", quantity: 1, unit_price_rappen: 500000 }] }
         ],
         company_settings: [{ company_name: "HEAV", owner_name: "Michias Tegegne", email: "hello@heav.ch", iban: "", default_tax_rate: 8.1, default_due_days: 30 }],
+        activity_events: [],
         customer_portal_memberships: [],
-        customer_portal_requests: [{ id: "r1", company: "Studio Nord", contact_name: "Lea Meier", email: "lea@studio-nord.example", phone: "+41 79 123 45 67", message: "Zugang für die Filmabnahme 2026.", status: "pending", created_at: "2026-09-09T10:00:00Z" }]
+        customer_portal_requests: [{ id: "r1", company: "Studio Nord", contact_name: "Lea Meier", email: "lea@studio-nord.example", phone: "+41 79 123 45 67", message: "Zugang für die Filmabnahme 2026.", status: "pending", created_at: "2026-09-09T10:00:00Z" }],
+        assistant_threads: [],
+        assistant_messages: []
       };
       Object.assign(store, ${JSON.stringify(overrides)});
       const result = (data) => ({ data, error: null });
@@ -67,8 +75,9 @@ async function mockStudioSupabase(page, overrides = {}) {
               eq() { return builder; },
               order: async () => result(store[table]),
               maybeSingle: async () => result(store[table][0] || null),
-              limit: async () => result(store[table].slice(0, 1)),
-              insert: async (payload) => { store[table].push({ id: crypto.randomUUID(), ...payload }); return result(null); },
+              limit() { return builder; },
+              insert: async (payload) => { const row = { id: crypto.randomUUID(), ...payload }; store[table].push(row); if (table === "customers") store.customer_departments.push({ id: crypto.randomUUID(), customer_id: row.id, owner_id: row.owner_id, name: "Allgemein", code: "GENERAL", is_default: true, active: true }); return result(null); },
+              update: (payload) => { builder.__update = payload; return builder; },
               upsert: async (payload) => { store[table] = [{ ...store[table][0], ...payload }]; return result(null); }
             };
             return builder;
@@ -78,21 +87,21 @@ async function mockStudioSupabase(page, overrides = {}) {
             if (name === "update_invoice") {
               window.__lastUpdatedInvoiceItems = payload.p_items;
             }
-            if (name === "create_invoice") {
+            if (name === "create_invoice" || name === "create_invoice_in_department") {
               window.__lastCreatedInvoiceItems = payload.p_items;
               const subtotal = payload.p_items.reduce((sum, item) => sum + Math.round(item.quantity * item.unit_price_rappen), 0);
               const tax = Math.round(subtotal * payload.p_tax_rate / 100);
-              store.invoices.unshift({ id: crypto.randomUUID(), customer_id: payload.p_customer_id, project_id: payload.p_project_id, invoice_number: "HEAV-2026-003", payment_reference: "RF94HEAV2026000003", issue_date: payload.p_issue_date, due_date: payload.p_due_date, status: "draft", subtotal_rappen: subtotal, tax_rappen: tax, total_rappen: subtotal + tax, tax_rate: payload.p_tax_rate, invoice_items: payload.p_items });
+              store.invoices.unshift({ id: crypto.randomUUID(), customer_id: payload.p_customer_id, department_id: payload.p_department_id || "d1", project_id: payload.p_project_id, invoice_number: "HEAV-2026-003", payment_reference: "RF94HEAV2026000003", issue_date: payload.p_issue_date, due_date: payload.p_due_date, status: "draft", subtotal_rappen: subtotal, tax_rappen: tax, total_rappen: subtotal + tax, tax_rate: payload.p_tax_rate, invoice_items: payload.p_items });
             }
-            if (name === "create_offer") {
+            if (name === "create_offer" || name === "create_offer_in_department") {
               const subtotal = payload.p_items.reduce((sum, item) => sum + Math.round(item.quantity * item.unit_price_rappen), 0);
               const tax = Math.round(subtotal * payload.p_tax_rate / 100);
-              store.offers.unshift({ id: crypto.randomUUID(), customer_id: payload.p_customer_id, project_id: payload.p_project_id, offer_number: "HEAV-O-2026-002", title: payload.p_title, issue_date: payload.p_issue_date, valid_until: payload.p_valid_until, status: "draft", subtotal_rappen: subtotal, tax_rappen: tax, total_rappen: subtotal + tax, tax_rate: payload.p_tax_rate, notes: payload.p_notes, terms: payload.p_terms, offer_items: payload.p_items });
+              store.offers.unshift({ id: crypto.randomUUID(), customer_id: payload.p_customer_id, department_id: payload.p_department_id || "d1", project_id: payload.p_project_id, offer_number: "HEAV-O-2026-002", title: payload.p_title, issue_date: payload.p_issue_date, valid_until: payload.p_valid_until, status: "draft", subtotal_rappen: subtotal, tax_rappen: tax, total_rappen: subtotal + tax, tax_rate: payload.p_tax_rate, notes: payload.p_notes, terms: payload.p_terms, offer_items: payload.p_items });
             }
             if (name === "share_customer_offer") {
               const offer = store.offers.find((item) => item.id === payload.p_offer_id); if (offer) offer.status = "sent";
             }
-            if (name === "delete_draft_invoice") {
+            if (name === "delete_invoice" || name === "delete_draft_invoice") {
               store.invoices = store.invoices.filter((item) => item.id !== payload.p_invoice_id);
             }
             if (name === "delete_project") {
@@ -117,17 +126,20 @@ async function mockStudioSupabase(page, overrides = {}) {
                 }
                 const sendProposal = /\\bsend(?:e|en)\\b/.test(String(body.message || "").toLowerCase());
                 const unknownTaxProposal = String(body.message || "").includes("__unknown_tax__");
+                const missingPriceProposal = String(body.message || "").includes("__missing_price__");
                 const xssProposal = String(body.message || "").includes("__xss__");
                 const proposals = xssProposal
                   ? [{ id: "proposal-xss", kind: "customer", label: '<img src=x onerror="window.__assistantXss=1">', payload: { company: '<script>window.__assistantXss=1</script>', contact_name: "Test" } }]
                   : sendProposal
                   ? [{ id: "proposal-send", kind: "send_invoice", label: "HEAV-2026-001 senden", payload: { invoice_id: "i1" } }]
+                  : missingPriceProposal
+                    ? [{ id: "proposal-invoice", kind: "invoice", label: "Rechnung prüfen", payload: { customer_id: "c1", items: [{ description: "Produktion", quantity: 1 }] } }]
                   : unknownTaxProposal
                     ? [{ id: "proposal-invoice", kind: "invoice", label: "Rechnung prüfen", payload: { customer_id: "c1", items: [{ description: "Produktion", quantity: 1, unit_price_rappen: 100000 }] } }]
                     : [{ id: "proposal-customer", kind: "customer", label: "Nordstern GmbH anlegen", payload: { company: "Nordstern GmbH", contact_name: "Mila Stern", email: "mila@nordstern.example", phone: "+41 79 555 44 33", address_line1: "Sternweg 8", postal_code: "8004", city: "Zürich", country: "Schweiz" } }];
                 return { data: {
                   threadId: body.threadId,
-                  message: xssProposal ? '<img src=x onerror="window.__assistantXss=1">' : sendProposal ? "Ich habe die Rechnung gefunden. Prüfe den Versand." : unknownTaxProposal ? "Ich habe einen Rechnungsentwurf vorbereitet." : "Ich habe die Kundendaten als Entwurf vorbereitet.",
+                  message: xssProposal ? '<img src=x onerror="window.__assistantXss=1">' : sendProposal ? "Ich habe die Rechnung gefunden. Prüfe den Versand." : missingPriceProposal ? "Der Rechnungsentwurf ist unvollständig und braucht noch einen Einzelpreis." : unknownTaxProposal ? "Ich habe einen Rechnungsentwurf vorbereitet." : "Ich habe die Kundendaten als Entwurf vorbereitet.",
                   proposals,
                 }, error: null };
               }
@@ -769,6 +781,18 @@ test("HEAV Assistent: unbekannte MWST übernimmt den geprüften Studio-Standard 
   await expect(page.locator('#editor-dialog [name="tax_rate"]')).toHaveValue("8.1");
 });
 
+test("HEAV Assistent: fehlender Positionspreis wird nicht als CHF 0.00 vorgeschlagen", async ({ page }) => {
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  await page.getByRole("button", { name: "HEAV Assistent öffnen" }).click();
+  const assistant = page.locator("#assistant-dialog");
+  await assistant.getByLabel("Nachricht an HEAV Assistent").fill("__missing_price__");
+  await assistant.getByRole("button", { name: "Senden", exact: true }).click();
+  await expect(assistant).toContainText("braucht noch einen Einzelpreis");
+  await expect(assistant.getByRole("button", { name: "Rechnungsentwurf prüfen" })).toHaveCount(0);
+  await expect(page.locator("#editor-dialog")).toBeHidden();
+});
+
 test("HEAV Assistent: Modelltexte, Vorschläge und Dateinamen bleiben als Text XSS-sicher", async ({ page }) => {
   await mockStudioSupabase(page);
   await page.goto(`${base}/studio/`);
@@ -850,9 +874,9 @@ test("HEAV Assistent: ein Chat wird auf Mobile nur nach Bestätigung vollständi
   await page.close();
 });
 
-test("HEAV Assistent: ersetzt einen fremden oder gelöschten Chat automatisch und kontogebunden", async ({ page }) => {
+test("HEAV Assistent: bereinigt einen fremden oder gelöschten Chat automatisch und kontogebunden", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("heav-assistant-thread:owner-test", "90000000-0000-4000-8000-000000000099"));
-  await mockStudioSupabase(page, { assistantFailures: 1, assistantFailureStatus: 404 });
+  await mockStudioSupabase(page);
   await page.goto(`${base}/studio/`);
   await page.getByRole("button", { name: "HEAV Assistent öffnen" }).click();
   const assistant = page.locator("#assistant-dialog");
@@ -865,11 +889,10 @@ test("HEAV Assistent: ersetzt einen fremden oder gelöschten Chat automatisch un
     scoped: localStorage.getItem("heav-assistant-thread:owner-test"),
     legacy: localStorage.getItem("heav-assistant-thread"),
   }));
-  expect(recovery.requests).toHaveLength(2);
-  expect(recovery.requests[0]).toMatchObject({ threadId: "90000000-0000-4000-8000-000000000099", newThread: false });
-  expect(recovery.requests[1].newThread).toBe(true);
-  expect(recovery.requests[1].threadId).not.toBe(recovery.requests[0].threadId);
-  expect(recovery.scoped).toBe(recovery.requests[1].threadId);
+  expect(recovery.requests).toHaveLength(1);
+  expect(recovery.requests[0].newThread).toBe(true);
+  expect(recovery.requests[0].threadId).not.toBe("90000000-0000-4000-8000-000000000099");
+  expect(recovery.scoped).toBe(recovery.requests[0].threadId);
   expect(recovery.legacy).toBeNull();
 });
 
@@ -884,6 +907,24 @@ test("HEAV Assistent: ein Providerfehler lässt den neuen Chat löschbar statt v
   const retained = await page.evaluate(() => ({ request: window.__assistantRequests[0], scoped: localStorage.getItem("heav-assistant-thread:owner-test") }));
   expect(retained.request.newThread).toBe(true);
   expect(retained.scoped).toBe(retained.request.threadId);
+});
+
+test("HEAV Assistent: gespeicherter Verlauf wird beim erneuten Öffnen wiederhergestellt", async ({ page }) => {
+  const threadId = "90000000-0000-4000-8000-000000000123";
+  await page.addInitScript((id) => localStorage.setItem("heav-assistant-thread:owner-test", id), threadId);
+  await mockStudioSupabase(page, {
+    assistant_threads: [{ id: threadId }],
+    assistant_messages: [
+      { role: "user", content: "Plane ein Kundenprofil.", proposals: [], created_at: "2026-09-17T10:00:00Z" },
+      { role: "assistant", content: "Ich habe die Kundendaten als Entwurf vorbereitet.", proposals: [{ id: "proposal-customer", kind: "customer", label: "Nordstern GmbH anlegen", payload: { company: "Nordstern GmbH", contact_name: "Mila Stern" } }], created_at: "2026-09-17T10:00:01Z" }
+    ]
+  });
+  await page.goto(`${base}/studio/`);
+  await page.getByRole("button", { name: "HEAV Assistent öffnen" }).click();
+  const assistant = page.locator("#assistant-dialog");
+  await expect(assistant).toContainText("Plane ein Kundenprofil.");
+  await expect(assistant).toContainText("Kundendaten als Entwurf vorbereitet");
+  await expect(assistant.getByRole("button", { name: "Kundenentwurf prüfen" })).toBeVisible();
 });
 
 test("Workspace: mobile toast uses a compact safe-area bottom offset", async ({ browser }) => {
@@ -1576,7 +1617,7 @@ test("Studio: Rechnungen, Kunden und Projekte verwenden klare Icon-Aktionen", as
   await page.locator('.nav-link[data-view="invoices"]').click();
   const invoiceRow = page.locator(".data-table tbody tr").filter({ hasText: "HEAV-2026-001" });
   await invoiceRow.getByRole("button", { name: "Aktionen für HEAV-2026-001" }).click();
-  await expect(invoiceRow.getByRole("button", { name: "Rechnung senden" }).locator("svg")).toBeVisible();
+  await expect(invoiceRow.getByRole("button", { name: "Rechnung erneut senden" }).locator("svg")).toBeVisible();
   const actionLayout = await invoiceRow.locator(".table-actions").evaluate((toolbar) => {
     const buttons = [...toolbar.querySelectorAll("button")].map((button) => button.getBoundingClientRect());
     return {
@@ -1682,4 +1723,16 @@ test("Studio: Offerte wird erstellt und per geschütztem Portal-Link versendet",
   await expect.poll(() => page.evaluate(() => window.__lastOfferEmail)).toMatchObject({ offerId: expect.any(String) });
   await expect(page.locator(".data-table tbody tr").first()).toContainText("Versendet");
   await page.close();
+});
+
+test("Studio: Projekte werden einer Kundenabteilung zugeordnet", async ({ page }) => {
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  await page.locator('.nav-link[data-view="projects"]').click();
+  await page.locator('[data-create="project"]').first().click();
+  await page.locator('select[name="customer_id"]').selectOption("c1");
+  const department = page.locator('select[name="department_id"]');
+  await expect(department).toBeVisible();
+  await expect(department).toContainText("Berufsbildung");
+  await expect(department).toContainText("Jugend");
 });

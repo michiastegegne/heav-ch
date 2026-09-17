@@ -195,7 +195,7 @@ const safePublicUrl = (value: unknown, fallback = "") => {
 
 function invoiceGreetingAndProject(invoice: Invoice) {
   const greeting = compactText(
-    invoice.customers.contact_name || invoice.customers.company,
+    (invoice.customers.contact_name || "").trim().split(/\s+/)[0] || invoice.customers.company,
     160,
   );
   const projectTitle = compactText(invoice.project_title_snapshot, 160);

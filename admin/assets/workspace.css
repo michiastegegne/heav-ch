@@ -155,6 +155,7 @@ body{font-size:14px;line-height:1.5}
 .project-money-grid strong{display:block;font-size:19px;overflow-wrap:anywhere;margin-top:4px}
 .project-money-grid [data-project-money="paid"] strong{color:#42601d}
 .project-documents .workspace-action:last-child{border-bottom:0;padding-bottom:0}
+@media(max-width:560px){.project-documents .table-actions{min-width:0;max-width:100%;overflow-x:auto;overflow-y:hidden}}
 @media(max-width:560px){.project-finances,.project-documents{padding:16px}.project-money-grid{grid-template-columns:1fr;gap:10px}.project-money-grid>div{display:flex;justify-content:space-between;align-items:baseline;gap:12px}.project-money-grid strong{font-size:17px}.project-documents .panel-head>div{flex:1 1 160px}}
 .editor-dialog{border-radius:14px;background:var(--surface);overflow:visible}
 .dialog-shell{overflow:visible}

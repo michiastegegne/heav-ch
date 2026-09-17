@@ -1,0 +1,56 @@
+name: Verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Use Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v2.9.4
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Check JavaScript
+        run: npm run check
+
+      - name: Run unit and migration tests
+        run: npm test
+
+      - name: Check Edge Functions
+        run: deno check supabase/functions/*/index.ts
+
+      - name: Run Edge Function tests
+        run: deno test --no-check --allow-env --allow-read --allow-write supabase/functions/*/*_test.ts
+
+      - name: Start static server
+        run: python3 -m http.server 4180 --bind 127.0.0.1 > /tmp/heav-http.log 2>&1 &
+
+      - name: Verify static server
+        run: curl --fail --retry 5 --retry-delay 1 http://127.0.0.1:4180/studio/
+
+      - name: Run browser tests
+        run: npm run test:browser -- --workers=1

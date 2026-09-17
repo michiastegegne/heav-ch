@@ -7,6 +7,8 @@ const offersEl = document.querySelector("#portal-offers");
 const invoicesEl = document.querySelector("#portal-invoices");
 const filesEl = document.querySelector("#portal-files");
 const projectCount = document.querySelector("#project-count");
+const customerSwitcher = document.querySelector("#portal-customer-switcher");
+const customerSelect = document.querySelector("#portal-customer-select");
 const reviewForm = document.querySelector("#review-form");
 const reviewCustomerField = document.querySelector("#review-customer-field");
 const reviewCustomer = document.querySelector("#review-customer");
@@ -23,6 +25,9 @@ let previewBlob = null;
 let previewFilename = "Rechnung.pdf";
 let previewUrl = null;
 let memberships = [];
+let activeMembership = null;
+let activeCustomerId = null;
+let portalData = { projects: [], invoices: [], files: [], offers: [] };
 let activeOfferId = null;
 
 const esc = (value = "") => String(value).replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
@@ -78,6 +83,41 @@ function renderOffers(offers) {
 }
 function renderFiles(files) {
   filesEl.innerHTML = files.length ? files.map((file) => `<article class="file-row"><div><span class="file-kind">${esc(kind(file.kind))}</span><strong>${esc(file.title)}</strong><small>${esc(file.original_filename)}</small></div>${file.download_enabled ? `<button class="download-button" type="button" data-file-id="${esc(file.id)}">Download</button>` : ""}</article>`).join("") : empty("Noch keine Dateien freigegeben. Sobald eine Galerie, Offerte oder Delivery bereitsteht, erscheint sie hier.");
+}
+async function loadCustomerData(membership) {
+  const customerId = membership.customer_id;
+  const departmentId = membership.department_id;
+  const [projects, invoices, files, offers] = await Promise.all([
+    supabase.from("projects").select("id,title,description,status,start_date,due_date").eq("customer_id", customerId).eq("department_id", departmentId).order("created_at", { ascending: false }),
+    supabase.from("invoices").select("id,invoice_number,due_date,total_rappen,status").eq("customer_id", customerId).eq("department_id", departmentId).order("issue_date", { ascending: false }),
+    supabase.from("customer_files").select("id,title,original_filename,storage_bucket,storage_path,kind,download_enabled").eq("customer_id", customerId).eq("department_id", departmentId).order("published_at", { ascending: false }),
+    supabase.from("offers").select("id,offer_number,title,valid_until,status,notes,terms,total_rappen,accepted_at,offer_items(id,position,description,quantity,unit_price_rappen)").eq("customer_id", customerId).eq("department_id", departmentId).order("issue_date", { ascending: false }),
+  ]);
+  [projects, invoices, files, offers].forEach((result) => { if (result.error) throw result.error; });
+  return { projects: projects.data || [], invoices: invoices.data || [], files: files.data || [], offers: offers.data || [] };
+}
+function renderCustomerData(data) {
+  portalData = data;
+  renderProjects(data.projects);
+  renderInvoices(data.invoices);
+  renderOffers(data.offers);
+  renderFiles(data.files);
+  renderNextStep(data.offers, data.invoices, data.files);
+  if (reviewCustomer && memberships.length > 1 && activeMembership) reviewCustomer.value = activeMembership.id;
+}
+function renderCustomerSwitcher() {
+  if (!customerSwitcher || !customerSelect) return;
+  customerSwitcher.hidden = memberships.length < 2;
+  if (memberships.length < 2) return;
+  customerSelect.innerHTML = memberships.map((membership, index) => `<option value="${esc(membership.id)}">${esc(membership.department?.name || `Abteilung ${index + 1}`)}</option>`).join("");
+}
+async function setActiveMembership(membershipId) {
+  const membership = memberships.find((item) => item.id === membershipId);
+  if (!membership) return;
+  activeMembership = membership;
+  activeCustomerId = membership.customer_id;
+  if (customerSelect) customerSelect.value = membership.id;
+  renderCustomerData(await loadCustomerData(membership));
 }
 
 async function downloadFile(file) {
@@ -138,29 +178,36 @@ async function loadPortal() {
   const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
   if (sessionError || !sessionData.session) { window.location.replace(`/login/?next=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`); return; }
   const userId = sessionData.session.user.id;
-  const { data: access, error: accessError } = await supabase.from("customer_portal_memberships").select("customer_id, role").eq("user_id", userId).eq("status", "active");
+  const { data: access, error: accessError } = await supabase.from("customer_portal_memberships").select("id,customer_id,department_id,role").eq("user_id", userId).eq("status", "active");
   if (accessError) throw accessError;
-  memberships = access || [];
+  const departmentIds = (access || []).map((membership) => membership.department_id).filter(Boolean);
+  const { data: departments, error: departmentError } = await supabase.from("customer_departments").select("id,customer_id,name").in("id", departmentIds);
+  if (departmentError) throw departmentError;
+  const departmentMap = new Map((departments || []).map((department) => [department.id, department]));
+  memberships = (access || []).map((membership) => ({ ...membership, department: departmentMap.get(membership.department_id) })).filter((membership) => membership.department);
   if (!memberships.length) throw new Error("Für dieses Konto ist noch kein Kundenportal freigeschaltet.");
-  const customerId = memberships[0].customer_id;
-  const [projects, invoices, files, offers] = await Promise.all([
-    supabase.from("projects").select("id,title,description,status,start_date,due_date").eq("customer_id", customerId).order("created_at", { ascending: false }),
-    supabase.from("invoices").select("id,invoice_number,due_date,total_rappen,status").eq("customer_id", customerId).order("issue_date", { ascending: false }),
-    supabase.from("customer_files").select("id,title,original_filename,storage_bucket,storage_path,kind,download_enabled").eq("customer_id", customerId).order("published_at", { ascending: false }),
-    supabase.from("offers").select("id,offer_number,title,valid_until,status,notes,terms,total_rappen,accepted_at,offer_items(id,position,description,quantity,unit_price_rappen)").eq("customer_id", customerId).order("issue_date", { ascending: false }),
-  ]);
-  [projects, invoices, files, offers].forEach((result) => { if (result.error) throw result.error; });
-  renderProjects(projects.data || []);
-  renderInvoices(invoices.data || []);
-  renderOffers(offers.data || []);
-  renderFiles(files.data || []);
-  renderNextStep(offers.data || [], invoices.data || [], files.data || []);
+  renderCustomerSwitcher();
+  const targetOffer = new URLSearchParams(window.location.search).get("offer");
+  let initialMembership = memberships[0];
+  if (targetOffer) {
+    for (const membership of memberships) {
+      const candidate = await loadCustomerData(membership);
+      if (candidate.offers.some((offer) => offer.id === targetOffer)) { initialMembership = membership; break; }
+    }
+  }
+  await setActiveMembership(initialMembership.id);
+  void supabase.rpc("record_customer_portal_login", { p_customer_id: initialMembership.customer_id, p_department_id: initialMembership.department_id });
   const suppliedName = sessionData.session.user.user_metadata?.full_name;
   if (suppliedName) reviewForm.elements.reviewer_name.value = suppliedName;
-  if (memberships.length === 1) reviewCustomer.innerHTML = `<option value="${esc(memberships[0].customer_id)}">Mein Kundenkonto</option>`;
-  else { reviewCustomerField.hidden = false; reviewCustomer.innerHTML = memberships.map((membership, index) => `<option value="${esc(membership.customer_id)}">Kundenkonto ${index + 1}</option>`).join(""); }
+  if (memberships.length === 1) reviewCustomer.innerHTML = `<option value="${esc(memberships[0].id)}">${esc(memberships[0].department.name)}</option>`;
+  else { reviewCustomerField.hidden = false; reviewCustomer.innerHTML = memberships.map((membership, index) => `<option value="${esc(membership.id)}">${esc(membership.department?.name || `Abteilung ${index + 1}`)}</option>`).join(""); }
+  if (customerSelect) customerSelect.addEventListener("change", async () => {
+    customerSelect.disabled = true;
+    try { await setActiveMembership(customerSelect.value); }
+    catch (error) { alert(error.message || "Abteilung konnte nicht geladen werden."); customerSelect.value = activeMembership?.id || ""; }
+    finally { customerSelect.disabled = false; }
+  });
   loading.remove(); portal.hidden = false;
-  const targetOffer = new URLSearchParams(window.location.search).get("offer");
   if (targetOffer) document.querySelector(`#offer-${CSS.escape(targetOffer)}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
   invoicesEl.addEventListener("click", async (event) => {
     const preview = event.target.closest("[data-invoice-preview]");
@@ -168,7 +215,7 @@ async function loadPortal() {
     if (!preview && !download) return;
     const button = preview || download;
     button.disabled = true;
-    const invoice = (invoices.data || []).find((item) => item.id === button.dataset.invoicePreview || item.id === button.dataset.invoiceDownload);
+    const invoice = portalData.invoices.find((item) => item.id === button.dataset.invoicePreview || item.id === button.dataset.invoiceDownload);
     if (!invoice) { button.disabled = false; return; }
     if (preview) startInvoicePreview(invoice);
     try {
@@ -183,7 +230,7 @@ async function loadPortal() {
   filesEl.addEventListener("click", async (event) => {
     const button = event.target.closest("[data-file-id]");
     if (!button) return;
-    const file = (files.data || []).find((item) => item.id === button.dataset.fileId);
+    const file = portalData.files.find((item) => item.id === button.dataset.fileId);
     if (!file) return;
     button.disabled = true;
     try { await downloadFile(file); } catch (error) { alert(error.message || "Download fehlgeschlagen."); } finally { button.disabled = false; }
@@ -211,9 +258,9 @@ offerAcceptConfirm.addEventListener("click", async () => {
 reviewForm.addEventListener("submit", async (event) => {
   event.preventDefault(); reviewMessage.textContent = "";
   if (!reviewForm.reportValidity()) return;
-  const values = new FormData(reviewForm); const customerId = values.get("customer_id") || memberships[0]?.customer_id;
+  const values = new FormData(reviewForm); const selectedMembership = memberships.find((membership) => membership.id === values.get("customer_id")) || activeMembership; const customerId = selectedMembership?.customer_id || activeCustomerId;
   const button = reviewForm.querySelector("button[type=submit]"); button.disabled = true;
-  const { error } = await supabase.from("customer_reviews").insert({ customer_id: customerId, reviewer_name: values.get("reviewer_name").trim(), body: values.get("body").trim() });
+  const { error } = await supabase.from("customer_reviews").insert({ customer_id: customerId, department_id: selectedMembership?.department_id, reviewer_name: values.get("reviewer_name").trim(), body: values.get("body").trim() });
   button.disabled = false;
   if (error) { reviewMessage.textContent = "Die Rezension konnte nicht gesendet werden. Bitte versuche es später erneut."; return; }
   reviewForm.elements.body.value = ""; reviewMessage.classList.add("success"); reviewMessage.textContent = "Danke. Deine Rezension wurde zur Prüfung übermittelt.";

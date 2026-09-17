@@ -41,3 +41,6 @@ verify_jwt = true
 
 [functions.offer-send]
 verify_jwt = true
+
+[functions.invoice-reminders]
+verify_jwt = false

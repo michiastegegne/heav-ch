@@ -16,6 +16,7 @@ const privateBaseCss = await Promise.all([
   readFile(new URL("../portal/assets/portal.css", import.meta.url), "utf8"),
 ]);
 const offerSendSource = await readFile(new URL("../supabase/functions/offer-send/index.ts", import.meta.url), "utf8").catch(() => "");
+const offerSendReliabilityMigration = await readFile(new URL("../supabase/migrations/20260917_offer_send_reliability.sql", import.meta.url), "utf8");
 
 test("Produktionsfrontend ist mit dem HEAV-Supabase-Projekt verbunden", () => {
   assert.equal(HEAV_ADMIN_CONFIG.supabaseUrl, "https://bkazlpqjvbuhwmjcwexn.supabase.co");
@@ -73,7 +74,7 @@ test("Studio verwendet das HEAV-Menü und zugängliche Aktionsicons", () => {
   assert.match(studioHtml, /class="menu-button"[^>]*aria-label="Menü öffnen"[^>]*>Menü<\/button>/);
   assert.match(studioHtml, /class="nav-close"[^>]*aria-label="Menü schliessen"[^>]*>Schliessen<\/button>/);
   assert.match(adminSource, /function actionIconButton/);
-  assert.match(adminSource, /actionIconButton\("edit", "Bearbeiten"/);
+  assert.match(adminSource, /actionIconButton\("pencil", "Bearbeiten"/);
   assert.match(adminSource, /paper-plane/);
   assert.match(adminSource, /customer-contact/);
   assert.match(studioHtml, /href="\/admin\/assets\/crm-theme\.css\?v=anthracite-1"/);
@@ -88,7 +89,7 @@ test("Studio-Iconleisten bleiben in einer kompakten Reihe", () => {
 
 test("Offerten können zuverlässig kopiert und per HEAV-Mail versendet werden", () => {
   assert.match(adminSource, /data-send-offer/);
-  assert.match(adminSource, /sendOffer\(id\)/);
+  assert.match(adminSource, /sendOffer\(id, requestKey\)/);
   assert.match(adminSource, /navigator\.clipboard\.writeText/);
   assert.match(adminSource, /document\.execCommand\("copy"\)/);
   assert.match(offerSendSource, /const allowedOrigins = new Set/);
@@ -100,8 +101,15 @@ test("Offerten können zuverlässig kopiert und per HEAV-Mail versendet werden",
   assert.match(offerSendSource, /offer\.valid_until < new Date\(\)/);
   assert.match(offerSendSource, /customer_portal_memberships/);
   assert.match(offerSendSource, /\.eq\("status", "active"\)/);
-  assert.match(offerSendSource, /offer_events/);
-  assert.match(offerSendSource, /kind: "emailed"/);
+  assert.match(offerSendSource, /requestKey/);
+  assert.match(offerSendSource, /reserve_offer_send/);
+  assert.match(offerSendSource, /complete_offer_send/);
+  assert.match(offerSendSource, /Idempotency-Key.*reservation\.idempotency_key/s);
+  assert.match(offerSendReliabilityMigration, /create table public\.offer_send_attempts/);
+  assert.match(offerSendReliabilityMigration, /create or replace function public\.reserve_offer_send/);
+  assert.match(offerSendReliabilityMigration, /create or replace function public\.complete_offer_send/);
+  assert.match(offerSendReliabilityMigration, /'offer-' \|\| p_offer_id::text \|\| '-' \|\| p_request_key::text/);
+  assert.match(offerSendReliabilityMigration, /'emailed'/);
   assert.match(offerSendSource, /RESEND_API_KEY/);
 });
 

@@ -10,9 +10,10 @@ async function mockPortalSupabase(page) {
     await route.fulfill({
       contentType: "application/javascript",
       body: `const store = {
-        customer_portal_memberships: [{ customer_id: "customer-1", role: "client" }],
+        customer_portal_memberships: [{ id: "membership-1", customer_id: "customer-1", department_id: "department-1", role: "client" }],
+        customer_departments: [{ id: "department-1", customer_id: "customer-1", name: "Berufsbildung" }],
         projects: [],
-        invoices: [{ id: "invoice-1", invoice_number: "HEAV-2026-101", due_date: "2026-10-10", total_rappen: 49500, status: "sent" }],
+        invoices: [{ id: "invoice-1", customer_id: "customer-1", department_id: "department-1", invoice_number: "HEAV-2026-101", due_date: "2026-10-10", total_rappen: 49500, status: "sent" }],
         customer_files: [],
         offers: []
       };
@@ -27,6 +28,7 @@ async function mockPortalSupabase(page) {
             const builder = {
               select() { return builder; },
               eq() { return builder; },
+              in() { return builder; },
               order: async () => result(store[table] || []),
               then(resolve) { return Promise.resolve(result(store[table] || [])).then(resolve); }
             };

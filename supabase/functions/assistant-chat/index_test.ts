@@ -107,6 +107,17 @@ Deno.test("normalizeModelResponse allowlists actions and bounds nested values", 
   assertEquals(result.proposals[1].payload, { invoice_number: "HEAV-2026-001" });
 });
 
+Deno.test("normalizeModelResponse verwirft negative oder nicht numerische Rechnungspreise", () => {
+  const result = normalizeModelResponse({
+    message: "Ich habe den Entwurf geprüft.",
+    proposals: [
+      { id: "negative-price", kind: "invoice", label: "Ungültig", payload: { items: [{ description: "Leistung", quantity: 1, unit_price_rappen: -1 }] } },
+      { id: "text-price", kind: "invoice", label: "Ungültig", payload: { items: [{ description: "Leistung", quantity: 1, unit_price_rappen: "CHF 10" }] } },
+    ],
+  });
+  assertEquals(result.proposals, []);
+});
+
 Deno.test("normalizeModelResponse preserves unknown numeric fields and canonicalizes duplicate proposal IDs", () => {
   const result = normalizeModelResponse({
     message: "Entwürfe",
