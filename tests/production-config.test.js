@@ -7,6 +7,7 @@ const loginSource = await readFile(new URL("../login/assets/login.js", import.me
 const adminSource = await readFile(new URL("../admin/assets/app.js", import.meta.url), "utf8");
 const contactSource = await readFile(new URL("../contact/index.html", import.meta.url), "utf8");
 const studioHtml = await readFile(new URL("../studio/index.html", import.meta.url), "utf8");
+const clientHtml = await readFile(new URL("../client/index.html", import.meta.url), "utf8");
 const invoiceDocumentSource = await readFile(new URL("../supabase/functions/invoice-document/index.ts", import.meta.url), "utf8");
 const actionCss = await readFile(new URL("../admin/assets/admin-actions.css", import.meta.url), "utf8");
 const studioCss = await readFile(new URL("../admin/assets/studio-editorial.css", import.meta.url), "utf8");
@@ -54,7 +55,7 @@ test("Studio lädt das isolierte Editorial-Designsystem in stabiler Reihenfolge"
   assert.match(studioHtml, /<html lang="de-CH" class="studio-editorial-root" data-assistant-enabled="false">/);
   assert.match(studioHtml, /<meta name="theme-color" content="#000000"/);
   assert.match(studioHtml, /<body class="crm-theme studio-editorial-theme">/);
-  assert.match(studioHtml, /src="\/admin\/assets\/app\.js\?v=20260917-crm-status-menu-2"/);
+  assert.match(studioHtml, /src="\/admin\/assets\/app\.js\?v=20260917-crm-status-menu-3"/);
   assert.match(adminSource, /dashboard\.js\?v=20260916-revenue-1/);
   assert.match(studioCss, /--studio-accent:\s*#e8e4dc/);
   assert.doesNotMatch(studioCss, /#d7ff38|--studio-acid/);
@@ -124,6 +125,10 @@ test("Portal bietet owner-geschützte Bearbeitung für Kunden, Projekte, Rechnun
 test("Login loads the cache-safe owner-authority client", async () => {
   const html = await readFile(new URL("../login/index.html", import.meta.url), "utf8");
   assert.match(html, /\/login\/assets\/login\.js\?v=20260916-owner-authority-2/);
+});
+
+test("Portal lädt die atomare Kontowechsel-Logik cache-sicher", () => {
+  assert.match(clientHtml, /src="\/portal\/assets\/portal\.js\?v=crm-multi-membership-3"/);
 });
 
 test("Assistant Edge Function requires gateway JWT verification", async () => {
