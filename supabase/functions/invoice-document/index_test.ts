@@ -134,7 +134,8 @@ Deno.test("E-Mail-Text nennt das Projekt und bleibt gegen Header-Injection gesch
   };
   const settings = { owner_name: "Michias Tegegne", company_name: "HEAV" };
   const text = buildInvoiceText(invoice as never, settings as never);
-  assert(text.includes("Hello Yoyo Bcc: fremd@example.com"));
+  assert(text.includes("Hello Yoyo"));
+  assert(!text.includes("Bcc: fremd@example.com"));
   assert(text.includes("invoice for “Post Production des Yousty Videos”"));
   assert(
     text.includes("Thank you for the opportunity and the great collaboration."),
