@@ -76,7 +76,7 @@ async function mockStudioSupabase(page, overrides = {}) {
               order: async () => result(store[table]),
               maybeSingle: async () => result(store[table][0] || null),
               limit() { return builder; },
-              insert: async (payload) => { const row = { id: crypto.randomUUID(), ...payload }; store[table].push(row); if (table === "customers") store.customer_departments.push({ id: crypto.randomUUID(), customer_id: row.id, owner_id: row.owner_id, name: "Allgemein", code: "GENERAL", is_default: true, active: true }); return result(null); },
+              insert(payload) { const row = { id: crypto.randomUUID(), ...payload }; store[table].push(row); if (table === "customers") store.customer_departments.push({ id: crypto.randomUUID(), customer_id: row.id, owner_id: row.owner_id, name: "Allgemein", code: "GENERAL", is_default: true, active: true }); return { select() { return { single: async () => result({ id: row.id }) }; }, then(resolve) { return Promise.resolve(result(null)).then(resolve); } }; },
               update: (payload) => { builder.__update = payload; return builder; },
               upsert: async (payload) => { store[table] = [{ ...store[table][0], ...payload }]; return result(null); }
             };
@@ -86,6 +86,7 @@ async function mockStudioSupabase(page, overrides = {}) {
             if (name === "is_studio_owner") return result(true);
             if (name === "update_invoice") {
               window.__lastUpdatedInvoiceItems = payload.p_items;
+              window.__lastUpdatedInvoiceStatus = payload.p_status;
             }
             if (name === "create_invoice" || name === "create_invoice_in_department") {
               window.__lastCreatedInvoiceItems = payload.p_items;
@@ -1613,7 +1614,10 @@ test("Studio: Rechnungen, Kunden und Projekte verwenden klare Icon-Aktionen", as
   await mockStudioSupabase(page);
   await page.goto(`${base}/studio/`);
   await page.locator('.nav-link[data-view="customers"]').click();
+  await expect(page.locator(".customer-table")).toBeVisible();
   const customerRow = page.locator(".data-table tbody tr").first();
+  await expect(customerRow).not.toContainText("Portal: Allgemein");
+  await page.screenshot({ path: "qa/admin-customer-status-layout.png", fullPage: true });
   await expect(customerRow.locator(".customer-contact svg")).toBeVisible();
   const edit = customerRow.getByRole("button", { name: "Bearbeiten" });
   await expect(edit.locator("svg")).toBeVisible();
@@ -1621,10 +1625,25 @@ test("Studio: Rechnungen, Kunden und Projekte verwenden klare Icon-Aktionen", as
   const editBounds = await edit.boundingBox();
   expect(editBounds.width).toBeGreaterThanOrEqual(38);
   expect(editBounds.height).toBeGreaterThanOrEqual(38);
+  await page.getByRole("button", { name: "Kunde erfassen" }).click();
+  const customerDialog = page.locator("#editor-dialog");
+  const additional = customerDialog.locator(".form-disclosure");
+  await expect(additional).toBeVisible();
+  await expect(additional).not.toHaveAttribute("open", "");
+  await additional.locator("summary").click();
+  await expect(additional.locator('[name="department_name"]')).toBeVisible();
+  await customerDialog.getByRole("button", { name: "Dialog schliessen" }).click();
   await page.locator('.nav-link[data-view="invoices"]').click();
   const invoiceRow = page.locator(".data-table tbody tr").filter({ hasText: "HEAV-2026-001" });
   await invoiceRow.getByRole("button", { name: "Aktionen für HEAV-2026-001" }).click();
   await expect(invoiceRow.getByRole("button", { name: "Rechnung erneut senden" }).locator("svg")).toBeVisible();
+  const statusMenu = invoiceRow.locator(".invoice-status-menu");
+  await expect(statusMenu.locator("summary")).toContainText("Versendet");
+  await statusMenu.locator("summary").click();
+  await expect(statusMenu.getByRole("menuitem", { name: "Bezahlt" })).toBeVisible();
+  await expect(statusMenu.getByRole("menuitem", { name: "Storniert" })).toBeVisible();
+  await statusMenu.getByRole("menuitem", { name: "Überfällig" }).click();
+  await expect.poll(() => page.evaluate(() => window.__lastUpdatedInvoiceStatus)).toBe("overdue");
   const actionLayout = await invoiceRow.locator(".table-actions").evaluate((toolbar) => {
     const buttons = [...toolbar.querySelectorAll("button")].map((button) => button.getBoundingClientRect());
     return {
@@ -1756,6 +1775,9 @@ test("Studio: Projekte werden einer Kundenabteilung zugeordnet", async ({ page }
   await page.locator('[data-create="project"]').first().click();
   await page.locator('select[name="customer_id"]').selectOption("c1");
   const department = page.locator('select[name="department_id"]');
+  await expect(page.locator(".form-disclosure")).toBeVisible();
+  await expect(department).toBeHidden();
+  await page.locator(".form-disclosure summary").click();
   await expect(department).toBeVisible();
   await expect(department).toContainText("Berufsbildung");
   await expect(department).toContainText("Jugend");
