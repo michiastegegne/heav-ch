@@ -886,13 +886,13 @@ body.studio-editorial-theme .customer-table th:nth-child(5) { width: 12%; }
 body.studio-editorial-theme .customer-table td { overflow-wrap: anywhere; }
 body.studio-editorial-theme .customer-table .customer-name { max-width: 100%; overflow-wrap: anywhere; }
 body.studio-editorial-theme .invoice-record:has(.invoice-status-menu[open]) { position: relative; z-index: 20; }
-body.studio-editorial-theme .invoice-status-menu { position: relative; display: inline-block; z-index: 30; }
+body.studio-editorial-theme .invoice-status-menu { position: relative; display: inline-grid; max-width: 100%; z-index: 30; }
 body.studio-editorial-theme .invoice-status-menu > summary { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; transition: border-color .16s ease, background-color .16s ease; }
 body.studio-editorial-theme .invoice-status-menu > summary::-webkit-details-marker { display: none; }
 body.studio-editorial-theme .invoice-status-menu > summary > .status-chevron { color: currentColor; font-size: 13px; line-height: 1; transform: translateY(-1px); }
 body.studio-editorial-theme .invoice-status-menu[open] > summary { border-color: currentColor; background: color-mix(in srgb, currentColor 12%, #111416); }
 body.studio-editorial-theme .status-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 14%, transparent); }
-body.studio-editorial-theme .invoice-status-options { position: absolute; top: calc(100% + 9px); left: 0; z-index: 40; display: grid; min-width: 220px; gap: 2px; padding: 7px; border: 1px solid rgba(214, 235, 253, .22); border-radius: 13px; background: #101315; box-shadow: 0 22px 50px rgba(0, 0, 0, .56); }
+body.studio-editorial-theme .invoice-status-options { position: static; z-index: 40; display: grid; width: min(280px, calc(100vw - 64px)); min-width: 220px; max-width: 100%; margin-top: 9px; gap: 2px; padding: 7px; border: 1px solid rgba(214, 235, 253, .22); border-radius: 13px; background: #101315; box-shadow: 0 22px 50px rgba(0, 0, 0, .56); }
 body.studio-editorial-theme .invoice-status-options::before { content: "STATUS AUSWÄHLEN"; padding: 5px 10px 7px; color: #737b7e; font-size: 9px; font-weight: 700; letter-spacing: .12em; }
 body.studio-editorial-theme .invoice-status-options button { display: flex; width: 100%; align-items: center; gap: 11px; min-height: 39px; padding: 0 10px; border: 0; border-radius: 8px; color: #d5d7d8; background: transparent; font: inherit; font-size: 13px; line-height: 1.25; text-align: left; white-space: nowrap; }
 body.studio-editorial-theme .invoice-status-options button:hover,

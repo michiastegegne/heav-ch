@@ -1669,6 +1669,22 @@ test("Studio: Rechnungen, Kunden und Projekte verwenden klare Icon-Aktionen", as
   expect(actionLayout.actionTopSpread).toBeLessThanOrEqual(1);
   await page.close();
 });
+test("Studio: ein offenes Rechnungsstatusmenü verschiebt die folgende Zeile", async ({ page }) => {
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  await page.locator('.nav-link[data-view="invoices"]').click();
+  const firstStatusMenu = page.locator(".invoice-table tbody tr").first().locator(".invoice-status-menu");
+  await firstStatusMenu.locator("summary").click();
+  const layout = await firstStatusMenu.evaluate((menu) => {
+    const options = menu.querySelector(".invoice-status-options");
+    const nextRow = menu.closest("tr")?.nextElementSibling;
+    return {
+      menuBottom: options?.getBoundingClientRect().bottom,
+      nextRowTop: nextRow?.getBoundingClientRect().top,
+    };
+  });
+  expect(layout.menuBottom).toBeLessThanOrEqual(layout.nextRowTop + 1);
+});
 test("Studio: Escape bestätigt keine erneut geöffnete Löschabfrage", async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   await mockStudioSupabase(page);
