@@ -44,7 +44,7 @@ jobs:
         run: deno check --config supabase/functions/deno.json supabase/functions/*/index.ts
 
       - name: Run Edge Function tests
-        run: deno test --no-check --allow-env --allow-read --allow-write supabase/functions/*/*_test.ts
+        run: deno test --config supabase/functions/deno.json --no-check --allow-env --allow-read --allow-write supabase/functions/*/*_test.ts
 
       - name: Start static server
         run: python3 -m http.server 4180 --bind 127.0.0.1 > /tmp/heav-http.log 2>&1 &
