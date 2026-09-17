@@ -1617,7 +1617,6 @@ test("Studio: Rechnungen, Kunden und Projekte verwenden klare Icon-Aktionen", as
   await expect(page.locator(".customer-table")).toBeVisible();
   const customerRow = page.locator(".data-table tbody tr").first();
   await expect(customerRow).not.toContainText("Portal: Allgemein");
-  await page.screenshot({ path: "qa/admin-customer-status-layout.png", fullPage: true });
   await expect(customerRow.locator(".customer-contact svg")).toBeVisible();
   const edit = customerRow.getByRole("button", { name: "Bearbeiten" });
   await expect(edit.locator("svg")).toBeVisible();
