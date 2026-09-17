@@ -83,6 +83,8 @@ function showDispatchSuccess(title = "Rechnung versendet", copy = "Der sichere V
 }
 
 function confirmAction({ kicker = "BESTÄTIGEN", title, copy, confirmLabel = "Bestätigen", destructive = false }) {
+  if (actionConfirmDialog.open) return Promise.resolve(false);
+  actionConfirmDialog.returnValue = "";
   actionConfirmKicker.textContent = kicker;
   actionConfirmTitle.textContent = title;
   actionConfirmCopy.textContent = copy;

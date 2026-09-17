@@ -3,6 +3,18 @@ import { HEAV_ADMIN_CONFIG, isBackendConfigured } from "/admin/config.js";
 const form = document.querySelector("#login-form");
 const message = document.querySelector("#login-message");
 const button = form.querySelector("button");
+// Only the canonical customer workspace may survive the login round-trip.
+// Parse before allowing it so backslashes, traversal and external URLs fail closed.
+function customerReturnPath() {
+  const next = new URLSearchParams(window.location.search).get("next");
+  if (!next || !next.startsWith("/") || next.startsWith("//")) return "";
+  try {
+    const target = new URL(next, window.location.origin);
+    if (target.origin !== window.location.origin || target.pathname !== "/client/") return "";
+    return `${target.pathname}${target.search}${target.hash}`;
+  } catch { return ""; }
+}
+const returnPath = customerReturnPath();
 const successMarkup = (title, copy) => `<span class="send-plane" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M21 3 10 14"/><path d="m21 3-7 18-4-7-7-4Z"/></svg></span><span class="send-success-copy"><strong>${title}</strong><small>${copy}</small></span><span class="send-check" aria-hidden="true">✓</span>`;
 
 if (!isBackendConfigured()) {
@@ -39,7 +51,7 @@ if (!isBackendConfigured()) {
     try {
       const destination = await workspaceDestination(data.session);
       if (destination) {
-        window.location.replace(destination);
+        window.location.replace(destination === "/client/" && returnPath ? returnPath : destination);
       } else {
         await supabase.auth.signOut();
         message.textContent = "Für dieses Konto besteht kein freigegebener Zugang.";
@@ -61,7 +73,7 @@ if (!isBackendConfigured()) {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/login/`,
+        emailRedirectTo: `${window.location.origin}/login/${returnPath ? `?next=${encodeURIComponent(returnPath)}` : ""}`,
         shouldCreateUser: false,
       },
     });

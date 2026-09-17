@@ -26,7 +26,15 @@ export function applyEmailTemplate(template: string, values: Record<string, unkn
 export async function logEmail(
   client: { from: (table: string) => any },
   payload: Record<string, unknown>,
-) {
-  const { error } = await client.from("email_delivery_logs").insert(payload);
-  if (error) console.error("email log write failed", error);
+): Promise<{ error: unknown | null }> {
+  // Auditing is secondary: a transport exception must not turn an accepted
+  // provider send into a failed send (and thereby trigger duplicate delivery).
+  try {
+    const { error } = await client.from("email_delivery_logs").insert(payload);
+    if (error) console.error("email log write failed", error);
+    return { error: error ?? null };
+  } catch (error) {
+    console.error("email log write failed", error);
+    return { error };
+  }
 }

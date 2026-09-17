@@ -1,3 +1,5 @@
+import { RequestBodyError, readJsonBody } from "../_shared/http.ts";
+
 const allowedOrigins = new Set([
   "https://heav.ch",
   "https://www.heav.ch",
@@ -239,8 +241,19 @@ Deno.serve(async (request) => {
     return responseJson({ error: "Origin not allowed." }, 403, origin);
   }
 
+  let enquiry: ContactEnquiry;
   try {
-    const enquiry = parseEnquiry(await request.json());
+    enquiry = parseEnquiry(await readJsonBody(request));
+  } catch (error) {
+    const status = error instanceof RequestBodyError ? error.status : 400;
+    return responseJson(
+      { error: error instanceof Error ? error.message : "Please complete the required fields." },
+      status,
+      origin,
+    );
+  }
+
+  try {
     // A filled honeypot is treated as a successful submission without sending mail.
     if (enquiry.website) return responseJson({ ok: true }, 200, origin);
 
@@ -279,11 +292,9 @@ Deno.serve(async (request) => {
     console.error("contact enquiry failed", error);
     return responseJson(
       {
-        error: error instanceof Error
-          ? error.message
-          : "Unable to send your enquiry.",
+        error: "Unable to send your enquiry. Please try again later.",
       },
-      400,
+      503,
       origin,
     );
   }

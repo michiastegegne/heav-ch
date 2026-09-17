@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { assertDarkTheme } from './theme-assertions.js';
 const base = process.env.HEAV_QA_BASE || 'http://127.0.0.1:4180';
 
-async function fixture(page, { offers = true, invoices = true, empty = false, multi = false } = {}) {
+async function fixture(page, { offers = true, invoices = true, empty = false, multi = false, failCustomerId = "" } = {}) {
   const store = {
     customer_portal_memberships: multi ? [{ id: 'membership-1', customer_id: 'customer-1', department_id: 'department-1', role: 'client' }, { id: 'membership-2', customer_id: 'customer-2', department_id: 'department-2', role: 'client' }] : [{ id: 'membership-1', customer_id: 'customer-1', department_id: 'department-1', role: 'client' }],
     customer_departments: [{ id: 'department-1', customer_id: 'customer-1', name: 'Berufsbildung' }, ...(multi ? [{ id: 'department-2', customer_id: 'customer-2', name: 'Jugend' }] : [])],
@@ -11,10 +11,10 @@ async function fixture(page, { offers = true, invoices = true, empty = false, mu
     offers: offers && !empty ? [{ id: 'offer-1', customer_id: 'customer-1', department_id: 'department-1', offer_number: '2026-010', title: 'Eventfilm mit Social-Media-Versionen', status: 'sent', valid_until: '2099-12-31', total_rappen: 49500, terms: 'Eine Korrekturrunde ist enthalten.', offer_items: [{ position: 1, description: 'Konzeption und Produktion des Eventfilms', quantity: 1, unit_price_rappen: 49500 }] }, ...(multi ? [{ id: 'offer-2', customer_id: 'customer-2', department_id: 'department-2', offer_number: '2026-011', title: 'Beta Kampagne', status: 'sent', valid_until: '2099-12-31', total_rappen: 65000, terms: 'Eine Korrekturrunde ist enthalten.', offer_items: [] }] : [])] : [],
     customer_files: empty ? [] : [{ id: 'file-1', customer_id: 'customer-1', department_id: 'department-1', title: 'Finaler Eventfilm', original_filename: 'eventfilm-finale-version.mp4', kind: 'video', download_enabled: true }, ...(multi ? [{ id: 'file-2', customer_id: 'customer-2', department_id: 'department-2', title: 'Beta Dateien', original_filename: 'beta-dateien.zip', kind: 'document', download_enabled: true }] : [])],
   };
-  await page.route('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm', route => route.fulfill({ contentType: 'application/javascript', body: `const store = ${JSON.stringify(store)};
+  await page.route('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm', route => route.fulfill({ contentType: 'application/javascript', body: `const store = ${JSON.stringify(store)}; const failCustomerId = ${JSON.stringify(failCustomerId)};
     export function createClient() { return {
       auth: { getSession: async () => ({ data: { session: { access_token: 'fixture-only', user: { id: 'client-1', user_metadata: {} } } } }), signOut: async () => ({ error: null }) },
-      from(table) { const q = { customerId: null, departmentId: null, ids: null, select() { return q; }, eq(column, value) { if (column === 'customer_id') q.customerId = value; if (column === 'department_id') q.departmentId = value; return q; }, in(column, values) { if (column === 'id') q.ids = values; return q; }, order() { return q; }, then(resolve) { const data = (store[table] || []).filter(item => (!q.customerId || item.customer_id === q.customerId) && (!q.departmentId || item.department_id === q.departmentId) && (!q.ids || q.ids.includes(item.id))); return new Promise(done => setTimeout(() => done({ data, error: null }), Number(window.__portalLoadDelay || 0))).then(resolve); } }; return q; },
+      from(table) { const q = { customerId: null, departmentId: null, ids: null, select() { return q; }, eq(column, value) { if (column === 'customer_id') q.customerId = value; if (column === 'department_id') q.departmentId = value; return q; }, in(column, values) { if (column === 'id') q.ids = values; return q; }, order() { return q; }, then(resolve) { const data = (store[table] || []).filter(item => (!q.customerId || item.customer_id === q.customerId) && (!q.departmentId || item.department_id === q.departmentId) && (!q.ids || q.ids.includes(item.id))); const error = q.customerId === failCustomerId ? new Error('Fixture data error') : null; return new Promise(done => setTimeout(() => done({ data, error }), Number(window.__portalLoadDelay || 0))).then(resolve); } }; return q; },
       rpc: async () => ({ error: null }), storage: { from: () => ({ createSignedUrl: async () => ({ error: new Error('Fixture has no file download') }) }) }
     }; }` }));
 }
@@ -93,6 +93,18 @@ test('Kunden-Arbeitsplatz: Kontowechsel zeigt einen zugänglichen Ladezustand', 
   await expect(page.locator('#portal-customer-loading')).toBeHidden();
   await expect(page.locator('#portal')).not.toHaveAttribute('aria-busy', 'true');
   await expect(page.locator('#portal-projects')).toContainText('Beta Kampagne');
+});
+
+test('Kunden-Arbeitsplatz: fehlgeschlagener Kontowechsel behält den vorherigen Kontext', async ({ page }) => {
+  await fixture(page, { multi: true, failCustomerId: 'customer-2' });
+  page.on('dialog', dialog => dialog.dismiss());
+  await page.goto(`${base}/client/`);
+  const selector = page.locator('#portal-customer-select');
+  await selector.selectOption('membership-2');
+  await expect(selector).toHaveValue('membership-1');
+  await expect(page.locator('#portal-projects')).toContainText('Eventfilm – ein gemeinsamer Auftritt');
+  await expect(page.locator('#portal-projects')).not.toContainText('Beta Kampagne');
+  await expect(page.locator('#portal')).not.toHaveAttribute('aria-busy', 'true');
 });
 
 

@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import { RequestBodyError, readJsonBody } from "../_shared/http.ts";
 
 const allowedOrigins = new Set(["https://heav.ch", "https://www.heav.ch", "http://127.0.0.1:4179", "http://localhost:4179"]);
 const corsHeaders = {
@@ -15,7 +16,7 @@ Deno.serve(async (request) => {
   if (request.method !== "POST") return Response.json({ error: "Method not allowed" }, { status: 405, headers });
   if (origin && !allowedOrigins.has(origin)) return Response.json({ error: "Origin not allowed" }, { status: 403, headers });
   try {
-    const body = await request.json();
+    const body = await readJsonBody(request) as Record<string, unknown>;
     const contactName = text(body.contactName, 160);
     const company = text(body.company, 200);
     const email = text(body.email, 254).toLowerCase();
@@ -47,6 +48,8 @@ Deno.serve(async (request) => {
     return Response.json({ ok: true }, { headers });
   } catch (error) {
     console.error("portal access request rejected", error);
-    return Response.json({ error: "Request could not be accepted." }, { status: 400, headers });
+    const status = error instanceof RequestBodyError ? error.status : 400;
+    const message = error instanceof RequestBodyError ? error.message : "Request could not be accepted.";
+    return Response.json({ error: message }, { status, headers });
   }
 });

@@ -1666,6 +1666,24 @@ test("Studio: Rechnungen, Kunden und Projekte verwenden klare Icon-Aktionen", as
   expect(actionLayout.actionTopSpread).toBeLessThanOrEqual(1);
   await page.close();
 });
+test("Studio: Escape bestätigt keine erneut geöffnete Löschabfrage", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  await page.locator('.nav-link[data-view="customers"]').click();
+  const first = page.locator('.customer-table tr').filter({ hasText: 'Nordlicht AG' });
+  await first.getByRole('button', { name: 'Kunde löschen: Nordlicht AG' }).click();
+  await page.locator('#action-confirm-button').click();
+  await expect(first).toHaveCount(0);
+  const second = page.locator('.customer-table tr').filter({ hasText: 'Atelier Morgen' });
+  await second.getByRole('button', { name: 'Kunde löschen: Atelier Morgen' }).click();
+  await expect(page.locator('#action-confirm-dialog')).toHaveJSProperty('returnValue', '');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#action-confirm-dialog')).not.toBeVisible();
+  await expect(second).toBeVisible();
+  await page.close();
+});
+
 test("Studio: E-Mail-Verlauf zeigt Versandtext und editierbare Mailvorlagen", async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   await mockStudioSupabase(page);

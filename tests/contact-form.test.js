@@ -93,6 +93,9 @@ test("Kontakt-Edge-Function validiert, schützt und versendet über den bestehen
   assert.match(functionSource, /website/);
   assert.match(functionSource, /Access-Control-Allow-Origin/);
   assert.match(functionSource, /Project enquiry/);
+  assert.match(functionSource, /readJsonBody\(request\)/);
+  assert.match(functionSource, /RequestBodyError/);
+  assert.match(functionSource, /Unable to send your enquiry\. Please try again later\./);
   assert.match(supabaseConfig, /\[functions\.contact-enquiry\][\s\S]*verify_jwt = false/);
 });
 

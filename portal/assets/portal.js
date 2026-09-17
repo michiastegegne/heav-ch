@@ -115,14 +115,15 @@ function renderCustomerSwitcher() {
 async function setActiveMembership(membershipId) {
   const membership = memberships.find((item) => item.id === membershipId);
   if (!membership) return;
-  activeMembership = membership;
-  activeCustomerId = membership.customer_id;
   if (customerSelect) customerSelect.value = membership.id;
   if (customerLoading) customerLoading.hidden = false;
   if (portal) portal.setAttribute("aria-busy", "true");
   if (customerSelect) customerSelect.disabled = true;
   try {
-    renderCustomerData(await loadCustomerData(membership));
+    const data = await loadCustomerData(membership);
+    activeMembership = membership;
+    activeCustomerId = membership.customer_id;
+    renderCustomerData(data);
   } finally {
     if (customerLoading) customerLoading.hidden = true;
     if (portal) portal.removeAttribute("aria-busy");
