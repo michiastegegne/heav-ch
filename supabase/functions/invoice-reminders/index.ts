@@ -2,6 +2,8 @@ import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 
 const validMailbox = (value: unknown) => typeof value === "string" && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value.trim());
 const escapeHtml = (value: unknown) => String(value ?? "").replace(/[&<>\"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char] || char));
+import { applyEmailTemplate, loadEmailTemplate, logEmail } from "../_shared/email.ts";
+
 const formatCHF = (rappen: number) => `CHF ${(Number(rappen || 0) / 100).toFixed(2).replace(".", ",")}`;
 
 Deno.serve(async (request) => {
@@ -24,9 +26,16 @@ Deno.serve(async (request) => {
     const runDate = new Date().toISOString().slice(0, 10);
     const { data: reminders, error: claimError } = await service.rpc("claim_invoice_reminders", { p_run_date: runDate });
     if (claimError) throw claimError;
+    const claimedReminders = (reminders || []) as Array<Record<string, any>>;
+    const invoiceIds = claimedReminders.map((reminder) => reminder.invoice_id).filter(Boolean);
+    const { data: invoiceRows, error: invoiceLookupError } = invoiceIds.length
+      ? await service.from("invoices").select("id, customer_id").in("id", invoiceIds)
+      : { data: [], error: null };
+    if (invoiceLookupError) throw invoiceLookupError;
+    const customerByInvoice = new Map((invoiceRows || []).map((invoice) => [invoice.id, invoice.customer_id]));
     let sent = 0;
     let failed = 0;
-    for (const reminder of reminders || []) {
+    for (const reminder of claimedReminders) {
       const recipient = String(reminder.recipient_email || "").trim().toLowerCase();
       if (!validMailbox(recipient)) {
         failed += 1;
@@ -34,9 +43,15 @@ Deno.serve(async (request) => {
         continue;
       }
       const firstName = String(reminder.recipient_first_name || "").trim() || "Guten Tag";
-      const subject = `Zahlungserinnerung · Rechnung ${reminder.invoice_number}`;
-      const text = `Hallo ${firstName}\n\nfreundliche Erinnerung: Die Rechnung ${reminder.invoice_number} über ${formatCHF(reminder.total_rappen)} ist am ${reminder.due_date} fällig.\n\nBitte beachte die Zahlungsangaben auf der Rechnung.\n\nFreundliche Grüsse\n${reminder.company_name || "HEAV"}`;
-      const html = `<div style="font-family:Arial,Helvetica,sans-serif;color:#171816;line-height:1.6"><p>Hallo ${escapeHtml(firstName)}</p><p>freundliche Erinnerung: Die Rechnung <strong>${escapeHtml(reminder.invoice_number)}</strong> über <strong>${escapeHtml(formatCHF(reminder.total_rappen))}</strong> ist am <strong>${escapeHtml(reminder.due_date)}</strong> fällig.</p><p>Bitte beachte die Zahlungsangaben auf der Rechnung.</p><p>Freundliche Grüsse<br>${escapeHtml(reminder.company_name || "HEAV")}</p></div>`;
+      const template = await loadEmailTemplate(service, reminder.owner_id, "invoice_reminder", {
+        subject_template: "Zahlungserinnerung · Rechnung {{invoice_number}}",
+        text_template: "Hallo {{first_name}}\n\nfreundliche Erinnerung: Die Rechnung {{invoice_number}} über {{amount}} ist am {{due_date}} fällig.\n\nBitte beachte die Zahlungsangaben auf der Rechnung.\n\nFreundliche Grüsse\n{{company_name}}",
+      });
+      const values = { first_name: firstName, invoice_number: reminder.invoice_number, amount: formatCHF(reminder.total_rappen), due_date: reminder.due_date, company_name: reminder.company_name || "HEAV" };
+      const subject = applyEmailTemplate(template.subject_template, values);
+      const text = applyEmailTemplate(template.text_template, values);
+      const htmlText = text.split(/\n{2,}/u).map((paragraph) => `<p>${escapeHtml(paragraph).replace(/\n/gu, "<br>")}</p>`).join("");
+      const html = `<div style="font-family:Arial,Helvetica,sans-serif;color:#171816;line-height:1.6">${htmlText}</div>`;
       try {
         const response = await fetch("https://api.resend.com/emails", {
           method: "POST",
@@ -46,9 +61,11 @@ Deno.serve(async (request) => {
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(String(payload.message || "Reminder email failed"));
         await service.rpc("complete_invoice_reminder", { p_reminder_id: reminder.reminder_id, p_success: true, p_provider_id: payload.id || null });
+        await logEmail(service, { owner_id: reminder.owner_id, template_key: "invoice_reminder", status: "sent", recipient_email: recipient, recipient_name: firstName, customer_id: customerByInvoice.get(reminder.invoice_id) || null, invoice_id: reminder.invoice_id, subject, text_body: text, provider_id: payload.id || null, idempotency_key: reminder.idempotency_key });
         sent += 1;
       } catch (error) {
-        await service.rpc("complete_invoice_reminder", { p_reminder_id: reminder.reminder_id, p_success: false, p_error: error instanceof Error ? error.message : "Reminder email failed" });
+        await logEmail(service, { owner_id: reminder.owner_id, template_key: "invoice_reminder", status: "failed", recipient_email: recipient, recipient_name: firstName, customer_id: customerByInvoice.get(reminder.invoice_id) || null, invoice_id: reminder.invoice_id, subject, text_body: text, error_message: error instanceof Error ? error.message : "Reminder email failed", idempotency_key: reminder.idempotency_key });
+        await service.rpc("complete_invoice_reminder", { p_reminder_id: reminder.reminder_id, p_success: false, p_error: error instanceof Error ? error.message : "Invoice reminder failed" });
         failed += 1;
       }
     }

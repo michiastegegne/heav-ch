@@ -46,7 +46,7 @@ test("Studio lädt das isolierte Editorial-Designsystem in stabiler Reihenfolge"
     "/admin/assets/admin-actions.css?v=20260910-layout",
     "/admin/assets/workspace.css?v=20260917-crm-layout-status",
     "/admin/assets/crm-theme.css?v=anthracite-1",
-    "/admin/assets/studio-editorial.css?v=editorial-11",
+    "/admin/assets/studio-editorial.css?v=editorial-12",
   ];
   const positions = expectedAssets.map((asset) => studioHtml.indexOf(`href="${asset}"`));
   assert.ok(positions.every((position) => position >= 0), "alle Studio-Stylesheets sind versioniert eingebunden");
@@ -54,7 +54,7 @@ test("Studio lädt das isolierte Editorial-Designsystem in stabiler Reihenfolge"
   assert.match(studioHtml, /<html lang="de-CH" class="studio-editorial-root" data-assistant-enabled="false">/);
   assert.match(studioHtml, /<meta name="theme-color" content="#000000"/);
   assert.match(studioHtml, /<body class="crm-theme studio-editorial-theme">/);
-  assert.match(studioHtml, /src="\/admin\/assets\/app\.js\?v=20260917-crm-layout-status"/);
+  assert.match(studioHtml, /src="\/admin\/assets\/app\.js\?v=20260917-crm-email-log"/);
   assert.match(adminSource, /dashboard\.js\?v=20260916-revenue-1/);
   assert.match(studioCss, /--studio-accent:\s*#e8e4dc/);
   assert.doesNotMatch(studioCss, /#d7ff38|--studio-acid/);

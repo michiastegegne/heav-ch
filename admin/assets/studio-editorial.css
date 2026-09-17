@@ -885,20 +885,54 @@ body.studio-editorial-theme .customer-table th:nth-child(4) { width: 17%; }
 body.studio-editorial-theme .customer-table th:nth-child(5) { width: 12%; }
 body.studio-editorial-theme .customer-table td { overflow-wrap: anywhere; }
 body.studio-editorial-theme .customer-table .customer-name { max-width: 100%; overflow-wrap: anywhere; }
-body.studio-editorial-theme .invoice-status-menu { position: relative; display: inline-block; }
-body.studio-editorial-theme .invoice-status-menu > summary { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; list-style: none; }
+body.studio-editorial-theme .invoice-status-menu { position: relative; display: inline-block; z-index: 3; }
+body.studio-editorial-theme .invoice-status-menu > summary { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; transition: border-color .16s ease, background-color .16s ease; }
 body.studio-editorial-theme .invoice-status-menu > summary::-webkit-details-marker { display: none; }
-body.studio-editorial-theme .invoice-status-menu > summary > span { color: currentColor; font-size: 12px; line-height: 1; }
-body.studio-editorial-theme .invoice-status-options { position: absolute; top: calc(100% + 7px); left: 0; z-index: 20; display: grid; min-width: 170px; padding: 5px; border: 1px solid rgba(214, 235, 253, .2); border-radius: 10px; background: #090b0d; box-shadow: 0 18px 36px rgba(0, 0, 0, .4); }
-body.studio-editorial-theme .invoice-status-options button { min-height: 36px; padding: 0 10px; border: 0; border-radius: 7px; color: #d5d7d8; background: transparent; font: inherit; font-size: 12px; text-align: left; }
+body.studio-editorial-theme .invoice-status-menu > summary > .status-chevron { color: currentColor; font-size: 13px; line-height: 1; transform: translateY(-1px); }
+body.studio-editorial-theme .invoice-status-menu[open] > summary { border-color: currentColor; background: color-mix(in srgb, currentColor 12%, #111416); }
+body.studio-editorial-theme .status-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 14%, transparent); }
+body.studio-editorial-theme .invoice-status-options { position: absolute; top: calc(100% + 9px); left: 0; z-index: 30; display: grid; min-width: 210px; gap: 2px; padding: 7px; border: 1px solid rgba(214, 235, 253, .22); border-radius: 13px; background: #101315; box-shadow: 0 22px 50px rgba(0, 0, 0, .56); }
+body.studio-editorial-theme .invoice-status-options::before { content: "STATUS AUSWÄHLEN"; padding: 5px 10px 7px; color: #737b7e; font-size: 9px; font-weight: 700; letter-spacing: .12em; }
+body.studio-editorial-theme .invoice-status-options button { display: flex; align-items: center; gap: 11px; min-height: 39px; padding: 0 10px; border: 0; border-radius: 8px; color: #d5d7d8; background: transparent; font: inherit; font-size: 13px; text-align: left; }
 body.studio-editorial-theme .invoice-status-options button:hover,
-body.studio-editorial-theme .invoice-status-options button:focus-visible { background: #171a1c; color: #fff; }
-body.studio-editorial-theme .invoice-status-options button[aria-current="true"] { color: #8f9496; }
+body.studio-editorial-theme .invoice-status-options button:focus-visible { background: #1d2224; color: #fff; outline: none; }
+body.studio-editorial-theme .invoice-status-options .status-check { margin-left: auto; color: currentColor; font-size: 14px; }
+body.studio-editorial-theme .status-option--draft { color: #c5c8ca !important; }
+body.studio-editorial-theme .status-option--sent { color: #d8c58b !important; }
+body.studio-editorial-theme .status-option--paid { color: #83d9ad !important; }
+body.studio-editorial-theme .status-option--overdue { color: #ffb36c !important; }
+body.studio-editorial-theme .status-option--cancelled { color: #ff9089 !important; }
 body.studio-editorial-theme .form-disclosure { border: 1px solid rgba(214, 235, 253, .16); border-radius: 10px; background: #0c0f11; }
 body.studio-editorial-theme .form-disclosure > summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 46px; padding: 0 14px; cursor: pointer; color: #eef0f1; font-size: 13px; font-weight: 600; list-style: none; }
 body.studio-editorial-theme .form-disclosure > summary::-webkit-details-marker { display: none; }
 body.studio-editorial-theme .form-disclosure > summary::after { content: "+"; color: #9ea4a6; font-size: 18px; font-weight: 400; }
 body.studio-editorial-theme .form-disclosure[open] > summary::after { content: "–"; }
+
+body.studio-editorial-theme .email-summary { grid-column: 1 / -1; }
+body.studio-editorial-theme .email-summary-latest { display: flex; align-items: center; gap: 14px; padding-top: 14px; }
+body.studio-editorial-theme .email-summary-latest > div { display: grid; gap: 4px; min-width: 0; }
+body.studio-editorial-theme .email-summary-latest strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.studio-editorial-theme .email-summary-latest small { color: #8b9294; }
+body.studio-editorial-theme .emails-view { display: grid; gap: 22px; }
+body.studio-editorial-theme .email-templates,
+body.studio-editorial-theme .email-log { padding: 22px; border: 1px solid rgba(214, 235, 253, .13); border-radius: 14px; background: #0a0d0f; }
+body.studio-editorial-theme .email-template-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+body.studio-editorial-theme .email-template-card { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; min-height: 145px; padding: 18px; border: 1px solid rgba(214, 235, 253, .12); border-radius: 11px; background: #101315; }
+body.studio-editorial-theme .email-template-card h3 { margin: 8px 0 5px; }
+body.studio-editorial-theme .email-template-card p { margin: 0 0 10px; color: #a0a7a9; font-size: 13px; }
+body.studio-editorial-theme .email-template-card small { display: block; max-width: 430px; color: #737b7e; font-size: 11px; line-height: 1.5; }
+body.studio-editorial-theme .email-log { display: grid; gap: 12px; }
+body.studio-editorial-theme .email-log-row { display: grid; grid-template-columns: 150px minmax(0, 1fr) 170px; gap: 18px; align-items: start; padding: 16px 0; border-top: 1px solid rgba(214, 235, 253, .1); }
+body.studio-editorial-theme .email-log-meta,
+body.studio-editorial-theme .email-log-main,
+body.studio-editorial-theme .email-log-result { display: grid; gap: 7px; min-width: 0; }
+body.studio-editorial-theme .email-log-meta small,
+body.studio-editorial-theme .email-log-main > span,
+body.studio-editorial-theme .email-log-result small { color: #858d90; font-size: 12px; }
+body.studio-editorial-theme .email-log-main details { margin-top: 5px; }
+body.studio-editorial-theme .email-log-main summary { color: var(--studio-accent); cursor: pointer; font-size: 12px; }
+body.studio-editorial-theme .email-log-main pre { max-height: 220px; margin: 10px 0 0; padding: 12px; overflow: auto; border: 1px solid rgba(214, 235, 253, .1); border-radius: 8px; color: #d5d7d8; background: #070909; font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; }
+body.studio-editorial-theme .email-log-result code { overflow-wrap: anywhere; color: #b9c0c2; font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; }
 body.studio-editorial-theme .form-disclosure > summary small { color: #8f9496; font-size: 11px; font-weight: 400; }
 body.studio-editorial-theme .form-disclosure > .form-grid { padding: 14px; border-top: 1px solid rgba(214, 235, 253, .12); }
 body.studio-editorial-theme .department-invite-list { display: grid; gap: 8px; }
@@ -1637,6 +1671,10 @@ body.studio-editorial-theme .bottom-nav { display: none; }
   body.studio-editorial-theme .assistant-send { width: 44px; min-width: 44px; padding: 0; font-size: 0; }
   body.studio-editorial-theme .assistant-send span { font-size: 16px; }
   body.studio-editorial-theme .toast { bottom: max(16px, env(safe-area-inset-bottom)); }
+  body.studio-editorial-theme .email-template-grid { grid-template-columns: 1fr; }
+  body.studio-editorial-theme .email-template-card { align-items: flex-start; flex-direction: column; }
+  body.studio-editorial-theme .email-log-row { grid-template-columns: 1fr; gap: 10px; }
+  body.studio-editorial-theme .email-log-result:empty { display: none; }
 }
 
 @media (max-width: 560px) {

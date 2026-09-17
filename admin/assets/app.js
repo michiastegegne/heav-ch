@@ -45,6 +45,7 @@ document.addEventListener("focusin", (event) => {
 
 const viewNames = {
   dashboard: "Übersicht",
+  emails: "E-Mail-Verlauf",
   customers: "Kunden",
   projects: "Projekte",
   invoices: "Rechnungen",
@@ -115,7 +116,7 @@ function createSupabaseAdapter(supabase, session) {
   const fail = (error) => { if (error) throw error; };
   return {
     async loadAll() {
-      const [customers, departments, projects, invoices, offers, settings, portalRequests, activityEvents] = await Promise.all([
+      const [customers, departments, projects, invoices, offers, settings, portalRequests, activityEvents, emailLogs, emailTemplates] = await Promise.all([
         supabase.from("customers").select("*").order("company"),
         supabase.from("customer_departments").select("*").order("name"),
         supabase.from("projects").select("*").order("created_at", { ascending: false }),
@@ -124,11 +125,13 @@ function createSupabaseAdapter(supabase, session) {
         supabase.from("company_settings").select("*").maybeSingle(),
         supabase.from("customer_portal_requests").select("*").order("created_at", { ascending: false }),
         supabase.from("activity_events").select("*").limit(100).order("created_at", { ascending: false }),
+        supabase.from("email_delivery_logs").select("*").limit(200).order("created_at", { ascending: false }),
+        supabase.from("email_templates").select("*").order("template_key"),
       ]);
-      [customers, departments, projects, invoices, offers, settings, portalRequests, activityEvents].forEach((result) => fail(result.error));
+      [customers, departments, projects, invoices, offers, settings, portalRequests, activityEvents, emailLogs, emailTemplates].forEach((result) => fail(result.error));
       const normalizedInvoices = invoices.data.map((invoice) => ({ ...invoice, items: invoice.invoice_items || [] }));
       const normalizedOffers = (offers.data || []).map((offer) => ({ ...offer, items: offer.offer_items || [] }));
-      return joinedData({ customers: customers.data, departments: departments.data || [], projects: projects.data, invoices: normalizedInvoices, offers: normalizedOffers, settings: settings.data || {}, portalRequests: portalRequests.data || [], activityEvents: activityEvents.data || [] });
+      return joinedData({ customers: customers.data, departments: departments.data || [], projects: projects.data, invoices: normalizedInvoices, offers: normalizedOffers, settings: settings.data || {}, portalRequests: portalRequests.data || [], activityEvents: activityEvents.data || [], emailLogs: emailLogs.data || [], emailTemplates: emailTemplates.data || [] });
     },
     async saveCustomer(payload) { const result = await supabase.from("customers").insert({ ...payload, owner_id: ownerId }).select("id").single(); fail(result.error); return result.data; },
     async saveDepartment(payload) { const result = await supabase.from("customer_departments").insert({ ...payload, owner_id: ownerId }); fail(result.error); },
@@ -220,6 +223,7 @@ function createSupabaseAdapter(supabase, session) {
       return data;
     },
     async saveSettings(payload) { const result = await supabase.from("company_settings").upsert({ ...payload, owner_id: ownerId }, { onConflict: "owner_id" }); fail(result.error); },
+    async saveEmailTemplate(templateKey, payload) { const result = await supabase.from("email_templates").upsert({ owner_id: ownerId, template_key: templateKey, subject_template: payload.subject_template, text_template: payload.text_template }, { onConflict: "owner_id,template_key" }); fail(result.error); },
     async invoiceAction(id, action, requestKey = null) {
       const { data: sessionData } = await supabase.auth.getSession();
       const response = await fetch(`${HEAV_ADMIN_CONFIG.supabaseUrl}/functions/v1/invoice-document`, {
@@ -281,6 +285,37 @@ function renderActivityTimeline() {
   return `<section class="panel dashboard-panel activity-timeline" aria-labelledby="activity-timeline-title"><div class="panel-head"><div><h3 id="activity-timeline-title">Aktivitäten</h3><p>Nachvollziehbare Ereignisse aus Kunden, Abteilungen und Projekten.</p></div></div>${rows ? `<ol>${rows}</ol>` : '<p class="document-empty">Noch keine Aktivitäten erfasst.</p>'}</section>`;
 }
 
+const emailTemplateDefinitions = [
+  ["invoice_send", "Rechnung versenden", "Versand einer Rechnung als PDF", "{{first_name}}, {{invoice_number}}, {{amount}}, {{due_date}}, {{company_name}}, {{owner_name}}"],
+  ["offer_send", "Offerte versenden", "Link zu einer Offerte im Kundenportal", "{{first_name}}, {{offer_number}}, {{offer_title}}, {{amount}}, {{portal_link}}, {{company_name}}, {{owner_name}}"],
+  ["invoice_reminder", "Zahlungserinnerung", "Automatische Erinnerung vor der Fälligkeit", "{{first_name}}, {{invoice_number}}, {{amount}}, {{due_date}}, {{company_name}}"],
+];
+const emailTemplateDefaults = {
+  invoice_send: { subject_template: "Rechnung {{invoice_number}} von {{company_name}}", text_template: "Hallo {{first_name}}\n\nDeine Rechnung {{invoice_number}} über {{amount}} ist fällig am {{due_date}}.\n\nFreundliche Grüsse\n{{owner_name}}\n{{company_name}}" },
+  offer_send: { subject_template: "Offerte {{offer_number}} von {{company_name}}", text_template: "Hallo {{first_name}}\n\nDeine Offerte {{offer_title}} über {{amount}} liegt bereit.\n\nIm Kundenportal ansehen:\n{{portal_link}}\n\nFreundliche Grüsse\n{{owner_name}}\n{{company_name}}" },
+  invoice_reminder: { subject_template: "Zahlungserinnerung · Rechnung {{invoice_number}}", text_template: "Hallo {{first_name}}\n\nfreundliche Erinnerung: Die Rechnung {{invoice_number}} über {{amount}} ist am {{due_date}} fällig.\n\nFreundliche Grüsse\n{{company_name}}" },
+};
+function emailTemplateValue(key) { return state.data.emailTemplates?.find((item) => item.template_key === key) || { template_key: key, ...(emailTemplateDefaults[key] || { subject_template: "", text_template: "" }) }; }
+function emailTemplateDefinition(key) { return emailTemplateDefinitions.find(([templateKey]) => templateKey === key) || [key, key, "", ""]; }
+function emailLogCustomer(log) { return state.data.customers.find((item) => item.id === log.customer_id); }
+function emailLogDate(value) { return value ? new Intl.DateTimeFormat("de-CH", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "–"; }
+function renderEmailSummary() {
+  const logs = state.data.emailLogs || [];
+  const sent = logs.filter((item) => item.status === "sent");
+  const latest = sent[0];
+  return `<section class="panel dashboard-panel email-summary" aria-labelledby="email-summary-title"><div class="panel-head"><div><h3 id="email-summary-title">Versendete E-Mails</h3><p>${sent.length} erfolgreiche Versand${sent.length === 1 ? "" : "e"} in der geladenen Historie.</p></div><button class="text-button" data-view="emails">Verlauf öffnen →</button></div>${latest ? `<div class="email-summary-latest"><span class="status paid">Versendet</span><div><strong>${esc(latest.subject)}</strong><small>${esc(latest.recipient_email)} · ${esc(emailLogDate(latest.created_at))}</small></div></div>` : '<p class="document-empty">Noch keine E-Mail wurde protokolliert.</p>'}</section>`;
+}
+function renderEmails() {
+  const logs = state.data.emailLogs || [];
+  const rows = logs.map((log) => {
+    const customer = emailLogCustomer(log);
+    const template = emailTemplateDefinition(log.template_key);
+    return `<article class="email-log-row"><div class="email-log-meta"><span class="status ${log.status === "sent" ? "paid" : "cancelled"}">${log.status === "sent" ? "Versendet" : "Fehlgeschlagen"}</span><small>${esc(template[1])} · ${esc(emailLogDate(log.created_at))}</small></div><div class="email-log-main"><strong>${esc(log.subject)}</strong><span>${esc(customerLabel(customer))} · ${esc(log.recipient_email)}</span><details><summary>Text anzeigen</summary><pre>${esc(log.text_body || "Kein Text gespeichert.")}</pre></details></div><div class="email-log-result">${log.provider_id ? `<small>Provider-ID</small><code>${esc(log.provider_id)}</code>` : log.error_message ? `<small>Fehler</small><span>${esc(log.error_message)}</span>` : ""}</div></article>`;
+  }).join("");
+  const templateCards = emailTemplateDefinitions.map(([key, label, description, placeholders]) => { const template = emailTemplateValue(key); return `<article class="email-template-card"><div><span class="kicker">MAIL-TEXT</span><h3>${esc(label)}</h3><p>${esc(description)}</p><small>Platzhalter: ${esc(placeholders)}</small></div><button class="secondary-button" type="button" data-edit-email-template="${esc(key)}">Text anpassen</button></article>`; }).join("");
+  return `<section class="view emails-view"><div class="hero-row"><div><h2>E-Mail-Verlauf</h2><p>Jeder protokollierte Versand zeigt Empfänger, Kundenbezug, Betreff und den tatsächlich gespeicherten Text.</p></div></div><section class="email-templates"><div class="panel-head"><div><h3>Mail-Texte</h3><p>Ändere Betreff und Text für die automatisierten Studio-Mails. Platzhalter bleiben erhalten.</p></div></div><div class="email-template-grid">${templateCards}</div></section><section class="email-log"><div class="panel-head"><div><h3>Versandprotokoll</h3><p>${logs.length} Einträge · erfolgreiche und fehlgeschlagene Zustellungen</p></div></div>${rows || '<p class="document-empty">Noch keine E-Mail-Versände protokolliert.</p>'}</section></section>`;
+}
+
 function renderDashboard() {
   const { customers, projects, invoices, offers = [] } = state.data;
   const activeProjects = projects.filter(item => ["planning", "active"].includes(item.status)).sort((a,b) => String(a.due_date || "9999").localeCompare(String(b.due_date || "9999")));
@@ -307,7 +342,7 @@ function renderDashboard() {
       ${!drafts.length && !openOffers.length && !openInvoices.length ? '<p>Keine offenen Finanzschritte.</p>' : ''}
     </div><div class="panel-footer"><button class="text-button" data-view="invoices">Alle Rechnungen</button><button class="text-button" data-view="offers">Alle Offerten</button></div></section>
     <aside class="panel dashboard-panel dashboard-productions"><div class="panel-head"><h3>Laufende Projekte</h3><button class="text-button" data-view="projects">Alle öffnen</button></div><div class="dashboard-production-list">${activeProjects.slice(0,3).map(project => `<button class="dashboard-production-row" data-dashboard-project-focus="${esc(project.id)}"><span class="status ${esc(project.status)}">${esc(statusLabel(project.status))}</span><strong>${esc(project.title)}</strong><small>${esc(customerLabel(project.customer))} · ${formatDate(project.due_date)}</small><b aria-hidden="true">→</b></button>`).join("") || '<p>Keine laufende Produktion.</p>'}</div><div class="dashboard-quick-actions"><button class="secondary-button" data-create="customer">Kunde erfassen</button><button class="primary-action" data-create="project">Projekt anlegen</button></div></aside></section>
-    ${renderActivityTimeline()}
+    ${renderActivityTimeline()}${renderEmailSummary()}
   </section>`;
 }
 
@@ -403,15 +438,8 @@ function invoiceActions(invoice, reveal = false, instance = "record") {
   return `<div class="invoice-action-reveal" data-invoice-actions><button class="invoice-action-trigger" type="button" data-invoice-actions-toggle aria-expanded="false" aria-controls="${esc(panelId)}" aria-label="Aktionen für ${esc(invoice.invoice_number)}"><span aria-hidden="true">•••</span></button><div class="table-actions invoice-actions-panel" id="${esc(panelId)}" aria-hidden="true" inert>${actions}</div></div>`;
 }
 function invoiceStatusControl(invoice) {
-  const transitions = {
-    draft: ["draft", "sent", "overdue", "cancelled"],
-    sent: ["sent", "paid", "overdue", "cancelled"],
-    overdue: ["overdue", "paid", "cancelled"],
-    paid: ["paid"],
-    cancelled: ["cancelled"],
-  };
-  const options = transitions[invoice.status] || [invoice.status];
-  return `<details class="invoice-status-menu"><summary class="status ${esc(invoice.status)}" aria-label="Status von ${esc(invoice.invoice_number)} ändern">${esc(statusLabel(invoice.status))}<span aria-hidden="true">⌄</span></summary><div class="invoice-status-options" role="menu">${options.map((status) => `<button type="button" role="menuitem" data-invoice-status="${esc(status)}" data-id="${esc(invoice.id)}" ${status === invoice.status ? "aria-current=\"true\"" : ""}>${esc(statusLabel(status))}</button>`).join("")}</div></details>`;
+  const options = ["draft", "sent", "paid", "overdue", "cancelled"];
+  return `<details class="invoice-status-menu"><summary class="status ${esc(invoice.status)}" aria-label="Status von ${esc(invoice.invoice_number)} ändern"><span class="status-dot" aria-hidden="true"></span>${esc(statusLabel(invoice.status))}<span class="status-chevron" aria-hidden="true">⌄</span></summary><div class="invoice-status-options" role="menu" aria-label="Status auswählen">${options.map((status) => `<button class="status-option status-option--${esc(status)}" type="button" role="menuitem" data-invoice-status="${esc(status)}" data-id="${esc(invoice.id)}" ${status === invoice.status ? "aria-current=\"true\"" : ""}><span class="status-dot" aria-hidden="true"></span><span>${esc(statusLabel(status))}</span>${status === invoice.status ? '<span class="status-check" aria-hidden="true">✓</span>' : ""}</button>`).join("")}</div></details>`;
 }
 function renderInvoices() {
   const all = state.data.invoices;
@@ -454,7 +482,7 @@ function renderSettings() {
   return `<section class="view"><div class="hero-row"><h2>Dein Unternehmen</h2><p>Diese Angaben erscheinen auf deinen Rechnungen und in den Rechnungs-E-Mails. Ohne MWST-Nummer berechnet das System automatisch keine MWST.</p></div><div class="settings-grid"><article class="settings-card"><h3>Rechnungsabsender</h3><p>Rechtliche und finanzielle Angaben für alle PDF-Rechnungen.</p><div class="settings-list"><div><span>Firma</span><strong>${esc(settings.company_name || "HEAV")}</strong></div><div><span>Inhaber</span><strong>${esc(settings.owner_name || "Michias Tegegne")}</strong></div><div><span>E-Mail</span><strong>${esc(settings.email || "hello@heav.ch")}</strong></div><div><span>MWST</span><strong>${esc(settings.vat_number || "Nicht MWST-pflichtig")}</strong></div><div><span>IBAN</span><strong>${esc(settings.iban || "Noch offen")}</strong></div></div><button class="primary-action" data-create="settings" style="margin-top:24px">Angaben bearbeiten</button></article><article class="settings-card"><h3>Systemstatus</h3><p>Der Adminbereich nutzt einen getrennten, geschützten Backend-Zugang.</p><div class="settings-list"><div><span>Modus</span><strong>Produktion</strong></div><div><span>Datenbank</span><strong>Supabase RLS</strong></div><div><span>Rechnungsversand</span><strong>billing@heav.ch</strong></div><div><span>Website</span><strong>heav.ch</strong></div></div></article></div></section>`;
 }
 
-const renderers = { dashboard: renderDashboard, customers: renderCustomers, projects: renderProjects, invoices: renderInvoices, offers: renderOffers, settings: renderSettings, "portal-requests": renderPortalRequests };
+const renderers = { dashboard: renderDashboard, emails: renderEmails, customers: renderCustomers, projects: renderProjects, invoices: renderInvoices, offers: renderOffers, settings: renderSettings, "portal-requests": renderPortalRequests };
 const topbarActions = {
   dashboard: ["invoice", "Neue Rechnung"],
   customers: ["customer", "Kunde erfassen"],
@@ -633,6 +661,7 @@ function openEditor(type, existing = null, context = {}) {
   formError.textContent = "";
   dialogForm.dataset.type = type;
   dialogForm.dataset.editId = existing?.id || "";
+  dialogForm.dataset.templateKey = existing?.template_key || context.templateKey || "";
   dialogKicker.textContent = existing ? "BEARBEITEN" : "NEU";
   if (type === "customer") {
     const item = existing || prefill;
@@ -663,6 +692,12 @@ function openEditor(type, existing = null, context = {}) {
     const offerTitle = contextProject ? `Offerte · ${contextProject.title}` : "";
     dialogBody.innerHTML = `<div class="form-grid"><label class="form-field"><span>Kunde *</span><select name="customer_id" required><option value="">Bitte wählen</option>${customerOptions(customerId)}</select></label><details class="form-disclosure wide"><summary><span>Weitere Angaben</span><small>Abteilung: Allgemein</small></summary><label class="form-field wide"><span>Abteilung</span><select name="department_id"><option value="">Zuerst Kunde wählen</option>${departmentOptions(customerId, contextProject?.department_id)}</select></label></details><label class="form-field"><span>Projekt</span><select name="project_id"><option value="">Kein Projekt</option>${projectOptions(customerId,projectId)}</select></label>${field("Titel *","title","text",offerTitle,true,"required")}${field(vatRegistered ? "MWST %" : "MWST % · nicht registriert","tax_rate","number",vatRegistered ? (state.data.settings?.default_tax_rate ?? 0) : 0,false,vatRegistered ? 'min="0" step="0.1"' : 'readonly aria-readonly="true"')}${field("Offertdatum *","issue_date","date",today(),false,"required")}${field("Gültig bis *","valid_until","date",plusDays(today(),30),false,"required")}<div class="invoice-items"><span class="items-label">Leistungen *</span><div id="invoice-item-list"></div><div class="invoice-add-actions"><button class="secondary-button" type="button" data-add-item>Position hinzufügen</button><button class="secondary-button" type="button" data-add-discount>Rabatt hinzufügen</button></div></div><label class="form-field wide"><span>Hinweis für den Kunden</span><textarea name="notes"></textarea></label><label class="form-field wide"><span>Verbindlichkeit bei Annahme *</span><textarea name="terms" required>Mit der Annahme dieser Offerte bestätigst du verbindlich die aufgeführten Leistungen, Beträge und Bedingungen.</textarea></label><div class="invoice-total" id="invoice-total">TOTAL&nbsp;&nbsp; CHF 0.00</div></div>`;
     addInvoiceItem();
+  } else if (type === "email-template") {
+    const template = emailTemplateValue(existing?.template_key);
+    const definition = emailTemplateDefinition(existing?.template_key);
+    dialogKicker.textContent = "MAIL-TEXT";
+    dialogTitle.textContent = `${definition[1]} anpassen`;
+    dialogBody.innerHTML = `<p class="form-hint">Verfügbare Platzhalter: ${esc(definition[3])}</p><div class="form-grid">${field("Betreff","subject_template","text",template.subject_template || "",true,"required")}<label class="form-field wide"><span>Text</span><textarea name="text_template" rows="12" required>${esc(template.text_template || "")}</textarea></label></div>`;
   } else {
     const settings = state.data.settings || {};
     dialogKicker.textContent = "EINSTELLUNGEN"; dialogTitle.textContent = "Rechnungsabsender";
@@ -747,6 +782,9 @@ async function saveEditor(type) {
     const items = editorItems.map((item) => ({ description: item.description, quantity: item.quantity, unit_price_rappen: Math.round(item.unitPrice * 100) }));
     if (!data.customer_id || !data.title.trim() || !data.issue_date || !data.valid_until || data.valid_until < data.issue_date || !items.length) { formError.textContent = "Bitte Kunde, Titel, gültige Daten und mindestens eine Leistung ausfüllen."; return false; }
     await adapter.saveOffer({ customer_id: data.customer_id, department_id: data.department_id, project_id: data.project_id || null, title: data.title.trim(), issue_date: data.issue_date, valid_until: data.valid_until, tax_rate: Number(data.tax_rate || 0), notes: data.notes.trim(), terms: data.terms.trim(), items });
+  }
+  if (type === "email-template") {
+    await adapter.saveEmailTemplate(dialogForm.dataset.templateKey, { subject_template: data.subject_template.trim(), text_template: data.text_template.trim() });
   }
   if (type === "settings") {
     const vatNumber = normalizeVatNumber(data.vat_number);
@@ -1217,6 +1255,7 @@ content.addEventListener("click", async (event) => {
     await changeInvoiceStatus(invoiceStatus.dataset.id, invoiceStatus.dataset.invoiceStatus, invoiceStatus);
     return;
   }
+  const emailTemplate = event.target.closest("[data-edit-email-template]"); if (emailTemplate) { openEditor("email-template", emailTemplateValue(emailTemplate.dataset.editEmailTemplate), { templateKey: emailTemplate.dataset.editEmailTemplate }); return; }
   const create = event.target.closest("[data-create]"); if (create) openEditor(create.dataset.create, null, { projectId: create.dataset.projectId || "" });
   const view = event.target.closest("[data-view]"); if (view) setView(view.dataset.view);
   const filter = event.target.closest("[data-filter]"); if (filter) { state.filter = filter.dataset.filter; render(); }

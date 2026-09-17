@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import { applyEmailTemplate, loadEmailTemplate, logEmail } from "../_shared/email.ts";
 
 const allowedOrigins = new Set(["https://heav.ch", "https://www.heav.ch", "http://127.0.0.1:4179", "http://localhost:4179"]);
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -69,9 +70,15 @@ Deno.serve(async (request) => {
     if (reservation.state === "sent") return reply({ ok: true, recipient: recipientEmail, idempotent: true }, 200, headers);
     const recipientName = (department.contact_name || customer.contact_name || customer.company || "Guten Tag").trim().split(/\s+/)[0];
     const portalLink = `https://heav.ch/client/?offer=${encodeURIComponent(offer.id)}`;
-    const subject = `Offerte ${offer.offer_number} von ${settings.company_name || "HEAV"}`;
-    const text = `Hallo ${recipientName}\n\nDeine Offerte „${offer.title}" über ${chf(offer.total_rappen)} liegt bereit.\n\nIm geschützten Kundenportal ansehen und verbindlich annehmen:\n${portalLink}\n\nFreundliche Grüsse\n${settings.owner_name || "HEAV"}\n${settings.company_name || "HEAV"}`;
-    const html = `<div style="margin:0;padding:32px 20px;background:#eeeae0;color:#090a08;font-family:Arial,sans-serif"><div style="max-width:620px;margin:0 auto;background:#fffdf8"><div style="padding:24px 28px;background:#090a08;color:#eeeae0;font-size:25px;font-weight:700;letter-spacing:-1px">HEAV</div><div style="padding:34px 28px"><p style="margin:0 0 18px">Hallo ${esc(recipientName)}</p><h1 style="margin:0 0 16px;font-size:30px;font-weight:400">Deine Offerte ist bereit.</h1><p style="line-height:1.55">${esc(offer.title)} · ${esc(chf(offer.total_rappen))}</p><p style="margin:28px 0"><a href="${portalLink}" style="display:inline-block;padding:14px 20px;background:#d7ff38;color:#090a08;text-decoration:none;font-weight:700">Offerte ansehen</a></p><p style="color:#686761;font-size:13px;line-height:1.5">Die Offerte ist im geschützten Kundenportal verfügbar und kann dort verbindlich angenommen werden.</p><p style="margin:28px 0 0">Freundliche Grüsse<br>${esc(settings.owner_name || "HEAV")}<br>${esc(settings.company_name || "HEAV")}</p></div></div></div>`;
+    const template = await loadEmailTemplate(service, identity.user.id, "offer_send", {
+      subject_template: "Offerte {{offer_number}} von {{company_name}}",
+      text_template: "Hallo {{first_name}}\n\nDeine Offerte {{offer_title}} über {{amount}} liegt bereit.\n\nIm geschützten Kundenportal ansehen und verbindlich annehmen:\n{{portal_link}}\n\nFreundliche Grüsse\n{{owner_name}}\n{{company_name}}",
+    });
+    const values = { first_name: recipientName, offer_number: offer.offer_number, offer_title: offer.title, amount: chf(offer.total_rappen), portal_link: portalLink, owner_name: settings.owner_name || "HEAV", company_name: settings.company_name || "HEAV" };
+    const subject = applyEmailTemplate(template.subject_template, values);
+    const text = applyEmailTemplate(template.text_template, values);
+    const htmlText = text.split(/\n{2,}/u).map((paragraph) => `<p style="margin:0 0 20px;line-height:1.55">${esc(paragraph).replace(/\n/gu, "<br>")}</p>`).join("");
+    const html = `<div style="margin:0;padding:32px 20px;background:#eeeae0;color:#090a08;font-family:Arial,sans-serif"><div style="max-width:620px;margin:0 auto;background:#fffdf8"><div style="padding:24px 28px;background:#090a08;color:#eeeae0;font-size:25px;font-weight:700;letter-spacing:-1px">HEAV</div><div style="padding:34px 28px">${htmlText}<p style="margin:28px 0"><a href="${portalLink}" style="display:inline-block;padding:14px 20px;background:#e8e4dc;color:#090a08;text-decoration:none;font-weight:700">Offerte ansehen</a></p></div></div></div>`;
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json", "Idempotency-Key": reservation.idempotency_key },
@@ -79,10 +86,12 @@ Deno.serve(async (request) => {
     });
     const emailData = await emailResponse.json().catch(() => ({}));
     if (!emailResponse.ok) {
+      await logEmail(service, { owner_id: identity.user.id, template_key: "offer_send", status: "failed", recipient_email: recipientEmail, recipient_name: recipientName, customer_id: offer.customer_id, offer_id: offer.id, subject, text_body: text, error_message: String(emailData.message || "provider error"), idempotency_key: reservation.idempotency_key });
       const { error: completionError } = await caller.rpc("complete_offer_send", { p_attempt_id: reservation.attempt_id, p_success: false, p_recipient: recipientEmail, p_details: { provider_error: String(emailData.message || "provider error") } });
       if (completionError) throw completionError;
       return reply({ error: String(emailData.message || "E-Mail konnte nicht gesendet werden.") }, 502, headers);
     }
+    await logEmail(service, { owner_id: identity.user.id, template_key: "offer_send", status: "sent", recipient_email: recipientEmail, recipient_name: recipientName, customer_id: offer.customer_id, offer_id: offer.id, subject, text_body: text, provider_id: emailData.id || null, idempotency_key: reservation.idempotency_key });
     const { error: completionError } = await caller.rpc("complete_offer_send", { p_attempt_id: reservation.attempt_id, p_success: true, p_provider_id: emailData.id || null, p_recipient: recipientEmail, p_details: { resend_id: emailData.id || null } });
     if (completionError) throw completionError;
     return reply({ ok: true, recipient: recipientEmail }, 200, headers);

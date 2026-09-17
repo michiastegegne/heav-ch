@@ -56,6 +56,8 @@ async function mockStudioSupabase(page, overrides = {}) {
         ],
         company_settings: [{ company_name: "HEAV", owner_name: "Michias Tegegne", email: "hello@heav.ch", iban: "", default_tax_rate: 8.1, default_due_days: 30 }],
         activity_events: [],
+        email_delivery_logs: [{ id: "mail1", template_key: "invoice_send", status: "sent", recipient_email: "anna@nordlicht.example", recipient_name: "Anna", customer_id: "c1", subject: "Rechnung HEAV-2026-001", text_body: "Hallo Anna – Deine Rechnung ist bereit.", provider_id: "resend-test-1", created_at: "2026-09-10T12:00:00Z" }],
+        email_templates: [],
         customer_portal_memberships: [],
         customer_portal_requests: [{ id: "r1", company: "Studio Nord", contact_name: "Lea Meier", email: "lea@studio-nord.example", phone: "+41 79 123 45 67", message: "Zugang für die Filmabnahme 2026.", status: "pending", created_at: "2026-09-09T10:00:00Z" }],
         assistant_threads: [],
@@ -78,7 +80,7 @@ async function mockStudioSupabase(page, overrides = {}) {
               limit() { return builder; },
               insert(payload) { const row = { id: crypto.randomUUID(), ...payload }; store[table].push(row); if (table === "customers") store.customer_departments.push({ id: crypto.randomUUID(), customer_id: row.id, owner_id: row.owner_id, name: "Allgemein", code: "GENERAL", is_default: true, active: true }); return { select() { return { single: async () => result({ id: row.id }) }; }, then(resolve) { return Promise.resolve(result(null)).then(resolve); } }; },
               update: (payload) => { builder.__update = payload; return builder; },
-              upsert: async (payload) => { store[table] = [{ ...store[table][0], ...payload }]; return result(null); }
+              upsert: async (payload) => { if (table === "email_templates") window.__lastEmailTemplate = payload; store[table] = [{ ...store[table][0], ...payload }]; return result(null); }
             };
             return builder;
           },
@@ -1641,6 +1643,8 @@ test("Studio: Rechnungen, Kunden und Projekte verwenden klare Icon-Aktionen", as
   await statusMenu.locator("summary").click();
   await expect(statusMenu.getByRole("menuitem", { name: "Bezahlt" })).toBeVisible();
   await expect(statusMenu.getByRole("menuitem", { name: "Storniert" })).toBeVisible();
+  await expect(statusMenu.getByRole("menuitem", { name: "Nicht versendet" })).toBeVisible();
+  await expect(statusMenu.getByRole("menuitem", { name: "Versendet", exact: true })).toBeVisible();
   await statusMenu.getByRole("menuitem", { name: "Überfällig" }).click();
   await expect.poll(() => page.evaluate(() => window.__lastUpdatedInvoiceStatus)).toBe("overdue");
   const actionLayout = await invoiceRow.locator(".table-actions").evaluate((toolbar) => {
@@ -1654,6 +1658,22 @@ test("Studio: Rechnungen, Kunden und Projekte verwenden klare Icon-Aktionen", as
   expect(actionLayout.display).toBe("flex");
   expect(actionLayout.flexWrap).toBe("nowrap");
   expect(actionLayout.actionTopSpread).toBeLessThanOrEqual(1);
+  await page.close();
+});
+test("Studio: E-Mail-Verlauf zeigt Versandtext und editierbare Mailvorlagen", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  await page.locator('.nav-link[data-view="emails"]').click();
+  await expect(page.locator(".emails-view")).toBeVisible();
+  await expect(page.locator(".email-log-row")).toContainText("anna@nordlicht.example");
+  await expect(page.locator(".email-log-row")).toContainText("Rechnung HEAV-2026-001");
+  await page.locator('[data-edit-email-template="invoice_send"]').click();
+  await expect(page.locator("#editor-dialog")).toContainText("Rechnung versenden anpassen");
+  await page.locator('#editor-dialog input[name="subject_template"]').fill("Neue Rechnung {{invoice_number}}");
+  await page.locator('#editor-dialog textarea[name="text_template"]').fill("Hallo {{first_name}}\n\n{{amount}}");
+  await page.getByRole("button", { name: "Speichern" }).click();
+  await expect.poll(() => page.evaluate(() => window.__lastEmailTemplate?.subject_template)).toBe("Neue Rechnung {{invoice_number}}");
   await page.close();
 });
 test("Studio: Projekt-Canvas verbindet Produktion, Kunde und Finanzschritte", async ({ browser }) => {

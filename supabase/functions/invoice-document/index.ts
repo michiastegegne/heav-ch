@@ -3,6 +3,7 @@ import { degrees, PDFDocument, rgb } from "npm:pdf-lib@1.17.1";
 import fontkit from "npm:@pdf-lib/fontkit@1.1.1";
 // @ts-types="npm:@types/qrcode@1.5.5"
 import QRCode from "npm:qrcode@1.5.4";
+import { applyEmailTemplate, loadEmailTemplate, logEmail } from "../_shared/email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Headers":
@@ -57,6 +58,7 @@ type Settings = {
 type Invoice = {
   id: string;
   owner_id: string;
+  customer_id: string;
   invoice_number: string;
   payment_reference: string;
   project_title_snapshot?: string | null;
@@ -212,7 +214,7 @@ export function buildInvoiceText(invoice: Invoice, settings: Settings) {
   }\n${compactText(settings.company_name, 160)}`;
 }
 
-export function buildInvoiceEmailHtml(invoice: Invoice, settings: Settings) {
+export function buildInvoiceEmailHtml(invoice: Invoice, settings: Settings, customText = "") {
   const { greeting, projectLine } = invoiceGreetingAndProject(invoice);
   const name = escapeHtml(compactText(settings.owner_name, 160));
   const company = escapeHtml(compactText(settings.company_name, 160));
@@ -222,6 +224,9 @@ export function buildInvoiceEmailHtml(invoice: Invoice, settings: Settings) {
   const profileImage =
     "https://heav.ch/assets/images/michias-email-profile-headroom.jpg";
   const wordmarkImage = "https://heav.ch/assets/images/heav-email-wordmark.png";
+  const messageHtml = customText.trim()
+    ? customText.split(/\n{2,}/u).map((paragraph) => `<p style="margin:0 0 20px;">${escapeHtml(paragraph).replace(/\n/gu, "<br>")}</p>`).join("")
+    : `<p style="margin:0 0 20px;">Hello ${escapeHtml(greeting)}</p><p style="margin:0 0 20px;">${escapeHtml(projectLine)}</p><p style="margin:0 0 20px;">Thank you for the opportunity and the great collaboration.</p><p style="margin:0 0 26px;">If you have any questions, please feel free to get in touch.</p>`;
   const phoneRow = phone
     ? `<br><a href="tel:${
       escapeHtml(phone.replace(/[^+0-9]/g, ""))
@@ -235,10 +240,7 @@ export function buildInvoiceEmailHtml(invoice: Invoice, settings: Settings) {
       </td>
     </tr>
   </table>
-  <p style="margin:0 0 20px;">Hello ${escapeHtml(greeting)}</p>
-  <p style="margin:0 0 20px;">${escapeHtml(projectLine)}</p>
-  <p style="margin:0 0 20px;">Thank you for the opportunity and the great collaboration.</p>
-  <p style="margin:0 0 26px;">If you have any questions, please feel free to get in touch.</p>
+  ${messageHtml}
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin:0;padding:0;">
     <tr>
       <td valign="middle" style="padding:0 18px 0 0;">
@@ -1289,6 +1291,14 @@ if (import.meta.main) {
       );
       let emailResponse: Response;
       let emailData: { id?: string; message?: string; [key: string]: unknown };
+      const firstName = (customer.contact_name || customer.company || "Guten Tag").trim().split(/\s+/)[0];
+      const template = await loadEmailTemplate(supabase, invoice.owner_id, "invoice_send", {
+        subject_template: "Rechnung {{invoice_number}} von {{company_name}}",
+        text_template: buildInvoiceText(invoice, settings),
+      });
+      const templateValues = { first_name: firstName, invoice_number: invoice.invoice_number, amount: formatCHF(invoice.total_rappen), due_date: invoice.due_date, company_name: settings.company_name, owner_name: settings.owner_name };
+      const subject = applyEmailTemplate(template.subject_template, templateValues);
+      const text = applyEmailTemplate(template.text_template, templateValues);
       try {
         emailResponse = await fetch("https://api.resend.com/emails", {
           method: "POST",
@@ -1301,13 +1311,9 @@ if (import.meta.main) {
             from: fromEmail,
             to: [customer.email],
             reply_to: settings.email,
-            subject: safeHeader(
-              `Rechnung ${
-                formatDocumentReference(invoice.invoice_number)
-              } von ${settings.company_name}`,
-            ),
-            text: buildInvoiceText(invoice, settings),
-            html: buildInvoiceEmailHtml(invoice, settings),
+            subject: safeHeader(subject),
+            text,
+            html: buildInvoiceEmailHtml(invoice, settings, text),
             attachments: [{
               filename: invoiceFilename(invoice),
               content: base64(pdfBytes),
@@ -1322,6 +1328,7 @@ if (import.meta.main) {
         throw sendError;
       }
       if (!emailResponse.ok) {
+        await logEmail(supabase, { owner_id: invoice.owner_id, template_key: "invoice_send", status: "failed", recipient_email: customer.email, recipient_name: firstName, customer_id: invoice.customer_id, invoice_id: invoice.id, subject, text_body: text, error_message: String(emailData.message || "provider error"), idempotency_key: idempotencyKey });
         const { error: completionError } = await supabase.rpc(
           "complete_invoice_send",
           {
@@ -1353,6 +1360,7 @@ if (import.meta.main) {
       if (completionError) {
         throw completionError;
       }
+      await logEmail(supabase, { owner_id: invoice.owner_id, template_key: "invoice_send", status: "sent", recipient_email: customer.email, recipient_name: firstName, customer_id: invoice.customer_id, invoice_id: invoice.id, subject, text_body: text, provider_id: emailData.id || null, idempotency_key: idempotencyKey });
       return Response.json({ ok: true, emailId: emailData.id }, {
         headers: responseCors,
       });
