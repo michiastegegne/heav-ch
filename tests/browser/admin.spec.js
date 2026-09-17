@@ -115,7 +115,14 @@ async function mockStudioSupabase(page, overrides = {}) {
           },
           functions: {
             invoke: async (name, { body }) => {
-              if (name === "offer-send") window.__lastOfferEmail = body;
+              if (name === "offer-send") {
+                window.__lastOfferEmail = body;
+                window.__offerSendAttempts = [...(window.__offerSendAttempts || []), body];
+                if (Number(window.__offerSendFailures || 0) > 0) {
+                  window.__offerSendFailures -= 1;
+                  return { data: null, error: { context: { status: 502, json: async () => ({ error: "E-Mail konnte nicht gesendet werden." }) } } };
+                }
+              }
               if (name === "assistant-chat") {
                 window.__lastAssistantRequest = body;
                 window.__assistantRequests = [...(window.__assistantRequests || []), body];
@@ -1723,6 +1730,23 @@ test("Studio: Offerte wird erstellt und per geschütztem Portal-Link versendet",
   await expect.poll(() => page.evaluate(() => window.__lastOfferEmail)).toMatchObject({ offerId: expect.any(String) });
   await expect(page.locator(".data-table tbody tr").first()).toContainText("Versendet");
   await page.close();
+});
+
+test("Studio: Offertenversand behält denselben Request-Key nach einem Providerfehler", async ({ page }) => {
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  await page.locator('.nav-link[data-view="invoices"]').click();
+  await page.getByRole("navigation", { name: "Finanzen" }).getByRole("button", { name: "Offerten" }).click();
+  const offerRow = page.locator(".data-table tbody tr").filter({ hasText: "HEAV-O-2026-001" });
+  await page.evaluate(() => { window.__offerSendFailures = 1; });
+  await offerRow.getByRole("button", { name: "Offerte per E-Mail senden" }).click();
+  await page.getByRole("button", { name: "Jetzt senden" }).click();
+  await expect(page.locator("#toast")).toContainText("E-Mail konnte nicht gesendet werden");
+  await offerRow.getByRole("button", { name: "Offerte per E-Mail senden" }).click();
+  await page.getByRole("button", { name: "Jetzt senden" }).click();
+  await expect.poll(() => page.evaluate(() => window.__offerSendAttempts?.length)).toBe(2);
+  const requestKeys = await page.evaluate(() => window.__offerSendAttempts.map((attempt) => attempt.requestKey));
+  expect(requestKeys[0]).toBe(requestKeys[1]);
 });
 
 test("Studio: Projekte werden einer Kundenabteilung zugeordnet", async ({ page }) => {
