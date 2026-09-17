@@ -1,8 +1,11 @@
 import { test, expect } from "@playwright/test";
-import { readFile } from "node:fs/promises";
 
 import { assertStudioEditorialTheme } from './theme-assertions.js';
 const base = "http://127.0.0.1:4180";
+const pngFixture = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEUlEQVR4nGP4z8DA8B+MgBgAHfAD/dPQfSYAAAAASUVORK5CYII=",
+  "base64",
+);
 
 async function assertHealthy(page, errors) {
   const metrics = await page.evaluate(() => ({
@@ -746,7 +749,7 @@ test("HEAV Assistent: Screenshot und Chat erzeugen nur prüfbare Entwürfe", asy
   await assistant.locator('input[type="file"]').setInputFiles({
     name: "kundendaten.png",
     mimeType: "image/png",
-    buffer: await readFile(new URL("../../qa/workspace-dashboard-390.png", import.meta.url)),
+    buffer: pngFixture,
   });
   await expect(assistant).toContainText("kundendaten.png");
   await assistant.getByLabel("Nachricht an HEAV Assistent").fill("Erstelle aus diesem Screenshot einen Kundenentwurf.");
@@ -811,7 +814,7 @@ test("HEAV Assistent: Modelltexte, Vorschläge und Dateinamen bleiben als Text X
   await assistant.locator('input[type="file"]').setInputFiles({
     name: '<img src=x onerror="window.__assistantXss=1">.png',
     mimeType: "image/png",
-    buffer: await readFile(new URL("../../qa/workspace-dashboard-390.png", import.meta.url)),
+    buffer: pngFixture,
   });
   await assistant.getByLabel("Nachricht an HEAV Assistent").fill("__xss__");
   await assistant.getByRole("button", { name: "Senden", exact: true }).click();
