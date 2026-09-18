@@ -232,8 +232,9 @@ test("Workspace: mobile HEAV menu replaces duplicate bottom navigation and traps
   }));
   expect(activeStyle.color).toBe('rgb(250, 250, 250)');
   expect(activeStyle.radius).toBe('0px');
-  expect(activeStyle.fontSize).toBeGreaterThanOrEqual(32);
-  expect(activeStyle.labelFontSize).toBeGreaterThanOrEqual(32);
+  expect(activeStyle.fontSize).toBeGreaterThanOrEqual(24);
+  expect(activeStyle.labelFontSize).toBeGreaterThanOrEqual(24);
+  await expect(nav.locator('.nav-section-label')).toHaveText('Verwaltung');
   const indicatorAlignment = await nav.evaluate((element) => {
     const indicator = element.querySelector('.nav-active-indicator');
     const label = element.querySelector('.nav-link.is-active .nav-label');

@@ -175,3 +175,83 @@ body.studio-editorial-theme .bklit-shimmer-char {
   body.studio-editorial-theme .bklit-shimmer-char { animation: none; color: var(--studio-muted, #a6afa5); }
 }
 
+/* Existing HEAV mobile-menu direction: full-bleed, numbered, quiet, and touch-safe. */
+@media (max-width: 820px) {
+  body.studio-editorial-theme .sidebar {
+    width: 100%;
+    max-width: none;
+    padding: 0 !important;
+    background: #111;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    transition: transform .68s var(--studio-ease);
+  }
+  body.studio-editorial-theme .admin-shell.nav-open .sidebar { transform: none; }
+  body.studio-editorial-theme .sidebar-head { min-height: 52px; margin-top: -2px; padding: 0 16px; align-items: flex-start; }
+  body.studio-editorial-theme .sidebar .brand {
+    min-height: 52px;
+    padding: 0;
+    color: #f7f7f5;
+    font-size: 52px;
+    font-weight: 600;
+    line-height: .82;
+    letter-spacing: -.09em;
+  }
+  body.studio-editorial-theme .nav-close {
+    display: block;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    margin-top: 0;
+    padding: 0;
+    border: 0 !important;
+    border-radius: 0;
+    background: transparent;
+    color: #f7f7f5;
+    font-size: 0;
+    line-height: 1;
+  }
+  body.studio-editorial-theme .nav-close::before { content: "×"; font-size: 30px; font-weight: 300; }
+  body.studio-editorial-theme .main-nav {
+    margin: 66px 0 0;
+    padding: 0 0 24px;
+    gap: 0;
+  }
+  body.studio-editorial-theme .nav-link {
+    position: relative;
+    min-height: 78px;
+    padding: 0 8px;
+    grid-template-columns: 48px minmax(0, 1fr);
+    border: 0;
+    border-radius: 0;
+    color: #9d9d9d;
+    font-size: 24px;
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: -.02em;
+  }
+  body.studio-editorial-theme .nav-link > .nav-index { align-self: center; padding-top: 0; }
+  body.studio-editorial-theme .nav-link > .nav-label { align-self: center; }
+  body.studio-editorial-theme .nav-link span { font-size: 18px; letter-spacing: .04em; }
+  body.studio-editorial-theme .nav-link.is-active {
+    background: transparent;
+    color: #f7f7f5;
+    box-shadow: none;
+  }
+  body.studio-editorial-theme .nav-active-indicator {
+    height: 2px;
+    background: #f7f7f5;
+  }
+  body.studio-editorial-theme .nav-section-label {
+    display: block;
+    min-height: 70px;
+    padding: 37px 22px 14px;
+    color: #a9a9a9;
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 19px;
+    letter-spacing: .12em;
+  }
+  body.studio-editorial-theme .sidebar-foot { margin-top: 24px; }
+}
+
