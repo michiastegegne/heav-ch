@@ -1074,6 +1074,7 @@ test("Dashboard: erklärt einen echten Nullzeitraum statt eine leere Chartfläch
   await mockStudioSupabase(page);
   await page.goto(`${base}/studio/`);
   const empty = page.locator(".dashboard-revenue-empty");
+  await expect(page.locator(".dashboard-revenue-figure.is-empty")).toBeVisible();
   await expect(empty).toBeVisible();
   await expect(empty).toHaveText("Noch keine Zahlungen in diesem Zeitraum.");
 });

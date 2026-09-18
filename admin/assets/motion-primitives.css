@@ -71,7 +71,9 @@ body.studio-editorial-theme .dashboard-revenue-summary { padding: 24px; }
 body.studio-editorial-theme .dashboard-revenue-summary h3 { margin: 8px 0 16px; font-size: clamp(25px, 2.4vw, 36px); }
 body.studio-editorial-theme .dashboard-revenue-summary > strong { font-size: clamp(38px, 4.2vw, 60px); }
 body.studio-editorial-theme .dashboard-revenue-figure { min-height: 286px; padding: 24px; }
+body.studio-editorial-theme .dashboard-revenue-figure.is-empty { min-height: 210px; }
 body.studio-editorial-theme .dashboard-revenue-chart { min-height: 185px; }
+body.studio-editorial-theme .dashboard-revenue-figure.is-empty .dashboard-revenue-chart { min-height: 108px; }
 body.studio-editorial-theme .dashboard-stage { grid-template-columns: minmax(0, 1.55fr) minmax(260px, .75fr); gap: 12px; border: 0; background: transparent; }
 body.studio-editorial-theme .dashboard-stage > :is(.dashboard-focus, .dashboard-money) { border: 1px solid rgba(214, 235, 253, .2); border-radius: var(--studio-card-radius); }
 body.studio-editorial-theme .dashboard-focus { min-height: 278px; padding: 24px; }
@@ -118,7 +120,9 @@ body.studio-editorial-theme .mobile-card { border-radius: var(--studio-card-radi
   body.studio-editorial-theme .dashboard-focus,
   body.studio-editorial-theme .dashboard-money { min-height: 0; padding: 20px; }
   body.studio-editorial-theme .dashboard-revenue-figure { min-height: 235px; }
+  body.studio-editorial-theme .dashboard-revenue-figure.is-empty { min-height: 170px; }
   body.studio-editorial-theme .dashboard-revenue-chart { min-height: 145px; }
+  body.studio-editorial-theme .dashboard-revenue-figure.is-empty .dashboard-revenue-chart { min-height: 100px; }
   body.studio-editorial-theme .dashboard-focus h3 { font-size: clamp(30px, 10vw, 44px); }
   body.studio-editorial-theme .dashboard-grid { margin-top: 10px; }
   body.studio-editorial-theme .workspace-action,

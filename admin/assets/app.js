@@ -284,7 +284,7 @@ function renderRevenueChart(invoices) {
     : "Alle bezahlten Rechnungen haben ein Zahlungsdatum.";
   return `<section class="dashboard-revenue bklit-stat-card" aria-labelledby="dashboard-revenue-title">
     <div class="dashboard-revenue-summary bklit-stat-card__content"><div class="bklit-stat-card__heading"><span class="kicker">LETZTE 12 MONATE</span>${trend}</div><h3 id="dashboard-revenue-title">Bezahlter Rechnungsumsatz</h3><strong data-revenue-net>${formatCHF(revenue.totals.netRappen)}</strong><p>exkl. MWST · ${revenue.totals.invoiceCount} ${revenue.totals.invoiceCount === 1 ? "Zahlung" : "Zahlungen"}</p><dl><div><dt>MWST</dt><dd data-revenue-tax>${formatCHF(revenue.totals.taxRappen)}</dd></div><div><dt>Zahlungseingang brutto</dt><dd data-revenue-gross>${formatCHF(revenue.totals.grossRappen)}</dd></div></dl><small data-revenue-missing-date>${esc(missing)}</small></div>
-    <figure class="dashboard-revenue-figure bklit-stat-card__chart"><figcaption><span>NETTO PRO MONAT</span><span>CHF</span></figcaption><div class="dashboard-revenue-chart">${revenue.totals.invoiceCount ? "" : '<p class="dashboard-revenue-empty">Noch keine Zahlungen in diesem Zeitraum.</p>'}${bars}</div></figure>
+    <figure class="dashboard-revenue-figure bklit-stat-card__chart ${revenue.totals.invoiceCount ? "" : "is-empty"}"><figcaption><span>NETTO PRO MONAT</span><span>CHF</span></figcaption><div class="dashboard-revenue-chart">${revenue.totals.invoiceCount ? "" : '<p class="dashboard-revenue-empty">Noch keine Zahlungen in diesem Zeitraum.</p>'}${bars}</div></figure>
   </section>`;
 }
 
