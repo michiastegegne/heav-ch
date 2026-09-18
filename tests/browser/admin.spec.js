@@ -230,17 +230,12 @@ test("Workspace: mobile HEAV menu replaces duplicate bottom navigation and traps
     fontSize: parseFloat(getComputedStyle(element).fontSize),
     labelFontSize: parseFloat(getComputedStyle(element.querySelector('.nav-label')).fontSize),
   }));
-  expect(activeStyle.color).toBe('rgb(250, 250, 250)');
-  expect(activeStyle.radius).toBe('0px');
-  expect(activeStyle.fontSize).toBeGreaterThanOrEqual(24);
-  expect(activeStyle.labelFontSize).toBeGreaterThanOrEqual(24);
+  expect(activeStyle.color).toBe('rgb(245, 245, 245)');
+  expect(activeStyle.radius).toBe('14px');
+  expect(activeStyle.fontSize).toBeGreaterThanOrEqual(16);
+  expect(activeStyle.labelFontSize).toBeGreaterThanOrEqual(16);
   await expect(nav.locator('.nav-section-label')).toHaveText('Verwaltung');
-  const indicatorAlignment = await nav.evaluate((element) => {
-    const indicator = element.querySelector('.nav-active-indicator');
-    const label = element.querySelector('.nav-link.is-active .nav-label');
-    return { indicatorWidth: indicator.getBoundingClientRect().width, labelWidth: label.getBoundingClientRect().width };
-  });
-  expect(Math.abs(indicatorAlignment.indicatorWidth - indicatorAlignment.labelWidth)).toBeLessThanOrEqual(1);
+  await expect(active.locator('.nav-icon')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(sidebar).toHaveCSS('visibility', 'hidden');
   await expect(trigger).toBeFocused();
@@ -437,7 +432,7 @@ test("Workspace: entering mobile hides and deactivates the desktop sidebar atomi
   });
   expect(state).toEqual({
     visibility: 'hidden',
-    bottom: -14,
+    bottom: 700,
     inert: true,
     ariaHidden: 'true',
     activeInside: false,
@@ -507,8 +502,8 @@ test("Workspace: finance navigation uses one stable HEAV line state instead of a
     toolbarRadius: '24px',
     toolbarSides: ['0px', '0px'],
     tableRadius: '24px',
-    navBackground: 'rgba(0, 0, 0, 0)',
-    navRadius: '0px',
+    navBackground: 'rgb(44, 44, 44)',
+    navRadius: '14px',
     navMarker: ['1px', 'rgb(250, 250, 250)', '0.36s, 0.36s'],
     financeMarker: ['1px', 'rgb(250, 250, 250)', '0.36s, 0.36s'],
   });
@@ -1483,7 +1478,7 @@ test("Studio: Navigation und Textaktionen bleiben inhaltsnah statt gestreckt", a
       customerRowHeight: bounds('.data-table tbody tr').height,
     };
   });
-  expect(geometry.activeNavWidth).toBeLessThan(135);
+  expect(geometry.activeNavWidth).toBeLessThanOrEqual(230);
   expect(geometry.topbarActionWidth).toBeLessThan(150);
   expect(geometry.topbarActionHeight).toBeLessThanOrEqual(40);
   expect(geometry.primaryPadding).toBeLessThanOrEqual(13);

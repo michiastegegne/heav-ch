@@ -90,7 +90,7 @@ test("Alle referenzierten privaten Schriftdateien sind lokal gebündelt", async 
 
 test("Studio verwendet das HEAV-Menü und zugängliche Aktionsicons", () => {
   assert.match(studioHtml, /class="menu-button"[^>]*aria-label="Menü öffnen"[^>]*>Menü<\/button>/);
-  assert.match(studioHtml, /class="nav-close"[^>]*aria-label="Menü schliessen"[^>]*>Schliessen<\/button>/);
+  assert.match(studioHtml, /class="nav-close"[^>]*aria-label="Menü schliessen"[^>]*>[\s\S]*?<span>Schliessen<\/span><\/button>/);
   assert.match(adminSource, /function actionIconButton/);
   assert.match(adminSource, /actionIconButton\("pencil", "Bearbeiten"/);
   assert.match(adminSource, /paper-plane/);
