@@ -271,6 +271,31 @@ function bklitTrendBadge(value) {
   const direction = positive ? "gestiegen" : "gesunken";
   return `<span class="bklit-trend-badge ${positive ? "is-positive" : "is-negative"}" title="Vergleich der letzten sechs Monate mit den sechs Monaten davor" aria-label="Umsatz ${direction} um ${Math.abs(value).toFixed(1)} Prozent"><span aria-hidden="true">${positive ? "↑" : "↓"}</span>${positive ? "+" : ""}${value.toFixed(1)}%</span>`;
 }
+function dashboardOpenDistribution(invoices) {
+  const buckets = [
+    { label: "≤ 7 T", value: 0 },
+    { label: "8–14 T", value: 0 },
+    { label: "15–30 T", value: 0 },
+    { label: "30+ T", value: 0 },
+  ];
+  const now = Date.now();
+  invoices.filter((item) => ["sent", "overdue"].includes(item.status)).forEach((item) => {
+    const due = Date.parse(item.due_date || "");
+    const days = Number.isFinite(due) ? Math.ceil((due - now) / 86400000) : 31;
+    const index = days <= 7 ? 0 : days <= 14 ? 1 : days <= 30 ? 2 : 3;
+    buckets[index].value += item.total_rappen || 0;
+  });
+  return buckets;
+}
+function openDistributionPath(buckets) {
+  const max = Math.max(...buckets.map((item) => item.value), 0);
+  if (!max) return "";
+  return buckets.map((item, index) => {
+    const x = index * 200;
+    const y = 112 - Math.round((item.value / max) * 82);
+    return `${index ? "L" : "M"}${x} ${y}`;
+  }).join(" ");
+}
 function renderRevenueChart(invoices) {
   const revenue = buildPaidRevenueSeries(invoices);
   const trend = bklitTrendBadge(revenueTrendPercentage(revenue));
@@ -282,11 +307,28 @@ function renderRevenueChart(invoices) {
   const missing = revenue.missingPaidAt.count
     ? `${revenue.missingPaidAt.count} ${revenue.missingPaidAt.count === 1 ? "bezahlte Rechnung" : "bezahlte Rechnungen"} ohne Zahlungsdatum · ${formatCHF(revenue.missingPaidAt.grossRappen)}`
     : "Alle bezahlten Rechnungen haben ein Zahlungsdatum.";
-  return `<section class="dashboard-revenue bklit-stat-card" aria-labelledby="dashboard-revenue-title">
-    <div class="dashboard-revenue-summary bklit-stat-card__content"><div class="bklit-stat-card__heading"><span class="kicker">LETZTE 12 MONATE</span>${trend}</div><h3 id="dashboard-revenue-title">Bezahlter Rechnungsumsatz</h3><strong data-revenue-net>${formatCHF(revenue.totals.netRappen)}</strong><p>exkl. MWST · ${revenue.totals.invoiceCount} ${revenue.totals.invoiceCount === 1 ? "Zahlung" : "Zahlungen"}</p><dl><div><dt>MWST</dt><dd data-revenue-tax>${formatCHF(revenue.totals.taxRappen)}</dd></div><div><dt>Zahlungseingang brutto</dt><dd data-revenue-gross>${formatCHF(revenue.totals.grossRappen)}</dd></div></dl><small data-revenue-missing-date>${esc(missing)}</small></div>
-    <figure class="dashboard-revenue-figure bklit-stat-card__chart ${revenue.totals.invoiceCount ? "" : "is-empty"}"><figcaption><span>NETTO PRO MONAT</span><span>CHF</span></figcaption><div class="dashboard-revenue-chart">${revenue.totals.invoiceCount ? "" : '<p class="dashboard-revenue-empty">Noch keine Zahlungen in diesem Zeitraum.</p>'}${bars}</div></figure>
+  const openInvoices = invoices.filter((item) => ["sent", "overdue"].includes(item.status));
+  const openTotal = openInvoices.reduce((total, item) => total + (item.total_rappen || 0), 0);
+  const distribution = dashboardOpenDistribution(invoices);
+  const distributionPath = openDistributionPath(distribution);
+  const distributionMax = Math.max(...distribution.map((item) => item.value), 0);
+  const openPoints = distribution.map((item, index) => {
+    const x = index * 200;
+    const y = distributionMax ? 112 - Math.round((item.value / distributionMax) * 82) : 112;
+    return `<circle class="dashboard-open-marker" cx="${x}" cy="${y}" r="5"><title>${esc(item.label)}: ${formatCHF(item.value)}</title></circle>`;
+  }).join("");
+  return `<section class="dashboard-statistics" aria-label="Finanzstatistik">
+    <article class="dashboard-revenue bklit-stat-card dashboard-stat-card" aria-labelledby="dashboard-revenue-title">
+      <div class="dashboard-revenue-summary bklit-stat-card__content"><div class="bklit-stat-card__heading"><span class="dashboard-stat-kicker">Zahlungseingänge</span>${trend}</div><h3 class="dashboard-stat-title" id="dashboard-revenue-title">Bezahlter Rechnungsumsatz</h3><strong data-revenue-net>${formatCHF(revenue.totals.netRappen)}</strong><p class="dashboard-stat-note">exkl. MWST · ${revenue.totals.invoiceCount} ${revenue.totals.invoiceCount === 1 ? "Zahlung" : "Zahlungen"}</p><dl class="dashboard-stat-details"><div><dt>MWST</dt><dd data-revenue-tax>${formatCHF(revenue.totals.taxRappen)}</dd></div><div><dt>Brutto</dt><dd data-revenue-gross>${formatCHF(revenue.totals.grossRappen)}</dd></div></dl><small class="dashboard-stat-foot" data-revenue-missing-date>${esc(missing)}</small></div>
+      <figure class="dashboard-revenue-figure bklit-stat-card__chart ${revenue.totals.invoiceCount ? "" : "is-empty"}"><figcaption><span>NETTO · LETZTE 12 MONATE</span><span>CHF</span></figcaption><div class="dashboard-revenue-chart">${revenue.totals.invoiceCount ? "" : '<p class="dashboard-revenue-empty">Noch keine Zahlungen in diesem Zeitraum.</p>'}${bars}</div></figure>
+    </article>
+    <article class="dashboard-money bklit-stat-card dashboard-stat-card" aria-labelledby="dashboard-open-title">
+      <div class="dashboard-money-summary bklit-stat-card__content"><div class="bklit-stat-card__heading"><span class="dashboard-stat-kicker">Offene Rechnungen</span><span class="dashboard-stat-count">${openInvoices.length} OFFEN</span></div><h3 class="dashboard-stat-title" id="dashboard-open-title">Offene Rechnungen</h3><strong>${formatCHF(openTotal)}</strong><p class="dashboard-stat-note">${openInvoices.length} versendete / überfällige Rechnungen</p></div>
+      <figure class="dashboard-open-figure bklit-stat-card__chart"><figcaption><span>FÄLLIGKEITSVERTEILUNG</span><span>CHF</span></figcaption><svg class="dashboard-open-chart" viewBox="0 0 600 150" preserveAspectRatio="none" role="img" aria-label="Verteilung offener Rechnungen nach Fälligkeit"><path class="dashboard-open-grid" d="M0 30H600M0 71H600M0 112H600"/>${distributionPath ? `<path class="dashboard-open-line" d="${esc(distributionPath)}"/>${openPoints}` : ""}</svg><div class="dashboard-open-labels">${distribution.map((item) => `<span>${esc(item.label)}</span>`).join("")}</div></figure>
+    </article>
   </section>`;
 }
+
 
 function renderActivityTimeline() {
   const events = (state.data.activityEvents || []).slice(0, 12);
@@ -349,7 +391,7 @@ function renderDashboard() {
   </article>` : `<article class="dashboard-focus dashboard-focus--empty"><span class="kicker">PRODUKTION</span><h3>Kein laufendes Projekt</h3><p>Erfasse den nächsten Auftrag mit Kunde und Produktionsterminen.</p><button class="primary-action" data-create="project">Projekt anlegen</button></article>`;
   return `<section class="view dashboard-view"><header class="dashboard-intro"><div><h2>Dein Arbeitsbereich</h2><p>Einnahmen, offene Zahlungen und Produktionen in einem ruhigen Überblick.</p></div></header>
     ${renderRevenueChart(invoices)}
-    <section class="dashboard-stage">${focusSurface}<aside class="dashboard-money bklit-stat-card"><span class="kicker">AUSSTEHENDE ZAHLUNGEN</span><strong>${formatCHF(sum(openInvoices))}</strong><p>${openInvoices.length} versendete / überfällige Rechnungen</p><div class="dashboard-money-list"><div><span>Bezahlt erfasst</span><b>${formatCHF(sum(paid))}</b></div><div><span>Entwürfe · nicht fällig</span><b>${formatCHF(sum(drafts))}</b></div></div><button class="project-module-link" data-view="invoices">Rechnungen öffnen <span aria-hidden="true">→</span></button></aside></section>
+    <section class="dashboard-stage dashboard-stage--focus-only">${focusSurface}</section>
     <section class="dashboard-grid"><section class="panel dashboard-panel"><div class="panel-head"><h3>Nächste Finanzschritte</h3><span class="kicker">${drafts.length + openOffers.length + openInvoices.length} EINTRÄGE</span></div><div class="workspace-action-list">
       ${drafts.slice(0,3).map(item => `<article class="workspace-action"><div><span class="status draft">Entwurf</span><strong>${esc(item.invoice_number)}</strong><small>${esc(customerLabel(item.customer))} · ${formatCHF(item.total_rappen)} · noch nicht fällig</small></div>${invoiceActions(item)}</article>`).join("")}
       ${openOffers.slice(0,3).map(item => `<article class="workspace-action"><div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span><strong>${esc(item.title || item.offer_number)}</strong><small>Offerte · ${formatCHF(item.total_rappen)} · gültig bis ${formatDate(item.valid_until)}</small></div>${offerActions(item)}</article>`).join("")}

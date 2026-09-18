@@ -1051,7 +1051,8 @@ test("Dashboard: zeigt zwölf Monate bezahlten Nettoumsatz mit echten Zahlungsda
   await page.goto(`${base}/studio/`);
   const revenue = page.locator(".dashboard-revenue");
   await expect(revenue).toHaveClass(/bklit-stat-card/);
-  await expect(revenue.getByRole("heading", { name: "Bezahlter Rechnungsumsatz" })).toBeVisible();
+  await expect(revenue.locator(".dashboard-stat-title")).toHaveText("Bezahlter Rechnungsumsatz");
+  await expect(revenue.locator(".dashboard-stat-kicker")).toHaveText("Zahlungseingänge");
   await expect(revenue.locator(".bklit-trend-badge")).toHaveText("↑+150.0%");
   await expect(page.locator(".dashboard-money")).toHaveClass(/bklit-stat-card/);
   await expect(revenue.locator("[data-revenue-month]" )).toHaveCount(12);
@@ -1192,7 +1193,7 @@ test("Desktop: Dashboard und vollständiger Erfassungsfluss", async ({ browser }
   await page.goto(`${base}/admin/`);
   await expect(page.getByRole("heading", { name: "Übersicht" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Dein Arbeitsbereich" })).toBeVisible();
-  await expect(page.getByText("AUSSTEHENDE ZAHLUNGEN", { exact: true })).toBeVisible();
+  await expect(page.locator(".dashboard-money .dashboard-stat-kicker")).toHaveText("Offene Rechnungen");
   await expect(page.locator(".dashboard-focus").getByRole("heading", { name: "Brand Film 2026" })).toBeVisible();
   await page.getByRole("button", { name: "Projekt-Canvas öffnen" }).click();
   await expect(page.getByRole("heading", { name: "Brand Film 2026" })).toBeVisible();
