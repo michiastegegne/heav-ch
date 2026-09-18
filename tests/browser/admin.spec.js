@@ -213,14 +213,14 @@ test("Workspace: mobile HEAV menu replaces duplicate bottom navigation and traps
   await expect(sidebar).toHaveAttribute('role', 'dialog');
   await expect(sidebar).toHaveAttribute('aria-modal', 'true');
   await expect(page.locator('.workspace')).toHaveAttribute('inert', '');
-  await expect(sidebar).toHaveCSS('background-color', 'rgb(232, 228, 220)');
+  await expect(sidebar).toHaveCSS('background-color', 'rgb(17, 17, 17)');
   await page.waitForTimeout(700);
   const menuGeometry = await sidebar.evaluate((element) => {
     const box = element.getBoundingClientRect();
     const style = getComputedStyle(element);
     return { left: box.left, top: box.top, width: box.width, height: box.height, background: style.backgroundColor };
   });
-  expect(menuGeometry).toEqual({ left: 0, top: 0, width: 360, height: 800, background: 'rgb(232, 228, 220)' });
+  expect(menuGeometry).toEqual({ left: 0, top: 0, width: 360, height: 800, background: 'rgb(17, 17, 17)' });
   const nav = page.getByRole('navigation', { name: 'Studio Navigation' });
   const active = nav.getByRole('button', { name: 'Übersicht', exact: true });
   await expect(active).toBeFocused();
@@ -230,7 +230,7 @@ test("Workspace: mobile HEAV menu replaces duplicate bottom navigation and traps
     fontSize: parseFloat(getComputedStyle(element).fontSize),
     labelFontSize: parseFloat(getComputedStyle(element.querySelector('.nav-label')).fontSize),
   }));
-  expect(activeStyle.color).toBe('rgb(9, 10, 8)');
+  expect(activeStyle.color).toBe('rgb(250, 250, 250)');
   expect(activeStyle.radius).toBe('0px');
   expect(activeStyle.fontSize).toBeGreaterThanOrEqual(32);
   expect(activeStyle.labelFontSize).toBeGreaterThanOrEqual(32);
@@ -480,7 +480,7 @@ test("Workspace: finance navigation uses one stable HEAV line state instead of a
   });
   expect(state).toEqual({
     background: 'rgba(0, 0, 0, 0)',
-    color: 'rgb(240, 240, 240)',
+    color: 'rgb(250, 250, 250)',
     radius: '0px',
     borderBottomWidth: '0px',
     outline: 'none',
@@ -503,13 +503,13 @@ test("Workspace: finance navigation uses one stable HEAV line state instead of a
     };
   });
   expect(surface).toEqual({
-    toolbarRadius: '0px',
+    toolbarRadius: '24px',
     toolbarSides: ['0px', '0px'],
-    tableRadius: '0px',
+    tableRadius: '24px',
     navBackground: 'rgba(0, 0, 0, 0)',
     navRadius: '0px',
-    navMarker: ['1px', 'rgb(232, 228, 220)', '0.36s, 0.36s'],
-    financeMarker: ['1px', 'rgb(232, 228, 220)', '0.36s, 0.36s'],
+    navMarker: ['1px', 'rgb(250, 250, 250)', '0.36s, 0.36s'],
+    financeMarker: ['1px', 'rgb(250, 250, 250)', '0.36s, 0.36s'],
   });
 });
 
@@ -591,6 +591,13 @@ test("Workspace: mobile invoice actions stay collapsed until a deliberate tap", 
   await page.locator('.nav-link[data-view="invoices"]').click();
   await expect(page.locator('#sidebar')).toHaveCSS('visibility', 'hidden');
 
+  const filterLayout = await page.locator('.invoice-toolbar .filter-tabs').evaluate((element) => ({
+    gap: parseFloat(getComputedStyle(element).gap),
+    rows: new Set([...element.querySelectorAll('button')].map((button) => Math.round(button.getBoundingClientRect().top))).size,
+  }));
+  expect(filterLayout.gap).toBeGreaterThanOrEqual(6);
+  expect(filterLayout.rows).toBeGreaterThan(1);
+
   const card = page.locator('.invoice-card').first();
   const trigger = card.getByRole('button', { name: /Aktionen für/ });
   const panel = card.locator('.invoice-actions-panel');
@@ -647,9 +654,9 @@ test("Workspace: invoice editor uses one harmonious rounded geometry", async ({ 
     const style = getComputedStyle(element);
     return [style.borderTopLeftRadius, style.borderTopRightRadius, style.borderBottomRightRadius, style.borderBottomLeftRadius];
   });
-  expect(corners).toEqual(['18px', '18px', '18px', '18px']);
-  await expect(dialog.locator('.invoice-item').first()).toHaveCSS('border-radius', '12px');
-  await expect(dialog.locator('.form-field input').first()).toHaveCSS('border-radius', '12px');
+  expect(corners).toEqual(['24px', '24px', '24px', '24px']);
+  await expect(dialog.locator('.invoice-item').first()).toHaveCSS('border-radius', '18px');
+  await expect(dialog.locator('.form-field input').first()).toHaveCSS('border-radius', '18px');
 });
 
 test("Workspace: invoice search and sorting controls share one utility radius", async ({ page }) => {
@@ -660,7 +667,7 @@ test("Workspace: invoice search and sorting controls share one utility radius", 
     search: getComputedStyle(toolbar.querySelector('.search-field input')).borderRadius,
     sort: getComputedStyle(toolbar.querySelector('[data-invoice-sort]')).borderRadius,
   }));
-  expect(radii).toEqual({ search: '12px', sort: '12px' });
+  expect(radii).toEqual({ search: '18px', sort: '18px' });
 });
 
 test("Workspace: desktop topbar, finance nav and content share one left gutter", async ({ browser }) => {
@@ -1200,8 +1207,8 @@ test("Desktop: Dashboard und vollständiger Erfassungsfluss", async ({ browser }
 
   await newInvoiceRow.getByRole("button", { name: /Rechnung löschen/ }).click();
   await expect(page.locator("#action-confirm-dialog")).toBeVisible();
-  await expect(page.locator("#action-confirm-dialog").getByRole("button", { name: "Löschen" })).toHaveCSS("background-color", "rgb(112, 60, 64)");
-  await expect(page.locator("#action-confirm-dialog").getByRole("button", { name: "Löschen" })).toHaveCSS("color", "rgb(255, 240, 237)");
+  await expect(page.locator("#action-confirm-dialog").getByRole("button", { name: "Löschen" })).toHaveCSS("background-color", "rgb(220, 38, 38)");
+  await expect(page.locator("#action-confirm-dialog").getByRole("button", { name: "Löschen" })).toHaveCSS("color", "rgb(255, 255, 255)");
   await page.locator("#action-confirm-dialog").getByRole("button", { name: "Löschen" }).click();
   await expect(newInvoiceRow).toHaveCount(0);
 

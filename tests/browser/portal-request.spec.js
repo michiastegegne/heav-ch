@@ -1,10 +1,11 @@
 import { test, expect } from "@playwright/test";
 import { assertDarkTheme } from './theme-assertions.js';
 
-const base = "http://127.0.0.1:4180";
+const base = process.env.HEAV_QA_BASE || "http://127.0.0.1:4180";
 
-test("Portal-Anfrage: Versand zeigt Erfolgsmoment und bleibt mobil bedienbar", async ({ browser }) => {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+for (const width of [360, 390, 768, 1440]) {
+test(`Portal-Anfrage: Versand zeigt Erfolgsmoment bei ${width}px`, async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width, height: 844 }, isMobile: width < 821, hasTouch: width < 821 });
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
@@ -12,7 +13,7 @@ test("Portal-Anfrage: Versand zeigt Erfolgsmoment und bleibt mobil bedienbar", a
     await route.fulfill({ contentType: "application/json", body: JSON.stringify({ ok: true }) });
   });
 
-  await page.goto(`${base}/portal/request/`);
+  await page.goto(`${base}/client/request/`);
   await page.getByLabel("Your name").fill("Mira Muster");
   await assertDarkTheme(page);
   await page.getByLabel("Email").fill("mira@example.com");
@@ -22,8 +23,9 @@ test("Portal-Anfrage: Versand zeigt Erfolgsmoment und bleibt mobil bedienbar", a
   await expect(page.locator("#request-message .send-plane")).toBeVisible();
   await expect(page.locator("#request-message .send-check")).toBeVisible();
   await page.waitForTimeout(800);
+  await page.mouse.move(0, 0);
   await assertDarkTheme(page);
-  await page.screenshot({ path: "qa/portal-request-success-mobile.png", fullPage: true });
+  await page.screenshot({ path: `qa/portal-request-success-${width}.png`, fullPage: true });
   await expect(page.getByLabel("Your name")).toHaveValue("");
   const metrics = await page.evaluate(() => ({
     innerWidth,
@@ -32,11 +34,12 @@ test("Portal-Anfrage: Versand zeigt Erfolgsmoment und bleibt mobil bedienbar", a
     inputHeight: document.querySelector('[name="contact_name"]').getBoundingClientRect().height,
     signInHeight: document.querySelector(".portal-request-signin").getBoundingClientRect().height,
   }));
-  expect(metrics.innerWidth).toBe(390);
-  expect(metrics.clientWidth).toBe(390);
+  expect(metrics.innerWidth).toBe(width);
+  expect(metrics.clientWidth).toBe(width);
   expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth);
   expect(metrics.inputHeight).toBeGreaterThanOrEqual(44);
   expect(metrics.signInHeight).toBeGreaterThanOrEqual(44);
   expect(errors).toEqual([]);
   await page.close();
 });
+}

@@ -1,71 +1,93 @@
 import { expect } from '@playwright/test';
 
-export async function assertDarkTheme(page) {
-  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(17, 18, 20)');
-  await expect(page.locator('body')).toHaveCSS('color', 'rgb(237, 239, 242)');
-  await expect(page.locator('html')).toHaveCSS('color-scheme', 'dark');
-  const brightPanels = await page.locator('.dashboard-focus,.dashboard-money,.panel,.project-canvas,.mobile-card,.login-card,.portal-next-step,.project-card,.offer-card,.record,.file-row,dialog[open],input:not([type="hidden"]),textarea,select').evaluateAll(elements => elements.filter(el => el.getClientRects().length).flatMap(el => {
-    const color = getComputedStyle(el).backgroundColor;
-    const channels = color.match(/[\d.]+/g)?.map(Number) || [];
-    return channels.length >= 3 && (channels.length < 4 || channels[3] > 0.8) && Math.max(...channels.slice(0, 3)) > 85 ? [{ tag: el.tagName, class: el.className, color }] : [];
-  }));
-  expect(brightPanels).toEqual([]);
-  const lowContrast = await page.locator('body').evaluate(root => {
-    const rgb = color => (color.match(/[\d.]+/g) || []).map(Number);
-    const blend = (top, bottom) => top.slice(0, 3).map((v, i) => v * (top[3] ?? 1) + bottom[i] * (1 - (top[3] ?? 1)));
-    const background = el => { if (!el) return [17, 18, 20]; const color = rgb(getComputedStyle(el).backgroundColor); return (color[3] ?? 1) === 1 ? color : blend(color, background(el.parentElement)); };
-    const luminance = c => c.slice(0,3).map(v => v / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4).reduce((sum,v,i) => sum + v * [.2126,.7152,.0722][i], 0);
-    return [...root.querySelectorAll('*')].filter(el => el.getClientRects().length && !el.closest('.sr-only,[hidden],button:disabled') && [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())).flatMap(el => {
-      const style = getComputedStyle(el), rect = el.getBoundingClientRect();
-      if (style.visibility !== 'visible' || Number(style.opacity) < 1 || rect.width < 3 || rect.height < 3) return [];
-      const bg = background(el), fg = blend(rgb(style.color), bg), l = [luminance(bg), luminance(fg)];
-      const ratio = (Math.max(...l) + .05) / (Math.min(...l) + .05);
-      const large = parseFloat(style.fontSize) >= 24 || (parseFloat(style.fontSize) >= 18.66 && Number(style.fontWeight) >= 700);
-      return ratio + .05 < (large ? 3 : 4.5) ? [{text:el.textContent.trim().slice(0,45), class:el.className, ratio:Math.round(ratio*100)/100, color:style.color}] : [];
-    }).slice(0, 12);
-  });
-  expect(lowContrast).toEqual([]);
-}
-
-export async function assertStudioEditorialTheme(page) {
-  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(0, 0, 0)');
-  await expect(page.locator('body')).toHaveCSS('color', 'rgb(240, 240, 240)');
-  await expect(page.locator('html')).toHaveCSS('color-scheme', 'dark');
-  await expect(page.locator('.workspace')).toHaveCSS('background-color', 'rgb(0, 0, 0)');
-  await expect(page.locator('.topbar h1')).toHaveCSS('font-family', /Instrument Serif/);
-
-  const surfaces = await page.locator('.dashboard-focus,.dashboard-money,.panel,.project-canvas-head,.project-module,.project-finances,.project-documents,.mobile-card,.settings-card,.data-table,dialog[open]').evaluateAll(elements => elements.filter(el => el.getClientRects().length).map(el => ({
-    className: el.className,
-    background: getComputedStyle(el).backgroundColor,
-    radius: parseFloat(getComputedStyle(el).borderRadius),
-    flatLineSurface: el.matches('.mobile-card') && getComputedStyle(el).backgroundColor === 'rgba(0, 0, 0, 0)',
-    fullScreenEditor: el.matches('.editor-dialog') && innerWidth < 821,
-  })));
-  expect(surfaces.length).toBeGreaterThan(0);
-  const editorialSurfaces = ['rgb(5, 6, 7)', 'rgb(9, 11, 13)'];
-  const invalidSurfaces = surfaces.filter(surface =>
-    (!editorialSurfaces.includes(surface.background) && !surface.flatLineSurface)
-    || (surface.radius > 18 && !surface.fullScreenEditor)
-  );
-  expect(invalidSurfaces).toEqual([]);
-
-  const lowContrast = await page.locator('body').evaluate(root => {
+async function assertVisibleTextContrast(page, fallback = [10, 10, 10]) {
+  const lowContrast = await page.locator('body').evaluate((root, fallbackColor) => {
     const rgb = color => (color.match(/[\d.]+/g) || []).map(Number);
     const blend = (top, bottom) => top.slice(0, 3).map((value, index) => value * (top[3] ?? 1) + bottom[index] * (1 - (top[3] ?? 1)));
     const background = element => {
-      if (!element) return [0, 0, 0];
+      if (!element) return fallbackColor;
       const color = rgb(getComputedStyle(element).backgroundColor);
       return (color[3] ?? 1) === 1 ? color : blend(color, background(element.parentElement));
     };
     const luminance = color => color.slice(0, 3).map(value => value / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4).reduce((sum, value, index) => sum + value * [.2126, .7152, .0722][index], 0);
-    return [...root.querySelectorAll('*')].filter(element => element.getClientRects().length && !element.closest('.sr-only,[hidden],button:disabled') && [...element.childNodes].some(node => node.nodeType === 3 && node.textContent.trim())).flatMap(element => {
-      const style = getComputedStyle(element), rect = element.getBoundingClientRect();
-      if (style.visibility !== 'visible' || Number(style.opacity) < 1 || rect.width < 3 || rect.height < 3) return [];
-      const bg = background(element), fg = blend(rgb(style.color), bg), values = [luminance(bg), luminance(fg)];
-      const ratio = (Math.max(...values) + .05) / (Math.min(...values) + .05);
-      const large = parseFloat(style.fontSize) >= 24 || (parseFloat(style.fontSize) >= 18.66 && Number(style.fontWeight) >= 700);
-      return ratio + .05 < (large ? 3 : 4.5) ? [{ text: element.textContent.trim().slice(0, 45), className: element.className, ratio: Math.round(ratio * 100) / 100, color: style.color }] : [];
-    }).slice(0, 12);
-  });
+    return [...root.querySelectorAll('*')]
+      .filter(element => element.getClientRects().length && !element.closest('.sr-only,[hidden],[inert],button:disabled') && [...element.childNodes].some(node => node.nodeType === 3 && node.textContent.trim()))
+      .flatMap(element => {
+        const style = getComputedStyle(element), rect = element.getBoundingClientRect();
+        if (style.visibility !== 'visible' || Number(style.opacity) < 1 || rect.width < 3 || rect.height < 3) return [];
+        const bg = background(element), fg = blend(rgb(style.color), bg), values = [luminance(bg), luminance(fg)];
+        const ratio = (Math.max(...values) + .05) / (Math.min(...values) + .05);
+        const large = parseFloat(style.fontSize) >= 24 || (parseFloat(style.fontSize) >= 18.66 && Number(style.fontWeight) >= 700);
+        return ratio + .05 < (large ? 3 : 4.5) ? [{ text: element.textContent.trim().slice(0, 45), className: element.className, ratio: Math.round(ratio * 100) / 100, color: style.color }] : [];
+      }).slice(0, 12);
+  }, fallback);
   expect(lowContrast).toEqual([]);
+}
+
+async function assertFormControlBoundaries(page) {
+  const weakBoundaries = await page.locator('input:not([type="hidden"]),select,textarea').evaluateAll(elements => {
+    const rgb = color => (color.match(/[\d.]+/g) || []).map(Number).slice(0, 3);
+    const luminance = color => color.map(value => value / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4).reduce((sum, value, index) => sum + value * [.2126, .7152,.0722][index], 0);
+    const ratio = (a, b) => { const values = [luminance(a), luminance(b)]; return (Math.max(...values) + .05) / (Math.min(...values) + .05); };
+    return elements.filter(element => element.getClientRects().length).flatMap(element => {
+      const style = getComputedStyle(element);
+      const contrast = ratio(rgb(style.borderTopColor), rgb(style.backgroundColor));
+      return contrast + .05 < 3 ? [{ name: element.getAttribute('name') || element.id, contrast: Math.round(contrast * 100) / 100, border: style.borderTopColor, fill: style.backgroundColor }] : [];
+    });
+  });
+  expect(weakBoundaries).toEqual([]);
+}
+
+export async function assertDarkTheme(page) {
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(10, 10, 10)');
+  await expect(page.locator('body')).toHaveCSS('color', 'rgb(250, 250, 250)');
+  await expect(page.locator('html')).toHaveCSS('color-scheme', 'dark');
+
+  const cards = page.locator('.login-card,.portal-account-switcher,.portal-next-step,.project-card,.offer-card,.record,.file-row,.portal-request-page .feedback-section');
+  for (const card of await cards.all()) {
+    if (!await card.isVisible()) continue;
+    await expect(card).toHaveCSS('background-color', 'rgb(23, 23, 23)');
+    await expect(card).toHaveCSS('border-radius', '24px');
+  }
+
+  const primary = page.locator('.primary-button:visible,#login-form button:visible').first();
+  if (await primary.count()) {
+    await expect(primary).toHaveCSS('background-color', 'rgb(250, 250, 250)');
+    await expect(primary).toHaveCSS('color', 'rgb(10, 10, 10)');
+    await expect(primary).toHaveCSS('border-radius', '18px');
+  }
+
+  const controls = page.locator('input:not([type="hidden"]),select,textarea');
+  for (const control of await controls.all()) if (await control.isVisible()) await expect(control).toHaveCSS('border-radius', '18px');
+  await assertFormControlBoundaries(page);
+  await assertVisibleTextContrast(page);
+}
+
+export async function assertStudioEditorialTheme(page) {
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(10, 10, 10)');
+  await expect(page.locator('body')).toHaveCSS('color', 'rgb(250, 250, 250)');
+  await expect(page.locator('html')).toHaveCSS('color-scheme', 'dark');
+  await expect(page.locator('.workspace')).toHaveCSS('background-color', 'rgb(10, 10, 10)');
+  await expect(page.locator('.topbar h1')).toHaveCSS('font-family', /DM Sans/);
+  const displayValues = page.locator('.dashboard-revenue-summary > strong,.dashboard-money > strong,.project-module strong');
+  for (const value of await displayValues.all()) if (await value.isVisible()) await expect(value).toHaveCSS('font-family', /DM Sans/);
+
+  const cards = page.locator('.dashboard-focus,.dashboard-money,.panel,.settings-card,.empty-state,.mobile-card,.email-templates,.email-log,dialog[open]');
+  for (const card of await cards.all()) {
+    if (!await card.isVisible()) continue;
+    const fullScreenDialog = await card.evaluate(element => element.matches('dialog') && innerWidth < 821);
+    if (!fullScreenDialog) await expect(card).toHaveCSS('border-radius', '24px');
+  }
+  const dashboardCards = page.locator('.dashboard-money,.dashboard-panel');
+  for (const card of await dashboardCards.all()) if (await card.isVisible()) await expect(card).toHaveCSS('background-color', 'rgb(23, 23, 23)');
+
+  const controls = page.locator('.primary-action,.secondary-button,.filter-tab,input:not([type="hidden"]),select,textarea');
+  for (const control of await controls.all()) if (await control.isVisible()) await expect(control).toHaveCSS('border-radius', '18px');
+  const primary = page.locator('.primary-action:visible').first();
+  if (await primary.count()) {
+    await expect(primary).toHaveCSS('background-color', 'rgb(250, 250, 250)');
+    await expect(primary).toHaveCSS('color', 'rgb(10, 10, 10)');
+  }
+  await assertFormControlBoundaries(page);
+  await assertVisibleTextContrast(page);
 }

@@ -2,34 +2,36 @@
 .studio-editorial-root {
   color-scheme: dark;
   overflow-x: clip;
-  --crm-bg: #000000;
-  --crm-panel: #050607;
-  --crm-raised: #090b0d;
-  --crm-input: #07090b;
-  --crm-text: #f0f0f0;
-  --crm-muted: #a1a4a5;
-  --crm-line: rgba(214, 235, 253, .20);
-  --crm-accent: #f0f0f0;
-  --crm-positive: #63d99f;
-  --crm-danger: #ff8f85;
-  --night: #f0f0f0;
-  --paper: #000000;
-  --ink: #f0f0f0;
-  --acid: #f0f0f0;
-  --ember: #ff8f85;
-  --sage: #a1a4a5;
-  --muted: #a1a4a5;
-  --line: rgba(214, 235, 253, .20);
-  --white-line: rgba(214, 235, 253, .20);
-  --surface: #050607;
-  --surface-raised: #090b0d;
-  --focus: #f0f0f0;
-  --shadow: 0 24px 70px rgba(0, 0, 0, .34);
-  --studio-accent: #e8e4dc;
-  --studio-night: #090a08;
+  --crm-bg: #0a0a0a;
+  --crm-panel: #171717;
+  --crm-raised: #1e1e1e;
+  --crm-input: #202020;
+  --crm-text: #fafafa;
+  --crm-muted: #a3a3a3;
+  --crm-line: #3f3f46;
+  --crm-accent: #fafafa;
+  --crm-positive: #75d29c;
+  --crm-danger: #ff7b83;
+  --night: #fafafa;
+  --paper: #0a0a0a;
+  --ink: #fafafa;
+  --acid: #fafafa;
+  --ember: #ff7b83;
+  --sage: #a3a3a3;
+  --muted: #a3a3a3;
+  --line: #3f3f46;
+  --white-line: #3f3f46;
+  --surface: #171717;
+  --surface-raised: #1e1e1e;
+  --focus: #fafafa;
+  --shadow: 0 0 0 1px rgba(255, 255, 255, .035), 0 1px 3px rgba(0, 0, 0, .55);
+  --studio-accent: #fafafa;
+  --studio-night: #0a0a0a;
   --studio-ease: cubic-bezier(.22, 1, .36, 1);
-  --studio-radius-sm: 12px;
-  --studio-radius-md: 18px;
+  --studio-card-radius: 24px;
+  --studio-control-radius: 18px;
+  --studio-radius-sm: var(--studio-control-radius);
+  --studio-radius-md: var(--studio-card-radius);
 }
 
 body.studio-editorial-theme {
@@ -1700,4 +1702,188 @@ body.studio-editorial-theme .bottom-nav { display: none; }
 /* Keep the assistant implementation dormant until API billing is enabled. */
 html[data-assistant-enabled="false"] :is([data-open-assistant], #assistant-dialog) {
   display: none !important;
+}
+
+/* Approved achromatic workspace treatment. Kept last to normalize the
+   established interaction layer without changing its layout or state hooks. */
+body.crm-theme.studio-editorial-theme {
+  color: var(--crm-text);
+  background: var(--crm-bg);
+}
+body.crm-theme.studio-editorial-theme :is(h1, h2, h3, h4, .brand, .loading-screen strong) {
+  color: var(--crm-text);
+  font-family: "DM Sans", Arial, sans-serif;
+  font-style: normal;
+  font-weight: 600;
+}
+body.crm-theme.studio-editorial-theme :is(h1, h2, h3) em { font-style: normal; }
+body.crm-theme.studio-editorial-theme :is(.admin-shell, .workspace, .topbar, .loading-screen) { background: var(--crm-bg); }
+body.crm-theme.studio-editorial-theme .sidebar {
+  color: var(--crm-text);
+  background: #111111;
+  border-color: var(--crm-line);
+}
+body.crm-theme.studio-editorial-theme :is(.topbar, .sidebar-foot) { border-color: var(--crm-line); }
+body.crm-theme.studio-editorial-theme #logout-button { border-color: var(--crm-line); }
+body.crm-theme.studio-editorial-theme :is(.nav-link, .nav-section-label, .sidebar-foot) { color: var(--crm-muted); }
+body.crm-theme.studio-editorial-theme #logout-button { color: var(--crm-muted); }
+body.crm-theme.studio-editorial-theme :is(.nav-link:hover, .nav-link:focus-visible, .nav-link.is-active) { color: var(--crm-text); }
+body.crm-theme.studio-editorial-theme #logout-button:hover { color: var(--crm-text); }
+body.crm-theme.studio-editorial-theme .nav-active-indicator { background: var(--crm-text); }
+
+body.crm-theme.studio-editorial-theme :is(
+  .dashboard-focus,
+  .dashboard-money,
+  .panel,
+  .settings-card,
+  .empty-state,
+  .mobile-card,
+  .email-templates,
+  .email-log,
+  .email-template-card,
+  .project-canvas-track > header,
+  .project-canvas-track > .project-module-grid > article,
+  .project-canvas-track > section
+) {
+  color: var(--crm-text);
+  background: var(--crm-panel);
+  border: 1px solid var(--crm-line);
+  border-radius: var(--studio-card-radius);
+  box-shadow: var(--shadow);
+}
+body.crm-theme.studio-editorial-theme :is(.dashboard-revenue, .settings-grid) { background: transparent; }
+body.crm-theme.studio-editorial-theme .toolbar { border-radius: var(--studio-card-radius); }
+body.crm-theme.studio-editorial-theme :is(.dashboard-focus-modules, .dashboard-focus-modules > div, .dashboard-money-list, .dashboard-money-list > div, .panel-head, .panel-footer, .settings-list, .settings-list div) { border-color: var(--crm-line); }
+body.crm-theme.studio-editorial-theme :is(.email-template-card, .invoice-actions-panel, .invoice-status-options, .form-disclosure, .form-hint, .sequence-note, .invoice-item.is-discount) { background: var(--crm-raised); border-color: var(--crm-line); }
+body.crm-theme.studio-editorial-theme :is(.data-table, .data-table th, .data-table td) { color: var(--crm-text); background: var(--crm-panel); border-color: var(--crm-line); }
+body.crm-theme.studio-editorial-theme .data-table { border-radius: var(--studio-card-radius); }
+body.crm-theme.studio-editorial-theme .data-table th { color: var(--crm-muted); background: var(--crm-raised); }
+body.crm-theme.studio-editorial-theme .data-table tr:is(:hover, .is-selected) td { background: var(--crm-raised); }
+
+body.crm-theme.studio-editorial-theme :is(.primary-action, .primary-button) {
+  color: var(--crm-bg) !important;
+  background: var(--crm-text) !important;
+  border-color: var(--crm-text) !important;
+  border-radius: var(--studio-control-radius);
+}
+body.crm-theme.studio-editorial-theme :is(.primary-action, .primary-button):is(:hover, :focus-visible) {
+  color: var(--crm-bg) !important;
+  background: #e5e5e5 !important;
+  border-color: #e5e5e5 !important;
+}
+body.crm-theme.studio-editorial-theme :is(.secondary-button, .filter-tab, .finance-nav button, .assistant-launcher, .menu-button, .nav-close, .assistant-delete, .assistant-close, .assistant-upload, .invoice-preview-close) {
+  color: var(--crm-text);
+  background: transparent;
+  border-color: var(--crm-line);
+  border-radius: var(--studio-control-radius);
+}
+body.crm-theme.studio-editorial-theme :is(.secondary-button, .filter-tab, .finance-nav button, .assistant-launcher, .menu-button, .nav-close, .assistant-delete, .assistant-close, .assistant-upload, .invoice-preview-close):is(:hover, :focus-visible),
+body.crm-theme.studio-editorial-theme .filter-tab.is-active {
+  color: var(--crm-text);
+  background: var(--crm-raised);
+  border-color: #737373;
+}
+body.crm-theme.studio-editorial-theme .finance-nav button[aria-current] {
+  color: var(--crm-text);
+  background: transparent;
+  border-color: transparent;
+  border-radius: 0;
+}
+body.crm-theme.studio-editorial-theme :is(.icon-button, .action-icon) { color: var(--crm-muted); background: transparent; border-color: var(--crm-line); }
+body.crm-theme.studio-editorial-theme :is(.icon-button, .action-icon):is(:hover, :focus-visible) { color: var(--crm-text); background: var(--crm-raised); border-color: #737373; }
+body.crm-theme.studio-editorial-theme :is(.action-icon.is-danger, .danger-button, .remove-item) { color: var(--crm-danger); }
+body.crm-theme.studio-editorial-theme :is(.action-icon.is-danger, .danger-button, .remove-item):hover { color: #fff; background: #35191d; border-color: #9f3d45; }
+body.crm-theme.studio-editorial-theme .action-confirm-shell .primary-action.is-destructive,
+body.crm-theme.studio-editorial-theme .action-confirm-shell .primary-action.is-destructive:is(:hover, :focus-visible) {
+  color: #fff !important;
+  background: #dc2626 !important;
+  border-color: #dc2626 !important;
+}
+
+body.crm-theme.studio-editorial-theme :is(input, select, textarea),
+body.crm-theme.studio-editorial-theme .project-picker select {
+  color: var(--crm-text) !important;
+  background: var(--crm-input) !important;
+  border: 1px solid #737373 !important;
+  border-radius: var(--studio-control-radius) !important;
+}
+body.crm-theme.studio-editorial-theme :is(input, textarea)::placeholder { color: var(--crm-muted); }
+body.crm-theme.studio-editorial-theme :is(input, select, textarea):focus { border-color: var(--crm-text) !important; box-shadow: none; }
+body.crm-theme.studio-editorial-theme :is(.status, .status-menu-trigger) { border-radius: var(--studio-control-radius); }
+body.crm-theme.studio-editorial-theme .status { color: #e5e5e5 !important; background: #292929; border-color: var(--crm-line); }
+body.crm-theme.studio-editorial-theme .status:is(.paid, .accepted, .completed) { color: var(--crm-positive) !important; background: #142a20; border-color: #28543c; }
+body.crm-theme.studio-editorial-theme .status:is(.overdue, .expired, .declined) { color: var(--crm-danger) !important; background: #35191d; border-color: #713039; }
+
+body.crm-theme.studio-editorial-theme :is(.editor-dialog, .action-confirm-dialog, .assistant-dialog) {
+  color: var(--crm-text);
+  background: var(--crm-panel);
+  border-color: var(--crm-line);
+  border-radius: var(--studio-card-radius);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .62);
+}
+body.crm-theme.studio-editorial-theme :is(.dialog-shell > header, .dialog-shell > footer, .assistant-shell > header, .assistant-composer) { color: var(--crm-text); background: var(--crm-panel); border-color: var(--crm-line); }
+body.crm-theme.studio-editorial-theme :is(.dialog-body, .assistant-messages) { background: var(--crm-sidebar); }
+body.crm-theme.studio-editorial-theme :is(.invoice-item, .assistant-message, .assistant-attachment, .toast) { border-color: var(--crm-line); border-radius: var(--studio-control-radius); }
+body.crm-theme.studio-editorial-theme .assistant-message { color: var(--crm-text); background: var(--crm-raised); }
+body.crm-theme.studio-editorial-theme .assistant-message.is-user { color: var(--crm-bg); background: var(--crm-text); }
+body.crm-theme.studio-editorial-theme .toast { color: var(--crm-text); background: var(--crm-raised); }
+body.crm-theme.studio-editorial-theme .dashboard-revenue-summary h3 { font-size: clamp(24px, 2.1vw, 32px); line-height: 1.05; }
+body.crm-theme.studio-editorial-theme :is(.dashboard-revenue-summary > strong, .dashboard-money > strong, .project-module strong) {
+  font-family: "DM Sans", Arial, sans-serif;
+  font-weight: 600;
+}
+body.crm-theme.studio-editorial-theme .dashboard-revenue-summary > strong { font-size: clamp(40px, 4vw, 58px); }
+body.crm-theme.studio-editorial-theme .dashboard-money > strong { font-size: clamp(38px, 3.6vw, 52px); }
+
+@media (max-width: 820px) {
+  body.crm-theme.studio-editorial-theme :is(.dashboard-focus, .dashboard-money, .panel, .settings-card, .empty-state, .mobile-card) {
+    background: var(--crm-panel);
+    border: 1px solid var(--crm-line);
+    border-radius: var(--studio-card-radius);
+  }
+  body.crm-theme.studio-editorial-theme .mobile-card { padding: 18px; }
+  body.crm-theme.studio-editorial-theme .invoice-toolbar .filter-tabs {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 6px;
+  }
+  body.crm-theme.studio-editorial-theme .invoice-toolbar .filter-tab { padding-inline: 10px; }
+  body.crm-theme.studio-editorial-theme .invoice-card .invoice-action-reveal { max-width: 100%; overflow: hidden; }
+  body.crm-theme.studio-editorial-theme .invoice-card .invoice-action-reveal.is-actions-visible {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+  body.crm-theme.studio-editorial-theme .invoice-card .invoice-actions-panel { display: none; }
+  body.crm-theme.studio-editorial-theme .invoice-card .invoice-action-reveal.is-actions-visible .invoice-actions-panel {
+    display: inline-flex;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0 !important;
+    box-sizing: border-box;
+    contain: paint;
+    overflow-x: auto;
+  }
+  body.crm-theme.studio-editorial-theme .project-canvas-track > header,
+  body.crm-theme.studio-editorial-theme .project-canvas-track > .project-module-grid > article,
+  body.crm-theme.studio-editorial-theme .project-canvas-track > section { border-radius: var(--studio-card-radius); }
+  body.crm-theme.studio-editorial-theme #sidebar.sidebar {
+    color: var(--crm-text);
+    background: var(--crm-sidebar);
+    border-color: var(--crm-line);
+  }
+  body.crm-theme.studio-editorial-theme .sidebar .brand,
+  body.crm-theme.studio-editorial-theme .nav-link,
+  body.crm-theme.studio-editorial-theme .nav-link:is(:hover, :focus-visible, .is-active),
+  body.crm-theme.studio-editorial-theme .nav-close,
+  body.crm-theme.studio-editorial-theme #logout-button,
+  body.crm-theme.studio-editorial-theme #logout-button:hover,
+  body.crm-theme.studio-editorial-theme .sidebar-foot { color: var(--crm-text); }
+  body.crm-theme.studio-editorial-theme :is(.nav-link, .nav-link:is(:hover, :focus-visible, .is-active), .nav-close, .sidebar-foot) { border-color: var(--crm-line); }
+  body.crm-theme.studio-editorial-theme #logout-button { border-color: var(--crm-line); }
+  body.crm-theme.studio-editorial-theme .nav-active-indicator,
+  body.crm-theme.studio-editorial-theme .connection-dot { background: var(--crm-text); }
+  body.crm-theme.studio-editorial-theme .nav-link { border-radius: 0; }
+  body.crm-theme.studio-editorial-theme .sidebar :is(a, button):focus-visible { outline-color: var(--crm-text); }
+  body.crm-theme.studio-editorial-theme :is(.editor-dialog, .assistant-dialog) { border: 0; border-radius: 0; }
+  body.crm-theme.studio-editorial-theme .action-confirm-dialog { border-radius: var(--studio-card-radius); }
 }

@@ -33,6 +33,11 @@ test.describe("Öffentliche Website: lokale Ressourcen", () => {
       await page.waitForTimeout(300);
 
       expect(failures, `${route} hat fehlerhafte lokale Ressourcen`).toEqual([]);
+      await expect(page.locator('body')).not.toHaveClass(/crm-theme|studio-editorial-theme/);
+      const privateThemeLinks = await page.locator('link[rel="stylesheet"]').evaluateAll((links) => links
+        .map((link) => link.getAttribute('href') || '')
+        .filter((href) => /crm-theme|studio-editorial/.test(href)));
+      expect(privateThemeLinks, `${route} darf keine privaten App-Themes laden`).toEqual([]);
     });
   }
 });

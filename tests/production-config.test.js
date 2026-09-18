@@ -7,7 +7,10 @@ const loginSource = await readFile(new URL("../login/assets/login.js", import.me
 const adminSource = await readFile(new URL("../admin/assets/app.js", import.meta.url), "utf8");
 const contactSource = await readFile(new URL("../contact/index.html", import.meta.url), "utf8");
 const studioHtml = await readFile(new URL("../studio/index.html", import.meta.url), "utf8");
+const loginHtml = await readFile(new URL("../login/index.html", import.meta.url), "utf8");
 const clientHtml = await readFile(new URL("../client/index.html", import.meta.url), "utf8");
+const clientRequestHtml = await readFile(new URL("../client/request/index.html", import.meta.url), "utf8");
+const publicHtml = await readFile(new URL("../index.html", import.meta.url), "utf8");
 const invoiceDocumentSource = await readFile(new URL("../supabase/functions/invoice-document/index.ts", import.meta.url), "utf8");
 const actionCss = await readFile(new URL("../admin/assets/admin-actions.css", import.meta.url), "utf8");
 const studioCss = await readFile(new URL("../admin/assets/studio-editorial.css", import.meta.url), "utf8");
@@ -40,26 +43,40 @@ test("Kontaktformular nutzt die HEAV-eigene Edge Function statt eines sichtbaren
   assert.match(contactSource, /data-form-status/);
 });
 
-test("Studio lädt das isolierte Editorial-Designsystem in stabiler Reihenfolge", () => {
+test("Studio lädt das isolierte achromatische Dark-Designsystem in stabiler Reihenfolge", () => {
   const expectedAssets = [
     "/admin/assets/admin.css?v=20260830-discount-edit",
     "/admin/assets/admin-enhancements.css?v=20260917-crm-layout-status",
     "/admin/assets/admin-actions.css?v=20260910-layout",
     "/admin/assets/workspace.css?v=20260917-crm-layout-status",
-    "/admin/assets/crm-theme.css?v=anthracite-1",
-    "/admin/assets/studio-editorial.css?v=editorial-14",
+    "/admin/assets/crm-theme.css?v=shadcn-dark-1",
+    "/admin/assets/studio-editorial.css?v=shadcn-dark-1",
   ];
   const positions = expectedAssets.map((asset) => studioHtml.indexOf(`href="${asset}"`));
   assert.ok(positions.every((position) => position >= 0), "alle Studio-Stylesheets sind versioniert eingebunden");
-  assert.deepEqual(positions, [...positions].sort((a, b) => a - b), "Editorial-Overrides werden zuletzt geladen");
+  assert.deepEqual(positions, [...positions].sort((a, b) => a - b), "Studio-Overrides werden zuletzt geladen");
   assert.match(studioHtml, /<html lang="de-CH" class="studio-editorial-root" data-assistant-enabled="false">/);
-  assert.match(studioHtml, /<meta name="theme-color" content="#000000"/);
+  assert.match(studioHtml, /<meta name="theme-color" content="#0a0a0a"/);
   assert.match(studioHtml, /<body class="crm-theme studio-editorial-theme">/);
   assert.match(studioHtml, /src="\/admin\/assets\/app\.js\?v=20260917-crm-status-menu-3"/);
   assert.match(adminSource, /dashboard\.js\?v=20260916-revenue-1/);
-  assert.match(studioCss, /--studio-accent:\s*#e8e4dc/);
+  assert.match(studioCss, /--studio-card-radius:\s*24px/);
+  assert.match(studioCss, /--studio-control-radius:\s*18px/);
+  assert.match(studioCss, /--studio-accent:\s*#fafafa/);
   assert.doesNotMatch(studioCss, /#d7ff38|--studio-acid/);
   assert.doesNotMatch(adminSource, /#d7ff38/);
+});
+
+test("Alle privaten Einstiege teilen das Dark-Theme, öffentliche Seiten bleiben isoliert", () => {
+  for (const html of [studioHtml, loginHtml, clientHtml, clientRequestHtml]) {
+    assert.match(html, /href="\/admin\/assets\/crm-theme\.css\?v=shadcn-dark-1"/);
+    assert.match(html, /<body class="crm-theme(?: studio-editorial-theme)?">/);
+    assert.match(html, /<meta name="theme-color" content="#0a0a0a"/);
+  }
+  assert.doesNotMatch(loginHtml, /studio-editorial\.css/);
+  assert.doesNotMatch(clientHtml, /studio-editorial\.css/);
+  assert.doesNotMatch(clientRequestHtml, /studio-editorial\.css/);
+  assert.doesNotMatch(publicHtml, /crm-theme|studio-editorial-theme|studio-editorial\.css/);
 });
 
 test("Alle referenzierten privaten Schriftdateien sind lokal gebündelt", async () => {
@@ -78,7 +95,7 @@ test("Studio verwendet das HEAV-Menü und zugängliche Aktionsicons", () => {
   assert.match(adminSource, /actionIconButton\("pencil", "Bearbeiten"/);
   assert.match(adminSource, /paper-plane/);
   assert.match(adminSource, /customer-contact/);
-  assert.match(studioHtml, /href="\/admin\/assets\/crm-theme\.css\?v=anthracite-1"/);
+  assert.match(studioHtml, /href="\/admin\/assets\/crm-theme\.css\?v=shadcn-dark-1"/);
 });
 
 test("Studio-Iconleisten bleiben in einer kompakten Reihe", () => {
