@@ -455,3 +455,24 @@ body.crm-theme.studio-editorial-theme .dashboard-stage--focus-only .dashboard-fo
   body.crm-theme.studio-editorial-theme .dashboard-open-labels { right: 20px; left: 20px; }
 }
 
+@media (max-width: 560px) {
+  body.crm-theme.studio-editorial-theme .dashboard-intro { margin-bottom: 14px; }
+  body.crm-theme.studio-editorial-theme .dashboard-statistics { gap: 8px; margin-bottom: 12px; }
+  body.crm-theme.studio-editorial-theme .dashboard-stat-card { min-height: 216px; padding: 17px 16px 0; border-radius: 18px; }
+  body.crm-theme.studio-editorial-theme .dashboard-stat-card .bklit-stat-card__heading { min-height: 22px; }
+  body.crm-theme.studio-editorial-theme .dashboard-stat-kicker { font-size: 14px; }
+  body.crm-theme.studio-editorial-theme .dashboard-stat-count { font-size: 9px; }
+  body.crm-theme.studio-editorial-theme .dashboard-stat-card > .bklit-stat-card__content > strong { margin-top: 16px; font-size: 31px; }
+  body.crm-theme.studio-editorial-theme .dashboard-stat-note { margin-top: 8px; font-size: 11px; }
+  body.crm-theme.studio-editorial-theme .dashboard-stat-card figure { height: 88px; padding: 0 16px 10px; }
+  body.crm-theme.studio-editorial-theme .dashboard-stat-card figure figcaption { right: 16px; bottom: 10px; left: 16px; font-size: 8px; }
+  body.crm-theme.studio-editorial-theme .dashboard-revenue-chart { gap: 3px; padding-bottom: 20px; }
+  body.crm-theme.studio-editorial-theme .dashboard-revenue-month small { bottom: -17px; font-size: 7px; }
+  body.crm-theme.studio-editorial-theme .dashboard-revenue-empty { inset: 14px 0 0; font-size: 10px; }
+  body.crm-theme.studio-editorial-theme .dashboard-open-labels { right: 16px; bottom: 2px; left: 16px; font-size: 8px; }
+  body.crm-theme.studio-editorial-theme .dashboard-focus { padding: 18px 16px; }
+  body.crm-theme.studio-editorial-theme .dashboard-focus h3 { font-size: clamp(30px, 9vw, 36px); }
+  body.crm-theme.studio-editorial-theme .dashboard-panel .panel-head,
+  body.crm-theme.studio-editorial-theme .dashboard-production-list { padding-inline: 14px; }
+}
+
