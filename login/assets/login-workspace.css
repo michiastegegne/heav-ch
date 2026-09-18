@@ -46,4 +46,8 @@ button:focus-visible,a:focus-visible,input:focus-visible { outline:3px solid #7d
  .login-form-heading .eyebrow { display:none; }
  .legal { margin:8px 0 0; }
 }
+#login-form button.is-loading .login-button-label { display:none; }
+#login-form button.is-loading .login-button-shimmer { display:inline-block; color:transparent; background:linear-gradient(100deg,#9da993 20%,#f7f8f2 45%,#9da993 70%); background-size:220% 100%; background-clip:text; -webkit-background-clip:text; animation:login-text-shimmer 1s linear infinite; transform:none; }
+#login-form button.is-loading > span:last-child { display:inline-block; animation:none; transform:none; }
+@keyframes login-text-shimmer { from { background-position:120% center; } to { background-position:-20% center; } }
 @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none!important; transition:none!important; } }

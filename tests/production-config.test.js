@@ -141,7 +141,7 @@ test("Portal bietet owner-geschützte Bearbeitung für Kunden, Projekte, Rechnun
 
 test("Login loads the cache-safe owner-authority client", async () => {
   const html = await readFile(new URL("../login/index.html", import.meta.url), "utf8");
-  assert.match(html, /\/login\/assets\/login\.js\?v=20260916-owner-authority-2/);
+  assert.match(html, /\/login\/assets\/login\.js\?v=20260918-text-shimmer-1/);
 });
 
 test("Portal lädt die atomare Kontowechsel-Logik cache-sicher", () => {

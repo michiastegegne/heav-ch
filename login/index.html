@@ -9,7 +9,7 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/login/assets/login.css" />
     <link rel="stylesheet" href="/login/assets/login-enhancements.css?v=20260909-motion" />
-    <link rel="stylesheet" href="/login/assets/login-workspace.css?v=crm-mobile-1" />
+    <link rel="stylesheet" href="/login/assets/login-workspace.css?v=20260918-text-shimmer-1" />
     <link rel="stylesheet" href="/admin/assets/crm-theme.css?v=shadcn-dark-1" />
   </head>
   <body class="crm-theme">
@@ -27,12 +27,12 @@
           <label><span>E-Mail-Adresse</span><input name="email" type="email" autocomplete="username" placeholder="du@studio.ch" required /></label>
           <p class="login-security">Du brauchst kein Passwort. Wir senden dir einen sicheren Anmeldelink per E-Mail.</p>
           <p class="form-message" id="login-message" role="status" aria-live="polite"></p>
-          <button type="submit">Anmeldelink senden <span aria-hidden="true">→</span></button>
+          <button type="submit"><span class="login-button-label">Anmeldelink senden</span><span class="login-button-shimmer" hidden>Wird gesendet …</span><span aria-hidden="true">→</span></button>
           <p class="login-security login-access"><a href="/client/request/">Noch keinen Kundenzugang? Zugang anfragen.</a></p>
         </form>
       </section>
       <p class="legal">HEAV Studio · Zugang nur für freigeschaltete Konten.</p>
     </main>
-    <script type="module" src="/login/assets/login.js?v=20260916-owner-authority-2-portal-audit-1"></script>
+    <script type="module" src="/login/assets/login.js?v=20260918-text-shimmer-1"></script>
   </body>
 </html>

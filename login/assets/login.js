@@ -3,6 +3,16 @@ import { HEAV_ADMIN_CONFIG, isBackendConfigured } from "/admin/config.js";
 const form = document.querySelector("#login-form");
 const message = document.querySelector("#login-message");
 const button = form.querySelector("button");
+const buttonLabel = button.querySelector(".login-button-label");
+const buttonShimmer = button.querySelector(".login-button-shimmer");
+const setLoginLoading = (isLoading) => {
+  button.classList.toggle("is-loading", isLoading);
+  buttonLabel.hidden = isLoading;
+  buttonShimmer.hidden = !isLoading;
+  button.toggleAttribute("aria-busy", isLoading);
+  if (isLoading) button.setAttribute("aria-label", "Anmeldelink wird gesendet");
+  else button.removeAttribute("aria-label");
+};
 // Only the canonical customer workspace may survive the login round-trip.
 // Parse before allowing it so backslashes, traversal and external URLs fail closed.
 function customerReturnPath() {
@@ -67,8 +77,7 @@ if (!isBackendConfigured()) {
     message.textContent = "";
     if (!form.reportValidity()) return;
     button.disabled = true;
-    button.classList.add("is-loading");
-    button.setAttribute("aria-busy", "true");
+    setLoginLoading(true);
     const email = new FormData(form).get("email").trim().toLowerCase();
     const { error } = await supabase.auth.signInWithOtp({
       email,
@@ -80,14 +89,12 @@ if (!isBackendConfigured()) {
     if (error) {
       message.textContent = "Die Anmeldung konnte nicht gestartet werden. Bitte versuche es später erneut.";
       button.disabled = false;
-      button.classList.remove("is-loading");
-      button.removeAttribute("aria-busy");
+      setLoginLoading(false);
       return;
     }
     message.className = "form-message success is-dispatch-success";
     message.innerHTML = successMarkup("Anmeldelink gesendet", "Prüfe dein Postfach. Dein sicherer Link ist unterwegs.");
     button.disabled = false;
-    button.classList.remove("is-loading");
-    button.removeAttribute("aria-busy");
+    setLoginLoading(false);
   });
 }

@@ -7,7 +7,7 @@ for (const width of [360, 390, 768, 1440]) {
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     page.on('response', response => { if(response.status() >= 400) errors.push(`${response.status()} ${response.url()}`); });
-    await page.route('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm', route => route.fulfill({ contentType: 'application/javascript', body: `export function createClient() { return { auth: { getSession: async () => ({ data: { session: null } }), signInWithOtp: async () => ({ error: null }) } }; }` }));
+    await page.route('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm', route => route.fulfill({ contentType: 'application/javascript', body: `export function createClient() { return { auth: { getSession: async () => ({ data: { session: null } }), signInWithOtp: () => new Promise(resolve => setTimeout(() => resolve({ error: null }), 120)) } }; }` }));
     await page.goto(`${base}/login/`);
     await expect(page.getByRole('heading', { name: 'Dein Studio. Dein Überblick.' })).toBeVisible();
     await assertDarkTheme(page);
@@ -21,6 +21,8 @@ for (const width of [360, 390, 768, 1440]) {
     await page.screenshot({ path: `qa/login-workspace-${width}.png`, fullPage: true });
     await email.fill('fixture@example.com');
     await submit.click();
+    await expect(page.locator('.login-button-shimmer')).toBeVisible();
+    await expect(page.locator('.login-button-shimmer')).toHaveCSS('animation-name', 'login-text-shimmer');
     await expect(page.locator('#login-message')).toContainText('Anmeldelink gesendet');
     expect(errors).toEqual([]);
     await page.close();
