@@ -529,6 +529,43 @@ function syncFinanceNavigation(nav) {
   const active = nav.querySelector("button[aria-current]");
   activateIndicator(nav.querySelector(".finance-nav-indicator"), `translate3d(${Math.round(active?.offsetLeft || 0)}px, 0, 0)`, active?.offsetWidth || 1);
 }
+function applyTextEffect(element) {
+  if (!element || element.dataset.mpTextEffectApplied) return;
+  const text = element.innerText.trim().replace(/\s+/g, " ");
+  if (!text) return;
+  element.dataset.mpTextEffectApplied = "true";
+  element.dataset.textEffect = "per-char";
+  element.classList.add("mp-text-effect");
+  element.setAttribute("aria-label", text);
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+  const textNodes = [];
+  let node;
+  while ((node = walker.nextNode())) textNodes.push(node);
+  textNodes.forEach((textNode) => {
+    if (!textNode.nodeValue.trim()) return;
+    const fragment = document.createDocumentFragment();
+    [...textNode.nodeValue].forEach((character, index) => {
+      const span = document.createElement("span");
+      span.className = "mp-char";
+      span.setAttribute("aria-hidden", "true");
+      span.style.setProperty("--mp-char-index", index);
+      span.textContent = character === " " ? String.fromCharCode(160) : character;
+      fragment.append(span);
+    });
+    textNode.replaceWith(fragment);
+  });
+  requestAnimationFrame(() => element.classList.add("mp-text-visible"));
+}
+function applyMotionPrimitives() {
+  const items = [...content.querySelectorAll(":scope > .finance-nav, :scope > .view > *:not(.mobile-card-list)")];
+  items.forEach((item, index) => {
+    item.dataset.motion = "item";
+    item.style.setProperty("--motion-delay", `${Math.min(index, 8) * 45}ms`);
+  });
+  content.querySelectorAll(
+    ":scope > .view > .hero-row h2, :scope > .view > .dashboard-intro h2, :scope > .view > .project-canvas-head h3, :scope > .view > .dashboard-focus-head h3",
+  ).forEach(applyTextEffect);
+}
 function render() {
   content.classList.remove("is-view-entering");
   title.textContent = viewNames[state.view];
@@ -550,6 +587,7 @@ function render() {
   });
   syncMainNavigationIndicator();
   if (finance) syncFinanceNavigation(content.querySelector(":scope > .finance-nav"));
+  applyMotionPrimitives();
   content.focus({ preventScroll: true });
 }
 async function refresh() { state.data = await adapter.loadAll(); render(); }

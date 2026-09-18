@@ -1,0 +1,129 @@
+/* Motion-Primitives adapter for the static HEAV Studio client.
+   The upstream kit targets React + Tailwind; Studio is intentionally static,
+   so this keeps the same AnimatedGroup-style entrance without a runtime dependency. */
+
+@keyframes hev-motion-group-enter {
+  from {
+    opacity: .78;
+    transform: translate3d(0, 10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+body.studio-editorial-theme #app-content.is-view-entering > .finance-nav,
+body.studio-editorial-theme #app-content.is-view-entering [data-motion="item"] {
+  animation: hev-motion-group-enter .46s var(--studio-ease) var(--motion-delay, 0ms) both;
+}
+
+body.studio-editorial-theme .mp-text-effect .mp-char {
+  display: inline-block;
+  opacity: .84;
+  transform: translate3d(0, .32em, 0);
+  transition: opacity .38s var(--studio-ease), transform .46s var(--studio-ease);
+  transition-delay: calc(var(--mp-char-index, 0) * 22ms);
+}
+
+body.studio-editorial-theme .mp-text-effect.mp-text-visible .mp-char {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.studio-editorial-theme #app-content.is-view-entering > .view,
+  body.studio-editorial-theme #app-content.is-view-entering > .finance-nav,
+  body.studio-editorial-theme #app-content.is-view-entering [data-motion="item"],
+  body.studio-editorial-theme .mp-text-effect .mp-char {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* Compact Motion-Primitives CRM direction: dense, calm, no pointer tracking. */
+body.studio-editorial-theme {
+  --studio-card-radius: 24px;
+  --studio-control-radius: 18px;
+}
+body.studio-editorial-theme :is(h1, h2, h3, h4, .brand) {
+  font-family: "DM Sans", Arial, sans-serif;
+  font-weight: 600;
+  letter-spacing: -.035em;
+}
+body.studio-editorial-theme .admin-shell { grid-template-columns: 230px minmax(0, 1fr); }
+body.studio-editorial-theme .sidebar { padding: 24px 14px 16px; }
+body.studio-editorial-theme .sidebar-head { padding-inline: 8px; }
+body.studio-editorial-theme .sidebar .brand { min-height: 38px; font-size: 27px; font-weight: 700; }
+body.studio-editorial-theme .main-nav { margin-top: 26px; }
+body.studio-editorial-theme .nav-link { min-height: 39px; font-size: 12px; }
+body.studio-editorial-theme .nav-section-label { padding: 19px 12px 5px; }
+body.studio-editorial-theme .topbar { min-height: 66px; padding: 9px clamp(20px, 3.35vw, 48px); }
+body.studio-editorial-theme .topbar h1 { font-size: 20px; }
+body.studio-editorial-theme .view { padding: 24px clamp(20px, 3.35vw, 48px) 42px; }
+body.studio-editorial-theme :is(.dashboard-intro, .hero-row) { margin-bottom: 18px; }
+body.studio-editorial-theme :is(.dashboard-intro h2, .hero-row h2, .project-view-intro h2) { font-size: clamp(30px, 3.2vw, 48px); line-height: 1; }
+body.studio-editorial-theme :is(.dashboard-intro p, .hero-row p, .project-view-intro p) { margin-top: 7px; font-size: 12px; line-height: 1.45; }
+body.studio-editorial-theme .dashboard-revenue { margin-bottom: 18px; }
+body.studio-editorial-theme .dashboard-revenue-summary { padding: 24px; }
+body.studio-editorial-theme .dashboard-revenue-summary h3 { margin: 8px 0 16px; font-size: clamp(25px, 2.4vw, 36px); }
+body.studio-editorial-theme .dashboard-revenue-summary > strong { font-size: clamp(38px, 4.2vw, 60px); }
+body.studio-editorial-theme .dashboard-revenue-figure { min-height: 286px; padding: 24px; }
+body.studio-editorial-theme .dashboard-revenue-chart { min-height: 185px; }
+body.studio-editorial-theme .dashboard-stage { grid-template-columns: minmax(0, 1.55fr) minmax(260px, .75fr); gap: 12px; border: 0; background: transparent; }
+body.studio-editorial-theme .dashboard-stage > :is(.dashboard-focus, .dashboard-money) { border: 1px solid rgba(214, 235, 253, .2); border-radius: var(--studio-card-radius); }
+body.studio-editorial-theme .dashboard-focus { min-height: 278px; padding: 24px; }
+body.studio-editorial-theme .dashboard-focus h3 { margin: 8px 0 10px; font-size: clamp(32px, 4vw, 54px); }
+body.studio-editorial-theme .dashboard-focus-modules { padding-top: 20px; }
+body.studio-editorial-theme .dashboard-money { min-height: 278px; padding: 24px; }
+body.studio-editorial-theme .dashboard-money > strong { margin: 15px 0 5px; font-size: clamp(34px, 3.6vw, 52px); }
+body.studio-editorial-theme .dashboard-grid { gap: 12px; margin-top: 18px; border: 0; background: transparent; }
+body.studio-editorial-theme .dashboard-grid > .dashboard-panel { border: 1px solid rgba(214, 235, 253, .2); border-radius: var(--studio-card-radius); }
+body.studio-editorial-theme .dashboard-panel .panel-head { min-height: 56px; padding: 14px 18px; }
+body.studio-editorial-theme .dashboard-panel .panel-head h3,
+body.studio-editorial-theme .panel-head h3,
+body.studio-editorial-theme .settings-card h3 { font-size: 18px; }
+body.studio-editorial-theme .workspace-action-list,
+body.studio-editorial-theme .dashboard-production-list { padding-inline: 18px; }
+body.studio-editorial-theme .workspace-action { padding: 12px 0; }
+body.studio-editorial-theme .toolbar { min-height: 43px; gap: 8px; margin-bottom: 12px; padding: 5px 0; }
+body.studio-editorial-theme .finance-nav { min-height: 51px; gap: 18px; padding-top: 4px; }
+body.studio-editorial-theme .finance-nav button { min-height: 38px; }
+body.studio-editorial-theme .data-table { border-radius: var(--studio-card-radius); }
+body.studio-editorial-theme .data-table th { padding: 10px 12px; }
+body.studio-editorial-theme .data-table td { padding: 9px 12px; }
+body.studio-editorial-theme .panel,
+body.studio-editorial-theme .settings-card,
+body.studio-editorial-theme .empty-state,
+body.studio-editorial-theme .mobile-card { border-radius: var(--studio-card-radius); }
+
+@media (max-width: 820px) {
+  body.studio-editorial-theme .admin-shell { grid-template-columns: 1fr; }
+  body.studio-editorial-theme .nav-link { min-height: 44px; font-size: 32px; }
+  body.studio-editorial-theme .primary-action,
+  body.studio-editorial-theme .secondary-button,
+  body.studio-editorial-theme .text-button { min-height: 44px; }
+  body.studio-editorial-theme .mobile-card .primary-action,
+  body.studio-editorial-theme .mobile-card .secondary-button { min-height: 45px; }
+  body.studio-editorial-theme .dashboard-grid > .dashboard-panel { min-width: 0; }
+  body.studio-editorial-theme .topbar { min-height: 60px; padding: 8px 16px; }
+  body.studio-editorial-theme .view { padding: 20px 16px 32px; }
+  body.studio-editorial-theme .dashboard-revenue,
+  body.studio-editorial-theme .dashboard-stage,
+  body.studio-editorial-theme .dashboard-grid { grid-template-columns: 1fr; gap: 10px; }
+  body.studio-editorial-theme .dashboard-revenue-summary,
+  body.studio-editorial-theme .dashboard-revenue-figure,
+  body.studio-editorial-theme .dashboard-focus,
+  body.studio-editorial-theme .dashboard-money { min-height: 0; padding: 20px; }
+  body.studio-editorial-theme .dashboard-revenue-figure { min-height: 235px; }
+  body.studio-editorial-theme .dashboard-revenue-chart { min-height: 145px; }
+  body.studio-editorial-theme .dashboard-focus h3 { font-size: clamp(30px, 10vw, 44px); }
+  body.studio-editorial-theme .dashboard-grid { margin-top: 10px; }
+  body.studio-editorial-theme .workspace-action,
+  body.studio-editorial-theme .workspace-action > *,
+  body.studio-editorial-theme .workspace-action .table-actions { min-width: 0; max-width: 100%; }
+  body.studio-editorial-theme .workspace-action .table-actions { flex-wrap: wrap; }
+}
+

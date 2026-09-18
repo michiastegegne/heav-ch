@@ -717,6 +717,37 @@ test("Workspace: route changes use the restrained HEAV entrance motion", async (
   expect(motion.opacity).toBeGreaterThanOrEqual(0.8);
 });
 
+test("Workspace: Motion-Primitives group staggers view sections", async ({ page }) => {
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  await page.locator('.nav-link[data-view="customers"]').click();
+  await page.waitForFunction(() => document.querySelector('#app-content')?.classList.contains('is-view-entering'));
+  const items = page.locator('#app-content [data-motion="item"]');
+  await expect(items).toHaveCount(2);
+  const motion = await items.first().evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { name: style.animationName, duration: style.animationDuration, delay: style.animationDelay };
+  });
+  expect(motion.name).toBe('hev-motion-group-enter');
+  expect(motion.duration).toBe('0.46s');
+  expect(motion.delay).toBe('0s');
+  const secondDelay = await items.nth(1).evaluate((element) => getComputedStyle(element).animationDelay);
+  expect(secondDelay).toBe('0.045s');
+});
+
+test("Workspace: per-character TextEffect animiert CRM-Headlines zugänglich", async ({ page }) => {
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  const heading = page.locator(".dashboard-intro h2");
+  await expect(heading).toHaveClass(/mp-text-effect/);
+  await expect(heading.locator(".mp-char")).toHaveCount(19);
+  await expect(heading).toHaveAttribute("aria-label", "Dein Arbeitsbereich");
+  await expect(heading.locator(".mp-char").first()).toHaveCSS("opacity", "1");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.reload();
+  await expect(page.locator(".dashboard-intro h2 .mp-char").first()).toHaveCSS("opacity", "1");
+});
+
 test("Workspace: reduced motion clears route entrance state without animationend", async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   await page.emulateMedia({ reducedMotion: 'reduce' });
