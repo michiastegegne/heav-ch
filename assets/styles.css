@@ -2162,8 +2162,8 @@ main {
   line-height: 0.72;
   text-align: center;
 }
-.temporary-home-logo-mark.personal-wordmark span,
-.temporary-home-logo-mark.personal-wordmark em {
+.temporary-home-logo-mark.personal-wordmark > span,
+.temporary-home-logo-mark.personal-wordmark > em {
   display: block;
   font: inherit;
 }
@@ -2180,5 +2180,120 @@ main {
   .temporary-home-logo-mark.personal-wordmark {
     font-size: clamp(4.45rem, 21vw, 8.25rem);
     line-height: 0.76;
+  }
+}
+
+/* Motion Primitives — static-site equivalents for the editorial public site. */
+.motion-scroll-progress {
+  position: fixed;
+  inset: 0 auto auto 0;
+  z-index: 400;
+  width: calc(var(--motion-scroll-progress, 0) * 1%);
+  height: 2px;
+  pointer-events: none;
+  background: var(--acid);
+  transform-origin: left center;
+}
+.motion-primitives-ready .mp-reveal {
+  opacity: 1;
+  transform: none;
+}
+.motion-primitives-ready .mp-reveal.mp-in-view {
+  animation: mp-in-view .72s var(--ease) both;
+}
+.motion-primitives-ready .mp-stagger-group.mp-in-view > .mp-stagger-item {
+  animation: mp-stagger-item .68s var(--ease) both;
+  animation-delay: calc(var(--mp-index, 0) * 70ms);
+}
+@keyframes mp-in-view {
+  from { opacity: .68; transform: translate3d(0, 22px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes mp-stagger-item {
+  from { opacity: .72; transform: translate3d(0, 16px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+.mp-border-trail {
+  position: relative;
+  isolation: isolate;
+}
+.mp-border-trail::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  padding: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: conic-gradient(from var(--mp-angle, 0deg), transparent 0 76%, var(--acid) 86%, transparent 96%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+.mp-border-trail:is(:hover, :focus-visible)::after,
+.mp-border-trail.mp-in-view::after {
+  opacity: .9;
+  animation: mp-border-trail 5s linear infinite;
+}
+@keyframes mp-border-trail {
+  to { --mp-angle: 360deg; }
+}
+.mp-spotlight {
+  position: relative;
+  isolation: isolate;
+}
+.mp-spotlight::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at var(--mp-x, 50%) var(--mp-y, 50%), rgba(215, 255, 56, .2), transparent 34%);
+  mix-blend-mode: screen;
+  transition: opacity .35s var(--ease);
+}
+.mp-spotlight:is(:hover, :focus-within)::after {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .motion-scroll-progress { display: none; }
+  .motion-primitives-ready .mp-reveal.mp-in-view,
+  .motion-primitives-ready .mp-stagger-group.mp-in-view > .mp-stagger-item,
+  .mp-border-trail:is(:hover, :focus-visible)::after,
+  .mp-border-trail.mp-in-view::after {
+    animation: none !important;
+  }
+  .mp-reveal,
+  .mp-stagger-item { opacity: 1 !important; transform: none !important; }
+  .mp-border-trail::after { opacity: 0 !important; }
+  .mp-spotlight::after { display: none; }
+}
+
+/* Static adapter for Motion Primitives TextEffect per="char" preset="fade". */
+.mp-text-effect {
+  --mp-char-stagger: 24ms;
+}
+.mp-text-effect .mp-char {
+  display: inline-block;
+  opacity: .84;
+  transform: translateY(.35em);
+  transition: opacity .55s var(--ease), transform .55s var(--ease);
+  transition-delay: calc(var(--mp-char-index) * var(--mp-char-stagger));
+  will-change: opacity, transform;
+}
+.mp-text-effect.mp-text-visible .mp-char {
+  opacity: 1;
+  transform: translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .mp-text-effect .mp-char,
+  .mp-text-effect.mp-text-visible .mp-char {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+    will-change: auto;
   }
 }

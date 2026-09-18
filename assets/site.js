@@ -151,6 +151,7 @@
   const precisePointer = matchMedia(
     "(hover: hover) and (pointer: fine)",
   ).matches;
+  document.documentElement.classList.add("motion-primitives-ready");
 
   if (!reducedMotion && precisePointer) {
     $$(".hero-art, .work-feature-art").forEach((surface) => {
@@ -161,14 +162,8 @@
         if (frame) return;
         frame = requestAnimationFrame(() => {
           const rect = surface.getBoundingClientRect();
-          const x = (
-            42 +
-            ((latestEvent.clientX - rect.left) / rect.width) * 28
-          ).toFixed(2);
-          const y = (
-            22 +
-            ((latestEvent.clientY - rect.top) / rect.height) * 28
-          ).toFixed(2);
+          const x = (42 + ((latestEvent.clientX - rect.left) / rect.width) * 28).toFixed(2);
+          const y = (22 + ((latestEvent.clientY - rect.top) / rect.height) * 28).toFixed(2);
           surface.style.setProperty("--mx", `${x}%`);
           surface.style.setProperty("--my", `${y}%`);
           frame = 0;
@@ -182,4 +177,140 @@
       });
     });
   }
+
+  const motionProgress = document.createElement("span");
+  motionProgress.className = "motion-scroll-progress";
+  motionProgress.setAttribute("aria-hidden", "true");
+  document.body.append(motionProgress);
+
+  const updateMotionProgress = () => {
+    const maxScroll = document.documentElement.scrollHeight - innerHeight;
+    const progress = maxScroll > 0 ? Math.min(100, Math.max(0, (scrollY / maxScroll) * 100)) : 0;
+    document.documentElement.style.setProperty("--motion-scroll-progress", progress.toFixed(2));
+  };
+  let motionProgressFrame = 0;
+  addEventListener("scroll", () => {
+    if (motionProgressFrame) return;
+    motionProgressFrame = requestAnimationFrame(() => {
+      motionProgressFrame = 0;
+      updateMotionProgress();
+    });
+  }, { passive: true });
+  addEventListener("resize", updateMotionProgress);
+  updateMotionProgress();
+
+  const revealTargets = $$([
+    ".temporary-home-logo",
+    ".page-hero",
+    ".section",
+    ".cta-panel",
+    ".work-feature",
+    ".selected-work-feature",
+    ".home-photography-promo",
+    ".project-hero-image",
+    ".project-video-frame",
+    ".project-stills-section",
+    ".client-block",
+    ".owner-section",
+    ".contact-form-layout",
+    ".home-project-card",
+    ".still-card",
+    ".gallery-tile",
+  ].join(","));
+  const motionGroups = $$([
+    ".home-project-grid",
+    ".still-grid",
+    ".stills-gallery-grid",
+    ".selected-photography-grid",
+    ".link-list",
+    ".client-logos",
+  ].join(","));
+
+  motionGroups.forEach((group) => {
+    group.classList.add("mp-reveal", "mp-stagger-group");
+    [...group.children].forEach((item, index) => {
+      item.classList.add("mp-stagger-item");
+      item.style.setProperty("--mp-index", index);
+    });
+  });
+  revealTargets.forEach((target) => target.classList.add("mp-reveal"));
+  [
+    ".home-project-card",
+    ".selected-work-feature",
+    ".work-feature",
+    ".cta-panel",
+  ].forEach((selector) => $$(selector).forEach((element) => element.classList.add("mp-border-trail")));
+  [
+    ".home-project-card-image",
+    ".selected-work-image",
+  ].forEach((selector) => $$(selector).forEach((element) => element.classList.add("mp-spotlight")));
+
+  const motionTargets = [...new Set([...revealTargets, ...motionGroups])];
+  const showMotionTarget = (target) => target.classList.add("mp-in-view");
+  if (reducedMotion || !("IntersectionObserver" in window)) {
+    motionTargets.forEach(showMotionTarget);
+  } else {
+    const motionObserver = new IntersectionObserver((entries, observer) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        showMotionTarget(entry.target);
+        observer.unobserve(entry.target);
+      });
+    }, { rootMargin: "0px 0px -10% 0px", threshold: 0.08 });
+    motionTargets.forEach((target) => motionObserver.observe(target));
+  }
+
+  if (!reducedMotion && precisePointer) {
+    const spotlightSurfaces = $$(".home-project-card-image, .selected-work-image");
+    spotlightSurfaces.forEach((surface) => {
+      let frame = 0;
+      let latestEvent;
+      surface.addEventListener("pointermove", (event) => {
+        latestEvent = event;
+        if (frame) return;
+        frame = requestAnimationFrame(() => {
+          const rect = surface.getBoundingClientRect();
+          surface.style.setProperty("--mp-x", `${(((latestEvent.clientX - rect.left) / rect.width) * 100).toFixed(2)}%`);
+          surface.style.setProperty("--mp-y", `${(((latestEvent.clientY - rect.top) / rect.height) * 100).toFixed(2)}%`);
+          frame = 0;
+        });
+      });
+      surface.addEventListener("pointerleave", () => {
+        if (frame) cancelAnimationFrame(frame);
+        frame = 0;
+        surface.style.removeProperty("--mp-x");
+        surface.style.removeProperty("--mp-y");
+      });
+    });
+  }
+  const textEffectTargets = $$(
+    "[data-text-effect='per-char'], .page-hero h1, .temporary-home-logo-mark, .work-feature-copy h2, .selected-work-copy h2",
+  ).filter((element) => !element.dataset.mpTextEffectApplied && element.textContent.trim().length > 0);
+  textEffectTargets.forEach((element) => {
+    const text = element.innerText.trim().replace(/\s+/g, " ");
+    element.dataset.mpTextEffectApplied = "true";
+    element.dataset.textEffect = "per-char";
+    element.classList.add("mp-text-effect");
+    element.setAttribute("aria-label", text);
+    const textNodes = [];
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    let node;
+    while ((node = walker.nextNode())) {
+      if (node.parentElement?.closest("script, style")) continue;
+      if (node.textContent.trim()) textNodes.push(node);
+    }
+    textNodes.forEach((textNode) => {
+      const fragment = document.createDocumentFragment();
+      [...textNode.textContent].forEach((character, index) => {
+        const span = document.createElement("span");
+        span.className = "mp-char";
+        span.setAttribute("aria-hidden", "true");
+        span.style.setProperty("--mp-char-index", index);
+        span.textContent = character === " " ? String.fromCharCode(160) : character;
+        fragment.append(span);
+      });
+      textNode.replaceWith(fragment);
+    });
+    requestAnimationFrame(() => element.classList.add("mp-text-visible"));
+  });
 })();

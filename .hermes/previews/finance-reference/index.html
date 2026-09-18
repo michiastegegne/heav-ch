@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>HEAV — Finanzen · Design Preview</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --canvas: #090909;
+      --top: #000;
+      --sidebar: #111111;
+      --surface: #181818;
+      --surface-hover: #222222;
+      --surface-active: #2c2c2c;
+      --line: #303030;
+      --line-soft: #292929;
+      --ink: #f5f5f5;
+      --muted: #a5a5a5;
+      --quiet: #777;
+      --danger: #ff4c59;
+      --danger-soft: #31191d;
+      --success: #58d497;
+      --success-soft: #102d22;
+      --radius-card: 24px;
+      --radius-control: 18px;
+      --sidebar-width: clamp(240px, 16.15vw, 488px);
+      --font: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { background: var(--top); font-family: var(--font); }
+    body { margin: 0; min-width: 320px; background: var(--canvas); color: var(--ink); font-size: 16px; -webkit-font-smoothing: antialiased; }
+    button, input, select { font: inherit; color: inherit; }
+    button { border: 0; cursor: pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+    svg { display: block; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+    .top-spacer { height: 66px; background: var(--top); }
+    .app { min-height: calc(100vh - 66px); display: grid; grid-template-columns: var(--sidebar-width) minmax(0, 1fr); background: var(--canvas); }
+
+    .nav-scrim { display: none; }
+    .sidebar { position: sticky; top: 0; height: calc(100vh - 66px); min-height: 620px; display: flex; flex-direction: column; padding: 67px 28px 28px; background: var(--sidebar); border-right: 1px solid var(--line); z-index: 20; }
+    .brand { display: inline-flex; width: fit-content; color: var(--ink); font-size: 32px; line-height: 1; font-weight: 650; letter-spacing: -0.08em; text-decoration: none; }
+    .eyebrow { display: block; color: var(--muted); font-size: 13px; font-weight: 600; line-height: 1.2; letter-spacing: .13em; text-transform: uppercase; }
+    .sidebar .eyebrow { margin-top: 82px; margin-bottom: 26px; }
+    .nav { display: grid; gap: 5px; }
+    .nav-section { margin: 33px 20px 9px; color: var(--quiet); font-size: 13px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; }
+    .nav-item { width: 100%; min-height: 50px; display: flex; align-items: center; gap: 16px; padding: 0 20px; background: transparent; border-radius: 14px; color: var(--muted); text-align: left; transition: background .2s ease, color .2s ease, transform .2s ease; }
+    .nav-item:hover { background: var(--surface-hover); color: var(--ink); transform: translateX(2px); }
+    .nav-item.active { background: var(--surface-active); color: var(--ink); }
+    .nav-item svg { width: 21px; height: 21px; flex: 0 0 21px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .nav-item span { font-size: 17px; line-height: 1; }
+    .sidebar-foot { margin-top: auto; padding: 22px 20px 0; border-top: 1px solid var(--line); color: var(--muted); }
+    .status { display: flex; align-items: center; gap: 9px; margin-bottom: 18px; font-size: 14px; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 4px rgba(88,212,151,.10); }
+    .profile { display: flex; align-items: center; gap: 12px; color: var(--ink); font-size: 16px; }
+    .avatar { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; background: #f5f5f5; color: #222; font-size: 13px; font-weight: 700; }
+
+    .workspace { min-width: 0; padding: 91px clamp(32px, 3.15vw, 96px) 72px; overflow: hidden; }
+    .topbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 28px; margin-bottom: 52px; }
+    .title-block h1 { margin: 9px 0 10px; color: var(--ink); font-size: clamp(45px, 4.15vw, 91px); font-weight: 620; letter-spacing: -.075em; line-height: .98; }
+    .title-block p { max-width: 770px; margin: 0; color: var(--muted); font-size: clamp(16px, 1.15vw, 25px); line-height: 1.38; }
+    .search { position: relative; width: min(100%, 560px); flex: 0 1 560px; align-self: flex-end; }
+    .search svg { position: absolute; left: 21px; top: 50%; width: 20px; height: 20px; transform: translateY(-50%); color: var(--quiet); stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+    .search input { width: 100%; height: 62px; padding: 0 24px 0 56px; border: 0; border-radius: 32px; background: #232323; color: var(--ink); font-size: 17px; outline: none; }
+    .search input::placeholder { color: var(--muted); opacity: 1; }
+    .search input:focus { box-shadow: 0 0 0 2px #555; }
+
+    .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; margin-bottom: 56px; }
+    .metric { min-height: 201px; padding: 43px 42px 36px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); box-shadow: 0 10px 25px rgba(0,0,0,.12); }
+    .metric-label { color: var(--muted); font-size: 18px; line-height: 1.2; }
+    .metric-value { display: block; margin-top: 44px; color: var(--ink); font-size: clamp(30px, 2.5vw, 58px); font-weight: 700; letter-spacing: -.065em; line-height: .98; white-space: nowrap; }
+    .metric-note { display: block; margin-top: 38px; color: var(--muted); font-size: 17px; line-height: 1.25; }
+    .metric-note.danger { color: var(--danger); }
+
+    .register { overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); box-shadow: 0 10px 28px rgba(0,0,0,.13); }
+    .register-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; padding: 42px 42px 36px; }
+    .register-head h2 { margin: 0 0 12px; color: var(--ink); font-size: 29px; font-weight: 650; letter-spacing: -.045em; }
+    .register-head p { margin: 0; color: var(--muted); font-size: 18px; }
+    .sort-control { position: relative; flex: 0 0 auto; }
+    .sort-button { min-height: 49px; display: inline-flex; align-items: center; gap: 12px; padding: 0 21px; border: 1px solid #4a4a4a; border-radius: 26px; background: transparent; color: var(--ink); font-size: 17px; }
+    .sort-button:hover { background: var(--surface-hover); }
+    .sort-button svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .sort-menu { position: absolute; top: calc(100% + 9px); right: 0; min-width: 210px; display: none; padding: 7px; border: 1px solid var(--line); border-radius: 14px; background: #252525; box-shadow: 0 18px 35px rgba(0,0,0,.35); z-index: 10; }
+    .sort-menu.open { display: grid; }
+    .sort-option { padding: 11px 12px; border-radius: 9px; background: transparent; color: var(--muted); text-align: left; font-size: 14px; }
+    .sort-option:hover, .sort-option.selected { background: #363636; color: var(--ink); }
+    .tabs { display: flex; align-items: center; gap: 12px; padding: 0 42px 20px; border-bottom: 1px solid var(--line); }
+    .tab { min-height: 42px; padding: 0 18px; border-radius: 22px; background: transparent; color: var(--muted); font-size: 17px; }
+    .tab:hover { color: var(--ink); }
+    .tab.active { background: #303030; color: var(--ink); }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; min-width: 840px; border-collapse: collapse; }
+    th { padding: 25px 42px 20px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 17px; font-weight: 500; text-align: left; }
+    th:nth-child(1), td:nth-child(1) { width: 28%; }
+    th:nth-child(2), td:nth-child(2) { width: 23%; white-space: nowrap; }
+    th:nth-child(3), td:nth-child(3) { width: 17%; }
+    th:nth-child(4), td:nth-child(4) { width: 20%; white-space: nowrap; }
+    th:nth-child(5), td:nth-child(5) { width: 12%; white-space: nowrap; }
+    td { height: 111px; padding: 20px 42px; border-bottom: 1px solid var(--line-soft); color: var(--ink); font-size: 17px; vertical-align: middle; }
+    tr:last-child td { border-bottom: 0; }
+    .invoice-number { display: block; margin-bottom: 9px; color: var(--ink); font-size: 17px; }
+    .invoice-meta { color: var(--muted); font-size: 16px; }
+    .status-badge { display: inline-flex; min-height: 34px; align-items: center; padding: 0 16px; border-radius: 18px; background: #292929; color: #ddd; font-size: 15px; }
+    .status-badge.paid { background: var(--success-soft); color: var(--success); }
+    .status-badge.overdue { background: var(--danger-soft); color: #ff6974; }
+    .amount { font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .row-action { display: inline-flex; align-items: center; gap: 9px; padding: 7px 0; background: transparent; color: var(--ink); font-size: 16px; white-space: nowrap; }
+    .row-action:hover { color: #fff; text-decoration: underline; text-underline-offset: 5px; }
+    .row-action svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .empty { padding: 60px 42px; color: var(--muted); text-align: center; }
+
+    .analytics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-top: 24px; }
+    .bklit-card { position: relative; min-height: 246px; overflow: hidden; padding: 23px 24px 0; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
+    .bklit-card-head { position: relative; z-index: 2; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+    .bklit-card-title { color: var(--muted); font-size: 15px; }
+    .bklit-card-value { display: block; margin-top: 17px; color: var(--ink); font-size: 34px; font-weight: 650; letter-spacing: -.06em; line-height: 1; }
+    .bklit-trend { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; padding: 0 10px; border: 1px solid rgba(88,212,151,.28); border-radius: 15px; background: rgba(88,212,151,.10); color: var(--success); font-size: 12px; }
+    .bklit-trend svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .bklit-chart { position: absolute; right: 0; bottom: 0; left: 0; width: 100%; height: 125px; }
+    .bklit-chart path.area { fill: url(#bklit-area-gradient); }
+    .bklit-chart path.line { fill: none; stroke: #8d8d8d; stroke-width: 2; vector-effect: non-scaling-stroke; }
+    .bklit-chart .grid-line { stroke: #2b2b2b; stroke-width: 1; vector-effect: non-scaling-stroke; }
+    .bklit-chart .marker { fill: var(--ink); stroke: #242424; stroke-width: 4; vector-effect: non-scaling-stroke; }
+    .bklit-foot { position: absolute; right: 24px; bottom: 15px; left: 24px; z-index: 2; display: flex; justify-content: space-between; color: var(--quiet); font-size: 11px; }
+    .bklit-source { color: #686868; font-size: 10px; letter-spacing: .07em; text-transform: uppercase; }
+    .mobile-menu-button { display: none; }
+    .menu-close { display: none; }
+    .preview-badge { position: fixed; right: 18px; top: 18px; z-index: 40; display: flex; align-items: center; gap: 10px; padding: 8px 12px 8px 14px; border: 1px solid #3d3d3d; border-radius: 18px; background: rgba(20,20,20,.92); color: #aaa; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; box-shadow: 0 8px 25px rgba(0,0,0,.3); }
+    .preview-badge button { width: 20px; height: 20px; border-radius: 50%; background: #363636; color: #bbb; line-height: 1; }
+    .toast { position: fixed; left: 50%; bottom: 28px; z-index: 50; padding: 13px 18px; border: 1px solid #444; border-radius: 14px; background: #272727; color: var(--ink); font-size: 14px; opacity: 0; visibility: hidden; pointer-events: none; transform: translate(-50%, 150%); transition: opacity .24s ease, transform .24s ease, visibility .24s ease; }
+    .toast.show { opacity: 1; visibility: visible; pointer-events: auto; transform: translate(-50%, 0); }
+
+    .motion-scroll-progress { position: fixed; inset: 0 0 auto; z-index: 80; height: 3px; background: rgba(255,255,255,.08); pointer-events: none; }
+    .motion-scroll-progress span { display: block; width: var(--scroll-progress, 0%); height: 100%; background: linear-gradient(90deg, #fff, #8d8d8d); transform-origin: left; transition: width .12s linear; }
+    .mp-text-effect .mp-char { display: inline-block; opacity: .84; transform: translate3d(0, .34em, 0); transition: opacity .4s cubic-bezier(.22,1,.36,1), transform .46s cubic-bezier(.22,1,.36,1); transition-delay: calc(var(--mp-char-index, 0) * 24ms); }
+    .mp-text-effect.mp-text-visible .mp-char { opacity: 1; transform: translate3d(0, 0, 0); }
+    .motion-surface { position: relative; isolation: isolate; }
+    .motion-border-trail::after { position: absolute; inset: 0; z-index: 3; border: 1px solid transparent; border-radius: inherit; background: linear-gradient(115deg, transparent 28%, rgba(255,255,255,.6), transparent 72%) border-box; content: ""; opacity: 0; -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; transition: opacity .3s ease; }
+    .mp-stagger-group > [data-motion-item] { opacity: .84; transform: translate3d(0, 10px, 0); animation: preview-motion-stagger .58s cubic-bezier(.22,1,.36,1) both; animation-delay: calc(var(--motion-index, 0) * 60ms); }
+    .mp-stagger-group > [data-motion-item]:nth-child(2) { --motion-index: 1; }
+    .mp-stagger-group > [data-motion-item]:nth-child(3) { --motion-index: 2; }
+    .mp-stagger-group > [data-motion-item]:nth-child(4) { --motion-index: 3; }
+    @keyframes preview-motion-stagger { to { opacity: 1; transform: translate3d(0, 0, 0); } }
+    .motion-dock { position: relative; width: max-content; margin: -28px 0 28px auto; z-index: 4; display: flex; align-items: end; gap: 8px; padding: 8px; border: 1px solid rgba(255,255,255,.16); border-radius: 20px; background: rgba(18,18,18,.78); box-shadow: 0 14px 42px rgba(0,0,0,.38); backdrop-filter: blur(18px); }
+    .dock-item { position: relative; width: 46px; height: 46px; display: grid; place-items: center; border-radius: 14px; background: transparent; color: var(--muted); transition: color .2s ease, background .2s ease, transform .2s cubic-bezier(.22,1,.36,1); }
+    .dock-item:hover, .dock-item:focus-visible, .dock-item.is-active { background: #303030; color: var(--ink); transform: translateY(-4px) scale(1.08); }
+    .dock-item svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .dock-label { position: absolute; bottom: calc(100% + 9px); left: 50%; padding: 5px 8px; border: 1px solid #3d3d3d; border-radius: 8px; background: #202020; color: var(--ink); font-size: 11px; white-space: nowrap; opacity: 0; pointer-events: none; transform: translate(-50%, 5px); transition: opacity .18s ease, transform .18s ease; }
+    .dock-item:hover .dock-label, .dock-item:focus-visible .dock-label { opacity: 1; transform: translate(-50%, 0); }
+
+    @media (hover: hover) and (pointer: fine) {
+      .motion-border-trail:hover::after, .motion-border-trail:focus-within::after { opacity: 1; }
+    }
+
+    @media (max-width: 860px) {
+      .motion-dock { margin: -12px auto 24px; gap: 4px; border-radius: 18px; }
+      .dock-item { width: 44px; height: 44px; }
+      .dock-label { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+      .motion-scroll-progress span { transition: none; }
+      .mp-text-effect .mp-char, .mp-stagger-group > [data-motion-item] { opacity: 1; transform: none; animation: none; transition: none; }
+      .dock-item:hover, .dock-item:focus-visible, .dock-item.is-active { transform: none; }
+    }
+
+    @media (max-width: 1180px) {
+      .workspace { padding-inline: 32px; }
+      .metric { padding-inline: 28px; }
+      .register-head, .tabs, th, td { padding-left: 28px; padding-right: 28px; }
+      .topbar { align-items: flex-start; flex-direction: column; }
+      .search { width: min(100%, 560px); flex-basis: auto; align-self: stretch; }
+    }
+
+    @media (max-width: 860px) {
+      .top-spacer { height: 18px; }
+      .app { min-height: calc(100vh - 18px); display: block; }
+      .sidebar { position: fixed; inset: 18px 0 0; width: auto; height: auto; min-height: 0; padding: 38px 24px 24px; transform: translateX(-102%); transition: transform .28s ease; box-shadow: 22px 0 55px rgba(0,0,0,.32); }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar .eyebrow { margin-top: 65px; }
+      .menu-close { position: absolute; top: 31px; right: 24px; display: inline-flex; align-items: center; gap: 8px; padding: 10px; background: transparent; color: var(--muted); font-size: 14px; }
+      .menu-close svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; }
+      .nav-scrim { position: fixed; inset: 18px 0 0; z-index: 15; display: none; background: rgba(0,0,0,.66); }
+      .nav-scrim.open { display: block; }
+      .workspace { padding: 36px 18px 48px; }
+      .mobile-menu-button { display: inline-flex; align-items: center; gap: 9px; margin-bottom: 31px; padding: 0; background: transparent; color: var(--muted); font-size: 14px; }
+      .mobile-menu-button svg { width: 19px; height: 19px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; }
+      .topbar { gap: 0; margin-bottom: 36px; }
+      .title-block h1 { margin-top: 8px; font-size: clamp(42px, 14vw, 65px); }
+      .title-block p { font-size: 16px; }
+      .search { margin-top: 29px; }
+      .search input { height: 54px; font-size: 15px; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 28px; }
+      .metric { min-height: 155px; padding: 22px 19px 20px; border-radius: 19px; }
+      .metric-label { font-size: 14px; }
+      .metric-value { margin-top: 29px; font-size: clamp(22px, 6.5vw, 32px); }
+      .metric-note { margin-top: 25px; font-size: 13px; }
+      .analytics { grid-template-columns: 1fr; gap: 12px; margin-top: 12px; }
+      .bklit-card { min-height: 208px; border-radius: 19px; }
+      .register { border-radius: 19px; }
+      .register-head { padding: 25px 20px 23px; }
+      .register-head h2 { font-size: 23px; }
+      .register-head p { font-size: 14px; line-height: 1.4; }
+      .sort-button { min-height: 42px; padding: 0 14px; font-size: 13px; }
+      .tabs { gap: 2px; overflow-x: auto; padding: 0 13px 13px; }
+      .tab { min-height: 40px; padding: 0 12px; font-size: 14px; white-space: nowrap; }
+      .table-wrap { display: none; }
+      .mobile-invoices { display: grid; }
+      .mobile-invoice { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 17px; padding: 20px; border-bottom: 1px solid var(--line-soft); }
+      .mobile-invoice:last-child { border-bottom: 0; }
+      .mobile-invoice .amount { grid-column: 2; grid-row: 1; align-self: start; font-size: 14px; }
+      .mobile-invoice .status-badge { grid-column: 1; grid-row: 2; width: fit-content; }
+      .mobile-invoice .row-action { grid-column: 2; grid-row: 2; justify-self: end; align-self: center; font-size: 14px; }
+      .preview-badge { right: 10px; top: 10px; bottom: auto; }
+    }
+
+    @media (min-width: 861px) {
+      .mobile-invoices { display: none; }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="motion-scroll-progress" aria-hidden="true"><span></span></div>
+  <div class="top-spacer" aria-hidden="true"></div>
+  <div class="app">
+    <div class="nav-scrim" data-scrim></div>
+    <aside class="sidebar" data-sidebar aria-label="Studio Navigation">
+      <a href="#" class="brand" aria-label="HEAV Startseite">HEAV</a>
+      <button class="menu-close" type="button" data-close-menu aria-label="Menü schliessen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>Schliessen</button>
+      <span class="eyebrow">Studio</span>
+      <nav class="nav" aria-label="Studio">
+        <button class="nav-item" type="button" data-view="overview"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg><span>Übersicht</span></button>
+        <button class="nav-item" type="button" data-view="projects"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h16v11H4z"/><path d="M8 8.5V5h8v3.5"/></svg><span>Projekte</span></button>
+        <button class="nav-item" type="button" data-view="customers"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 19c.6-3.1 3.1-5 7-5s6.4 1.9 7 5"/></svg><span>Kunden</span></button>
+        <button class="nav-item active" type="button" data-view="finance" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V5M5 19h15"/><path d="M9 16v-4M13 16V8M17 16v-7"/></svg><span>Finanzen</span></button>
+        <div class="nav-section">Verwaltung</div>
+        <button class="nav-item" type="button" data-view="settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="m19 13 .1-1-.1-1 2-1.3-2-3.4-2.2 1a7.2 7.2 0 0 0-1.7-1L14.8 4h-4l-.3 2.3a7.2 7.2 0 0 0-1.7 1l-2.2-1-2 3.4 2 1.3-.1 1 .1 1-2 1.3 2 3.4 2.2-1a7.2 7.2 0 0 0 1.7 1l.3 2.3h4l.3-2.3a7.2 7.2 0 0 0 1.7-1l2.2 1 2-3.4Z"/></svg><span>Einstellungen</span></button>
+        <button class="nav-item" type="button" data-view="portal"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14v12H5z"/><path d="m5 8 7 5 7-5M8 4h8"/></svg><span>Portal-Anfragen</span></button>
+        <button class="nav-item" type="button" data-view="emails"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="13" rx="2"/><path d="m5 8 7 5 7-5"/></svg><span>E-Mail-Verlauf</span></button>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="status"><span class="status-dot" aria-hidden="true"></span><span>Sicher verbunden</span></div>
+        <div class="profile"><span class="avatar">MT</span><span>Michias Tegegne</span></div>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <button class="mobile-menu-button" type="button" data-open-menu aria-expanded="false" aria-controls="sidebar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>Menü</button>
+      <header class="topbar">
+        <div class="title-block">
+          <span class="eyebrow">Studio</span>
+          <h1 id="page-title" data-text-effect="per-char">Finanzen</h1>
+          <p id="page-description">Rechnungen, Zahlungslage und Projektbudgets an einem Ort. Konzeptdaten – keine Verbindung zum CRM.</p>
+        </div>
+        <label class="search"><span class="sr-only">Rechnungen durchsuchen</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.4"/><path d="m16 16 4.2 4.2"/></svg><input id="invoice-search" type="search" placeholder="Rechnungen durchsuchen …" autocomplete="off"></label>
+      </header>
+
+      <nav class="motion-dock" aria-label="Schnellzugriff">
+        <button type="button" class="dock-item is-active" data-dock-action="finance" aria-label="Finanzen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V5M5 19h15"/><path d="M9 16v-4M13 16V8M17 16v-7"/></svg><span class="dock-label">Finanzen</span></button>
+        <button type="button" class="dock-item" data-dock-action="new" aria-label="Neue Rechnung"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="dock-label">Neu</span></button>
+        <button type="button" class="dock-item" data-dock-action="search" aria-label="Suche öffnen"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.4"/><path d="m16 16 4.2 4.2"/></svg><span class="dock-label">Suche</span></button>
+        <button type="button" class="dock-item" data-dock-action="menu" aria-label="Menü öffnen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="dock-label">Menü</span></button>
+      </nav>
+
+      <section class="metrics mp-stagger-group" aria-label="Finanzübersicht">
+        <article class="metric motion-surface motion-border-trail" data-motion-item><span class="metric-label">Bezahlt erfasst</span><strong class="metric-value" data-number="84620">CHF 84’620</strong><span class="metric-note">+12.4 % gegenüber Vorjahr</span></article>
+        <article class="metric motion-surface motion-border-trail" data-motion-item><span class="metric-label">Ausstehend</span><strong class="metric-value" data-number="18920">CHF 18’920</strong><span class="metric-note">4 Rechnungen</span></article>
+        <article class="metric motion-surface motion-border-trail" data-motion-item><span class="metric-label">Überfällig</span><strong class="metric-value" data-number="3480">CHF 3’480</strong><span class="metric-note danger">1 Rechnung seit 3 Tagen</span></article>
+        <article class="metric motion-surface motion-border-trail" data-motion-item><span class="metric-label">Entwürfe</span><strong class="metric-value" data-number="6100">CHF 6’100</strong><span class="metric-note">2 Rechnungen</span></article>
+      </section>
+
+      <section class="register motion-surface motion-border-trail" aria-labelledby="register-title">
+        <header class="register-head">
+          <div><h2 id="register-title">Rechnungen</h2><p>Neueste Dokumente und deren aktueller Zahlungsstatus.</p></div>
+          <div class="sort-control"><button class="sort-button" type="button" data-sort-button aria-expanded="false">Zuletzt erstellt <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button><div class="sort-menu" data-sort-menu role="menu"><button class="sort-option selected" type="button" data-sort="created">Zuletzt erstellt</button><button class="sort-option" type="button" data-sort="due">Nächste Fälligkeit</button><button class="sort-option" type="button" data-sort="amount">Höchster Betrag</button></div></div>
+        </header>
+        <div class="tabs" role="tablist" aria-label="Rechnungsfilter"><button class="tab active" type="button" data-filter="all" role="tab" aria-selected="true">Alle 6</button><button class="tab" type="button" data-filter="open" role="tab" aria-selected="false">Ausstehend 3</button><button class="tab" type="button" data-filter="overdue" role="tab" aria-selected="false">Überfällig 1</button><button class="tab" type="button" data-filter="paid" role="tab" aria-selected="false">Bezahlt 2</button></div>
+        <div class="table-wrap"><table><thead><tr><th scope="col">Rechnung</th><th scope="col">Kunde</th><th scope="col">Status</th><th scope="col">Total</th><th scope="col"><span class="sr-only">Aktion</span></th></tr></thead><tbody id="invoice-body"></tbody></table></div>
+        <div class="mobile-invoices" id="mobile-invoices"></div>
+      </section>
+
+      <!-- Static bridge for the downloaded Bklit stat-card-area-01 and stat-card-line-01 registry blocks. -->
+      <section class="analytics mp-stagger-group" aria-label="Bklit Analytics Preview">
+        <article class="bklit-card motion-surface motion-border-trail" data-motion-item data-source="bklit/stat-card-area-01">
+          <div class="bklit-card-head"><div><span class="bklit-card-title">Zahlungseingänge</span><strong class="bklit-card-value">CHF 84’620</strong></div><span class="bklit-trend"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5L19 7"/></svg>+12.4%</span></div>
+          <svg class="bklit-chart" viewBox="0 0 600 150" preserveAspectRatio="none" role="img" aria-label="Ansteigender Zahlungseingang über zwölf Monate"><defs><linearGradient id="bklit-area-gradient" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#f5f5f5" stop-opacity=".18"/><stop offset="1" stop-color="#f5f5f5" stop-opacity="0"/></linearGradient></defs><path class="grid-line" d="M0 28H600M0 70H600M0 112H600"/><path class="area" d="M0 122C54 104 66 111 105 94S164 109 211 98s61-28 104-14 45 4 80-14 59 5 90-9 63-25 115-39V150H0Z"/><path class="line" d="M0 122C54 104 66 111 105 94S164 109 211 98s61-28 104-14 45 4 80-14 59 5 90-9 63-25 115-39"/><circle class="marker" cx="505" cy="63" r="5"/></svg>
+          <div class="bklit-foot"><span>Ø Netto · letzte 12 Monate</span><span class="bklit-source">Bklit Area Chart</span></div>
+        </article>
+        <article class="bklit-card motion-surface motion-border-trail" data-motion-item data-source="bklit/stat-card-line-01">
+          <div class="bklit-card-head"><div><span class="bklit-card-title">Offene Rechnungen</span><strong class="bklit-card-value">CHF 18’920</strong></div><span class="bklit-trend"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5L19 7"/></svg>+8.2%</span></div>
+          <svg class="bklit-chart" viewBox="0 0 600 150" preserveAspectRatio="none" role="img" aria-label="Linienverlauf offener Rechnungen"><path class="grid-line" d="M0 28H600M0 70H600M0 112H600"/><path class="line" d="M0 100C45 80 63 101 104 73s61 26 101 4 59-26 93-7 54 24 86-4 58 17 89-6 71-13 127-38"/><circle class="marker" cx="473" cy="60" r="5"/></svg>
+          <div class="bklit-foot"><span>Ø Bestand · letzte 7 Tage</span><span class="bklit-source">Bklit Line Chart</span></div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <div class="preview-badge" data-preview-badge>Motion-Primitives CRM Preview <button type="button" data-dismiss-preview aria-label="Preview-Hinweis schliessen">×</button></div>
+  <div class="toast" role="status" aria-live="polite" data-toast></div>
+
+  <script>
+    const invoices = [
+      { id: 'HEAV-2026-038', date: '07.09.2026', due: 'fällig 21.09.2026', customer: 'Alfa Romeo Swiss', status: 'sent', statusLabel: 'Versendet', amount: 'CHF 12’800.00', action: 'Ansehen' },
+      { id: 'HEAV-2026-036', date: '28.08.2026', due: 'fällig 14.09.2026', customer: 'River Söllner', status: 'overdue', statusLabel: 'Überfällig', amount: 'CHF 3’480.00', action: 'Erinnern' },
+      { id: 'HEAV-2026-035', date: '22.08.2026', due: 'bezahlt 03.09.2026', customer: 'DOPE Campaign', status: 'paid', statusLabel: 'Bezahlt', amount: 'CHF 9’560.00', action: 'Ansehen' },
+      { id: 'HEAV-2026-034', date: '18.08.2026', due: 'fällig 30.09.2026', customer: 'Videocrew Wyl', status: 'sent', statusLabel: 'Versendet', amount: 'CHF 2’640.00', action: 'Ansehen' },
+      { id: 'HEAV-2026-033', date: '08.08.2026', due: 'bezahlt 16.08.2026', customer: 'Angelo Durante', status: 'paid', statusLabel: 'Bezahlt', amount: 'CHF 6’280.00', action: 'Ansehen' },
+      { id: 'HEAV-2026-032', date: '02.08.2026', due: 'fällig 25.09.2026', customer: 'Lucky Chris', status: 'sent', statusLabel: 'Versendet', amount: 'CHF 4’120.00', action: 'Ansehen' }
+    ];
+    const state = { filter: 'all', query: '', sort: 'created' };
+    const $ = (selector, root = document) => root.querySelector(selector);
+    const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+    const eyeIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 12s3.1-5 8.5-5 8.5 5 8.5 5-3.1 5-8.5 5-8.5-5-8.5-5Z"/><circle cx="12" cy="12" r="2"/></svg>';
+    const sendIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 3 10 14"/><path d="m21 3-7 18-4-7-7-4Z"/></svg>';
+
+    function applyTextEffects() {
+      $$('[data-text-effect="per-char"]').forEach((element) => {
+        if (element.dataset.mpTextEffectApplied) return;
+        const text = element.innerText.trim().replace(/\s+/g, ' ');
+        if (!text) return;
+        element.dataset.mpTextEffectApplied = 'true';
+        element.classList.add('mp-text-effect');
+        element.setAttribute('aria-label', text);
+        element.textContent = '';
+        [...text].forEach((character, index) => {
+          const span = document.createElement('span');
+          span.className = 'mp-char';
+          span.setAttribute('aria-hidden', 'true');
+          span.style.setProperty('--mp-char-index', index);
+          span.textContent = character === ' ' ? String.fromCharCode(160) : character;
+          element.append(span);
+        });
+        requestAnimationFrame(() => element.classList.add('mp-text-visible'));
+      });
+    }
+
+    function setupMotionPrimitives() {
+      applyTextEffects();
+      const updateProgress = () => {
+        const max = document.documentElement.scrollHeight - window.innerHeight;
+        document.documentElement.style.setProperty('--scroll-progress', `${max > 0 ? (window.scrollY / max) * 100 : 0}%`);
+      };
+      if (!window.__motionProgressBound) {
+        window.__motionProgressBound = true;
+        window.addEventListener('scroll', updateProgress, { passive: true });
+      }
+      updateProgress();
+      $$('[data-number]').forEach((element) => {
+        if (element.dataset.numberAnimated) return;
+        element.dataset.numberAnimated = 'true';
+        const target = Number(element.dataset.number);
+        const start = performance.now();
+        const tick = (now) => {
+          const progress = Math.min(1, (now - start) / 700);
+          const value = Math.round(target * (1 - Math.pow(1 - progress, 3)));
+          element.textContent = `CHF ${value.toLocaleString('de-CH')}`;
+          if (progress < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      });
+    }
+    function visibleInvoices() {
+      const query = state.query.trim().toLowerCase();
+      let result = invoices.filter((invoice) => {
+        const inFilter = state.filter === 'all' || (state.filter === 'open' && invoice.status === 'sent') || invoice.status === state.filter;
+        const inSearch = !query || `${invoice.id} ${invoice.customer} ${invoice.statusLabel}`.toLowerCase().includes(query);
+        return inFilter && inSearch;
+      });
+      if (state.sort === 'amount') result = [...result].sort((a, b) => Number(b.amount.replace(/[^0-9]/g, '')) - Number(a.amount.replace(/[^0-9]/g, '')));
+      if (state.sort === 'due') result = [...result].reverse();
+      return result;
+    }
+
+    function rowMarkup(invoice, mobile = false) {
+      const actionIcon = invoice.action === 'Erinnern' ? sendIcon : eyeIcon;
+      const statusClass = invoice.status === 'paid' ? 'paid' : invoice.status === 'overdue' ? 'overdue' : '';
+      if (mobile) return `<article class="mobile-invoice"><div><span class="invoice-number">${invoice.id}</span><span class="invoice-meta">${invoice.date} · ${invoice.due}</span></div><span class="amount">${invoice.amount}</span><span class="status-badge ${statusClass}">${invoice.statusLabel}</span><button class="row-action" type="button" data-invoice-action="${invoice.action}">${actionIcon}${invoice.action}</button></article>`;
+      return `<tr><td><span class="invoice-number">${invoice.id}</span><span class="invoice-meta">${invoice.date} · ${invoice.due}</span></td><td>${invoice.customer}</td><td><span class="status-badge ${statusClass}">${invoice.statusLabel}</span></td><td class="amount">${invoice.amount}</td><td><button class="row-action" type="button" data-invoice-action="${invoice.action}">${actionIcon}${invoice.action}</button></td></tr>`;
+    }
+
+    function renderInvoices() {
+      const rows = visibleInvoices();
+      $('#invoice-body').innerHTML = rows.length ? rows.map((invoice) => rowMarkup(invoice)).join('') : '<tr><td colspan="5" class="empty">Keine passenden Rechnungen gefunden.</td></tr>';
+      $('#mobile-invoices').innerHTML = rows.length ? rows.map((invoice) => rowMarkup(invoice, true)).join('') : '<p class="empty">Keine passenden Rechnungen gefunden.</p>';
+      $$('.row-action').forEach((button) => button.addEventListener('click', () => showToast(`${button.dataset.invoiceAction}: Demo-Aktion ohne CRM-Verbindung`)));
+    }
+
+    function showToast(message) { const toast = $('[data-toast]'); toast.textContent = message; toast.classList.add('show'); clearTimeout(showToast.timer); showToast.timer = setTimeout(() => toast.classList.remove('show'), 2600); }
+    function setMenu(open) { $('[data-sidebar]').classList.toggle('open', open); $('[data-scrim]').classList.toggle('open', open); $('[data-open-menu]').setAttribute('aria-expanded', String(open)); document.body.style.overflow = open ? 'hidden' : ''; }
+
+    $('[data-dock-action="search"]').addEventListener('click', () => $('#invoice-search').focus());
+    $('[data-dock-action="new"]').addEventListener('click', () => showToast('Neue Rechnung: Demo-Aktion ohne CRM-Verbindung'));
+    $('[data-dock-action="finance"]').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    $('[data-dock-action="menu"]').addEventListener('click', () => setMenu(true));
+    setupMotionPrimitives();
+
+    $$('.tab').forEach((tab) => tab.addEventListener('click', () => { state.filter = tab.dataset.filter; $$('.tab').forEach((item) => { const active = item === tab; item.classList.toggle('active', active); item.setAttribute('aria-selected', String(active)); }); renderInvoices(); }));
+    $('#invoice-search').addEventListener('input', (event) => { state.query = event.target.value; renderInvoices(); });
+    $('[data-sort-button]').addEventListener('click', () => { const menu = $('[data-sort-menu]'); const open = !menu.classList.contains('open'); menu.classList.toggle('open', open); $('[data-sort-button]').setAttribute('aria-expanded', String(open)); });
+    $$('[data-sort]').forEach((option) => option.addEventListener('click', () => { state.sort = option.dataset.sort; $$('[data-sort]').forEach((item) => item.classList.toggle('selected', item === option)); $('[data-sort-button]').firstChild.textContent = option.textContent + ' '; $('[data-sort-menu]').classList.remove('open'); $('[data-sort-button]').setAttribute('aria-expanded', 'false'); renderInvoices(); }));
+    $('[data-open-menu]').addEventListener('click', () => setMenu(true));
+    $('[data-close-menu]').addEventListener('click', () => setMenu(false));
+    $('[data-scrim]').addEventListener('click', () => setMenu(false));
+    document.addEventListener('keydown', (event) => { if (event.key === 'Escape') { setMenu(false); $('[data-sort-menu]').classList.remove('open'); } });
+    $$('[data-view]').forEach((item) => item.addEventListener('click', () => { $$('[data-view]').forEach((nav) => { const active = nav === item; nav.classList.toggle('active', active); nav.toggleAttribute('aria-current', active); }); const labels = { overview: 'Übersicht', projects: 'Projekte', customers: 'Kunden', finance: 'Finanzen', settings: 'Einstellungen', portal: 'Portal-Anfragen', emails: 'E-Mail-Verlauf' }; $('#page-title').textContent = labels[item.dataset.view]; if (item.dataset.view !== 'finance') showToast(`${labels[item.dataset.view]}: Preview-Navigation`); setMenu(false); }));
+    $('[data-dismiss-preview]').addEventListener('click', () => $('[data-preview-badge]').remove());
+    renderInvoices();
+  </script>
+</body>
+</html>
