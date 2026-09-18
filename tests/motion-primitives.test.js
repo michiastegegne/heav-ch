@@ -21,5 +21,10 @@ test("Studio wires the static Motion-Primitives adapter", async () => {
   assert.match(app, /reducedMotionQuery\.matches/);
   assert.match(css, /@keyframes hev-motion-group-enter/);
   assert.match(css, /data-motion="item"/);
-  assert.match(css, /prefers-reduced-motion: reduce/);
+  assert.match(app, /function applyBklitShimmer\(\)/);
+  assert.match(app, /function bklitTrendBadge\(value\)/);
+  assert.match(app, /bklit-stat-card/);
+  assert.match(css, /bklit-shimmer-char/);
+  assert.match(css, /bklit-trend-badge/);
+  assert.match(css, /pointer-events: none/);
 });

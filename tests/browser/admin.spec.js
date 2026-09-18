@@ -1047,17 +1047,21 @@ test("Dashboard: zeigt zwölf Monate bezahlten Nettoumsatz mit echten Zahlungsda
   await mockStudioSupabase(page, { invoices: [
     { id: "paid-current", customer_id: "c1", project_id: "p1", invoice_number: "PAID-CURRENT", status: "paid", paid_at: paidAt(0), subtotal_rappen: 100000, tax_rappen: 8100, total_rappen: 108100, invoice_items: [] },
     { id: "paid-previous", customer_id: "c2", project_id: "p2", invoice_number: "PAID-PREVIOUS", status: "paid", paid_at: paidAt(1), subtotal_rappen: 25000, tax_rappen: 0, total_rappen: 25000, invoice_items: [] },
+    { id: "paid-older", customer_id: "c2", project_id: "p2", invoice_number: "PAID-OLDER", status: "paid", paid_at: paidAt(7), subtotal_rappen: 50000, tax_rappen: 4050, total_rappen: 54050, invoice_items: [] },
     { id: "paid-undated", customer_id: "c1", project_id: "p1", invoice_number: "PAID-UNDATED", status: "paid", paid_at: null, subtotal_rappen: 5000, tax_rappen: 0, total_rappen: 5000, invoice_items: [] },
     { id: "open", customer_id: "c1", project_id: "p1", invoice_number: "OPEN", status: "sent", due_date: "2099-12-01", subtotal_rappen: 80000, tax_rappen: 6480, total_rappen: 86480, invoice_items: [] },
   ] });
 
   await page.goto(`${base}/studio/`);
   const revenue = page.locator(".dashboard-revenue");
+  await expect(revenue).toHaveClass(/bklit-stat-card/);
   await expect(revenue.getByRole("heading", { name: "Bezahlter Rechnungsumsatz" })).toBeVisible();
+  await expect(revenue.locator(".bklit-trend-badge")).toHaveText("↑+150.0%");
+  await expect(page.locator(".dashboard-money")).toHaveClass(/bklit-stat-card/);
   await expect(revenue.locator("[data-revenue-month]" )).toHaveCount(12);
-  await expect(revenue.locator("[data-revenue-net]")).toContainText("CHF 1’250.00");
-  await expect(revenue.locator("[data-revenue-tax]")).toContainText("CHF 81.00");
-  await expect(revenue.locator("[data-revenue-gross]")).toContainText("CHF 1’331.00");
+  await expect(revenue.locator("[data-revenue-net]")).toContainText("CHF 1’750.00");
+  await expect(revenue.locator("[data-revenue-tax]")).toContainText("CHF 121.50");
+  await expect(revenue.locator("[data-revenue-gross]")).toContainText("CHF 1’871.50");
   await expect(revenue.locator("[data-revenue-missing-date]")).toContainText("1 bezahlte Rechnung ohne Zahlungsdatum");
   const labels = await revenue.locator("[data-revenue-month]").evaluateAll((bars) => bars.map((bar) => bar.getAttribute("aria-label")));
   expect(labels.every(Boolean)).toBe(true);

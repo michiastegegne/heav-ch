@@ -259,8 +259,21 @@ function actionIconButton(icon, label, attributes, tone = "") {
 }
 function contactMark() { return `<span class="customer-contact" title="Kunde" aria-label="Kunde">${actionIcons["customer-contact"]}</span>`; }
 
+function revenueTrendPercentage(revenue) {
+  const previous = revenue.months.slice(0, 6).reduce((total, month) => total + month.netRappen, 0);
+  const recent = revenue.months.slice(6).reduce((total, month) => total + month.netRappen, 0);
+  if (!previous) return null;
+  return ((recent - previous) / previous) * 100;
+}
+function bklitTrendBadge(value) {
+  if (!Number.isFinite(value)) return "";
+  const positive = value >= 0;
+  const direction = positive ? "gestiegen" : "gesunken";
+  return `<span class="bklit-trend-badge ${positive ? "is-positive" : "is-negative"}" title="Vergleich der letzten sechs Monate mit den sechs Monaten davor" aria-label="Umsatz ${direction} um ${Math.abs(value).toFixed(1)} Prozent"><span aria-hidden="true">${positive ? "↑" : "↓"}</span>${positive ? "+" : ""}${value.toFixed(1)}%</span>`;
+}
 function renderRevenueChart(invoices) {
   const revenue = buildPaidRevenueSeries(invoices);
+  const trend = bklitTrendBadge(revenueTrendPercentage(revenue));
   const bars = revenue.months.map((month) => {
     const height = revenue.maxNetRappen ? Math.max(2, Math.round((month.netRappen / revenue.maxNetRappen) * 100)) : 0;
     const ariaLabel = `${month.longLabel}: ${formatCHF(month.netRappen)} Nettoumsatz aus ${month.invoiceCount} ${month.invoiceCount === 1 ? "Rechnung" : "Rechnungen"}`;
@@ -269,9 +282,9 @@ function renderRevenueChart(invoices) {
   const missing = revenue.missingPaidAt.count
     ? `${revenue.missingPaidAt.count} ${revenue.missingPaidAt.count === 1 ? "bezahlte Rechnung" : "bezahlte Rechnungen"} ohne Zahlungsdatum · ${formatCHF(revenue.missingPaidAt.grossRappen)}`
     : "Alle bezahlten Rechnungen haben ein Zahlungsdatum.";
-  return `<section class="dashboard-revenue" aria-labelledby="dashboard-revenue-title">
-    <div class="dashboard-revenue-summary"><span class="kicker">LETZTE 12 MONATE</span><h3 id="dashboard-revenue-title">Bezahlter Rechnungsumsatz</h3><strong data-revenue-net>${formatCHF(revenue.totals.netRappen)}</strong><p>exkl. MWST · ${revenue.totals.invoiceCount} ${revenue.totals.invoiceCount === 1 ? "Zahlung" : "Zahlungen"}</p><dl><div><dt>MWST</dt><dd data-revenue-tax>${formatCHF(revenue.totals.taxRappen)}</dd></div><div><dt>Zahlungseingang brutto</dt><dd data-revenue-gross>${formatCHF(revenue.totals.grossRappen)}</dd></div></dl><small data-revenue-missing-date>${esc(missing)}</small></div>
-    <figure class="dashboard-revenue-figure"><figcaption><span>NETTO PRO MONAT</span><span>CHF</span></figcaption><div class="dashboard-revenue-chart">${revenue.totals.invoiceCount ? "" : '<p class="dashboard-revenue-empty">Noch keine Zahlungen in diesem Zeitraum.</p>'}${bars}</div></figure>
+  return `<section class="dashboard-revenue bklit-stat-card" aria-labelledby="dashboard-revenue-title">
+    <div class="dashboard-revenue-summary bklit-stat-card__content"><div class="bklit-stat-card__heading"><span class="kicker">LETZTE 12 MONATE</span>${trend}</div><h3 id="dashboard-revenue-title">Bezahlter Rechnungsumsatz</h3><strong data-revenue-net>${formatCHF(revenue.totals.netRappen)}</strong><p>exkl. MWST · ${revenue.totals.invoiceCount} ${revenue.totals.invoiceCount === 1 ? "Zahlung" : "Zahlungen"}</p><dl><div><dt>MWST</dt><dd data-revenue-tax>${formatCHF(revenue.totals.taxRappen)}</dd></div><div><dt>Zahlungseingang brutto</dt><dd data-revenue-gross>${formatCHF(revenue.totals.grossRappen)}</dd></div></dl><small data-revenue-missing-date>${esc(missing)}</small></div>
+    <figure class="dashboard-revenue-figure bklit-stat-card__chart"><figcaption><span>NETTO PRO MONAT</span><span>CHF</span></figcaption><div class="dashboard-revenue-chart">${revenue.totals.invoiceCount ? "" : '<p class="dashboard-revenue-empty">Noch keine Zahlungen in diesem Zeitraum.</p>'}${bars}</div></figure>
   </section>`;
 }
 
@@ -336,7 +349,7 @@ function renderDashboard() {
   </article>` : `<article class="dashboard-focus dashboard-focus--empty"><span class="kicker">PRODUKTION</span><h3>Kein laufendes Projekt</h3><p>Erfasse den nächsten Auftrag mit Kunde und Produktionsterminen.</p><button class="primary-action" data-create="project">Projekt anlegen</button></article>`;
   return `<section class="view dashboard-view"><header class="dashboard-intro"><div><h2>Dein Arbeitsbereich</h2><p>Einnahmen, offene Zahlungen und Produktionen in einem ruhigen Überblick.</p></div></header>
     ${renderRevenueChart(invoices)}
-    <section class="dashboard-stage">${focusSurface}<aside class="dashboard-money"><span class="kicker">AUSSTEHENDE ZAHLUNGEN</span><strong>${formatCHF(sum(openInvoices))}</strong><p>${openInvoices.length} versendete / überfällige Rechnungen</p><div class="dashboard-money-list"><div><span>Bezahlt erfasst</span><b>${formatCHF(sum(paid))}</b></div><div><span>Entwürfe · nicht fällig</span><b>${formatCHF(sum(drafts))}</b></div></div><button class="project-module-link" data-view="invoices">Rechnungen öffnen <span aria-hidden="true">→</span></button></aside></section>
+    <section class="dashboard-stage">${focusSurface}<aside class="dashboard-money bklit-stat-card"><span class="kicker">AUSSTEHENDE ZAHLUNGEN</span><strong>${formatCHF(sum(openInvoices))}</strong><p>${openInvoices.length} versendete / überfällige Rechnungen</p><div class="dashboard-money-list"><div><span>Bezahlt erfasst</span><b>${formatCHF(sum(paid))}</b></div><div><span>Entwürfe · nicht fällig</span><b>${formatCHF(sum(drafts))}</b></div></div><button class="project-module-link" data-view="invoices">Rechnungen öffnen <span aria-hidden="true">→</span></button></aside></section>
     <section class="dashboard-grid"><section class="panel dashboard-panel"><div class="panel-head"><h3>Nächste Finanzschritte</h3><span class="kicker">${drafts.length + openOffers.length + openInvoices.length} EINTRÄGE</span></div><div class="workspace-action-list">
       ${drafts.slice(0,3).map(item => `<article class="workspace-action"><div><span class="status draft">Entwurf</span><strong>${esc(item.invoice_number)}</strong><small>${esc(customerLabel(item.customer))} · ${formatCHF(item.total_rappen)} · noch nicht fällig</small></div>${invoiceActions(item)}</article>`).join("")}
       ${openOffers.slice(0,3).map(item => `<article class="workspace-action"><div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span><strong>${esc(item.title || item.offer_number)}</strong><small>Offerte · ${formatCHF(item.total_rappen)} · gültig bis ${formatDate(item.valid_until)}</small></div>${offerActions(item)}</article>`).join("")}
@@ -555,6 +568,23 @@ function applyTextEffect(element) {
     textNode.replaceWith(fragment);
   });
   requestAnimationFrame(() => element.classList.add("mp-text-visible"));
+}
+function applyBklitShimmer() {
+  document.querySelectorAll("[data-bklit-shimmer]").forEach((element) => {
+    if (element.dataset.bklitShimmerApplied) return;
+    const text = element.dataset.bklitShimmer || element.textContent.trim();
+    if (!text) return;
+    element.dataset.bklitShimmerApplied = "true";
+    element.setAttribute("aria-label", text);
+    element.replaceChildren(...[...text].map((character, index) => {
+      const span = document.createElement("span");
+      span.className = "bklit-shimmer-char";
+      span.setAttribute("aria-hidden", "true");
+      span.style.setProperty("--bklit-shimmer-index", index);
+      span.textContent = character === " " ? String.fromCharCode(160) : character;
+      return span;
+    }));
+  });
 }
 function applyMotionPrimitives() {
   const items = [...content.querySelectorAll(":scope > .finance-nav, :scope > .view > *:not(.mobile-card-list)")];
@@ -1406,4 +1436,5 @@ async function boot() {
     loading.innerHTML = `<strong>HEAV</strong><span>${esc(error.message)}</span><a href="/login/" style="color:#e8e4dc">Zum Login</a>`;
   }
 }
+applyBklitShimmer();
 boot();
