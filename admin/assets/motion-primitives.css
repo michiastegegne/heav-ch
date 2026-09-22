@@ -476,3 +476,105 @@ body.crm-theme.studio-editorial-theme .dashboard-stage--focus-only .dashboard-fo
   body.crm-theme.studio-editorial-theme .dashboard-production-list { padding-inline: 14px; }
 }
 
+/* Screenshot-led geometry repairs: keep navigation, registers and dashboard
+   rows linear instead of stacking rounded surfaces inside one another. */
+@media (min-width: 821px) {
+  body.crm-theme.studio-editorial-theme .nav-link.is-active {
+    border-radius: 0;
+    background: transparent;
+  }
+
+  body.crm-theme.studio-editorial-theme .invoice-toolbar :is(.search-field input, .invoice-sort-field select) {
+    height: 40px;
+    min-height: 40px;
+  }
+}
+
+body.crm-theme.studio-editorial-theme .toolbar {
+  border-radius: 0;
+}
+
+body.crm-theme.studio-editorial-theme .invoice-toolbar .filter-tab,
+body.crm-theme.studio-editorial-theme .invoice-toolbar .filter-tab:is(:hover, :focus-visible, .is-active) {
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+}
+
+body.crm-theme.studio-editorial-theme .invoice-toolbar .filter-tab:is(:hover, :focus-visible) {
+  border-bottom-color: #737373;
+}
+
+body.crm-theme.studio-editorial-theme .invoice-toolbar .filter-tab.is-active {
+  border-bottom-color: var(--crm-text);
+}
+
+body.crm-theme.studio-editorial-theme .invoice-record:has(.invoice-status-menu[open]) td {
+  vertical-align: top;
+}
+
+body.crm-theme.studio-editorial-theme .invoice-status-options {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(280px, calc(100vw - 72px));
+  max-width: none;
+  gap: 2px 6px;
+  padding: 6px;
+}
+
+body.crm-theme.studio-editorial-theme .invoice-status-menu > summary {
+  width: max-content;
+  justify-self: start;
+}
+
+body.crm-theme.studio-editorial-theme .invoice-status-options::before {
+  grid-column: 1 / -1;
+  padding-block: 3px 5px;
+}
+
+body.crm-theme.studio-editorial-theme .invoice-status-options button {
+  min-height: 32px;
+  padding-inline: 8px;
+  gap: 8px;
+  font-size: 11px;
+}
+
+body.crm-theme.studio-editorial-theme .dashboard-production-row {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+body.crm-theme.studio-editorial-theme .dashboard-production-row strong {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+body.crm-theme.studio-editorial-theme .dashboard-production-row small {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+body.crm-theme.studio-editorial-theme .dashboard-production-row .status {
+  grid-column: 2;
+  grid-row: 1 / 3;
+}
+
+body.crm-theme.studio-editorial-theme .dashboard-production-row b {
+  position: static;
+  grid-column: 3;
+  grid-row: 1 / 3;
+  transform: none;
+}
+
+body.crm-theme.studio-editorial-theme .dashboard-production-row:hover b {
+  transform: translateX(3px);
+}
+
+body.crm-theme.studio-editorial-theme .activity-timeline,
+body.crm-theme.studio-editorial-theme .email-summary {
+  margin-top: 18px;
+}
+
+body.crm-theme.studio-editorial-theme .email-summary-latest {
+  padding: 14px 20px 18px;
+}
+

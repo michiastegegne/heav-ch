@@ -51,6 +51,7 @@ test("Studio lädt das isolierte achromatische Dark-Designsystem in stabiler Rei
     "/admin/assets/workspace.css?v=20260917-crm-layout-status",
     "/admin/assets/crm-theme.css?v=shadcn-dark-1",
     "/admin/assets/studio-editorial.css?v=shadcn-dark-1",
+    "/admin/assets/motion-primitives.css?v=20260922-design-geometry-1",
   ];
   const positions = expectedAssets.map((asset) => studioHtml.indexOf(`href="${asset}"`));
   assert.ok(positions.every((position) => position >= 0), "alle Studio-Stylesheets sind versioniert eingebunden");
@@ -58,7 +59,7 @@ test("Studio lädt das isolierte achromatische Dark-Designsystem in stabiler Rei
   assert.match(studioHtml, /<html lang="de-CH" class="studio-editorial-root" data-assistant-enabled="false">/);
   assert.match(studioHtml, /<meta name="theme-color" content="#0a0a0a"/);
   assert.match(studioHtml, /<body class="crm-theme studio-editorial-theme">/);
-  assert.match(studioHtml, /src="\/admin\/assets\/app\.js\?v=20260918-bklit-components-1"/);
+  assert.match(studioHtml, /src="\/admin\/assets\/app\.js\?v=20260922-design-geometry-1"/);
   assert.match(adminSource, /dashboard\.js\?v=20260916-revenue-1/);
   assert.match(studioCss, /--studio-card-radius:\s*24px/);
   assert.match(studioCss, /--studio-control-radius:\s*18px/);

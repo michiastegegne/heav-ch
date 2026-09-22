@@ -571,9 +571,11 @@ function syncMainNavigationIndicator() {
   const label = active?.querySelector(".nav-label");
   const indicator = nav?.querySelector(".nav-active-indicator");
   if (!active || !label || !indicator) return;
-  const x = active.offsetLeft + label.offsetLeft;
+  const navBounds = nav.getBoundingClientRect();
+  const labelBounds = label.getBoundingClientRect();
+  const x = labelBounds.left - navBounds.left;
   const y = active.offsetTop + active.offsetHeight - 1;
-  activateIndicator(indicator, `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`, label.offsetWidth);
+  activateIndicator(indicator, `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`, labelBounds.width);
 }
 function syncFinanceNavigation(nav) {
   if (!nav) return;

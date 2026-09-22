@@ -499,11 +499,11 @@ test("Workspace: finance navigation uses one stable HEAV line state instead of a
     };
   });
   expect(surface).toEqual({
-    toolbarRadius: '24px',
+    toolbarRadius: '0px',
     toolbarSides: ['0px', '0px'],
     tableRadius: '24px',
-    navBackground: 'rgb(44, 44, 44)',
-    navRadius: '14px',
+    navBackground: 'rgba(0, 0, 0, 0)',
+    navRadius: '0px',
     navMarker: ['1px', 'rgb(250, 250, 250)', '0.36s, 0.36s'],
     financeMarker: ['1px', 'rgb(250, 250, 250)', '0.36s, 0.36s'],
   });
@@ -1724,6 +1724,110 @@ test("Studio: ein offenes Rechnungsstatusmenü verschiebt die folgende Zeile", a
     };
   });
   expect(layout.menuBottom).toBeLessThanOrEqual(layout.nextRowTop + 1);
+});
+
+test("Studio: markierte Designfehler bleiben linear, kompakt und sauber ausgerichtet", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+
+  await page.locator('.nav-link[data-view="invoices"]').click();
+  await page.waitForTimeout(450);
+  const navigation = await page.locator('.nav-link[data-view="invoices"]').evaluate((button) => {
+    const style = getComputedStyle(button);
+    const label = button.querySelector('.nav-label').getBoundingClientRect();
+    const indicator = button.parentElement.querySelector('.nav-active-indicator').getBoundingClientRect();
+    const bounds = button.getBoundingClientRect();
+    return {
+      background: style.backgroundColor,
+      radius: style.borderRadius,
+      indicatorWidth: indicator.width,
+      labelWidth: label.width,
+      indicatorBottomGap: Math.abs(bounds.bottom - indicator.bottom),
+    };
+  });
+  expect(navigation.background).toBe('rgba(0, 0, 0, 0)');
+  expect(navigation.radius).toBe('0px');
+  expect(navigation.indicatorWidth).toBeCloseTo(navigation.labelWidth, 0);
+  expect(navigation.indicatorBottomGap).toBeLessThanOrEqual(2);
+
+  const toolbar = await page.locator('.invoice-toolbar').evaluate((element) => {
+    const active = element.querySelector('.filter-tab.is-active');
+    const inactive = element.querySelector('.filter-tab:not(.is-active)');
+    const search = element.querySelector('input').getBoundingClientRect();
+    const sort = element.querySelector('select').getBoundingClientRect();
+    return {
+      radius: getComputedStyle(element).borderRadius,
+      activeRadius: getComputedStyle(active).borderRadius,
+      activeBackground: getComputedStyle(active).backgroundColor,
+      activeBorderTop: parseFloat(getComputedStyle(active).borderTopWidth),
+      inactiveRadius: getComputedStyle(inactive).borderRadius,
+      inactiveBorderTop: parseFloat(getComputedStyle(inactive).borderTopWidth),
+      controlHeightDifference: Math.abs(search.height - sort.height),
+    };
+  });
+  expect(toolbar.radius).toBe('0px');
+  expect(toolbar.activeRadius).toBe('0px');
+  expect(toolbar.activeBackground).toBe('rgba(0, 0, 0, 0)');
+  expect(toolbar.activeBorderTop).toBe(0);
+  expect(toolbar.inactiveRadius).toBe('0px');
+  expect(toolbar.inactiveBorderTop).toBe(0);
+  expect(toolbar.controlHeightDifference).toBeLessThanOrEqual(1);
+
+  const invoiceRow = page.locator('.invoice-table tbody tr').first();
+  const statusMenu = invoiceRow.locator('.invoice-status-menu');
+  await statusMenu.locator('summary').click();
+  const statusLayout = await invoiceRow.evaluate((row) => {
+    const cells = [...row.cells];
+    const options = row.querySelector('.invoice-status-options');
+    const nextRow = row.nextElementSibling;
+    return {
+      rowHeight: row.getBoundingClientRect().height,
+      verticalAlignments: cells.map((cell) => getComputedStyle(cell).verticalAlign),
+      columns: getComputedStyle(options).gridTemplateColumns.split(' ').length,
+      summaryWidth: row.querySelector('.invoice-status-menu > summary').getBoundingClientRect().width,
+      menuBottom: options.getBoundingClientRect().bottom,
+      nextRowTop: nextRow.getBoundingClientRect().top,
+    };
+  });
+  expect(statusLayout.columns).toBe(2);
+  expect(statusLayout.summaryWidth).toBeLessThanOrEqual(140);
+  expect(statusLayout.rowHeight).toBeLessThanOrEqual(190);
+  expect(statusLayout.verticalAlignments.every((value) => value === 'top')).toBe(true);
+  expect(statusLayout.menuBottom).toBeLessThanOrEqual(statusLayout.nextRowTop + 1);
+  await page.screenshot({ path: 'qa/admin-design-repairs-invoices-desktop.png', fullPage: true });
+
+  await page.locator('.nav-link[data-view="dashboard"]').click();
+  const productionLayout = await page.locator('.dashboard-production-row').first().evaluate((row) => {
+    const status = row.querySelector('.status').getBoundingClientRect();
+    const arrow = row.querySelector('b').getBoundingClientRect();
+    return {
+      arrowPosition: getComputedStyle(row.querySelector('b')).position,
+      gap: arrow.left - status.right,
+      centerDifference: Math.abs((status.top + status.height / 2) - (arrow.top + arrow.height / 2)),
+    };
+  });
+  expect(productionLayout.arrowPosition).toBe('static');
+  expect(productionLayout.gap).toBeGreaterThanOrEqual(8);
+  expect(productionLayout.gap).toBeLessThanOrEqual(16);
+  expect(productionLayout.centerDifference).toBeLessThanOrEqual(1);
+
+  const dashboardSpacing = await page.evaluate(() => {
+    const dashboard = document.querySelector('.dashboard-grid').getBoundingClientRect();
+    const timeline = document.querySelector('.activity-timeline').getBoundingClientRect();
+    const email = document.querySelector('.email-summary');
+    const latest = getComputedStyle(email.querySelector('.email-summary-latest'));
+    return {
+      timelineGap: timeline.top - dashboard.bottom,
+      emailInsetLeft: parseFloat(latest.paddingLeft),
+      emailInsetBottom: parseFloat(latest.paddingBottom),
+    };
+  });
+  expect(dashboardSpacing.timelineGap).toBeGreaterThanOrEqual(16);
+  expect(dashboardSpacing.emailInsetLeft).toBeGreaterThanOrEqual(18);
+  expect(dashboardSpacing.emailInsetBottom).toBeGreaterThanOrEqual(16);
+  await page.screenshot({ path: 'qa/admin-design-repairs-dashboard-desktop.png', fullPage: true });
+  await page.close();
 });
 test("Studio: Escape bestätigt keine erneut geöffnete Löschabfrage", async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
