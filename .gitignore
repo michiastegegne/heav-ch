@@ -11,3 +11,5 @@ node_modules/
 supabase/.temp/
 /deno.lock
 .DS_Store
+.hermes/vendor/bklit-ui/
+.hermes/vendor/watermellon-registry/
