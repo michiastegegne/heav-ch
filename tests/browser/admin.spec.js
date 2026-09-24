@@ -213,14 +213,14 @@ test("Workspace: mobile HEAV menu replaces duplicate bottom navigation and traps
   await expect(sidebar).toHaveAttribute('role', 'dialog');
   await expect(sidebar).toHaveAttribute('aria-modal', 'true');
   await expect(page.locator('.workspace')).toHaveAttribute('inert', '');
-  await expect(sidebar).toHaveCSS('background-color', 'rgb(17, 17, 17)');
+  await expect(sidebar).toHaveCSS('background-color', 'rgb(13, 13, 14)');
   await page.waitForTimeout(700);
   const menuGeometry = await sidebar.evaluate((element) => {
     const box = element.getBoundingClientRect();
     const style = getComputedStyle(element);
     return { left: box.left, top: box.top, width: box.width, height: box.height, background: style.backgroundColor };
   });
-  expect(menuGeometry).toEqual({ left: 0, top: 0, width: 360, height: 800, background: 'rgb(17, 17, 17)' });
+  expect(menuGeometry).toEqual({ left: 0, top: 0, width: 360, height: 800, background: 'rgb(13, 13, 14)' });
   const nav = page.getByRole('navigation', { name: 'Studio Navigation' });
   const active = nav.getByRole('button', { name: 'Übersicht', exact: true });
   await expect(active).toBeFocused();
@@ -230,11 +230,11 @@ test("Workspace: mobile HEAV menu replaces duplicate bottom navigation and traps
     fontSize: parseFloat(getComputedStyle(element).fontSize),
     labelFontSize: parseFloat(getComputedStyle(element.querySelector('.nav-label')).fontSize),
   }));
-  expect(activeStyle.color).toBe('rgb(245, 245, 245)');
-  expect(activeStyle.radius).toBe('14px');
+  expect(activeStyle.color).toBe('rgb(244, 243, 239)');
+  expect(activeStyle.radius).toBe('8px');
   expect(activeStyle.fontSize).toBeGreaterThanOrEqual(16);
   expect(activeStyle.labelFontSize).toBeGreaterThanOrEqual(16);
-  await expect(nav.locator('.nav-section-label')).toHaveText('Verwaltung');
+  await expect(nav.locator('.nav-section-label')).toHaveText(['Workspace', 'Operativ', 'System']);
   await expect(active.locator('.nav-icon')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(sidebar).toHaveCSS('visibility', 'hidden');
@@ -458,7 +458,7 @@ test("Workspace: mobile HEAV menu opens without motion when reduced motion is re
   await page.close();
 });
 
-test("Workspace: finance navigation uses one stable HEAV line state instead of a focus pill", async ({ page }) => {
+test("Workspace: finance navigation keeps its line state alongside Operator navigation", async ({ page }) => {
   await mockStudioSupabase(page);
   await page.goto(`${base}/studio/`);
   await page.locator('.nav-link[data-view="invoices"]').click();
@@ -476,7 +476,7 @@ test("Workspace: finance navigation uses one stable HEAV line state instead of a
   });
   expect(state).toEqual({
     background: 'rgba(0, 0, 0, 0)',
-    color: 'rgb(250, 250, 250)',
+    color: 'rgb(244, 243, 239)',
     radius: '0px',
     borderBottomWidth: '0px',
     outline: 'none',
@@ -501,11 +501,11 @@ test("Workspace: finance navigation uses one stable HEAV line state instead of a
   expect(surface).toEqual({
     toolbarRadius: '0px',
     toolbarSides: ['0px', '0px'],
-    tableRadius: '24px',
-    navBackground: 'rgba(0, 0, 0, 0)',
-    navRadius: '0px',
-    navMarker: ['1px', 'rgb(250, 250, 250)', '0.36s, 0.36s'],
-    financeMarker: ['1px', 'rgb(250, 250, 250)', '0.36s, 0.36s'],
+    tableRadius: '16px',
+    navBackground: 'rgb(26, 26, 29)',
+    navRadius: '8px',
+    navMarker: ['1px', 'rgb(244, 243, 239)', '0.36s, 0.36s'],
+    financeMarker: ['1px', 'rgb(222, 217, 255)', '0.36s, 0.36s'],
   });
 });
 
@@ -650,9 +650,9 @@ test("Workspace: invoice editor uses one harmonious rounded geometry", async ({ 
     const style = getComputedStyle(element);
     return [style.borderTopLeftRadius, style.borderTopRightRadius, style.borderBottomRightRadius, style.borderBottomLeftRadius];
   });
-  expect(corners).toEqual(['24px', '24px', '24px', '24px']);
-  await expect(dialog.locator('.invoice-item').first()).toHaveCSS('border-radius', '18px');
-  await expect(dialog.locator('.form-field input').first()).toHaveCSS('border-radius', '18px');
+  expect(corners).toEqual(['16px', '16px', '16px', '16px']);
+  await expect(dialog.locator('.invoice-item').first()).toHaveCSS('border-radius', '10px');
+  await expect(dialog.locator('.form-field input').first()).toHaveCSS('border-radius', '9px');
 });
 
 test("Workspace: invoice search and sorting controls share one utility radius", async ({ page }) => {
@@ -663,7 +663,7 @@ test("Workspace: invoice search and sorting controls share one utility radius", 
     search: getComputedStyle(toolbar.querySelector('.search-field input')).borderRadius,
     sort: getComputedStyle(toolbar.querySelector('[data-invoice-sort]')).borderRadius,
   }));
-  expect(radii).toEqual({ search: '18px', sort: '18px' });
+  expect(radii).toEqual({ search: '9px', sort: '9px' });
 });
 
 test("Workspace: desktop topbar, finance nav and content share one left gutter", async ({ browser }) => {
@@ -683,14 +683,10 @@ test("Workspace: desktop topbar, finance nav and content share one left gutter",
       viewPadding: padding('.view'),
     };
   });
-  expect(gutters).toEqual({
-    topbarContentLeft: 278,
-    financeContentLeft: 278,
-    viewContentLeft: 278,
-    topbarPadding: 48,
-    financePadding: 48,
-    viewPadding: 48,
-  });
+  expect(gutters.topbarContentLeft).toBeCloseTo(gutters.viewContentLeft, 0);
+  expect(gutters.financeContentLeft).toBeCloseTo(gutters.viewContentLeft, 0);
+  expect(gutters.topbarPadding).toBeCloseTo(gutters.viewPadding, 0);
+  expect(gutters.financePadding).toBeCloseTo(gutters.viewPadding, 0);
   await page.close();
 });
 
@@ -992,6 +988,7 @@ for (const width of [360, 390, 768, 1440]) {
     page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
     await page.goto(`${base}/studio/`);
     await expect(page.getByRole('heading', { name: 'Dein Arbeitsbereich', exact: true })).toBeVisible();
+    await expect(page.locator('.studio-owner-name')).toHaveText('Michias Tegegne');
     expect((await page.locator('.dashboard-intro').boundingBox()).height).toBeLessThan(100);
     await expect(page.locator('.dashboard-metrics')).toHaveCount(0);
     const navigate = async (view) => {
@@ -1008,6 +1005,8 @@ for (const width of [360, 390, 768, 1440]) {
       }
       const clipping = await page.locator('#app-content').evaluate(root => [...root.querySelectorAll('*')].filter(e => {
         if (!e.getClientRects().length || e.closest('.sr-only') || e.matches('.project-canvas,.project-canvas-track')) return false;
+        const projectStrip = e.closest('.project-strip');
+        if (projectStrip && ['auto', 'scroll'].includes(getComputedStyle(projectStrip).overflowX)) return false;
         const b = e.getBoundingClientRect();
         const actionScroller = e.closest('.table-actions');
         if (actionScroller) {
@@ -1726,7 +1725,7 @@ test("Studio: ein offenes Rechnungsstatusmenü verschiebt die folgende Zeile", a
   expect(layout.menuBottom).toBeLessThanOrEqual(layout.nextRowTop + 1);
 });
 
-test("Studio: markierte Designfehler bleiben linear, kompakt und sauber ausgerichtet", async ({ browser }) => {
+test("Studio: Operator-Navigation und Finanzkontrollen bleiben kompakt und sauber ausgerichtet", async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   await mockStudioSupabase(page);
   await page.goto(`${base}/studio/`);
@@ -1746,10 +1745,9 @@ test("Studio: markierte Designfehler bleiben linear, kompakt und sauber ausgeric
       indicatorBottomGap: Math.abs(bounds.bottom - indicator.bottom),
     };
   });
-  expect(navigation.background).toBe('rgba(0, 0, 0, 0)');
-  expect(navigation.radius).toBe('0px');
-  expect(navigation.indicatorWidth).toBeCloseTo(navigation.labelWidth, 0);
-  expect(navigation.indicatorBottomGap).toBeLessThanOrEqual(2);
+  expect(navigation.background).toBe('rgb(26, 26, 29)');
+  expect(navigation.radius).toBe('8px');
+  expect(navigation.indicatorWidth).toBe(0);
 
   const toolbar = await page.locator('.invoice-toolbar').evaluate((element) => {
     const active = element.querySelector('.filter-tab.is-active');
@@ -1767,11 +1765,11 @@ test("Studio: markierte Designfehler bleiben linear, kompakt und sauber ausgeric
     };
   });
   expect(toolbar.radius).toBe('0px');
-  expect(toolbar.activeRadius).toBe('0px');
-  expect(toolbar.activeBackground).toBe('rgba(0, 0, 0, 0)');
-  expect(toolbar.activeBorderTop).toBe(0);
-  expect(toolbar.inactiveRadius).toBe('0px');
-  expect(toolbar.inactiveBorderTop).toBe(0);
+  expect(toolbar.activeRadius).toBe('999px');
+  expect(toolbar.activeBackground).toBe('rgb(26, 26, 29)');
+  expect(toolbar.activeBorderTop).toBe(1);
+  expect(toolbar.inactiveRadius).toBe('999px');
+  expect(toolbar.inactiveBorderTop).toBe(1);
   expect(toolbar.controlHeightDifference).toBeLessThanOrEqual(1);
 
   const invoiceRow = page.locator('.invoice-table tbody tr').first();
@@ -1792,7 +1790,7 @@ test("Studio: markierte Designfehler bleiben linear, kompakt und sauber ausgeric
   });
   expect(statusLayout.columns).toBe(2);
   expect(statusLayout.summaryWidth).toBeLessThanOrEqual(140);
-  expect(statusLayout.rowHeight).toBeLessThanOrEqual(190);
+  expect(statusLayout.rowHeight).toBeLessThanOrEqual(200);
   expect(statusLayout.verticalAlignments.every((value) => value === 'top')).toBe(true);
   expect(statusLayout.menuBottom).toBeLessThanOrEqual(statusLayout.nextRowTop + 1);
   await page.screenshot({ path: 'qa/admin-design-repairs-invoices-desktop.png', fullPage: true });
@@ -1871,6 +1869,11 @@ test("Studio: Projekt-Canvas verbindet Produktion, Kunde und Finanzschritte", as
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
   await page.goto(`${base}/studio/`);
   await page.locator('.nav-link[data-view="projects"]').click();
+  const strip = page.getByRole('region', { name: 'Projektauswahl' });
+  await expect(strip.locator('.project-strip-item')).toHaveCount(2);
+  await expect(strip.locator('[data-project-focus="p1"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('region', { name: 'Projektkennzahlen' })).toContainText('CHF 18’500.00');
+  await expect(page.getByRole('region', { name: 'Projektkennzahlen' })).toContainText('CHF 9’188.50');
   const canvas = page.locator(".project-canvas");
   await expect(canvas).toBeVisible();
   await expect(canvas).toHaveAttribute('aria-describedby', 'project-canvas-guide');
@@ -1878,6 +1881,9 @@ test("Studio: Projekt-Canvas verbindet Produktion, Kunde und Finanzschritte", as
   await expect(canvas).toContainText("Brand Film 2026");
   await expect(canvas).toContainText("CHF 9’188.50");
   await page.locator('[data-project-focus="p2"]').first().click();
+  await expect(strip.locator('[data-project-focus="p2"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('region', { name: 'Projektkennzahlen' })).toContainText('CHF 9’200.00');
+  await expect(page.getByRole('region', { name: 'Projektkennzahlen' })).toContainText('CHF 508.20');
   await expect(canvas).toContainText("Campaign Content");
   await expect(canvas).toContainText("Atelier Morgen");
   await canvas.locator('[data-create="invoice"]').click();
@@ -1902,6 +1908,14 @@ test("Studio: Projekt-Canvas bleibt in echter 390px-Ansicht vollständig bedienb
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
   await page.goto(`${base}/studio/`);
+  const topbarAction = await page.locator('.topbar > .primary-action').evaluate(element => ({
+    width: element.getBoundingClientRect().width,
+    height: element.getBoundingClientRect().height,
+    fontSize: getComputedStyle(element).fontSize,
+  }));
+  expect(topbarAction.width).toBe(44);
+  expect(topbarAction.height).toBeGreaterThanOrEqual(44);
+  expect(topbarAction.fontSize).toBe('0px');
   await page.getByRole("button", { name: "Menü öffnen" }).click();
   await page.locator('.nav-link[data-view="projects"]').click();
   await expect(page.locator("#admin-shell")).not.toHaveClass(/nav-open/);

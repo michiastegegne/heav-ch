@@ -43,7 +43,7 @@ test("Kontaktformular nutzt die HEAV-eigene Edge Function statt eines sichtbaren
   assert.match(contactSource, /data-form-status/);
 });
 
-test("Studio lädt das isolierte achromatische Dark-Designsystem in stabiler Reihenfolge", () => {
+test("Studio lädt das isolierte Operator-Designsystem in stabiler Reihenfolge", async () => {
   const expectedAssets = [
     "/admin/assets/admin.css?v=20260830-discount-edit",
     "/admin/assets/admin-enhancements.css?v=20260917-crm-layout-status",
@@ -52,6 +52,7 @@ test("Studio lädt das isolierte achromatische Dark-Designsystem in stabiler Rei
     "/admin/assets/crm-theme.css?v=shadcn-dark-1",
     "/admin/assets/studio-editorial.css?v=shadcn-dark-1",
     "/admin/assets/motion-primitives.css?v=20260922-design-geometry-1",
+    "/admin/assets/studio-operator.css?v=20260924-operator-1",
   ];
   const positions = expectedAssets.map((asset) => studioHtml.indexOf(`href="${asset}"`));
   assert.ok(positions.every((position) => position >= 0), "alle Studio-Stylesheets sind versioniert eingebunden");
@@ -59,11 +60,15 @@ test("Studio lädt das isolierte achromatische Dark-Designsystem in stabiler Rei
   assert.match(studioHtml, /<html lang="de-CH" class="studio-editorial-root" data-assistant-enabled="false">/);
   assert.match(studioHtml, /<meta name="theme-color" content="#0a0a0a"/);
   assert.match(studioHtml, /<body class="crm-theme studio-editorial-theme">/);
-  assert.match(studioHtml, /src="\/admin\/assets\/app\.js\?v=20260922-design-geometry-1"/);
+  assert.match(studioHtml, /src="\/admin\/assets\/app\.js\?v=20260924-operator-1"/);
   assert.match(adminSource, /dashboard\.js\?v=20260916-revenue-1/);
   assert.match(studioCss, /--studio-card-radius:\s*24px/);
   assert.match(studioCss, /--studio-control-radius:\s*18px/);
   assert.match(studioCss, /--studio-accent:\s*#fafafa/);
+  const operatorCss = await readFile(new URL("../admin/assets/studio-operator.css", import.meta.url), "utf8");
+  assert.match(operatorCss, /--crm-accent:\s*#ded9ff/);
+  assert.match(operatorCss, /\.project-strip-item/);
+  assert.match(operatorCss, /\.project-metric/);
   assert.doesNotMatch(studioCss, /#d7ff38|--studio-acid/);
   assert.doesNotMatch(adminSource, /#d7ff38/);
 });

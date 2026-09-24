@@ -472,6 +472,25 @@ function renderProjectCanvas(project) {
   </div></section>`;
 }
 
+function renderProjectOverview(project, projects) {
+  const invoices = state.data.invoices.filter((invoice) => invoice.project_id === project.id);
+  const open = invoices.filter((invoice) => ["sent", "overdue"].includes(invoice.status));
+  const openTotal = open.reduce((total, invoice) => total + (invoice.total_rappen || 0), 0);
+  const customer = project.customer || state.data.customers.find((item) => item.id === project.customer_id);
+  return `<section class="project-strip" aria-label="Projektauswahl">${projects.map((item) => {
+    const selected = item.id === project.id;
+    const itemCustomer = item.customer || state.data.customers.find((customerRecord) => customerRecord.id === item.customer_id);
+    return `<button class="project-strip-item ${selected ? "is-selected" : ""}" type="button" data-project-focus="${esc(item.id)}" aria-pressed="${selected}"><span class="project-strip-head"><span class="project-strip-mark" aria-hidden="true">${esc(item.title.trim().slice(0, 2).toUpperCase())}</span><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></span><strong>${esc(item.title)}</strong><small>${esc(customerLabel(itemCustomer))} · ${formatDate(item.due_date)}</small></button>`;
+  }).join("")}</section>
+  <div class="project-section-head"><div><h2>Projektlage</h2><p>${esc(customerLabel(customer))} · Status und Finanzen dieses Projekts</p></div><button class="text-button" type="button" data-create="invoice" data-project-id="${esc(project.id)}">Rechnung erstellen →</button></div>
+  <section class="project-metrics" aria-label="Projektkennzahlen">
+    <article class="project-metric"><span>Budget</span><strong>${formatCHF(project.budget_rappen || 0)}</strong><small>Geplantes Projektbudget</small></article>
+    <article class="project-metric"><span>Offen</span><strong>${formatCHF(openTotal)}</strong><small>${open.length} ${open.length === 1 ? "Rechnung" : "Rechnungen"} ausstehend</small></article>
+    <article class="project-metric"><span>Abgabe</span><strong>${formatDate(project.due_date)}</strong><small>${project.start_date ? `Start ${formatDate(project.start_date)}` : "Kein Startdatum erfasst"}</small></article>
+    <article class="project-metric"><span>Status</span><strong>${esc(statusLabel(project.status))}</strong><small>${esc(project.description || "Kein weiterer Projektkontext erfasst")}</small></article>
+  </section>`;
+}
+
 function renderProjects() {
   const all = state.data.projects;
   const items = filtered(all.filter((item) => state.filter === "all" || item.status === state.filter), ["title", "description"]);
@@ -480,7 +499,7 @@ function renderProjects() {
   if (selected) state.selectedProjectId = selected.id;
   const rows = items.map((item) => `<tr class="${item.id === state.selectedProjectId ? "is-selected" : ""}"><td><button class="project-record" type="button" data-project-focus="${esc(item.id)}" aria-pressed="${String(item.id === state.selectedProjectId)}"><strong>${esc(item.title)}</strong><small>${esc(customerLabel(item.customer))}</small></button></td><td><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></td><td>${formatDate(item.due_date)}</td><td>${formatCHF(item.budget_rappen || 0)}</td><td><div class="table-actions">${actionIconButton("pencil", "Bearbeiten", `data-edit="project" data-id="${esc(item.id)}"`)}${actionIconButton("trash", `Projekt löschen: ${item.title}`, `data-delete-record="project" data-id="${esc(item.id)}"`, "is-danger")}</div></td></tr>`).join("");
   const cards = items.map((item) => `<article class="mobile-card ${item.id === state.selectedProjectId ? "is-selected" : ""}"><div><button class="project-record" type="button" data-project-focus="${esc(item.id)}" aria-pressed="${String(item.id === state.selectedProjectId)}"><strong>${esc(item.title)}</strong><small>${esc(customerLabel(item.customer))} · ${formatDate(item.due_date)}</small></button><div class="table-actions">${actionIconButton("pencil", "Bearbeiten", `data-edit="project" data-id="${esc(item.id)}"`)}${actionIconButton("trash", `Projekt löschen: ${item.title}`, `data-delete-record="project" data-id="${esc(item.id)}"`, "is-danger")}</div></div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></article>`).join("");
-  return `<section class="view">${toolbar("project", "Projekte durchsuchen …", [["all","Alle"],["planning","Planung"],["active","Aktiv"],["completed","Abgeschlossen"]])}${selected ? `<label class="project-picker"><span>Projekt auswählen</span><select data-project-picker>${items.map(item => `<option value="${esc(item.id)}" ${item.id === selected.id ? "selected" : ""}>${esc(item.title)} · ${esc(customerLabel(item.customer))}</option>`).join("")}</select></label><p class="project-canvas-guide" id="project-canvas-guide"><span>6 Bereiche · horizontal erkunden →</span></p>` : ""}${selected ? renderProjectCanvas(selected) : `<div class="empty-state"><h3>Keine Projekte in diesem Filter.</h3><p>Wähle einen anderen Status oder passe die Suche an.</p></div>`}<div class="project-register"><div class="panel-head"><h3>PROJEKTREGISTER</h3><span>${items.length} ${items.length === 1 ? "Projekt" : "Projekte"}</span></div><table class="data-table"><thead><tr><th>Projekt</th><th>Status</th><th>Deadline</th><th>Budget</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list">${cards}</div></div></section>`;
+  return `<section class="view projects-view">${toolbar("project", "Projekte durchsuchen …", [["all","Alle"],["planning","Planung"],["active","Aktiv"],["completed","Abgeschlossen"]])}${selected ? `${renderProjectOverview(selected, items)}<label class="project-picker"><span>Projekt auswählen</span><select data-project-picker>${items.map(item => `<option value="${esc(item.id)}" ${item.id === selected.id ? "selected" : ""}>${esc(item.title)} · ${esc(customerLabel(item.customer))}</option>`).join("")}</select></label><p class="project-canvas-guide" id="project-canvas-guide"><span>6 Bereiche · horizontal erkunden →</span></p>` : ""}${selected ? renderProjectCanvas(selected) : `<div class="empty-state"><h3>Keine Projekte in diesem Filter.</h3><p>Wähle einen anderen Status oder passe die Suche an.</p></div>`}<div class="project-register"><div class="panel-head"><h3>PROJEKTREGISTER</h3><span>${items.length} ${items.length === 1 ? "Projekt" : "Projekte"}</span></div><table class="data-table"><thead><tr><th>Projekt</th><th>Status</th><th>Deadline</th><th>Budget</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list">${cards}</div></div></section>`;
 }
 
 function invoiceActions(invoice, reveal = false, instance = "record") {
@@ -642,6 +661,9 @@ function applyMotionPrimitives() {
 }
 function render() {
   content.classList.remove("is-view-entering");
+  const ownerName = state.data.settings?.owner_name?.trim() || "Studio-Konto";
+  document.querySelector(".studio-owner-name").textContent = ownerName;
+  document.querySelector(".studio-owner-mark").textContent = ownerName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
   title.textContent = viewNames[state.view];
   syncTopbarAction();
   const finance = ["invoices", "offers"].includes(state.view);

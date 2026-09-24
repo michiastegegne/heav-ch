@@ -64,10 +64,10 @@ export async function assertDarkTheme(page) {
 }
 
 export async function assertStudioEditorialTheme(page) {
-  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(10, 10, 10)');
-  await expect(page.locator('body')).toHaveCSS('color', 'rgb(250, 250, 250)');
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(9, 9, 9)');
+  await expect(page.locator('body')).toHaveCSS('color', 'rgb(244, 243, 239)');
   await expect(page.locator('html')).toHaveCSS('color-scheme', 'dark');
-  await expect(page.locator('.workspace')).toHaveCSS('background-color', 'rgb(10, 10, 10)');
+  await expect(page.locator('.workspace')).toHaveCSS('background-color', 'rgb(9, 9, 9)');
   await expect(page.locator('.topbar h1')).toHaveCSS('font-family', /DM Sans/);
   const displayValues = page.locator('.dashboard-revenue-summary > strong,.dashboard-money > strong,.project-module strong');
   for (const value of await displayValues.all()) if (await value.isVisible()) await expect(value).toHaveCSS('font-family', /DM Sans/);
@@ -76,19 +76,19 @@ export async function assertStudioEditorialTheme(page) {
   for (const card of await cards.all()) {
     if (!await card.isVisible()) continue;
     const fullScreenDialog = await card.evaluate(element => element.matches('dialog') && innerWidth < 821);
-    if (!fullScreenDialog) await expect(card).toHaveCSS('border-radius', '24px');
+    if (!fullScreenDialog) await expect(card).toHaveCSS('border-radius', '16px');
   }
   const dashboardCards = page.locator('.dashboard-money,.dashboard-panel');
-  for (const card of await dashboardCards.all()) if (await card.isVisible()) await expect(card).toHaveCSS('background-color', 'rgb(23, 23, 23)');
+  for (const card of await dashboardCards.all()) if (await card.isVisible()) await expect(card).toHaveCSS('background-color', 'rgb(18, 18, 20)');
 
   const controls = page.locator('.primary-action,.secondary-button,input:not([type="hidden"]),select,textarea');
-  for (const control of await controls.all()) if (await control.isVisible()) await expect(control).toHaveCSS('border-radius', '18px');
+  for (const control of await controls.all()) if (await control.isVisible()) await expect(control).toHaveCSS('border-radius', '9px');
   const filterTabs = page.locator('.invoice-toolbar .filter-tab');
-  for (const filterTab of await filterTabs.all()) if (await filterTab.isVisible()) await expect(filterTab).toHaveCSS('border-radius', '0px');
+  for (const filterTab of await filterTabs.all()) if (await filterTab.isVisible()) await expect(filterTab).toHaveCSS('border-radius', '999px');
   const primary = page.locator('.primary-action:visible').first();
   if (await primary.count()) {
-    await expect(primary).toHaveCSS('background-color', 'rgb(250, 250, 250)');
-    await expect(primary).toHaveCSS('color', 'rgb(10, 10, 10)');
+    await expect(primary).toHaveCSS('background-color', 'rgb(222, 217, 255)');
+    await expect(primary).toHaveCSS('color', 'rgb(40, 35, 66)');
   }
   await assertFormControlBoundaries(page);
   await assertVisibleTextContrast(page);

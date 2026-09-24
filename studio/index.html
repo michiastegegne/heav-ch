@@ -14,25 +14,28 @@
     <link rel="stylesheet" href="/admin/assets/crm-theme.css?v=shadcn-dark-1" />
     <link rel="stylesheet" href="/admin/assets/studio-editorial.css?v=shadcn-dark-1" />
     <link rel="stylesheet" href="/admin/assets/motion-primitives.css?v=20260922-design-geometry-1" />
+    <link rel="stylesheet" href="/admin/assets/studio-operator.css?v=20260924-operator-1" />
   </head>
   <body class="crm-theme studio-editorial-theme">
     <div class="loading-screen" id="loading-screen" aria-live="polite"><strong>HEAV</strong><span data-bklit-shimmer="Studio wird geladen …" role="status">Studio wird geladen …</span></div>
     <div class="admin-shell" id="admin-shell" hidden>
       <aside class="sidebar" id="sidebar" aria-label="Studio Navigation">
         <div class="sidebar-head"><a class="brand" href="/" aria-label="Zur HEAV Website">HEAV</a><button class="nav-close" type="button" aria-label="Menü schliessen" data-close-nav><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg><span>Schliessen</span></button></div>
-        <span class="sidebar-eyebrow">Studio</span>
+        <div class="studio-workspace-identity" aria-label="HEAV Studio"><span class="studio-workspace-mark" aria-hidden="true">H</span><span><strong>HEAV Studio</strong><small>Creative operations</small></span></div>
         <nav class="main-nav" aria-label="Studio Navigation">
+          <span class="nav-section-label">Workspace</span>
           <button class="nav-link is-active" data-view="dashboard"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg><span class="nav-label">Übersicht</span></button>
           <button class="nav-link" data-view="projects"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h16v11H4z"/><path d="M8 8.5V5h8v3.5"/></svg><span class="nav-label">Projekte</span></button>
           <button class="nav-link" data-view="customers"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 19c.6-3.1 3.1-5 7-5s6.4 1.9 7 5"/></svg><span class="nav-label">Kunden</span></button>
+          <span class="nav-section-label">Operativ</span>
           <button class="nav-link" data-view="invoices"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V5M5 19h15"/><path d="M9 16v-4M13 16V8M17 16v-7"/></svg><span class="nav-label">Finanzen</span></button>
-          <span class="nav-section-label">Verwaltung</span>
+          <span class="nav-section-label">System</span>
           <button class="nav-link" data-view="settings"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="m19 13 .1-1-.1-1 2-1.3-2-3.4-2.2 1a7.2 7.2 0 0 0-1.7-1L14.8 4h-4l-.3 2.3a7.2 7.2 0 0 0-1.7 1l-2.2-1-2 3.4 2 1.3-.1 1 .1 1-2 1.3 2 3.4 2.2-1a7.2 7.2 0 0 0 1.7 1l.3 2.3h4l.3-2.3a7.2 7.2 0 0 0 1.7-1l2.2 1 2-3.4Z"/></svg><span class="nav-label">Einstellungen</span></button>
           <button class="nav-link" data-view="portal-requests"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14v12H5z"/><path d="m5 8 7 5 7-5M8 4h8"/></svg><span class="nav-label">Portal-Anfragen</span></button>
           <button class="nav-link" data-view="emails"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="13" rx="2"/><path d="m5 8 7 5 7-5"/></svg><span class="nav-label">E-Mail-Verlauf</span></button>
           <span class="nav-active-indicator" aria-hidden="true"></span>
         </nav>
-        <div class="sidebar-foot"><span class="connection-dot" aria-hidden="true"></span><span id="connection-label">Sicher verbunden</span><button id="logout-button" type="button">Abmelden</button></div>
+        <div class="sidebar-foot"><span class="connection-dot" aria-hidden="true"></span><span id="connection-label">Sicher verbunden</span><span class="studio-owner"><span class="studio-owner-mark" aria-hidden="true">H</span><span class="studio-owner-name">Studio-Konto</span></span><button id="logout-button" type="button">Abmelden</button></div>
       </aside>
       <div class="nav-scrim" data-close-nav></div>
       <section class="workspace"><header class="topbar"><button class="menu-button" type="button" aria-label="Menü öffnen" aria-controls="sidebar" aria-expanded="false" data-open-nav>Menü</button><div><span class="kicker">HEAV STUDIO</span><h1 id="view-title">Übersicht</h1></div><button class="assistant-launcher" type="button" aria-label="HEAV Assistent öffnen" data-open-assistant><span aria-hidden="true">✦</span><b>Assistent</b></button><button class="primary-action" type="button" data-create="invoice">Neue Rechnung <span aria-hidden="true">+</span></button></header><main id="app-content" tabindex="-1"></main></section>
@@ -42,6 +45,6 @@
     <dialog class="action-confirm-dialog" id="action-confirm-dialog" aria-labelledby="action-confirm-title" aria-describedby="action-confirm-copy"><form method="dialog" class="action-confirm-shell" id="action-confirm-form"><div class="action-confirm-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M21 3 10 14"/><path d="m21 3-7 18-4-7-7-4Z"/></svg></div><div><span class="kicker" id="action-confirm-kicker">BESTÄTIGEN</span><h2 id="action-confirm-title">Aktion bestätigen</h2><p id="action-confirm-copy"></p></div><footer><button class="secondary-button" value="cancel" type="submit" formnovalidate>Abbrechen</button><button class="primary-action" id="action-confirm-button" value="confirm" type="submit">Jetzt senden <span aria-hidden="true">↗</span></button></footer></form></dialog>
     <dialog class="assistant-dialog" id="assistant-dialog" aria-labelledby="assistant-title"><section class="assistant-shell"><header><div><span class="kicker">HEAV INTELLIGENCE</span><h2 id="assistant-title">HEAV Assistent</h2></div><div class="assistant-header-actions"><button class="assistant-delete" type="button" aria-label="Chat löschen" data-delete-assistant-thread hidden>Löschen</button><button class="assistant-close" type="button" aria-label="HEAV Assistent schliessen" data-close-assistant>Schliessen</button></div></header><div class="assistant-messages" id="assistant-messages" role="log" aria-live="polite" aria-relevant="additions"><article class="assistant-message is-assistant"><p>Schick mir Kundendaten als Screenshot oder plane ein Projekt im Chat. Ich bereite prüfbare Entwürfe vor – gespeichert oder versendet wird erst nach deiner Bestätigung.</p></article></div><form class="assistant-composer" id="assistant-form"><div class="assistant-attachment" id="assistant-attachment" hidden></div><label class="assistant-upload"><input id="assistant-image" type="file" accept="image/png,image/jpeg,image/webp"><span aria-hidden="true">＋</span><b>Screenshot</b></label><label class="assistant-prompt"><span class="sr-only">Nachricht an HEAV Assistent</span><textarea id="assistant-input" aria-label="Nachricht an HEAV Assistent" maxlength="6000" placeholder="Zum Beispiel: Erstelle aus diesem Briefing einen Kunden und ein Projekt …"></textarea></label><button class="primary-action assistant-send" type="submit">Senden <span aria-hidden="true">↗</span></button><p class="assistant-privacy">Screenshots werden verkleinert und nur für diese Anfrage verarbeitet. Jede CRM-Aktion bleibt bestätigungspflichtig.</p></form></section></dialog>
     <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-    <script type="module" src="/admin/assets/app.js?v=20260922-design-geometry-1"></script>
+    <script type="module" src="/admin/assets/app.js?v=20260924-operator-1"></script>
   </body>
 </html>
