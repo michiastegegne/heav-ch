@@ -1005,8 +1005,8 @@ for (const width of [360, 390, 768, 1440]) {
       }
       const clipping = await page.locator('#app-content').evaluate(root => [...root.querySelectorAll('*')].filter(e => {
         if (!e.getClientRects().length || e.closest('.sr-only') || e.matches('.project-canvas,.project-canvas-track')) return false;
-        const projectStrip = e.closest('.project-strip');
-        if (projectStrip && ['auto', 'scroll'].includes(getComputedStyle(projectStrip).overflowX)) return false;
+        const projectScroller = e.closest('.project-strip,.project-doc-scroll');
+        if (projectScroller && ['auto', 'scroll'].includes(getComputedStyle(projectScroller).overflowX)) return false;
         const b = e.getBoundingClientRect();
         const actionScroller = e.closest('.table-actions');
         if (actionScroller) {
@@ -1901,6 +1901,38 @@ test("Studio: Projekt-Canvas verbindet Produktion, Kunde und Finanzschritte", as
   await page.close();
 });
 
+test("Studio: Operator-Vorschau nutzt echte Projektdokumente und bedienbare Filter", async ({ browser }) => {
+  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+  await mockStudioSupabase(page);
+  await page.goto(`${base}/studio/`);
+  await page.locator('.nav-link[data-view="projects"]').click();
+  await expect(page.getByRole('heading', { name: 'Operate, not decorate.' })).toBeVisible();
+  const grid = page.getByRole('region', { name: 'Projekt-Dokumente und Signale' });
+  const columns = await grid.evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').map(parseFloat));
+  expect(columns).toHaveLength(2);
+  expect(columns[0]).toBeGreaterThan(columns[1]);
+  await expect(page.locator('.project-doc-scroll tbody tr')).toHaveCount(2);
+  await expect(page.locator('.project-doc-scroll')).toContainText('HEAV-2026-001');
+  await expect(page.locator('.project-doc-scroll')).toContainText('HEAV-O-2026-001');
+  await page.locator('.project-doc-actions summary').first().click();
+  await expect(page.locator('.project-doc-actions').first().getByRole('button').first()).toBeVisible();
+  await page.locator('[data-filter="offer"]').click();
+  await expect(page.locator('.project-doc-scroll tbody tr')).toHaveCount(1);
+  await page.locator('[data-sort-project-documents]').click();
+  await expect(page.locator('[data-sort-project-documents]')).toHaveAttribute('aria-label', /absteigend/);
+  await page.locator('.project-doc-search input').fill('nicht vorhanden');
+  await expect(page.locator('.project-doc-empty')).toBeVisible();
+  await page.locator('[data-project-focus="p2"]').first().click();
+  await expect(page.locator('.project-doc-filters .is-active')).toContainText('Alle');
+  await expect(page.locator('.project-doc-scroll')).toContainText('HEAV-2026-002');
+  await expect(page.locator('.project-doc-scroll')).not.toContainText('HEAV-2026-001');
+  await page.locator('[data-scroll-project-register]').click();
+  await expect(page.locator('#project-register')).toBeInViewport();
+  await page.evaluate(() => scrollTo(0, 0));
+  await page.screenshot({ path: 'qa/operator-preview-projects-1920.png' });
+  await page.close();
+});
+
 test("Studio: Projekt-Canvas bleibt in echter 390px-Ansicht vollständig bedienbar", async ({ browser }) => {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   await mockStudioSupabase(page);
@@ -1908,7 +1940,7 @@ test("Studio: Projekt-Canvas bleibt in echter 390px-Ansicht vollständig bedienb
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
   await page.goto(`${base}/studio/`);
-  const topbarAction = await page.locator('.topbar > .primary-action').evaluate(element => ({
+  const topbarAction = await page.locator('.topbar .studio-topbar-actions > .primary-action').evaluate(element => ({
     width: element.getBoundingClientRect().width,
     height: element.getBoundingClientRect().height,
     fontSize: getComputedStyle(element).fontSize,

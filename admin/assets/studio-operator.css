@@ -295,7 +295,7 @@ body.crm-theme.studio-editorial-theme .projects-view .project-picker {
 body.crm-theme.studio-editorial-theme .project-canvas-guide { width: 100%; margin: 4px 0 8px; }
 body.crm-theme.studio-editorial-theme .project-canvas {
   width: 100%; max-width: 100%; margin-bottom: 28px; border: 0;
-  border-radius: 0; background: transparent; box-shadow: none;
+  border-radius: 0; background: transparent; box-shadow: none; contain: paint;
 }
 body.crm-theme.studio-editorial-theme .project-canvas-track > header,
 body.crm-theme.studio-editorial-theme .project-canvas-track > .project-module-grid > article,
@@ -346,11 +346,11 @@ body.crm-theme.studio-editorial-theme #app-content:focus { outline: 0; }
   }
   body.crm-theme.studio-editorial-theme .topbar h1 { font-size: 18px; }
   body.crm-theme.studio-editorial-theme .menu-button { min-width: 48px; min-height: 44px; }
-  body.crm-theme.studio-editorial-theme .topbar > .primary-action {
+  body.crm-theme.studio-editorial-theme .studio-topbar-actions > .primary-action {
     flex: 0 0 44px; width: 44px; min-width: 44px; height: 44px;
     padding: 0; font-size: 0; white-space: nowrap;
   }
-  body.crm-theme.studio-editorial-theme .topbar > .primary-action span { font-size: 22px; }
+  body.crm-theme.studio-editorial-theme .studio-topbar-actions > .primary-action span { font-size: 22px; }
   body.crm-theme.studio-editorial-theme .view { padding: 20px 16px 32px; }
   body.crm-theme.studio-editorial-theme :is(.dashboard-intro h2, .hero-row h2) { font-size: 35px; }
   body.crm-theme.studio-editorial-theme .dashboard-statistics { grid-template-columns: 1fr; }
@@ -381,4 +381,218 @@ body.crm-theme.studio-editorial-theme #app-content:focus { outline: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   body.crm-theme.studio-editorial-theme .project-strip { scroll-behavior: auto; }
+}
+
+/* Exact Operator preview composition, populated with real Studio records. */
+body.crm-theme.studio-editorial-theme .studio-lab-mark,
+body.crm-theme.studio-editorial-theme .studio-project-crumb,
+body.crm-theme.studio-editorial-theme .studio-project-subhead,
+body.crm-theme.studio-editorial-theme .studio-project-filter { display: none; }
+body.crm-theme.studio-editorial-theme .studio-topbar-actions { display: contents; }
+body.crm-theme.studio-editorial-theme .admin-shell.studio-projects-active {
+  --crm-line: rgba(226,234,246,.14); --crm-boundary: rgba(226,234,246,.14);
+}
+body.crm-theme.studio-editorial-theme .studio-projects-active .sidebar-head {
+  display: flex; align-items: center; justify-content: space-between;
+}
+body.crm-theme.studio-editorial-theme .studio-projects-active .studio-lab-mark {
+  display: block; padding: 4px 7px; border: 1px solid var(--crm-line);
+  border-radius: 999px; color: var(--crm-muted); font: 10px ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+body.crm-theme.studio-editorial-theme .studio-projects-active .studio-workspace-identity { margin-top: 0; }
+body.crm-theme.studio-editorial-theme .studio-projects-active .nav-link[data-view="projects"].is-active::after {
+  content: ""; width: 6px; height: 6px; margin-left: auto; border-radius: 50%; background: var(--crm-positive);
+}
+body.crm-theme.studio-editorial-theme .studio-projects-active .topbar {
+  position: static; min-height: 0; align-items: flex-start; gap: 24px;
+  padding: 30px clamp(20px, 3.2vw, 56px) 0; border: 0; background: transparent;
+}
+body.crm-theme.studio-editorial-theme .studio-projects-active .studio-topbar-copy { min-width: 0; flex: 1; }
+body.crm-theme.studio-editorial-theme .studio-projects-active .studio-topbar-copy > .kicker { display: none; }
+body.crm-theme.studio-editorial-theme .studio-projects-active .studio-project-crumb {
+  display: flex; gap: 7px; color: var(--crm-muted); font-size: 12px;
+}
+body.crm-theme.studio-editorial-theme .studio-projects-active .studio-project-crumb b { color: var(--crm-text); font-weight: 550; }
+body.crm-theme.studio-editorial-theme .studio-projects-active .topbar h1 {
+  margin: 10px 0 4px; font-size: clamp(32px,4vw,54px); font-weight: 700;
+  letter-spacing: -.055em; line-height: .98;
+}
+body.crm-theme.studio-editorial-theme .studio-projects-active .studio-project-subhead {
+  display: block; max-width: 620px; margin: 0; color: var(--crm-muted);
+  font-size: 15px; line-height: 1.5;
+}
+body.crm-theme.studio-editorial-theme .studio-projects-active .studio-topbar-actions {
+  display: flex; align-items: center; gap: 8px; padding-top: 3px;
+}
+body.crm-theme.studio-editorial-theme .studio-projects-active .studio-project-filter { display: inline-flex; }
+body.crm-theme.studio-editorial-theme .studio-projects-active .view.projects-view {
+  width: 100%; max-width: 1632px; margin: 0 auto;
+  padding: 30px clamp(20px, 3.2vw, 56px) 44px;
+}
+body.crm-theme.studio-editorial-theme .studio-projects-active .project-strip-item {
+  flex: 0 0 210px; min-height: 0; gap: 8px; padding: 13px;
+  border-radius: 16px; background: var(--crm-sidebar);
+}
+body.crm-theme.studio-editorial-theme .studio-projects-active .project-strip-item.is-selected {
+  border-color: #a89ee0; box-shadow: 0 0 0 1px rgba(222,217,255,.38);
+}
+body.crm-theme.studio-editorial-theme .project-strip-token {
+  color: var(--crm-muted); font: 10px ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-transform: uppercase;
+}
+body.crm-theme.studio-editorial-theme .project-strip-progress {
+  height: 4px; overflow: hidden; border-radius: 999px; background: var(--crm-input);
+}
+body.crm-theme.studio-editorial-theme .project-strip-progress span {
+  display: block; height: 100%; border-radius: inherit; background: var(--crm-accent);
+}
+body.crm-theme.studio-editorial-theme .studio-projects-active .project-section-head { margin: 29px 0 12px; }
+body.crm-theme.studio-editorial-theme .studio-projects-active .project-section-head h2 { font-size: 16px; }
+body.crm-theme.studio-editorial-theme .project-section-head .text-button {
+  border: 0; color: var(--crm-muted); text-decoration: underline; text-underline-offset: 4px; font-size: 12px;
+}
+body.crm-theme.studio-editorial-theme .studio-projects-active .project-metric { background: var(--crm-sidebar); }
+body.crm-theme.studio-editorial-theme .project-metric > span {
+  display: flex; justify-content: space-between; align-items: center;
+}
+body.crm-theme.studio-editorial-theme .project-metric > span b { color: var(--crm-muted); font-size: 15px; font-weight: 400; }
+body.crm-theme.studio-editorial-theme .project-metric .is-risk { color: var(--crm-danger); }
+body.crm-theme.studio-editorial-theme .project-workspace-grid {
+  display: grid; grid-template-columns: minmax(0,1.62fr) minmax(275px,.78fr);
+  gap: 10px; margin-top: 10px;
+}
+body.crm-theme.studio-editorial-theme .project-doc-panel,
+body.crm-theme.studio-editorial-theme .project-side-panel {
+  min-width: 0; overflow: hidden; border: 1px solid var(--crm-line);
+  border-radius: 16px; background: var(--crm-sidebar);
+}
+body.crm-theme.studio-editorial-theme .project-doc-head,
+body.crm-theme.studio-editorial-theme .project-side-heading {
+  display: flex; align-items: center; justify-content: space-between; gap: 15px;
+}
+body.crm-theme.studio-editorial-theme .project-doc-head { padding: 15px 16px; border-bottom: 1px solid var(--crm-line); }
+body.crm-theme.studio-editorial-theme .project-doc-head h2,
+body.crm-theme.studio-editorial-theme .project-side-heading h2 { margin: 0; font-size: 14px; font-weight: 650; }
+body.crm-theme.studio-editorial-theme .project-doc-head p,
+body.crm-theme.studio-editorial-theme .project-side-heading p {
+  margin: 4px 0 0; color: var(--crm-muted); font-size: 11px;
+}
+body.crm-theme.studio-editorial-theme .project-doc-tools { display: flex; align-items: center; gap: 7px; }
+body.crm-theme.studio-editorial-theme .project-doc-sort {
+  min-height: 32px; padding: 0 12px; border: 1px solid var(--crm-line);
+  border-radius: 8px; background: var(--crm-sidebar); color: var(--crm-text); font-size: 11px;
+}
+body.crm-theme.studio-editorial-theme .project-doc-search { position: relative; flex: 0 1 190px; min-width: 150px; }
+body.crm-theme.studio-editorial-theme .project-doc-search > span[aria-hidden] {
+  position: absolute; top: 6px; left: 10px; color: var(--crm-muted); font-size: 17px;
+}
+body.crm-theme.studio-editorial-theme .project-doc-search input {
+  width: 100%; min-height: 32px; padding: 0 9px 0 29px;
+  border: 1px solid var(--crm-line) !important; border-radius: 8px !important;
+  background: var(--crm-input) !important; color: var(--crm-text) !important; font-size: 11px;
+}
+body.crm-theme.studio-editorial-theme .project-doc-filters {
+  display: flex; gap: 6px; overflow-x: auto; padding: 10px 16px; border-bottom: 1px solid var(--crm-line);
+}
+body.crm-theme.studio-editorial-theme .project-doc-chip {
+  flex: 0 0 auto; min-height: 28px; padding: 0 9px; border: 1px solid var(--crm-line);
+  border-radius: 999px; background: transparent; color: var(--crm-muted); font-size: 11px;
+}
+body.crm-theme.studio-editorial-theme .project-doc-chip.is-active { background: var(--crm-raised); color: var(--crm-text); }
+body.crm-theme.studio-editorial-theme .project-doc-scroll {
+  width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; overscroll-behavior-inline: contain;
+}
+body.crm-theme.studio-editorial-theme .project-doc-scroll table { width: 100%; min-width: 630px; border-collapse: collapse; }
+body.crm-theme.studio-editorial-theme .project-doc-scroll .sr-only { left: 0; }
+body.crm-theme.studio-editorial-theme .project-doc-scroll th {
+  padding: 10px 16px; color: var(--crm-muted); font: 10px ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .04em; text-align: left; text-transform: uppercase;
+}
+body.crm-theme.studio-editorial-theme .project-doc-scroll td {
+  padding: 12px 16px; border-top: 1px solid rgba(255,255,255,.075); font-size: 12px;
+}
+body.crm-theme.studio-editorial-theme .project-doc-scroll tr:hover td { background: var(--crm-raised); }
+body.crm-theme.studio-editorial-theme .project-doc-name { display: grid; gap: 3px; }
+body.crm-theme.studio-editorial-theme .project-doc-name strong { font-size: 12px; }
+body.crm-theme.studio-editorial-theme .project-doc-name small { color: var(--crm-muted); font-size: 11px; }
+body.crm-theme.studio-editorial-theme .project-doc-badge {
+  display: inline-flex; align-items: center; min-height: 22px; padding: 0 8px;
+  border-radius: 999px; background: var(--crm-raised); color: var(--crm-muted); font-size: 10px; white-space: nowrap;
+}
+body.crm-theme.studio-editorial-theme .project-doc-badge:is(.accepted,.paid,.completed) { background: #142a20; color: var(--crm-positive); }
+body.crm-theme.studio-editorial-theme .project-doc-badge:is(.sent,.active) { background: #302618; color: #f2c276; }
+body.crm-theme.studio-editorial-theme .project-doc-badge:is(.overdue,.declined,.cancelled) { background: #35191d; color: var(--crm-danger); }
+body.crm-theme.studio-editorial-theme .project-doc-owner {
+  display: grid; width: 26px; height: 26px; place-items: center; border-radius: 50%;
+  background: var(--crm-accent); color: #282342; font-size: 10px; font-weight: 800;
+}
+body.crm-theme.studio-editorial-theme .project-doc-amount { font-variant-numeric: tabular-nums; white-space: nowrap; }
+body.crm-theme.studio-editorial-theme .project-doc-empty { color: var(--crm-muted); }
+body.crm-theme.studio-editorial-theme .project-doc-actions { position: relative; width: max-content; }
+body.crm-theme.studio-editorial-theme .project-doc-actions summary {
+  display: grid; width: 28px; height: 28px; place-items: center; border-radius: 7px;
+  color: var(--crm-muted); cursor: pointer; list-style: none;
+}
+body.crm-theme.studio-editorial-theme .project-doc-actions summary::-webkit-details-marker { display: none; }
+body.crm-theme.studio-editorial-theme .project-doc-actions .table-actions {
+  display: flex; gap: 4px; min-width: max-content; padding: 5px;
+}
+body.crm-theme.studio-editorial-theme .project-side-stack { display: grid; align-content: start; gap: 10px; min-width: 0; }
+body.crm-theme.studio-editorial-theme .project-runway { padding: 16px; }
+body.crm-theme.studio-editorial-theme .project-runway > strong {
+  display: block; margin: 24px 0 12px; font-size: 31px; font-weight: 700; letter-spacing: -.06em;
+}
+body.crm-theme.studio-editorial-theme .project-runway-bar {
+  height: 9px; overflow: hidden; border-radius: 999px; background: var(--crm-input);
+}
+body.crm-theme.studio-editorial-theme .project-runway-bar span {
+  display: block; height: 100%; border-radius: inherit;
+  background: linear-gradient(90deg,var(--crm-accent),#a9dfcf);
+}
+body.crm-theme.studio-editorial-theme .project-runway-meta {
+  display: flex; justify-content: space-between; margin-top: 9px; color: var(--crm-muted); font-size: 10px;
+}
+body.crm-theme.studio-editorial-theme .project-side-stack > .project-side-panel:not(.project-runway) .project-side-heading {
+  padding: 15px 16px; border-bottom: 1px solid var(--crm-line);
+}
+body.crm-theme.studio-editorial-theme .project-signal {
+  display: grid; grid-template-columns: 8px minmax(0,1fr) auto; gap: 10px;
+  padding: 12px 16px; border-top: 1px solid rgba(255,255,255,.075);
+}
+body.crm-theme.studio-editorial-theme .project-signal:first-child { border-top: 0; }
+body.crm-theme.studio-editorial-theme .project-signal i {
+  width: 7px; height: 7px; margin-top: 4px; border-radius: 50%; background: var(--crm-positive);
+}
+body.crm-theme.studio-editorial-theme .project-signal strong { display: block; font-size: 11px; }
+body.crm-theme.studio-editorial-theme .project-signal span { display: block; margin-top: 2px; color: var(--crm-muted); font-size: 10px; }
+body.crm-theme.studio-editorial-theme .project-signal time {
+  color: var(--crm-muted); font: 10px ui-monospace, SFMono-Regular, Menlo, monospace; white-space: nowrap;
+}
+body.crm-theme.studio-editorial-theme .project-signals-empty { padding: 12px 16px; color: var(--crm-muted); font-size: 11px; }
+body.crm-theme.studio-editorial-theme .studio-projects-active .project-picker { margin-top: 36px; }
+
+@media (max-width: 1350px) {
+  body.crm-theme.studio-editorial-theme .project-workspace-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 1050px) {
+  body.crm-theme.studio-editorial-theme .studio-projects-active .topbar { flex-wrap: wrap; }
+  body.crm-theme.studio-editorial-theme .studio-projects-active .studio-topbar-actions { width: 100%; }
+}
+@media (max-width: 820px) {
+  body.crm-theme.studio-editorial-theme .studio-projects-active .topbar {
+    gap: 12px; padding: 20px 16px 0;
+  }
+  body.crm-theme.studio-editorial-theme .studio-projects-active .menu-button { order: 0; }
+  body.crm-theme.studio-editorial-theme .studio-projects-active .studio-topbar-copy { flex-basis: calc(100% - 64px); order: 1; }
+  body.crm-theme.studio-editorial-theme .studio-projects-active .studio-topbar-actions { order: 2; }
+  body.crm-theme.studio-editorial-theme .studio-projects-active .topbar h1 { font-size: 39px; }
+  body.crm-theme.studio-editorial-theme .studio-projects-active .view.projects-view { padding: 20px 16px 36px; }
+  body.crm-theme.studio-editorial-theme .studio-projects-active .project-strip-item { flex-basis: 184px; }
+  body.crm-theme.studio-editorial-theme .project-doc-head { flex-wrap: wrap; }
+  body.crm-theme.studio-editorial-theme .project-doc-tools { width: 100%; }
+  body.crm-theme.studio-editorial-theme .project-doc-search { flex: 1 1 100%; }
+  body.crm-theme.studio-editorial-theme .project-doc-search input { min-height: 44px; }
+  body.crm-theme.studio-editorial-theme .project-doc-search > span[aria-hidden] { top: 12px; }
+  body.crm-theme.studio-editorial-theme .project-doc-chip { min-height: 44px; }
+  body.crm-theme.studio-editorial-theme .project-doc-sort { min-height: 44px; }
 }

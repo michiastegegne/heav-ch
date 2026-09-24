@@ -82,7 +82,7 @@ export async function assertStudioEditorialTheme(page) {
   for (const card of await dashboardCards.all()) if (await card.isVisible()) await expect(card).toHaveCSS('background-color', 'rgb(18, 18, 20)');
 
   const controls = page.locator('.primary-action,.secondary-button,input:not([type="hidden"]),select,textarea');
-  for (const control of await controls.all()) if (await control.isVisible()) await expect(control).toHaveCSS('border-radius', '9px');
+  for (const control of await controls.all()) if (await control.isVisible()) await expect(control).toHaveCSS('border-radius', await control.evaluate(element => element.closest('.project-doc-search') ? '8px' : '9px'));
   const filterTabs = page.locator('.invoice-toolbar .filter-tab');
   for (const filterTab of await filterTabs.all()) if (await filterTab.isVisible()) await expect(filterTab).toHaveCSS('border-radius', '999px');
   const primary = page.locator('.primary-action:visible').first();

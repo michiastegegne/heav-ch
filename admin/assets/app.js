@@ -53,7 +53,7 @@ const viewNames = {
   settings: "Einstellungen",
   "portal-requests": "Portal-Anfragen",
 };
-const state = { view: "dashboard", query: "", filter: "all", invoiceSort: "created_desc", selectedProjectId: null, data: null, supabase: null, sendRequestKeys: new Map() };
+const state = { view: "dashboard", query: "", filter: "all", invoiceSort: "created_desc", projectDocumentSort: "newest", selectedProjectId: null, data: null, supabase: null, sendRequestKeys: new Map() };
 const assistantState = { ownerId: null, threadId: null, image: null, busy: false, proposals: new Map() };
 const esc = (value = "") => String(value).replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
 const formatDate = (value) => value ? new Intl.DateTimeFormat("de-CH").format(new Date(`${value}T12:00:00`)) : "–";
@@ -474,32 +474,55 @@ function renderProjectCanvas(project) {
 
 function renderProjectOverview(project, projects) {
   const invoices = state.data.invoices.filter((invoice) => invoice.project_id === project.id);
+  const offers = (state.data.offers || []).filter((offer) => offer.project_id === project.id);
   const open = invoices.filter((invoice) => ["sent", "overdue"].includes(invoice.status));
   const openTotal = open.reduce((total, invoice) => total + (invoice.total_rappen || 0), 0);
-  const customer = project.customer || state.data.customers.find((item) => item.id === project.customer_id);
+  const billed = invoices.filter((invoice) => ["sent", "overdue", "paid"].includes(invoice.status)).reduce((total, invoice) => total + (invoice.total_rappen || 0), 0);
+  const budget = project.budget_rappen || 0;
+  const utilization = budget ? Math.round(billed / budget * 100) : 0;
+  const documents = [...offers.map((item) => ({ type: "offer", item })), ...invoices.map((item) => ({ type: "invoice", item }))].sort((a, b) => {
+    const difference = String(b.item.issue_date || b.item.created_at || "").localeCompare(String(a.item.issue_date || a.item.created_at || ""));
+    return state.projectDocumentSort === "newest" ? difference : -difference;
+  });
+  const visibleDocuments = documents.filter(({ type, item }) => (state.filter === "all" || state.filter === type) && (!state.query.trim() || `${item.offer_number || item.invoice_number} ${item.title || ""} ${statusLabel(item.status)}`.toLowerCase().includes(state.query.trim().toLowerCase())));
+  const overdue = invoices.filter((invoice) => invoice.status === "overdue");
+  const owner = state.data.settings?.owner_name?.trim() || "Studio-Konto";
+  const initials = owner.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+  const signals = (state.data.activityEvents || []).filter((event) => event.project_id === project.id || (event.customer_id && event.customer_id === project.customer_id)).slice(0, 3);
   return `<section class="project-strip" aria-label="Projektauswahl">${projects.map((item) => {
     const selected = item.id === project.id;
     const itemCustomer = item.customer || state.data.customers.find((customerRecord) => customerRecord.id === item.customer_id);
-    return `<button class="project-strip-item ${selected ? "is-selected" : ""}" type="button" data-project-focus="${esc(item.id)}" aria-pressed="${selected}"><span class="project-strip-head"><span class="project-strip-mark" aria-hidden="true">${esc(item.title.trim().slice(0, 2).toUpperCase())}</span><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></span><strong>${esc(item.title)}</strong><small>${esc(customerLabel(itemCustomer))} · ${formatDate(item.due_date)}</small></button>`;
+    const mark = item.title.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+    const itemBilled = state.data.invoices.filter((invoice) => invoice.project_id === item.id && ["sent", "overdue", "paid"].includes(invoice.status)).reduce((total, invoice) => total + (invoice.total_rappen || 0), 0);
+    const progress = item.budget_rappen ? Math.min(100, Math.round(itemBilled / item.budget_rappen * 100)) : 0;
+    return `<button class="project-strip-item ${selected ? "is-selected" : ""}" type="button" data-project-focus="${esc(item.id)}" aria-pressed="${selected}"><span class="project-strip-head"><span class="project-strip-mark" aria-hidden="true">${esc(mark)}</span><span class="project-strip-token">${esc(statusLabel(item.status))}</span></span><strong>${esc(item.title)}</strong><small>${esc(customerLabel(itemCustomer))} · ${item.budget_rappen ? `${progress}% abgerechnet` : "Budget offen"}</small><span class="project-strip-progress" aria-hidden="true"><span style="width:${progress}%"></span></span></button>`;
   }).join("")}</section>
-  <div class="project-section-head"><div><h2>Projektlage</h2><p>${esc(customerLabel(customer))} · Status und Finanzen dieses Projekts</p></div><button class="text-button" type="button" data-create="invoice" data-project-id="${esc(project.id)}">Rechnung erstellen →</button></div>
+  <div class="project-section-head"><div><h2>Projektlage</h2><p>Der operative Kontext bleibt sichtbar, die Kennzahlen sind nicht das Produkt.</p></div><button class="text-button" type="button" data-scroll-project-register>Alle Projekte anzeigen</button></div>
   <section class="project-metrics" aria-label="Projektkennzahlen">
-    <article class="project-metric"><span>Budget</span><strong>${formatCHF(project.budget_rappen || 0)}</strong><small>Geplantes Projektbudget</small></article>
-    <article class="project-metric"><span>Offen</span><strong>${formatCHF(openTotal)}</strong><small>${open.length} ${open.length === 1 ? "Rechnung" : "Rechnungen"} ausstehend</small></article>
-    <article class="project-metric"><span>Abgabe</span><strong>${formatDate(project.due_date)}</strong><small>${project.start_date ? `Start ${formatDate(project.start_date)}` : "Kein Startdatum erfasst"}</small></article>
-    <article class="project-metric"><span>Status</span><strong>${esc(statusLabel(project.status))}</strong><small>${esc(project.description || "Kein weiterer Projektkontext erfasst")}</small></article>
+    <article class="project-metric"><span>Budget <b aria-hidden="true">▥</b></span><strong>${formatCHF(budget)}</strong><small>${budget ? `${utilization}% abgerechnet` : "Kein Budget erfasst"}</small></article>
+    <article class="project-metric"><span>Offen <b aria-hidden="true">→</b></span><strong>${formatCHF(openTotal)}</strong><small>${open.length} ${open.length === 1 ? "Rechnung" : "Rechnungen"}</small></article>
+    <article class="project-metric"><span>Nächster Termin <b aria-hidden="true">▣</b></span><strong>${formatDate(project.due_date)}</strong><small>${project.due_date ? "Projektabgabe" : "Kein Termin erfasst"}</small></article>
+    <article class="project-metric"><span>Risiko <b aria-hidden="true">△</b></span><strong>${overdue.length}</strong><small class="${overdue.length ? "is-risk" : ""}">${overdue.length ? "Überfällige Rechnungen" : "Keine überfälligen Rechnungen"}</small></article>
+  </section>
+  <section class="project-workspace-grid" aria-label="Projekt-Dokumente und Signale">
+    <article class="project-doc-panel"><header class="project-doc-head"><div><h2>Dokumente im Kontext</h2><p>Offerten und Rechnungen für ${esc(project.title)}.</p></div><div class="project-doc-tools"><label class="project-doc-search"><span class="sr-only">Dokumente suchen</span><span aria-hidden="true">⌕</span><input type="search" data-search placeholder="Dokument suchen" value="${esc(state.query)}"></label><button class="project-doc-sort" type="button" data-sort-project-documents aria-label="Dokumente nach Datum ${state.projectDocumentSort === "newest" ? "aufsteigend" : "absteigend"} sortieren">Sortieren</button></div></header>
+      <div class="project-doc-filters" role="group" aria-label="Dokumentfilter">${[["all", "Alle", documents.length], ["offer", "Offerten", offers.length], ["invoice", "Rechnungen", invoices.length]].map(([value, label, count]) => `<button class="project-doc-chip ${state.filter === value ? "is-active" : ""}" type="button" data-filter="${value}" aria-pressed="${state.filter === value}">${label} ${count}</button>`).join("")}</div>
+      <div class="project-doc-scroll"><table><thead><tr><th>Dokument</th><th>Stand</th><th>Owner</th><th>Total</th><th><span class="sr-only">Aktion</span></th></tr></thead><tbody>${visibleDocuments.map(({ type, item }) => `<tr><td><span class="project-doc-name"><strong>${esc(item.offer_number || item.invoice_number)}</strong><small>${esc(type === "offer" ? `Offerte · ${item.title || "Projekt"}` : `Rechnung · ${customerLabel(item.customer)}`)}</small></span></td><td><span class="project-doc-badge ${esc(item.status)}">${esc(statusLabel(item.status))}</span></td><td><span class="project-doc-owner" title="${esc(owner)}">${esc(initials)}</span></td><td class="project-doc-amount">${formatCHF(item.total_rappen || 0)}</td><td><details class="project-doc-actions"><summary aria-label="Aktionen für ${esc(item.offer_number || item.invoice_number)}">···</summary>${type === "offer" ? offerActions(item) : invoiceActions(item)}</details></td></tr>`).join("") || '<tr><td colspan="5" class="project-doc-empty">Keine Dokumente in diesem Filter.</td></tr>'}</tbody></table></div>
+    </article>
+    <aside class="project-side-stack"><article class="project-side-panel project-runway"><div class="project-side-heading"><div><h2>Projektbudget</h2><p>Abgerechnet / geplant</p></div><span class="project-doc-badge ${budget && billed > budget ? "overdue" : "accepted"}">${budget ? billed > budget ? "überschritten" : "im Rahmen" : "offen"}</span></div><strong>${formatCHF(billed)}</strong><div class="project-runway-bar" role="progressbar" aria-label="Budget abgerechnet" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.min(100, utilization)}"><span style="width:${Math.min(100, utilization)}%"></span></div><div class="project-runway-meta"><span>${budget ? `${formatCHF(Math.max(0, budget - billed))} frei` : "Kein Budget erfasst"}</span><span>${budget ? `${utilization}%` : "–"}</span></div></article>
+      <article class="project-side-panel"><div class="project-side-heading"><div><h2>Letzte Signale</h2><p>Echte Aktivitäten zum Projekt.</p></div></div><div class="project-signal-list">${signals.map((event) => `<div class="project-signal"><i aria-hidden="true"></i><div><strong>${esc(event.summary || event.event_type || "Aktivität")}</strong><span>${esc(customerLabel(project.customer))}</span></div><time>${event.created_at ? esc(formatDate(event.created_at.slice(0, 10))) : "–"}</time></div>`).join("") || '<p class="project-signals-empty">Noch keine Aktivitäten erfasst.</p>'}</div></article></aside>
   </section>`;
 }
 
 function renderProjects() {
   const all = state.data.projects;
-  const items = filtered(all.filter((item) => state.filter === "all" || item.status === state.filter), ["title", "description"]);
+  const items = all;
   if (!all.length) return `<section class="view">${emptyState("Noch keine Projekte", "Lege das erste Projekt an und halte Status, Kunde und Budget im Blick.", "project")}</section>`;
   const selected = items.find((item) => item.id === state.selectedProjectId) || items[0] || null;
   if (selected) state.selectedProjectId = selected.id;
   const rows = items.map((item) => `<tr class="${item.id === state.selectedProjectId ? "is-selected" : ""}"><td><button class="project-record" type="button" data-project-focus="${esc(item.id)}" aria-pressed="${String(item.id === state.selectedProjectId)}"><strong>${esc(item.title)}</strong><small>${esc(customerLabel(item.customer))}</small></button></td><td><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></td><td>${formatDate(item.due_date)}</td><td>${formatCHF(item.budget_rappen || 0)}</td><td><div class="table-actions">${actionIconButton("pencil", "Bearbeiten", `data-edit="project" data-id="${esc(item.id)}"`)}${actionIconButton("trash", `Projekt löschen: ${item.title}`, `data-delete-record="project" data-id="${esc(item.id)}"`, "is-danger")}</div></td></tr>`).join("");
   const cards = items.map((item) => `<article class="mobile-card ${item.id === state.selectedProjectId ? "is-selected" : ""}"><div><button class="project-record" type="button" data-project-focus="${esc(item.id)}" aria-pressed="${String(item.id === state.selectedProjectId)}"><strong>${esc(item.title)}</strong><small>${esc(customerLabel(item.customer))} · ${formatDate(item.due_date)}</small></button><div class="table-actions">${actionIconButton("pencil", "Bearbeiten", `data-edit="project" data-id="${esc(item.id)}"`)}${actionIconButton("trash", `Projekt löschen: ${item.title}`, `data-delete-record="project" data-id="${esc(item.id)}"`, "is-danger")}</div></div><span class="status ${esc(item.status)}">${esc(statusLabel(item.status))}</span></article>`).join("");
-  return `<section class="view projects-view">${toolbar("project", "Projekte durchsuchen …", [["all","Alle"],["planning","Planung"],["active","Aktiv"],["completed","Abgeschlossen"]])}${selected ? `${renderProjectOverview(selected, items)}<label class="project-picker"><span>Projekt auswählen</span><select data-project-picker>${items.map(item => `<option value="${esc(item.id)}" ${item.id === selected.id ? "selected" : ""}>${esc(item.title)} · ${esc(customerLabel(item.customer))}</option>`).join("")}</select></label><p class="project-canvas-guide" id="project-canvas-guide"><span>6 Bereiche · horizontal erkunden →</span></p>` : ""}${selected ? renderProjectCanvas(selected) : `<div class="empty-state"><h3>Keine Projekte in diesem Filter.</h3><p>Wähle einen anderen Status oder passe die Suche an.</p></div>`}<div class="project-register"><div class="panel-head"><h3>PROJEKTREGISTER</h3><span>${items.length} ${items.length === 1 ? "Projekt" : "Projekte"}</span></div><table class="data-table"><thead><tr><th>Projekt</th><th>Status</th><th>Deadline</th><th>Budget</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list">${cards}</div></div></section>`;
+  return `<section class="view projects-view">${selected ? `${renderProjectOverview(selected, items)}<label class="project-picker"><span>Projekt auswählen</span><select data-project-picker>${items.map(item => `<option value="${esc(item.id)}" ${item.id === selected.id ? "selected" : ""}>${esc(item.title)} · ${esc(customerLabel(item.customer))}</option>`).join("")}</select></label><p class="project-canvas-guide" id="project-canvas-guide"><span>6 Bereiche · horizontal erkunden →</span></p>${renderProjectCanvas(selected)}` : ""}<div class="project-register" id="project-register"><div class="panel-head"><h3>PROJEKTREGISTER</h3><span>${items.length} ${items.length === 1 ? "Projekt" : "Projekte"}</span></div><table class="data-table"><thead><tr><th>Projekt</th><th>Status</th><th>Deadline</th><th>Budget</th><th>Aktionen</th></tr></thead><tbody>${rows}</tbody></table><div class="mobile-card-list">${cards}</div></div></section>`;
 }
 
 function invoiceActions(invoice, reveal = false, instance = "record") {
@@ -573,7 +596,7 @@ function syncTopbarAction() {
   const [type, label] = action;
   topbarCreate.dataset.create = type;
   topbarCreate.setAttribute("aria-label", label);
-  topbarCreate.innerHTML = `${label} <span aria-hidden="true">+</span>`;
+  topbarCreate.innerHTML = `${state.view === "projects" ? "Neu" : label} <span aria-hidden="true">+</span>`;
 }
 function financeNavigation() {
   return `<nav class="finance-nav" aria-label="Finanzen">${[["invoices", "Rechnungen"], ["offers", "Offerten"]].map(([view, label]) => `<button type="button" data-view="${view}" ${state.view === view ? 'aria-current="page"' : ''}>${label}</button>`).join("")}<span class="finance-nav-indicator" aria-hidden="true"></span></nav>`;
@@ -664,7 +687,8 @@ function render() {
   const ownerName = state.data.settings?.owner_name?.trim() || "Studio-Konto";
   document.querySelector(".studio-owner-name").textContent = ownerName;
   document.querySelector(".studio-owner-mark").textContent = ownerName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
-  title.textContent = viewNames[state.view];
+  shell.classList.toggle("studio-projects-active", state.view === "projects");
+  title.textContent = state.view === "projects" ? "Operate, not decorate." : viewNames[state.view];
   syncTopbarAction();
   const finance = ["invoices", "offers"].includes(state.view);
   const viewMarkup = renderers[state.view]();
@@ -677,7 +701,7 @@ function render() {
     content.innerHTML = (finance ? financeNavigation() : "") + viewMarkup;
   }
   document.querySelectorAll(".nav-link,.bottom-link").forEach((item) => {
-    const active = item.dataset.view === state.view || (finance && item.dataset.view === "invoices");
+    const active = item.dataset.view === state.view;
     item.classList.toggle("is-active", active);
     if (active) item.setAttribute("aria-current", "page"); else item.removeAttribute("aria-current");
   });
@@ -1406,7 +1430,9 @@ content.addEventListener("click", async (event) => {
   const create = event.target.closest("[data-create]"); if (create) openEditor(create.dataset.create, null, { projectId: create.dataset.projectId || "" });
   const view = event.target.closest("[data-view]"); if (view) setView(view.dataset.view);
   const filter = event.target.closest("[data-filter]"); if (filter) { state.filter = filter.dataset.filter; render(); }
-  const projectFocus = event.target.closest("[data-project-focus]"); if (projectFocus) { state.selectedProjectId = projectFocus.dataset.projectFocus; render(); document.querySelector(".project-canvas")?.focus(); }
+  if (event.target.closest("[data-sort-project-documents]")) { state.projectDocumentSort = state.projectDocumentSort === "newest" ? "oldest" : "newest"; render(); document.querySelector("[data-sort-project-documents]")?.focus({ preventScroll: true }); }
+  if (event.target.closest("[data-scroll-project-register]")) document.querySelector("#project-register")?.scrollIntoView({ behavior: "smooth" });
+  const projectFocus = event.target.closest("[data-project-focus]"); if (projectFocus) { state.selectedProjectId = projectFocus.dataset.projectFocus; state.filter = "all"; state.query = ""; render(); document.querySelector(".project-strip-item.is-selected")?.focus({ preventScroll: true }); }
   const dashboardProjectFocus = event.target.closest("[data-dashboard-project-focus]"); if (dashboardProjectFocus) { state.selectedProjectId = dashboardProjectFocus.dataset.dashboardProjectFocus; setView("projects"); }
   const edit = event.target.closest("[data-edit]"); if (edit) { const collections = { customer: state.data.customers, project: state.data.projects, invoice: state.data.invoices }; openEditor(edit.dataset.edit, collections[edit.dataset.edit].find((item) => item.id === edit.dataset.id)); }
   const action = event.target.closest("[data-invoice-action]"); if (action) invoiceAction(action.dataset.id, action.dataset.invoiceAction, action);
@@ -1439,6 +1465,7 @@ dialogBody.addEventListener("input", (event) => { if (event.target.matches('[nam
 dialogBody.addEventListener("change", (event) => { if (event.target.matches('[name="customer_id"]') && ["invoice", "offer"].includes(dialogForm.dataset.type)) { const projects = dialogForm.elements.project_id; projects.innerHTML = `<option value="">Kein Projekt</option>${projectOptions(event.target.value)}`; } });
 dialogForm.addEventListener("submit", async (event) => { const submitter = event.submitter; if (submitter?.value !== "save") return; event.preventDefault(); submitter.disabled = true; formError.textContent = ""; try { if (await saveEditor(dialogForm.dataset.type)) { dialog.close(); await refresh(); showToast("Gespeichert."); } } catch (error) { formError.textContent = error.message || "Speichern fehlgeschlagen."; } finally { submitter.disabled = false; } });
 document.addEventListener("click", (event) => { const nav = event.target.closest(".nav-link,.bottom-link"); if (nav) setView(nav.dataset.view); if (event.target.closest("[data-open-nav]")) setNavigationOpen(true); if (event.target.closest("[data-close-nav]")) setNavigationOpen(false); const create = event.target.closest("[data-create]"); if (create && !content.contains(create)) openEditor(create.dataset.create); });
+document.querySelector("[data-focus-documents]").addEventListener("click", () => { document.querySelector(".project-doc-search input")?.focus(); });
 document.addEventListener("keydown", (event) => {
   const modal = document.querySelector("dialog[open]");
   if (modal && event.key === "Tab") {
