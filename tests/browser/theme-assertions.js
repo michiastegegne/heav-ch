@@ -68,7 +68,7 @@ export async function assertStudioEditorialTheme(page) {
   await expect(page.locator('body')).toHaveCSS('color', 'rgb(244, 243, 239)');
   await expect(page.locator('html')).toHaveCSS('color-scheme', 'dark');
   await expect(page.locator('.workspace')).toHaveCSS('background-color', 'rgb(9, 9, 9)');
-  await expect(page.locator('.topbar h1')).toHaveCSS('font-family', /DM Sans/);
+  await expect(page.locator('.topbar h1')).toHaveCSS('font-family', await page.locator('#admin-shell').evaluate(element => element.classList.contains('studio-projects-active') ? /ui-sans-serif/ : /DM Sans/));
   const displayValues = page.locator('.dashboard-revenue-summary > strong,.dashboard-money > strong,.project-module strong');
   for (const value of await displayValues.all()) if (await value.isVisible()) await expect(value).toHaveCSS('font-family', /DM Sans/);
 

@@ -1907,6 +1907,30 @@ test("Studio: Operator-Vorschau nutzt echte Projektdokumente und bedienbare Filt
   await page.goto(`${base}/studio/`);
   await page.locator('.nav-link[data-view="projects"]').click();
   await expect(page.getByRole('heading', { name: 'Operate, not decorate.' })).toBeVisible();
+  await expect(page.locator('.studio-skin-switch button')).toHaveCount(3);
+  await expect(page.locator('.project-metric svg')).toHaveCount(4);
+  await expect(page.locator('.operator-source-card')).toHaveCount(4);
+  await expect(page.locator('.operator-source-card').first()).toContainText('Nordlicht AG');
+  await page.locator('[data-studio-skin="system"]').click();
+  await expect(page.locator('#admin-shell')).toHaveAttribute('data-skin', 'system');
+  await expect(page.locator('.workspace')).toHaveCSS('background-color', 'rgb(244, 244, 242)');
+  await page.locator('[data-studio-skin="operator"]').click();
+  await expect(page.locator('.workspace')).toHaveCSS('background-color', 'rgb(9, 9, 9)');
+  const upperControls = await page.evaluate(() => {
+    const bounds = selector => { const { x, y, width, height } = document.querySelector(selector).getBoundingClientRect(); return { x, y, width, height }; };
+    return { note: bounds('.studio-live-note'), actions: bounds('.studio-topbar-actions'), filter: bounds('.studio-project-filter'), create: bounds('.studio-topbar-actions > .primary-action') };
+  });
+  for (const action of [upperControls.filter, upperControls.create]) {
+    expect(upperControls.note.y + upperControls.note.height, 'CRM-Status darf keine Topbar-Aktion überdecken').toBeLessThanOrEqual(action.y);
+  }
+  await page.evaluate(() => scrollTo(0, 0));
+  await page.screenshot({ path: 'qa/operator-exact-1920.png' });
+  await page.locator('.operator-source-card').first().click();
+  await expect(page.locator('#editor-dialog')).toBeVisible();
+  await expect(page.locator('#dialog-title')).toContainText('Kunde');
+  await page.locator('#editor-dialog [value="cancel"]').first().click();
+  await page.locator('[data-focus-project-canvas]').click();
+  await expect(page.locator('.project-canvas')).toBeFocused();
   const grid = page.getByRole('region', { name: 'Projekt-Dokumente und Signale' });
   const columns = await grid.evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').map(parseFloat));
   expect(columns).toHaveLength(2);
@@ -1952,6 +1976,13 @@ test("Studio: Projekt-Canvas bleibt in echter 390px-Ansicht vollständig bedienb
   await page.locator('.nav-link[data-view="projects"]').click();
   await expect(page.locator("#admin-shell")).not.toHaveClass(/nav-open/);
   await page.waitForTimeout(350);
+  const mobileHeader = await page.evaluate(() => {
+    const rect = selector => document.querySelector(selector).getBoundingClientRect().toJSON();
+    return { copy: rect('.studio-topbar-copy'), actions: rect('.studio-topbar-actions'), switcher: rect('.studio-skin-switch') };
+  });
+  expect(mobileHeader.copy.width).toBeGreaterThan(300);
+  expect(mobileHeader.actions.y).toBeGreaterThanOrEqual(mobileHeader.copy.y + mobileHeader.copy.height);
+  expect(mobileHeader.switcher.x + mobileHeader.switcher.width).toBeLessThanOrEqual(390);
   const canvas = page.locator(".project-canvas");
   await expect(canvas).toBeVisible();
   const metrics = await canvas.evaluate((element) => ({
