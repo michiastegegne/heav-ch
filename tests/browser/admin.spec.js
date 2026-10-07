@@ -70,6 +70,9 @@ async function mockStudioSupabase(page, overrides = {}) {
         assistant_messages: []
       };
       Object.assign(store, ${JSON.stringify(overrides)});
+      for (const table of ["customers", "customer_departments", "projects", "invoices", "offers", "products", "customer_portal_requests", "activity_events", "email_delivery_logs", "email_templates"]) {
+        if (Array.isArray(store[table])) store[table] = store[table].map((row) => ({ workspace_id: "w1", ...row }));
+      }
       const result = (data) => ({ data, error: null });
       export function createClient() {
         return {
@@ -78,11 +81,13 @@ async function mockStudioSupabase(page, overrides = {}) {
             signOut: async () => ({ error: null })
           },
           from(table) {
+            const filters = [];
+            const rows = () => (store[table] || []).filter((row) => filters.every(([column, value]) => row[column] === value));
             const builder = {
               select() { return builder; },
-              eq() { return builder; },
-              order: async () => result(store[table]),
-              maybeSingle: async () => result(store[table][0] || null),
+              eq(column, value) { filters.push([column, value]); return builder; },
+              order: async () => result(rows()),
+              maybeSingle: async () => result(rows()[0] || null),
               limit() { return builder; },
               insert(payload) { const row = { id: crypto.randomUUID(), ...payload }; store[table].push(row); if (table === "customers") store.customer_departments.push({ id: crypto.randomUUID(), customer_id: row.id, owner_id: row.owner_id, name: "Allgemein", code: "GENERAL", is_default: true, active: true }); return { select() { return { single: async () => result({ id: row.id }) }; }, then(resolve) { return Promise.resolve(result(null)).then(resolve); } }; },
               update: (payload) => { builder.__update = payload; return builder; },
@@ -100,12 +105,12 @@ async function mockStudioSupabase(page, overrides = {}) {
               window.__lastCreatedInvoiceItems = payload.p_items;
               const subtotal = payload.p_items.reduce((sum, item) => sum + Math.round(item.quantity * item.unit_price_rappen), 0);
               const tax = Math.round(subtotal * payload.p_tax_rate / 100);
-              store.invoices.unshift({ id: crypto.randomUUID(), customer_id: payload.p_customer_id, department_id: payload.p_department_id || "d1", project_id: payload.p_project_id, invoice_number: "HEAV-2026-003", payment_reference: "RF94HEAV2026000003", issue_date: payload.p_issue_date, due_date: payload.p_due_date, status: "draft", subtotal_rappen: subtotal, tax_rappen: tax, total_rappen: subtotal + tax, tax_rate: payload.p_tax_rate, invoice_items: payload.p_items });
+              store.invoices.unshift({ id: crypto.randomUUID(), workspace_id: store.customers.find((item) => item.id === payload.p_customer_id)?.workspace_id || "w1", customer_id: payload.p_customer_id, department_id: payload.p_department_id || "d1", project_id: payload.p_project_id, invoice_number: "HEAV-2026-003", payment_reference: "RF94HEAV2026000003", issue_date: payload.p_issue_date, due_date: payload.p_due_date, status: "draft", subtotal_rappen: subtotal, tax_rappen: tax, total_rappen: subtotal + tax, tax_rate: payload.p_tax_rate, invoice_items: payload.p_items });
             }
             if (name === "create_offer" || name === "create_offer_in_department") {
               const subtotal = payload.p_items.reduce((sum, item) => sum + Math.round(item.quantity * item.unit_price_rappen), 0);
               const tax = Math.round(subtotal * payload.p_tax_rate / 100);
-              store.offers.unshift({ id: crypto.randomUUID(), customer_id: payload.p_customer_id, department_id: payload.p_department_id || "d1", project_id: payload.p_project_id, offer_number: "HEAV-O-2026-002", title: payload.p_title, issue_date: payload.p_issue_date, valid_until: payload.p_valid_until, status: "draft", subtotal_rappen: subtotal, tax_rappen: tax, total_rappen: subtotal + tax, tax_rate: payload.p_tax_rate, notes: payload.p_notes, terms: payload.p_terms, offer_items: payload.p_items });
+              store.offers.unshift({ id: crypto.randomUUID(), workspace_id: store.customers.find((item) => item.id === payload.p_customer_id)?.workspace_id || "w1", customer_id: payload.p_customer_id, department_id: payload.p_department_id || "d1", project_id: payload.p_project_id, offer_number: "HEAV-O-2026-002", title: payload.p_title, issue_date: payload.p_issue_date, valid_until: payload.p_valid_until, status: "draft", subtotal_rappen: subtotal, tax_rappen: tax, total_rappen: subtotal + tax, tax_rate: payload.p_tax_rate, notes: payload.p_notes, terms: payload.p_terms, offer_items: payload.p_items });
             }
             if (name === "share_customer_offer") {
               const offer = store.offers.find((item) => item.id === payload.p_offer_id); if (offer) offer.status = "sent";
@@ -182,6 +187,55 @@ async function setDeterministicScrollPosition(page, preferredY = 320) {
   await page.waitForFunction((expectedY) => window.scrollY === expectedY, targetY);
   return targetY;
 }
+
+test("Hive: startet im Michias-Tegegne-Workspace und wechselt Daten atomar", async ({ page }) => {
+  const michias = "w-michias";
+  const wedding = "w-wedding";
+  await mockStudioSupabase(page, {
+    workspaces: [
+      { id: "w-hive", name: "Hive", slug: "hive", owner_id: "owner-test", status: "active" },
+      { id: michias, name: "Michias Tegegne", slug: "michias-tegegne", owner_id: "owner-test", status: "active" },
+      { id: wedding, name: "Wedding Vocals", slug: "wedding-vocals", owner_id: "owner-test", status: "active" },
+    ],
+    workspace_settings: [
+      { workspace_id: michias, business_name: "Michias Tegegne", contact_name: "Michias Tegegne", currency: "CHF", default_due_days: 30, default_tax_rate: 0 },
+      { workspace_id: wedding, business_name: "Wedding Vocals", contact_name: "Wedding Vocals", currency: "CHF", default_due_days: 30, default_tax_rate: 0 },
+      { workspace_id: "w-hive", business_name: "Hive", contact_name: "Hive", currency: "CHF", default_due_days: 30, default_tax_rate: 0 },
+    ],
+    customers: [
+      { id: "c-photo", workspace_id: michias, company: "Foto-Bestand AG", contact_name: "Mira Foto", email: "mira@example.test" },
+      { id: "c-wedding", workspace_id: wedding, company: "Wedding Kunde AG", contact_name: "Willi Wedding", email: "willi@example.test" },
+    ],
+    customer_departments: [], projects: [], invoices: [], offers: [], customer_portal_requests: [], email_delivery_logs: [],
+  });
+  await page.goto(`${base}/studio/`);
+  await expect(page.locator("[data-active-workspace-name]")).toHaveText("Michias Tegegne");
+  await page.getByRole("button", { name: /Kunden/ }).click();
+  await expect(page.locator("#app-content")).toContainText("Foto-Bestand AG");
+  await expect(page.locator("#app-content")).not.toContainText("Wedding Kunde AG");
+
+  await page.locator(".studio-workspace-identity").click();
+  await page.getByRole("option", { name: "Wedding Vocals", exact: true }).click();
+  await expect(page.locator("[data-active-workspace-name]")).toHaveText("Wedding Vocals");
+  await expect(page.locator("#app-content")).toContainText("Wedding Kunde AG");
+  await expect(page.locator("#app-content")).not.toContainText("Foto-Bestand AG");
+
+  await page.reload();
+  await expect(page.locator("[data-active-workspace-name]")).toHaveText("Wedding Vocals");
+  await page.getByRole("button", { name: /Kunden/ }).click();
+  await expect(page.locator("#app-content")).toContainText("Wedding Kunde AG");
+
+  await page.evaluate(() => localStorage.setItem("hive.activeWorkspace.owner-test", "deleted-workspace"));
+  await page.reload();
+  await expect(page.locator("[data-active-workspace-name]")).toHaveText("Michias Tegegne");
+  await page.getByRole("button", { name: /Kunden/ }).click();
+  await expect(page.locator("#app-content")).toContainText("Foto-Bestand AG");
+
+  await page.locator(".studio-workspace-identity").click();
+  await page.getByRole("option", { name: "Michias Tegegne", exact: true }).click();
+  await expect(page.locator("[data-active-workspace-name]")).toHaveText("Michias Tegegne");
+  await expect(page.locator("#app-content")).toContainText("Foto-Bestand AG");
+});
 
 test("Workspace: Privatkunden bleiben in Projekten und Rechnungen erkennbar", async ({ page }) => {
   const customer = { id: 'c-private', company: '', contact_name: 'Noah Frei' };
@@ -961,8 +1015,8 @@ test("HEAV Assistent: gespeicherter Verlauf wird beim erneuten Öffnen wiederher
   await mockStudioSupabase(page, {
     assistant_threads: [{ id: threadId }],
     assistant_messages: [
-      { role: "user", content: "Plane ein Kundenprofil.", proposals: [], created_at: "2026-09-17T10:00:00Z" },
-      { role: "assistant", content: "Ich habe die Kundendaten als Entwurf vorbereitet.", proposals: [{ id: "proposal-customer", kind: "customer", label: "Nordstern GmbH anlegen", payload: { company: "Nordstern GmbH", contact_name: "Mila Stern" } }], created_at: "2026-09-17T10:00:01Z" }
+      { thread_id: threadId, role: "user", content: "Plane ein Kundenprofil.", proposals: [], created_at: "2026-09-17T10:00:00Z" },
+      { thread_id: threadId, role: "assistant", content: "Ich habe die Kundendaten als Entwurf vorbereitet.", proposals: [{ id: "proposal-customer", kind: "customer", label: "Nordstern GmbH anlegen", payload: { company: "Nordstern GmbH", contact_name: "Mila Stern" } }], created_at: "2026-09-17T10:00:01Z" }
     ]
   });
   await page.goto(`${base}/studio/`);

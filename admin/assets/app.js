@@ -721,13 +721,30 @@ function syncWorkspaceSwitcher() {
   activeWorkspaceMeta.textContent = active?.slug ? `Hive · ${active.slug}` : "Hive";
   workspaceList.innerHTML = state.workspaces.map((item) => `<button type="button" role="option" aria-selected="${item.id === state.activeWorkspaceId}" data-workspace-id="${esc(item.id)}">${esc(item.name)}</button>`).join("") + '<button type="button" class="business-switcher-new" data-create-workspace>+ Neues Business</button>';
 }
-function activateWorkspace(id) {
-  if (!state.workspaces.some((item) => item.id === id)) return;
-  state.activeWorkspaceId = id;
-  localStorage.setItem(`hive.activeWorkspace.${state.workspaceUserId}`, id);
+function defaultWorkspaceId(workspaces) {
+  return workspaces.find((item) => item.slug === "michias-tegegne")?.id || workspaces[0]?.id || null;
+}
+function closeWorkspaceSwitcher() {
   workspaceList.hidden = true;
   workspaceSwitcher.setAttribute("aria-expanded", "false");
-  refresh();
+}
+async function activateWorkspace(id) {
+  if (id === state.activeWorkspaceId || !state.workspaces.some((item) => item.id === id)) return;
+  workspaceSwitcher.disabled = true;
+  workspaceSwitcher.setAttribute("aria-busy", "true");
+  try {
+    const nextData = await adapter.loadAll(id);
+    state.activeWorkspaceId = id;
+    state.data = nextData;
+    localStorage.setItem(`hive.activeWorkspace.${state.workspaceUserId}`, id);
+    closeWorkspaceSwitcher();
+    render();
+  } catch (error) {
+    showToast(error.message || "Business konnte nicht geladen werden.", "error");
+  } finally {
+    workspaceSwitcher.disabled = false;
+    workspaceSwitcher.removeAttribute("aria-busy");
+  }
 }
 function render() {
   content.classList.remove("is-view-entering");
@@ -1563,7 +1580,7 @@ document.addEventListener("keydown", (event) => {
   else if (!document.querySelector("#sidebar").contains(document.activeElement)) { event.preventDefault(); first.focus(); }
 });
 workspaceSwitcher.addEventListener("click", (event) => { if (!event.target.closest(".studio-workspace-identity")) return; const open = workspaceList.hidden; workspaceList.hidden = !open; workspaceSwitcher.setAttribute("aria-expanded", String(open)); });
-workspaceList.addEventListener("click", (event) => { const item = event.target.closest("[data-workspace-id]"); if (item) activateWorkspace(item.dataset.workspaceId); if (event.target.closest("[data-create-workspace]")) { workspaceList.hidden = true; workspaceSwitcher.setAttribute("aria-expanded", "false"); openEditor("workspace"); } });
+workspaceList.addEventListener("click", (event) => { const item = event.target.closest("[data-workspace-id]"); if (item) void activateWorkspace(item.dataset.workspaceId); if (event.target.closest("[data-create-workspace]")) { closeWorkspaceSwitcher(); openEditor("workspace"); } });
 document.addEventListener("click", (event) => { if (!event.target.closest(".studio-workspace-switcher")) { workspaceList.hidden = true; workspaceSwitcher.setAttribute("aria-expanded", "false"); } });
 document.querySelector("#logout-button").addEventListener("click", async () => { await adapter.logout(); window.location.replace("/login/"); });
 
@@ -1595,7 +1612,7 @@ async function boot() {
     state.workspaceUserId = userId;
     state.workspaces = await adapter.loadWorkspaces();
     const storedWorkspace = localStorage.getItem(`hive.activeWorkspace.${userId}`);
-    state.activeWorkspaceId = state.workspaces.some((item) => item.id === storedWorkspace) ? storedWorkspace : state.workspaces[0]?.id || null;
+    state.activeWorkspaceId = state.workspaces.some((item) => item.id === storedWorkspace) ? storedWorkspace : defaultWorkspaceId(state.workspaces);
     if (!state.activeWorkspaceId) throw new Error("Für dieses Konto ist noch kein Hive-Business eingerichtet.");
     void state.supabase.rpc("record_owner_login");
     state.data = await adapter.loadAll(state.activeWorkspaceId);

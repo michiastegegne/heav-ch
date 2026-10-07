@@ -35,7 +35,7 @@ body.crm-theme.studio-editorial-theme .sidebar .brand {
 body.crm-theme.studio-editorial-theme .studio-workspace-identity {
   display: flex; align-items: center; gap: 10px; min-height: 56px; margin-top: 18px;
   padding: 10px; border-radius: 10px; background: var(--crm-raised); color: var(--crm-text);
-  pointer-events: none;
+  pointer-events: auto; cursor: pointer;
 }
 body.crm-theme.studio-editorial-theme .studio-workspace-mark {
   display: grid; flex: 0 0 28px; width: 28px; height: 28px; place-items: center;
