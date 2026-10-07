@@ -131,7 +131,7 @@ test("Assistent-Nachrichten bleiben an Thread und Owner gebunden", async () => {
   await db.close();
 });
 
-test("vollständige Migrationskette schützt alle owner-exponierten SECURITY DEFINER RPCs", async () => {
+test("vollständige Migrationskette schützt alle exponierten SECURITY DEFINER RPCs durch Owner- oder Workspace-Autorisierung", async () => {
   const db = new PGlite();
   await db.exec(`
     create role anon;
@@ -170,7 +170,7 @@ test("vollständige Migrationskette schützt alle owner-exponierten SECURITY DEF
     where nspname = 'public' and proname = any($1::text[]) order by proname
   `, [expected]);
   assert.deepEqual(routines.rows.map((entry) => entry.proname), expected);
-  assert.equal(routines.rows.every((entry) => entry.prosrc.includes("public.is_studio_owner()")), true);
+  assert.equal(routines.rows.every((entry) => entry.prosrc.includes("public.is_studio_owner()") || entry.prosrc.includes("public.is_workspace_member(")), true);
   const portalAcceptance = await db.query(`select prosrc from pg_proc where oid = 'public.accept_customer_offer(uuid)'::regprocedure`);
   assert.doesNotMatch(portalAcceptance.rows[0].prosrc, /is_studio_owner/);
   await db.close();

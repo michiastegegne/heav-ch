@@ -140,6 +140,9 @@ body{font-size:14px;line-height:1.5}
 }
 @media(max-width:560px){.project-module-grid{grid-template-columns:1fr}.dashboard-panel .panel-head{flex-wrap:wrap}.workspace-action>div:first-child{flex-basis:100%}}
 
+/* Hive business switcher */
+.studio-workspace-switcher{position:relative}.studio-workspace-identity{width:100%;cursor:pointer}.business-switcher-list{position:absolute;z-index:80;inset:calc(100% + 6px) 0 auto;padding:6px;background:#172015;border:1px solid #56694a;border-radius:8px;box-shadow:0 16px 36px #0008}.business-switcher-list button{width:100%;padding:10px;border:0;border-radius:5px;background:transparent;color:#f2f5ec;text-align:left;cursor:pointer}.business-switcher-list button:hover,.business-switcher-list button[aria-selected="true"]{background:#34452c}.business-switcher-list .business-switcher-new{margin-top:4px;border-top:1px solid #56694a;color:#d5f18a}
+
 .project-picker{display:grid;gap:6px;margin:18px 0;color:var(--muted);font-size:12px}
 .project-picker select{width:100%;min-width:0;min-height:46px;padding:10px 12px;background:var(--surface-raised);color:var(--night);border:1px solid var(--line);border-radius:8px;font:inherit;font-size:14px}
 .project-canvas{margin:18px 0 28px;scroll-margin-top:96px}

@@ -57,6 +57,9 @@ async function mockStudioSupabase(page, overrides = {}) {
         offers: [
           { id: "o1", customer_id: "c1", department_id: "d1", project_id: "p1", offer_number: "HEAV-O-2026-001", title: "Brand Film Produktion", issue_date: "2026-09-01", valid_until: "2026-10-01", status: "draft", subtotal_rappen: 500000, tax_rappen: 40500, total_rappen: 540500, tax_rate: 8.1, notes: "Produktion gemäss Briefing.", terms: "Mit der Annahme ist die Offerte verbindlich.", offer_items: [{ position: 1, description: "Produktion", quantity: 1, unit_price_rappen: 500000 }] }
         ],
+        workspaces: [{ id: "w1", name: "HEAV", slug: "hive", owner_id: "owner-test", status: "active" }],
+        workspace_settings: [{ workspace_id: "w1", business_name: "HEAV", legal_name: "HEAV", contact_name: "Michias Tegegne", email: "hello@heav.ch", iban: "", default_tax_rate: 8.1, default_due_days: 30, invoice_prefix: "HEAV", currency: "CHF", primary_color: "#090a08", secondary_color: "#eeeae0", accent_color: "#d7ff38" }],
+        products: [],
         company_settings: [{ company_name: "HEAV", owner_name: "Michias Tegegne", email: "hello@heav.ch", iban: "", default_tax_rate: 8.1, default_due_days: 30 }],
         activity_events: [],
         email_delivery_logs: [{ id: "mail1", template_key: "invoice_send", status: "sent", recipient_email: "anna@nordlicht.example", recipient_name: "Anna", customer_id: "c1", subject: "Rechnung HEAV-2026-001", text_body: "Hallo Anna – Deine Rechnung ist bereit.", provider_id: "resend-test-1", created_at: "2026-09-10T12:00:00Z" }],
@@ -812,7 +815,7 @@ test("HEAV Assistent: Screenshot und Chat erzeugen nur prüfbare Entwürfe", asy
 
 test("HEAV Assistent: unbekannte MWST übernimmt den geprüften Studio-Standard statt null als null Prozent", async ({ page }) => {
   await mockStudioSupabase(page, {
-    company_settings: [{ company_name: "HEAV", owner_name: "Michias Tegegne", email: "hello@heav.ch", iban: "", vat_number: "CHE-123.456.789 MWST", default_tax_rate: 8.1, default_due_days: 30 }],
+    workspace_settings: [{ workspace_id: "w1", business_name: "HEAV", legal_name: "HEAV", contact_name: "Michias Tegegne", email: "hello@heav.ch", iban: "", vat_number: "CHE-123.456.789 MWST", default_tax_rate: 8.1, default_due_days: 30, invoice_prefix: "HEAV", currency: "CHF", primary_color: "#090a08", secondary_color: "#eeeae0", accent_color: "#d7ff38" }],
   });
   await page.goto(`${base}/studio/`);
   await page.getByRole("button", { name: "HEAV Assistent öffnen" }).click();

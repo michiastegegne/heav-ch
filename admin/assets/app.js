@@ -15,6 +15,10 @@ const formError = document.querySelector("#form-error");
 const toast = document.querySelector("#toast");
 const topbarCreate = document.querySelector(".topbar .primary-action");
 const workspace = document.querySelector(".workspace");
+const workspaceSwitcher = document.querySelector(".studio-workspace-identity");
+const workspaceList = document.querySelector("#business-switcher-list");
+const activeWorkspaceName = document.querySelector("[data-active-workspace-name]");
+const activeWorkspaceMeta = document.querySelector("[data-active-workspace-meta]");
 const navMenuButton = document.querySelector("[data-open-nav]");
 const navigationPanel = document.querySelector("#sidebar");
 const mobileNavigationQuery = window.matchMedia("(max-width: 820px)");
@@ -53,7 +57,7 @@ const viewNames = {
   settings: "Einstellungen",
   "portal-requests": "Portal-Anfragen",
 };
-const state = { view: "dashboard", query: "", filter: "all", invoiceSort: "created_desc", projectDocumentSort: "newest", projectSkin: "operator", selectedProjectId: null, data: null, supabase: null, sendRequestKeys: new Map() };
+const state = { view: "dashboard", query: "", filter: "all", invoiceSort: "created_desc", projectDocumentSort: "newest", projectSkin: "operator", selectedProjectId: null, activeWorkspaceId: null, workspaces: [], workspaceUserId: null, data: null, supabase: null, sendRequestKeys: new Map() };
 const assistantState = { ownerId: null, threadId: null, image: null, busy: false, proposals: new Map() };
 const esc = (value = "") => String(value).replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
 const formatDate = (value) => value ? new Intl.DateTimeFormat("de-CH").format(new Date(`${value}T12:00:00`)) : "–";
@@ -117,28 +121,35 @@ function createSupabaseAdapter(supabase, session) {
   const ownerId = session.user.id;
   const fail = (error) => { if (error) throw error; };
   return {
-    async loadAll() {
-      const [customers, departments, projects, invoices, offers, settings, portalRequests, activityEvents, emailLogs, emailTemplates] = await Promise.all([
-        supabase.from("customers").select("*").order("company"),
-        supabase.from("customer_departments").select("*").order("name"),
-        supabase.from("projects").select("*").order("created_at", { ascending: false }),
-        supabase.from("invoices").select("*, invoice_items(*)").order("issue_date", { ascending: false }),
-        supabase.from("offers").select("*, offer_items(*) ").order("issue_date", { ascending: false }),
-        supabase.from("company_settings").select("*").maybeSingle(),
-        supabase.from("customer_portal_requests").select("*").order("created_at", { ascending: false }),
-        supabase.from("activity_events").select("*").limit(100).order("created_at", { ascending: false }),
-        supabase.from("email_delivery_logs").select("*").limit(200).order("created_at", { ascending: false }),
-        supabase.from("email_templates").select("*").order("template_key"),
+    async loadWorkspaces() {
+      const result = await supabase.from("workspaces").select("*").order("name");
+      fail(result.error);
+      return result.data || [];
+    },
+    async loadAll(workspaceId) {
+      const scoped = (table) => supabase.from(table).select("*").eq("workspace_id", workspaceId);
+      const [customers, departments, projects, invoices, offers, settings, products, portalRequests, activityEvents, emailLogs, emailTemplates] = await Promise.all([
+        scoped("customers").order("company"),
+        scoped("customer_departments").order("name"),
+        scoped("projects").order("created_at", { ascending: false }),
+        supabase.from("invoices").select("*, invoice_items(*)").eq("workspace_id", workspaceId).order("issue_date", { ascending: false }),
+        supabase.from("offers").select("*, offer_items(*) ").eq("workspace_id", workspaceId).order("issue_date", { ascending: false }),
+        supabase.from("workspace_settings").select("*").eq("workspace_id", workspaceId).maybeSingle(),
+        scoped("products").eq("active", true).order("name"),
+        scoped("customer_portal_requests").order("created_at", { ascending: false }),
+        scoped("activity_events").limit(100).order("created_at", { ascending: false }),
+        scoped("email_delivery_logs").limit(200).order("created_at", { ascending: false }),
+        scoped("email_templates").order("template_key"),
       ]);
-      [customers, departments, projects, invoices, offers, settings, portalRequests, activityEvents, emailLogs, emailTemplates].forEach((result) => fail(result.error));
+      [customers, departments, projects, invoices, offers, settings, products, portalRequests, activityEvents, emailLogs, emailTemplates].forEach((result) => fail(result.error));
       const normalizedInvoices = invoices.data.map((invoice) => ({ ...invoice, items: invoice.invoice_items || [] }));
       const normalizedOffers = (offers.data || []).map((offer) => ({ ...offer, items: offer.offer_items || [] }));
-      return joinedData({ customers: customers.data, departments: departments.data || [], projects: projects.data, invoices: normalizedInvoices, offers: normalizedOffers, settings: settings.data || {}, portalRequests: portalRequests.data || [], activityEvents: activityEvents.data || [], emailLogs: emailLogs.data || [], emailTemplates: emailTemplates.data || [] });
+      return joinedData({ customers: customers.data, departments: departments.data || [], projects: projects.data, invoices: normalizedInvoices, offers: normalizedOffers, settings: settings.data || {}, products: products.data || [], portalRequests: portalRequests.data || [], activityEvents: activityEvents.data || [], emailLogs: emailLogs.data || [], emailTemplates: emailTemplates.data || [] });
     },
-    async saveCustomer(payload) { const result = await supabase.from("customers").insert({ ...payload, owner_id: ownerId }).select("id").single(); fail(result.error); return result.data; },
-    async saveDepartment(payload) { const result = await supabase.from("customer_departments").insert({ ...payload, owner_id: ownerId }); fail(result.error); },
+    async saveCustomer(payload) { const result = await supabase.from("customers").insert({ ...payload, workspace_id: state.activeWorkspaceId }).select("id").single(); fail(result.error); return result.data; },
+    async saveDepartment(payload) { const result = await supabase.from("customer_departments").insert({ ...payload, workspace_id: state.activeWorkspaceId }); fail(result.error); },
     async updateCustomer(id, payload) { const result = await supabase.rpc("update_customer", { p_customer_id: id, p_company: payload.company, p_contact_name: payload.contact_name, p_email: payload.email, p_phone: payload.phone, p_address_line1: payload.address_line1, p_postal_code: payload.postal_code, p_city: payload.city, p_country: payload.country }); fail(result.error); },
-    async saveProject(payload) { const result = await supabase.from("projects").insert({ ...payload, owner_id: ownerId }); fail(result.error); },
+    async saveProject(payload) { const result = await supabase.from("projects").insert({ ...payload, workspace_id: state.activeWorkspaceId }); fail(result.error); },
     async updateProject(id, payload) { const result = await supabase.rpc("update_project", { p_project_id: id, p_customer_id: payload.customer_id, p_title: payload.title, p_description: payload.description, p_status: payload.status, p_budget_rappen: payload.budget_rappen, p_start_date: payload.start_date, p_due_date: payload.due_date }); fail(result.error); if (payload.department_id) { const department = await supabase.from("projects").update({ department_id: payload.department_id }).eq("id", id).eq("owner_id", ownerId); fail(department.error); } },
     async saveInvoice(payload) {
       const items = payload.items;
@@ -224,7 +235,9 @@ function createSupabaseAdapter(supabase, session) {
       }
       return data;
     },
-    async saveSettings(payload) { const result = await supabase.from("company_settings").upsert({ ...payload, owner_id: ownerId }, { onConflict: "owner_id" }); fail(result.error); },
+    async saveSettings(payload) { const result = await supabase.from("workspace_settings").upsert({ workspace_id: state.activeWorkspaceId, business_name: payload.company_name, legal_name: payload.legal_name || payload.company_name, contact_name: payload.owner_name, email: payload.email, phone: payload.phone, website_url: payload.website_url, address_line1: payload.address_line1, postal_code: payload.postal_code, city: payload.city, country: payload.country, logo_url: payload.logo_url, dark_logo_url: payload.dark_logo_url, icon_url: payload.icon_url, primary_color: payload.primary_color, secondary_color: payload.secondary_color, accent_color: payload.accent_color, invoice_sender_name: payload.invoice_sender_name || payload.company_name, invoice_prefix: payload.invoice_prefix, currency: payload.currency, iban: payload.iban, bank_name: payload.bank_name, account_holder: payload.account_holder, uid_number: payload.uid_number, vat_number: payload.vat_number, vat_enabled: Boolean(payload.vat_number), default_tax_rate: payload.default_tax_rate, default_due_days: payload.default_due_days }, { onConflict: "workspace_id" }); fail(result.error); },
+    async saveProduct(payload) { const result = await supabase.from("products").insert({ ...payload, workspace_id: state.activeWorkspaceId }); fail(result.error); },
+    async createWorkspace(payload) { const result = await supabase.rpc("create_workspace", { p_name: payload.name, p_slug: payload.slug, p_invoice_prefix: payload.invoicePrefix, p_currency: payload.currency }); fail(result.error); return result.data; },
     async saveEmailTemplate(templateKey, payload) { const result = await supabase.from("email_templates").upsert({ owner_id: ownerId, template_key: templateKey, subject_template: payload.subject_template, text_template: payload.text_template }, { onConflict: "owner_id,template_key" }); fail(result.error); },
     async invoiceAction(id, action, requestKey = null) {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -702,9 +715,24 @@ function applyMotionPrimitives() {
     ":scope > .view > .hero-row h2, :scope > .view > .dashboard-intro h2, :scope > .view > .project-canvas-head h3, :scope > .view > .dashboard-focus-head h3",
   ).forEach(applyTextEffect);
 }
+function syncWorkspaceSwitcher() {
+  const active = state.workspaces.find((item) => item.id === state.activeWorkspaceId);
+  activeWorkspaceName.textContent = active?.name || "Business wählen";
+  activeWorkspaceMeta.textContent = active?.slug ? `Hive · ${active.slug}` : "Hive";
+  workspaceList.innerHTML = state.workspaces.map((item) => `<button type="button" role="option" aria-selected="${item.id === state.activeWorkspaceId}" data-workspace-id="${esc(item.id)}">${esc(item.name)}</button>`).join("") + '<button type="button" class="business-switcher-new" data-create-workspace>+ Neues Business</button>';
+}
+function activateWorkspace(id) {
+  if (!state.workspaces.some((item) => item.id === id)) return;
+  state.activeWorkspaceId = id;
+  localStorage.setItem(`hive.activeWorkspace.${state.workspaceUserId}`, id);
+  workspaceList.hidden = true;
+  workspaceSwitcher.setAttribute("aria-expanded", "false");
+  refresh();
+}
 function render() {
   content.classList.remove("is-view-entering");
-  const ownerName = state.data.settings?.owner_name?.trim() || "Studio-Konto";
+  syncWorkspaceSwitcher();
+  const ownerName = state.data.settings?.contact_name?.trim() || state.data.settings?.owner_name?.trim() || "Studio-Konto";
   document.querySelector(".studio-owner-name").textContent = ownerName;
   document.querySelector(".studio-owner-mark").textContent = ownerName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
   shell.classList.toggle("studio-projects-active", state.view === "projects");
@@ -731,7 +759,7 @@ function render() {
   applyMotionPrimitives();
   content.focus({ preventScroll: true });
 }
-async function refresh() { state.data = await adapter.loadAll(); render(); }
+async function refresh() { state.data = await adapter.loadAll(state.activeWorkspaceId); render(); }
 function navigationFocusable() { return [...document.querySelectorAll("#sidebar a[href],#sidebar button:not([disabled])")].filter((element) => element.getClientRects().length); }
 function clearNavigationCloseTimer() {
   clearTimeout(navCloseTimer);
@@ -879,10 +907,13 @@ function openEditor(type, existing = null, context = {}) {
     dialogKicker.textContent = "MAIL-TEXT";
     dialogTitle.textContent = `${definition[1]} anpassen`;
     dialogBody.innerHTML = `<p class="form-hint">Verfügbare Platzhalter: ${esc(definition[3])}</p><div class="form-grid">${field("Betreff","subject_template","text",template.subject_template || "",true,"required")}<label class="form-field wide"><span>Text</span><textarea name="text_template" rows="12" required>${esc(template.text_template || "")}</textarea></label></div>`;
+  } else if (type === "workspace") {
+    dialogKicker.textContent = "HIVE"; dialogTitle.textContent = "Neues Business";
+    dialogBody.innerHTML = `<div class="form-grid">${field("Business Name *","workspace_name","text","",true,"required")}${field("Slug *","workspace_slug","text","",true,"required pattern=\"[a-z0-9]+(?:-[a-z0-9]+)*\"")}${field("Rechnungspräfix *","workspace_prefix","text","",false,"required pattern=\"[A-Z0-9-]{1,12}\"")}${field("Währung","workspace_currency","text","CHF",false,"required pattern=\"[A-Z]{3}\"")}</div>`;
   } else {
     const settings = state.data.settings || {};
-    dialogKicker.textContent = "EINSTELLUNGEN"; dialogTitle.textContent = "Rechnungsabsender";
-    dialogBody.innerHTML = `<div class="form-grid">${field("Firma *","company_name","text",settings.company_name || "HEAV",false,"required")}${field("Inhaber *","owner_name","text",settings.owner_name || "Michias Tegegne",false,"required")}${field("E-Mail *","email","email",settings.email || "hello@heav.ch",false,"required")}${field("Telefon","phone","tel",settings.phone || "")}${field("Website","website_url","url",settings.website_url || "https://heav.ch")}${field("Instagram URL","instagram_url","url",settings.instagram_url || "")}${field("Strasse / Nr. *","address_line1","text",settings.address_line1 || "",true,"required")}${field("PLZ *","postal_code","text",settings.postal_code || "",false,"required")}${field("Ort *","city","text",settings.city || "",false,"required")}${field("IBAN *","iban","text",settings.iban || "",true,"required")}${field("MWST-Nr. · leer lassen, wenn nicht registriert","vat_number","text",settings.vat_number || "",true)}${field("Standard-MWST %","default_tax_rate","number",settings.vat_number ? (settings.default_tax_rate ?? 0) : 0,false,'min="0" step="0.1"')}${field("Standard-Zahlungsfrist (Tage)","default_due_days","number",settings.default_due_days || 30,false,'min="1" step="1"')}${field("Zahlungserinnerung vor Fälligkeit (Tage)","invoice_reminder_days","number",settings.invoice_reminder_days || 7,false,'min="3" max="10" step="1"')}</div>`;
+    dialogKicker.textContent = "BUSINESS / BRANDING"; dialogTitle.textContent = "Business- und Rechnungseinstellungen";
+    dialogBody.innerHTML = `<div class="form-grid">${field("Business Name *","company_name","text",settings.business_name || settings.company_name || "",true,"required")}${field("Offizieller Firmenname","legal_name","text",settings.legal_name || settings.company_name || "",true)}${field("Ansprechpartner","owner_name","text",settings.contact_name || settings.owner_name || "",false)}${field("E-Mail *","email","email",settings.email || "",false,"required")}${field("Telefon","phone","tel",settings.phone || "")}${field("Website","website_url","url",settings.website_url || "")}${field("Strasse / Nr.","address_line1","text",settings.address_line1 || "",true)}${field("PLZ","postal_code","text",settings.postal_code || "")}${field("Ort","city","text",settings.city || "")}${field("Land","country","text",settings.country || "Schweiz")}${field("Logo URL","logo_url","url",settings.logo_url || "",true)}${field("Dark Logo URL","dark_logo_url","url",settings.dark_logo_url || "",true)}${field("Icon / Favicon URL","icon_url","url",settings.icon_url || "",true)}${field("Primary Color","primary_color","text",settings.primary_color || "#090a08")}${field("Secondary Color","secondary_color","text",settings.secondary_color || "#eeeae0")}${field("Accent Color","accent_color","text",settings.accent_color || "#d7ff38")}${field("Rechnungs-Absender","invoice_sender_name","text",settings.invoice_sender_name || settings.company_name || "",true)}${field("Rechnungspräfix *","invoice_prefix","text",settings.invoice_prefix || "HIVE",false,"required pattern=\"[A-Z0-9-]{1,12}\"")}${field("Währung *","currency","text",settings.currency || "CHF",false,"required pattern=\"[A-Z]{3}\"")}${field("IBAN","iban","text",settings.iban || "",true)}${field("Bankname","bank_name","text",settings.bank_name || "")}${field("Kontoinhaber","account_holder","text",settings.account_holder || "")}${field("UID / Unternehmensnummer","uid_number","text",settings.uid_number || "")}${field("MWST-Nr. · leer lassen, wenn nicht registriert","vat_number","text",settings.vat_number || "",true)}${field("Standard-MWST %","default_tax_rate","number",settings.vat_number ? (settings.default_tax_rate ?? 0) : 0,false,'min="0" step="0.1"')}${field("Standard-Zahlungsfrist (Tage)","default_due_days","number",settings.default_due_days || 30,false,'min="1" step="1"')}</div>`;
   }
   const customerField = dialogForm.elements.customer_id;
   const departmentField = dialogForm.elements.department_id;
@@ -967,13 +998,19 @@ async function saveEditor(type) {
   if (type === "email-template") {
     await adapter.saveEmailTemplate(dialogForm.dataset.templateKey, { subject_template: data.subject_template.trim(), text_template: data.text_template.trim() });
   }
+  if (type === "workspace") {
+    const id = await adapter.createWorkspace({ name: data.workspace_name.trim(), slug: data.workspace_slug.trim(), invoicePrefix: data.workspace_prefix.trim(), currency: data.workspace_currency.trim().toUpperCase() });
+    state.workspaces = await adapter.loadWorkspaces();
+    state.activeWorkspaceId = id;
+    localStorage.setItem(`hive.activeWorkspace.${state.workspaceUserId}`, id);
+  }
   if (type === "settings") {
     const vatNumber = normalizeVatNumber(data.vat_number);
     if (vatNumber && !validVatNumber(vatNumber)) {
       formError.textContent = "MWST-Nummer im Format CHE-123.456.789 MWST eingeben oder leer lassen.";
       return false;
     }
-    await adapter.saveSettings({ company_name: data.company_name.trim(), owner_name: data.owner_name.trim(), email: data.email.trim(), phone: data.phone.trim(), website_url: data.website_url.trim() || "https://heav.ch", instagram_url: data.instagram_url.trim(), address_line1: data.address_line1.trim(), postal_code: data.postal_code.trim(), city: data.city.trim(), iban: data.iban.trim(), vat_number: vatNumber, default_tax_rate: vatNumber ? Number(data.default_tax_rate || 0) : 0, default_due_days: Number(data.default_due_days || 30), invoice_reminder_days: [3, 7, 10].includes(Number(data.invoice_reminder_days)) ? Number(data.invoice_reminder_days) : 7 });
+    await adapter.saveSettings({ company_name: data.company_name.trim(), legal_name: data.legal_name.trim(), owner_name: data.owner_name.trim(), email: data.email.trim(), phone: data.phone.trim(), website_url: data.website_url.trim(), address_line1: data.address_line1.trim(), postal_code: data.postal_code.trim(), city: data.city.trim(), country: data.country.trim() || "Schweiz", logo_url: data.logo_url.trim(), dark_logo_url: data.dark_logo_url.trim(), icon_url: data.icon_url.trim(), primary_color: data.primary_color.trim(), secondary_color: data.secondary_color.trim(), accent_color: data.accent_color.trim(), invoice_sender_name: data.invoice_sender_name.trim(), invoice_prefix: data.invoice_prefix.trim(), currency: data.currency.trim().toUpperCase(), iban: data.iban.trim(), bank_name: data.bank_name.trim(), account_holder: data.account_holder.trim(), uid_number: data.uid_number.trim(), vat_number: vatNumber, default_tax_rate: vatNumber ? Number(data.default_tax_rate || 0) : 0, default_due_days: Number(data.default_due_days || 30) });
   }
   return true;
 }
@@ -1525,6 +1562,9 @@ document.addEventListener("keydown", (event) => {
   else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
   else if (!document.querySelector("#sidebar").contains(document.activeElement)) { event.preventDefault(); first.focus(); }
 });
+workspaceSwitcher.addEventListener("click", (event) => { if (!event.target.closest(".studio-workspace-identity")) return; const open = workspaceList.hidden; workspaceList.hidden = !open; workspaceSwitcher.setAttribute("aria-expanded", String(open)); });
+workspaceList.addEventListener("click", (event) => { const item = event.target.closest("[data-workspace-id]"); if (item) activateWorkspace(item.dataset.workspaceId); if (event.target.closest("[data-create-workspace]")) { workspaceList.hidden = true; workspaceSwitcher.setAttribute("aria-expanded", "false"); openEditor("workspace"); } });
+document.addEventListener("click", (event) => { if (!event.target.closest(".studio-workspace-switcher")) { workspaceList.hidden = true; workspaceSwitcher.setAttribute("aria-expanded", "false"); } });
 document.querySelector("#logout-button").addEventListener("click", async () => { await adapter.logout(); window.location.replace("/login/"); });
 
 async function boot() {
@@ -1552,8 +1592,13 @@ async function boot() {
 
     configureAssistantOwner(userId);
     adapter = createSupabaseAdapter(state.supabase, data.session);
+    state.workspaceUserId = userId;
+    state.workspaces = await adapter.loadWorkspaces();
+    const storedWorkspace = localStorage.getItem(`hive.activeWorkspace.${userId}`);
+    state.activeWorkspaceId = state.workspaces.some((item) => item.id === storedWorkspace) ? storedWorkspace : state.workspaces[0]?.id || null;
+    if (!state.activeWorkspaceId) throw new Error("Für dieses Konto ist noch kein Hive-Business eingerichtet.");
     void state.supabase.rpc("record_owner_login");
-    state.data = await adapter.loadAll();
+    state.data = await adapter.loadAll(state.activeWorkspaceId);
     await restoreAssistantThread();
     loading.remove(); shell.hidden = false; render();
   } catch (error) {
