@@ -847,6 +847,47 @@ export default function StudioPage() {
     }
   }
 
+  async function uploadBusinessLogo(file: File | null) {
+    if (!file || !activeWorkspaceId || !settings) return;
+    if (!['image/png','image/jpeg','image/webp'].includes(file.type)) {
+      setNotice('Logo muss PNG, JPG oder WebP sein.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setNotice('Logo darf maximal 5 MB gross sein.');
+      return;
+    }
+    try {
+      const prepared=await requestJson<{bucket:string;storagePath:string;token:string}>('/api/hive/branding/logo',{
+        method:'POST',
+        body:JSON.stringify({
+          action:'prepare_upload',
+          workspaceId:activeWorkspaceId,
+          mimeType:file.type,
+          bytes:file.size,
+        }),
+      });
+      const supabase=createPublicSupabaseBrowserClient();
+      const {error:uploadError}=await supabase.storage
+        .from(prepared.bucket)
+        .uploadToSignedUrl(prepared.storagePath,prepared.token,file);
+      if(uploadError) throw uploadError;
+
+      const completed=await requestJson<{logoUrl:string}>('/api/hive/branding/logo',{
+        method:'POST',
+        body:JSON.stringify({
+          action:'complete_upload',
+          workspaceId:activeWorkspaceId,
+          storagePath:prepared.storagePath,
+        }),
+      });
+      setSettings({...settings,logo_url:completed.logoUrl});
+      setNotice('Business-Logo hochgeladen.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Logo konnte nicht hochgeladen werden.');
+    }
+  }
+
   async function saveSettings(event: FormEvent) {
     event.preventDefault();
     if (!activeWorkspaceId || !settings) return;
@@ -1140,6 +1181,7 @@ export default function StudioPage() {
         {tab === 'branding' && settings && <form className="hsv-branding" onSubmit={saveSettings}>
           <div className="hsv-brand-preview"><span>{settings.logo_url ? <img src={settings.logo_url} alt="Logo"/> : settings.business_name.charAt(0)}</span><div><strong>{settings.business_name}</strong><small>{activeWorkspace?.role} · Dev-Workspace</small></div></div>
           <label>Business-Name<input value={settings.business_name} onChange={(e) => setSettings({ ...settings, business_name: e.target.value })}/></label>
+          <label>Business-Logo<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => void uploadBusinessLogo(e.target.files?.[0] || null)}/><small>PNG, JPG oder WebP · max. 5 MB</small></label>
           <label>Logo-URL<input value={settings.logo_url} onChange={(e) => setSettings({ ...settings, logo_url: e.target.value })} placeholder="https://…"/></label>
           <label>Kontakt-E-Mail<input type="email" value={settings.email} onChange={(e) => setSettings({ ...settings, email: e.target.value })}/></label>
           <label>Adresse<input value={settings.address_line1} onChange={(e) => setSettings({ ...settings, address_line1: e.target.value })}/></label>
