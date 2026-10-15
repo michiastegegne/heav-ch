@@ -5,6 +5,7 @@ import {
   ArrowLeft, ArrowRight, BriefcaseBusiness, Check, CreditCard, FileText,
   LayoutDashboard, Mail, Plus, RefreshCw, Settings2, ShieldCheck, Trash2, Users, X,
 } from 'lucide-react';
+import { createPublicSupabaseBrowserClient } from '@/lib/supabase/public-browser';
 import './studio.css';
 
 type Workspace = { id: string; name: string; slug: string; status: string; role: string };
@@ -118,6 +119,10 @@ export default function StudioPage() {
   const [offerOpen, setOfferOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteDraft, setInviteDraft] = useState({ customerId:'', email:'' });
+  const [fileOpen, setFileOpen] = useState(false);
+  const [fileDraft, setFileDraft] = useState<{ customerId:string; projectId:string; title:string; kind:'image'|'video'|'gallery'|'offer'|'document'; file:File|null }>({
+    customerId:'', projectId:'', title:'', kind:'document', file:null,
+  });
   const [offerDraft, setOfferDraft] = useState({
     customerId: '', projectId: '', title: '', issueDate: today(), validUntil: afterDays(30),
     taxRate: 0, notes: '', terms: 'Diese Offerte ist bis zum angegebenen Datum gültig.',
@@ -388,6 +393,85 @@ export default function StudioPage() {
     setInviteOpen(false);
   }
 
+  async function uploadPortalFile(event: FormEvent) {
+    event.preventDefault();
+    if (!activeWorkspaceId || !fileDraft.file) {
+      setNotice('Bitte zuerst eine Datei auswählen.');
+      return;
+    }
+    try {
+      const common = {
+        workspaceId: activeWorkspaceId,
+        customerId: fileDraft.customerId,
+        projectId: fileDraft.projectId || null,
+        title: fileDraft.title || fileDraft.file.name,
+        filename: fileDraft.file.name,
+        mimeType: fileDraft.file.type || 'application/octet-stream',
+        bytes: fileDraft.file.size,
+        kind: fileDraft.kind,
+      };
+      const prepared = await requestJson<{ bucket:string; storagePath:string; token:string }>('/api/hive/files', {
+        method:'POST',
+        body:JSON.stringify({ action:'prepare_upload', ...common }),
+      });
+
+      const supabase = createPublicSupabaseBrowserClient();
+      const { error: uploadError } = await supabase.storage
+        .from(prepared.bucket)
+        .uploadToSignedUrl(prepared.storagePath, prepared.token, fileDraft.file);
+      if (uploadError) throw uploadError;
+
+      await requestJson('/api/hive/files', {
+        method:'POST',
+        body:JSON.stringify({ action:'complete_upload', storagePath:prepared.storagePath, ...common }),
+      });
+      setFileOpen(false);
+      setFileDraft({ customerId:'', projectId:'', title:'', kind:'document', file:null });
+      setNotice('Datei hochgeladen. Sie ist noch nicht im Kundenportal veröffentlicht.');
+      await loadWorkspaceData(activeWorkspaceId);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Datei konnte nicht hochgeladen werden.');
+    }
+  }
+
+  async function downloadPortalFile(file: PortalFile) {
+    try {
+      const data = await requestJson<{ signedUrl:string }>(`/api/hive/files/${file.id}`);
+      window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Download fehlgeschlagen.');
+    }
+  }
+
+  async function togglePortalFile(file: PortalFile) {
+    if (!activeWorkspaceId) return;
+    try {
+      await requestJson(`/api/hive/files/${file.id}`, {
+        method:'PATCH',
+        body:JSON.stringify({
+          workspaceId:activeWorkspaceId,
+          published:!file.published_at,
+          downloadEnabled:true,
+        }),
+      });
+      setNotice(file.published_at ? 'Datei aus dem Portal genommen.' : 'Datei im Portal veröffentlicht.');
+      await loadWorkspaceData(activeWorkspaceId);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Datei konnte nicht aktualisiert werden.');
+    }
+  }
+
+  async function deletePortalFile(file: PortalFile) {
+    if (!activeWorkspaceId || !confirm(`${file.title} wirklich löschen?`)) return;
+    try {
+      await requestJson(`/api/hive/files/${file.id}`, { method:'DELETE' });
+      setNotice('Datei gelöscht.');
+      await loadWorkspaceData(activeWorkspaceId);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Datei konnte nicht gelöscht werden.');
+    }
+  }
+
   async function saveSettings(event: FormEvent) {
     event.preventDefault();
     if (!activeWorkspaceId || !settings) return;
@@ -623,10 +707,19 @@ export default function StudioPage() {
             {review.status === 'pending' && <><button onClick={() => void portalAction({ action:'review_update', reviewId:review.id, status:'approved' }, 'Review freigegeben.')}>Freigeben</button><button onClick={() => void portalAction({ action:'review_update', reviewId:review.id, status:'rejected' }, 'Review abgelehnt.')}>Ablehnen</button></>}
           </div>) : <p className="hsv-empty">Keine Reviews.</p>}</div>
 
-          <div className="hsv-rowtop" style={{ marginTop: 24 }}><strong>Dateien</strong></div>
+          <div className="hsv-rowtop" style={{ marginTop: 24 }}>
+            <strong>Dateien</strong>
+            <button className="hsv-primary" disabled={!customers.length} onClick={() => {
+              setFileDraft({ customerId:customers[0]?.id || '', projectId:'', title:'', kind:'document', file:null });
+              setFileOpen(true);
+            }}><Plus size={15}/> Datei hochladen</button>
+          </div>
           <div className="hsv-table">{portal.files.length ? portal.files.map((file) => <div key={file.id}>
             <span className="hsv-letter"><FileText size={16}/></span>
-            <span className="hsv-grow"><strong>{file.title}</strong><small>{file.original_filename} · {file.kind} · {file.published_at ? 'veröffentlicht' : 'Entwurf'}</small></span>
+            <span className="hsv-grow"><strong>{file.title}</strong><small>{file.original_filename} · {file.kind} · {file.published_at ? 'veröffentlicht' : 'Entwurf'}{file.bytes ? ` · ${(file.bytes / 1024 / 1024).toFixed(1)} MB` : ''}</small></span>
+            <button onClick={() => void downloadPortalFile(file)}>Download</button>
+            <button onClick={() => void togglePortalFile(file)}>{file.published_at ? 'Unpublish' : 'Publish'}</button>
+            <button aria-label="Datei löschen" onClick={() => void deletePortalFile(file)}><Trash2 size={16}/></button>
           </div>) : <p className="hsv-empty">Keine Portal-Dateien.</p>}</div>
 
           <div className="hsv-rowtop" style={{ marginTop: 24 }}><strong>Letzte Aktivität</strong></div>
@@ -656,6 +749,18 @@ export default function StudioPage() {
     </div>
 
     {notice && <div className="hsv-toast" role="status">{notice}<button aria-label="Schliessen" onClick={() => setNotice('')}><X size={16}/></button></div>}
+
+    {fileOpen && <Modal title="Datei hochladen" onClose={() => setFileOpen(false)}>
+      <form onSubmit={uploadPortalFile}>
+        <label>Kunde<select required value={fileDraft.customerId} onChange={(e) => setFileDraft({ ...fileDraft, customerId:e.target.value, projectId:'' })}>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customerName(customer)}</option>)}</select></label>
+        <label>Projekt<select value={fileDraft.projectId} onChange={(e) => setFileDraft({ ...fileDraft, projectId:e.target.value })}><option value="">Kein Projekt</option>{projects.filter((project) => project.customer_id === fileDraft.customerId).map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}</select></label>
+        <label>Titel<input value={fileDraft.title} onChange={(e) => setFileDraft({ ...fileDraft, title:e.target.value })} placeholder="z.B. Final Photos"/></label>
+        <label>Typ<select value={fileDraft.kind} onChange={(e) => setFileDraft({ ...fileDraft, kind:e.target.value as typeof fileDraft.kind })}><option value="document">Dokument</option><option value="image">Bild</option><option value="video">Video</option><option value="gallery">Galerie</option><option value="offer">Offerte</option></select></label>
+        <label>Datei<input required type="file" onChange={(e) => setFileDraft({ ...fileDraft, file:e.target.files?.[0] || null })}/></label>
+        <p className="hsv-warning">Max. 50 MB pro Datei. Nach dem Upload bleibt sie zuerst unveröffentlicht.</p>
+        <button className="hsv-primary" type="submit">Hochladen <Check size={15}/></button>
+      </form>
+    </Modal>}
 
     {inviteOpen && <Modal title="Portal-Einladung" onClose={() => setInviteOpen(false)}>
       <form onSubmit={createPortalInvite}>
