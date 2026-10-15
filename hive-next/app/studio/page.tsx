@@ -38,6 +38,10 @@ type EmailLog = {
   id: string; template_key: string; status: string; recipient_email: string;
   recipient_name: string; subject: string; error_message: string | null; created_at: string;
 };
+type EmailTemplateRow = {
+  id?:string; template_key:'invoice_send'|'offer_send'|'portal_invite'|'invoice_reminder';
+  subject_template:string; text_template:string; customized:boolean;
+};
 type Settings = {
   workspace_id: string; business_name: string; legal_name: string; contact_name: string; email: string;
   phone: string; website_url: string; address_line1: string; postal_code: string; city: string;
@@ -45,6 +49,7 @@ type Settings = {
   invoice_sender_name: string; iban: string; bank_name: string; account_holder: string;
   uid_number: string; vat_number: string; vat_enabled: boolean; default_tax_rate: number;
   default_due_days: number; currency: string; invoice_prefix: string;
+  invoice_reminders_enabled:boolean; invoice_reminder_days:number;
 };
 type PortalMembership = { id:string; customer_id:string; department_id:string; user_id:string; role:string; status:string; invited_at:string; accepted_at:string|null; revoked_at:string|null; created_at:string };
 type PortalInvite = { id:string; customer_id:string; department_id:string; email:string; expires_at:string; accepted_at:string|null; revoked_at:string|null; created_at:string };
@@ -109,6 +114,7 @@ export default function StudioPage() {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [emails, setEmails] = useState<EmailLog[]>([]);
+  const [emailTemplates, setEmailTemplates] = useState<EmailTemplateRow[]>([]);
   const [portal, setPortal] = useState<PortalData>({ memberships:[], invites:[], requests:[], files:[], reviews:[], activity:[] });
   const [settings, setSettings] = useState<Settings | null>(null);
   const [busy, setBusy] = useState(true);
@@ -177,13 +183,14 @@ export default function StudioPage() {
     setBackendError('');
     try {
       const q = encodeURIComponent(workspaceId);
-      const [customerData, projectData, invoiceData, offerData, productData, emailData, portalData, settingsData] = await Promise.all([
+      const [customerData, projectData, invoiceData, offerData, productData, emailData, templateData, portalData, settingsData] = await Promise.all([
         requestJson<{ customers: Customer[] }>(`/api/hive/customers?workspace=${q}`),
         requestJson<{ projects: Project[] }>(`/api/hive/projects?workspace=${q}`),
         requestJson<{ invoices: Invoice[] }>(`/api/hive/invoices?workspace=${q}`),
         requestJson<{ offers: Offer[] }>(`/api/hive/offers?workspace=${q}`),
         requestJson<{ products: Product[] }>(`/api/hive/products?workspace=${q}`),
         requestJson<{ emails: EmailLog[] }>(`/api/hive/emails?workspace=${q}`),
+        requestJson<{ templates: EmailTemplateRow[] }>(`/api/hive/email-templates?workspace=${q}`),
         requestJson<PortalData>(`/api/hive/portal?workspace=${q}`),
         requestJson<{ settings: Settings }>(`/api/hive/settings?workspace=${q}`),
       ]);
@@ -193,6 +200,7 @@ export default function StudioPage() {
       setOffers(offerData.offers);
       setProducts(productData.products);
       setEmails(emailData.emails);
+      setEmailTemplates(templateData.templates);
       setPortal(portalData);
       setSettings(settingsData.settings);
     } catch (error) {
@@ -679,6 +687,25 @@ export default function StudioPage() {
     }
   }
 
+  async function saveEmailTemplate(template: EmailTemplateRow) {
+    if (!activeWorkspaceId) return;
+    try {
+      await requestJson('/api/hive/email-templates', {
+        method:'PUT',
+        body:JSON.stringify({
+          workspaceId:activeWorkspaceId,
+          templateKey:template.template_key,
+          subjectTemplate:template.subject_template,
+          textTemplate:template.text_template,
+        }),
+      });
+      setNotice('E-Mail-Vorlage gespeichert.');
+      await loadWorkspaceData(activeWorkspaceId);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'E-Mail-Vorlage konnte nicht gespeichert werden.');
+    }
+  }
+
   async function saveSettings(event: FormEvent) {
     event.preventDefault();
     if (!activeWorkspaceId || !settings) return;
@@ -712,6 +739,8 @@ export default function StudioPage() {
           defaultDueDays: Number(settings.default_due_days),
           currency: settings.currency,
           invoicePrefix: settings.invoice_prefix,
+          invoiceRemindersEnabled:settings.invoice_reminders_enabled,
+          invoiceReminderDays:Number(settings.invoice_reminder_days),
         }),
       });
       setSettings(data.settings);
@@ -880,13 +909,23 @@ export default function StudioPage() {
         </>}
 
         {tab === 'emails' && <>
-          <div className="hsv-rowtop"><strong>{emails.length} E-Mail-Ereignisse</strong><button className="hsv-outline" onClick={() => activeWorkspaceId && void loadWorkspaceData(activeWorkspaceId)}><RefreshCw size={14}/> Aktualisieren</button></div>
+          <div className="hsv-rowtop"><strong>E-Mail-Vorlagen</strong><button className="hsv-outline" onClick={() => activeWorkspaceId && void loadWorkspaceData(activeWorkspaceId)}><RefreshCw size={14}/> Aktualisieren</button></div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:14,marginBottom:30}}>
+            {emailTemplates.map((template,index) => <div className="hsv-branding" key={template.template_key} style={{margin:0}}>
+              <span className="auth-kicker">{template.template_key.replaceAll('_',' ').toUpperCase()}</span>
+              <label>Betreff<input value={template.subject_template} onChange={(e) => setEmailTemplates((current) => current.map((item,i) => i === index ? { ...item, subject_template:e.target.value } : item))}/></label>
+              <label>Text<textarea rows={7} value={template.text_template} onChange={(e) => setEmailTemplates((current) => current.map((item,i) => i === index ? { ...item, text_template:e.target.value } : item))}/></label>
+              <small>Variablen: {{first_name}}, {{company_name}}, {{owner_name}}, {{invoice_number}}, {{offer_number}}, {{amount}}, {{due_date}}, {{portal_link}}</small>
+              <button className="hsv-primary" type="button" onClick={() => void saveEmailTemplate(template)}>Vorlage speichern <Check size={15}/></button>
+            </div>)}
+          </div>
+          <div className="hsv-rowtop"><strong>{emails.length} Versandereignisse</strong></div>
           <div className="hsv-table">{emails.map((email) => <div key={email.id}>
             <span className="hsv-letter"><Mail size={16}/></span>
             <span className="hsv-grow"><strong>{email.subject}</strong><small>{email.template_key} · {email.status} · {new Date(email.created_at).toLocaleString('de-CH')}</small></span>
             <small>{email.recipient_email}</small>
           </div>)}</div>
-          <p className="hsv-warning">Historische Empfänger in der Dev-Kopie wurden neutralisiert.</p>
+          <p className="hsv-warning">Historische Empfänger in der Dev-Kopie wurden neutralisiert. Echte Dev-Mails bleiben gesperrt.</p>
         </>}
 
         {tab === 'portal' && <>
@@ -966,6 +1005,8 @@ export default function StudioPage() {
           <label>IBAN<input value={settings.iban} onChange={(e) => setSettings({ ...settings, iban: e.target.value })}/></label>
           <label>Rechnungspräfix<input value={settings.invoice_prefix} onChange={(e) => setSettings({ ...settings, invoice_prefix: e.target.value.toUpperCase() })}/></label>
           <label>Standard-Steuersatz %<input type="number" min="0" max="100" step="0.1" value={settings.default_tax_rate} onChange={(e) => setSettings({ ...settings, default_tax_rate: Number(e.target.value) })}/></label>
+          <label><input type="checkbox" checked={settings.invoice_reminders_enabled} onChange={(e) => setSettings({ ...settings, invoice_reminders_enabled:e.target.checked })}/> Automatische Zahlungserinnerungen</label>
+          <label>Reminder vor Fälligkeit (Tage)<input type="number" min="1" max="30" value={settings.invoice_reminder_days} onChange={(e) => setSettings({ ...settings, invoice_reminder_days:Number(e.target.value) })}/></label>
           <label>Accent-Farbe<div className="hsv-color"><input type="color" value={settings.accent_color} onChange={(e) => setSettings({ ...settings, accent_color: e.target.value })}/><span>{settings.accent_color}</span></div></label>
           <button className="hsv-primary" type="submit">Speichern <Check size={15}/></button>
         </form>}
