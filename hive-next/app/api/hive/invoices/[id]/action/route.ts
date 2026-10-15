@@ -48,7 +48,6 @@ export async function POST(
     }
 
     const payload: Record<string, string> = { invoiceId, action };
-    if (action === 'send') payload.requestKey = crypto.randomUUID();
 
     const upstream = await fetch(`${supabaseUrl}/functions/v1/invoice-document`, {
       method: 'POST',
