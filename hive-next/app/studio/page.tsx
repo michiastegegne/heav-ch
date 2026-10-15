@@ -80,8 +80,12 @@ type TeamMember = {
   membership_id:string; user_id:string; role:'owner'|'admin'|'member'|'accountant';
   email:string; display_name:string; created_at:string;
 };
+type UnifiedActivity = {
+  id:string; source:'activity'|'invoice'|'offer'|'email'; kind:string;
+  entityType:string; entityId:string|null; summary:string; meta:string; createdAt:string;
+};
 
-type Tab = 'overview' | 'customers' | 'projects' | 'invoices' | 'offers' | 'catalog' | 'emails' | 'portal' | 'team' | 'branding';
+type Tab = 'overview' | 'customers' | 'projects' | 'invoices' | 'offers' | 'catalog' | 'emails' | 'portal' | 'activity' | 'team' | 'branding';
 type LineDraft = { description: string; quantity: number; unitPrice: number };
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -126,6 +130,7 @@ export default function StudioPage() {
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplateRow[]>([]);
   const [portal, setPortal] = useState<PortalData>({ memberships:[], invites:[], requests:[], files:[], reviews:[], activity:[] });
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [activityFeed, setActivityFeed] = useState<UnifiedActivity[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [busy, setBusy] = useState(true);
   const [backendError, setBackendError] = useState('');
@@ -328,7 +333,7 @@ export default function StudioPage() {
     setBackendError('');
     try {
       const q = encodeURIComponent(workspaceId);
-      const [customerData, projectData, invoiceData, offerData, productData, emailData, templateData, portalData, settingsData] = await Promise.all([
+      const [customerData, projectData, invoiceData, offerData, productData, emailData, templateData, portalData, activityData, settingsData] = await Promise.all([
         requestJson<{ customers: Customer[] }>(`/api/hive/customers?workspace=${q}`),
         requestJson<{ projects: Project[] }>(`/api/hive/projects?workspace=${q}`),
         requestJson<{ invoices: Invoice[] }>(`/api/hive/invoices?workspace=${q}`),
@@ -337,6 +342,7 @@ export default function StudioPage() {
         requestJson<{ emails: EmailLog[] }>(`/api/hive/emails?workspace=${q}`),
         requestJson<{ templates: EmailTemplateRow[] }>(`/api/hive/email-templates?workspace=${q}`),
         requestJson<PortalData>(`/api/hive/portal?workspace=${q}`),
+        requestJson<{ activity: UnifiedActivity[] }>(`/api/hive/activity?workspace=${q}`),
         requestJson<{ settings: Settings }>(`/api/hive/settings?workspace=${q}`),
       ]);
       setCustomers(customerData.customers);
@@ -347,6 +353,7 @@ export default function StudioPage() {
       setEmails(emailData.emails);
       setEmailTemplates(templateData.templates);
       setPortal(portalData);
+      setActivityFeed(activityData.activity);
       setSettings(settingsData.settings);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Workspace konnte nicht geladen werden';
@@ -1226,6 +1233,7 @@ export default function StudioPage() {
     ['catalog', 'Leistungen', Package],
     ['emails', 'E-Mail', Mail],
     ['portal', 'Portal', ShieldCheck],
+    ['activity', 'Aktivität', RefreshCw],
     ...(['owner','admin'].includes(activeWorkspace?.role || '') ? [['team', 'Team', Users] as const] : []),
     ['branding', 'Business', Settings2],
   ] as const;
@@ -1423,6 +1431,23 @@ export default function StudioPage() {
             <span className="hsv-letter"><RefreshCw size={15}/></span>
             <span className="hsv-grow"><strong>{item.summary}</strong><small>{item.event_type} · {new Date(item.created_at).toLocaleString('de-CH')}</small></span>
           </div>)}</div>
+        </>}
+
+        {tab === 'activity' && <>
+          <div className="hsv-rowtop">
+            <strong>{activityFeed.length} Ereignisse</strong>
+            <button className="hsv-outline" onClick={() => activeWorkspaceId && void loadWorkspaceData(activeWorkspaceId)}><RefreshCw size={14}/> Aktualisieren</button>
+          </div>
+          <div className="hsv-table">
+            {activityFeed.length ? activityFeed.map((item) => <div key={`${item.source}-${item.id}`}>
+              <span className="hsv-letter">{item.source === 'invoice' ? 'R' : item.source === 'offer' ? 'O' : item.source === 'email' ? '@' : '•'}</span>
+              <span className="hsv-grow">
+                <strong>{item.summary}</strong>
+                <small>{item.source} · {item.kind.replaceAll('_',' ')}{item.meta ? ` · ${item.meta}` : ''}</small>
+              </span>
+              <small>{new Date(item.createdAt).toLocaleString('de-CH')}</small>
+            </div>) : <p className="hsv-empty">Noch keine Aktivität.</p>}
+          </div>
         </>}
 
         {tab === 'team' && <>
