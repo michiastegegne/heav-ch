@@ -71,8 +71,8 @@ async function resolveScope(
 export async function POST(request: Request) {
   try {
     const payload = bodySchema.parse(await request.json());
-    assertWorkspaceAllowed(payload.workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(payload.workspaceId, supabase);
     const scope = await resolveScope(
       supabase,
       payload.workspaceId,
