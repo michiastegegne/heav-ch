@@ -5,8 +5,8 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const workspaceId = z.string().uuid().parse(url.searchParams.get('workspace'));
-    assertWorkspaceAllowed(workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(workspaceId, supabase);
 
     const { data, error } = await supabase
       .from('email_delivery_logs')
