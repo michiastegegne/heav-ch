@@ -3,7 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft, ArrowRight, BriefcaseBusiness, Check, CreditCard, FileText,
-  LayoutDashboard, Mail, Package, Plus, RefreshCw, Settings2, ShieldCheck, Trash2, Users, X,
+  LayoutDashboard, Mail, Package, Plus, RefreshCw, Search, Settings2, ShieldCheck, Trash2, Users, X,
 } from 'lucide-react';
 import { createPublicSupabaseBrowserClient } from '@/lib/supabase/public-browser';
 import './studio.css';
@@ -130,6 +130,8 @@ export default function StudioPage() {
   const [busy, setBusy] = useState(true);
   const [backendError, setBackendError] = useState('');
   const [notice, setNotice] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [businessOpen, setBusinessOpen] = useState(false);
   const [businessDraft, setBusinessDraft] = useState({ name:'', invoicePrefix:'HIVE' });
@@ -357,6 +359,17 @@ export default function StudioPage() {
   useEffect(() => { void loadWorkspaces(); }, [loadWorkspaces]);
   useEffect(() => { if (activeWorkspaceId) void loadWorkspaceData(activeWorkspaceId); }, [activeWorkspaceId, loadWorkspaceData]);
   useEffect(() => { if (tab === 'team' && activeWorkspaceId) void loadTeam(activeWorkspaceId); }, [tab, activeWorkspaceId, loadTeam]);
+  useEffect(() => {
+    const handler = (event:KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setSearchOpen((open) => !open);
+      }
+      if (event.key === 'Escape') setSearchOpen(false);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   const invoiceTotal = useMemo(
     () => invoiceDraft.lines.reduce((sum, line) => sum + Math.round(line.quantity * line.unitPrice * 100), 0),
@@ -370,6 +383,45 @@ export default function StudioPage() {
     () => new Set(invoices.map((invoice) => invoice.source_offer_id).filter(Boolean)),
     [invoices],
   );
+  const searchResults = useMemo(() => {
+    const q=searchQuery.trim().toLowerCase();
+    if (!q) return [] as Array<{kind:'customer'|'project'|'invoice'|'offer';id:string;label:string;meta:string}>;
+    const matches:Array<{kind:'customer'|'project'|'invoice'|'offer';id:string;label:string;meta:string}>=[];
+    for (const customer of customers) {
+      const label=customerName(customer);
+      const hay=[label,customer.email,customer.city].filter(Boolean).join(' ').toLowerCase();
+      if (hay.includes(q)) matches.push({kind:'customer',id:customer.id,label,meta:customer.email || 'Kunde'});
+    }
+    for (const project of projects) {
+      const label=project.title;
+      const hay=[label,relatedName(project.customers),project.status].join(' ').toLowerCase();
+      if (hay.includes(q)) matches.push({kind:'project',id:project.id,label,meta:`${relatedName(project.customers)} · ${project.status}`});
+    }
+    for (const invoice of invoices) {
+      const label=invoice.number_finalized ? invoice.invoice_number : 'Rechnungsentwurf';
+      const hay=[label,relatedName(invoice.customers),invoice.status,String(invoice.total_rappen)].join(' ').toLowerCase();
+      if (hay.includes(q)) matches.push({kind:'invoice',id:invoice.id,label,meta:`${relatedName(invoice.customers)} · ${money(invoice.total_rappen, invoice.currency)}`});
+    }
+    for (const offer of offers) {
+      const label=`${offer.offer_number} · ${offer.title}`;
+      const hay=[label,relatedName(offer.customers),offer.status].join(' ').toLowerCase();
+      if (hay.includes(q)) matches.push({kind:'offer',id:offer.id,label,meta:`${relatedName(offer.customers)} · ${money(offer.total_rappen)}`});
+    }
+    return matches.slice(0,20);
+  }, [searchQuery, customers, projects, invoices, offers]);
+
+  function selectSearchResult(result:{kind:'customer'|'project'|'invoice'|'offer';id:string}) {
+    setSearchOpen(false);
+    setSearchQuery('');
+    if (result.kind === 'customer') setTab('customers');
+    if (result.kind === 'invoice') setTab('invoices');
+    if (result.kind === 'offer') setTab('offers');
+    if (result.kind === 'project') {
+      setTab('projects');
+      void loadProjectWorkspace(result.id);
+    }
+  }
+
   const metrics = useMemo(() => ({
     paid: invoices.filter((invoice) => invoice.status === 'paid').reduce((sum, invoice) => sum + Number(invoice.total_rappen || 0), 0),
     open: invoices.filter((invoice) => invoice.status === 'sent' || invoice.status === 'overdue').reduce((sum, invoice) => sum + Number(invoice.total_rappen || 0), 0),
@@ -1167,6 +1219,7 @@ export default function StudioPage() {
           setBusinessOpen(true);
         }}><Plus size={14}/> Business</button>
       </div>
+      <button className="hsv-outline" type="button" onClick={() => setSearchOpen(true)}><Search size={14}/> Suche <kbd>⌘K</kbd></button>
       <span className="hsv-mode">DEV DATABASE · E-MAIL-VERSAND GESPERRT</span>
       <a className="hsv-back" href="/account">Account <ArrowRight size={15}/></a>
     </header>
@@ -1415,6 +1468,25 @@ export default function StudioPage() {
         </form>}
       </main>
     </div>
+
+    {searchOpen && <div className="hsv-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) setSearchOpen(false); }}>
+      <div className="hsv-dialog" style={{maxWidth:680,padding:0,overflow:'hidden'}}>
+        <div style={{display:'flex',alignItems:'center',gap:12,padding:'16px 18px',borderBottom:'1px solid rgba(0,0,0,.12)'}}>
+          <Search size={18}/>
+          <input autoFocus value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Kunden, Projekte, Rechnungen, Offerten…" style={{border:0,outline:'none',fontSize:18,width:'100%',background:'transparent'}}/>
+          <kbd>ESC</kbd>
+        </div>
+        <div className="hsv-table" style={{maxHeight:480,overflow:'auto'}}>
+          {!searchQuery.trim() && <p className="hsv-empty">Tippen, um im aktuellen Business zu suchen.</p>}
+          {searchQuery.trim() && !searchResults.length && <p className="hsv-empty">Keine Treffer.</p>}
+          {searchResults.map((result) => <button key={`${result.kind}-${result.id}`} type="button" onClick={() => selectSearchResult(result)} style={{width:'100%',textAlign:'left'}}>
+            <span className="hsv-letter">{result.kind === 'customer' ? 'K' : result.kind === 'project' ? 'P' : result.kind === 'invoice' ? 'R' : 'O'}</span>
+            <span className="hsv-grow"><strong>{result.label}</strong><small>{result.meta}</small></span>
+            <small>{result.kind}</small><ArrowRight size={15}/>
+          </button>)}
+        </div>
+      </div>
+    </div>}
 
     {notice && <div className="hsv-toast" role="status">{notice}<button aria-label="Schliessen" onClick={() => setNotice('')}><X size={16}/></button></div>}
 
