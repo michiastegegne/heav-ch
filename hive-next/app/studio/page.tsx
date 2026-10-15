@@ -222,6 +222,12 @@ export default function StudioPage() {
     () => offerDraft.lines.reduce((sum, line) => sum + Math.round(line.quantity * line.unitPrice * 100), 0),
     [offerDraft.lines],
   );
+  const metrics = useMemo(() => ({
+    paid: invoices.filter((invoice) => invoice.status === 'paid').reduce((sum, invoice) => sum + Number(invoice.total_rappen || 0), 0),
+    open: invoices.filter((invoice) => invoice.status === 'sent' || invoice.status === 'overdue').reduce((sum, invoice) => sum + Number(invoice.total_rappen || 0), 0),
+    activeProjects: projects.filter((project) => project.status === 'active').length,
+    offerPipeline: offers.filter((offer) => offer.status === 'draft' || offer.status === 'sent').reduce((sum, offer) => sum + Number(offer.total_rappen || 0), 0),
+  }), [invoices, projects, offers]);
 
   async function saveCustomer(event: FormEvent) {
     event.preventDefault();
@@ -832,10 +838,11 @@ export default function StudioPage() {
         {tab === 'overview' && <>
           <div className="hsv-cards">
             <button onClick={() => setTab('customers')}><span>KUNDEN</span><strong>{customers.length.toString().padStart(2, '0')}</strong><small>Öffnen <ArrowRight size={14}/></small></button>
-            <button onClick={() => setTab('projects')}><span>PROJEKTE</span><strong>{projects.length.toString().padStart(2, '0')}</strong><small>Öffnen <ArrowRight size={14}/></small></button>
-            <button onClick={() => setTab('invoices')}><span>RECHNUNGEN</span><strong>{invoices.length.toString().padStart(2, '0')}</strong><small>Öffnen <ArrowRight size={14}/></small></button>
-            <button onClick={() => setTab('offers')}><span>OFFERTEN</span><strong>{offers.length.toString().padStart(2, '0')}</strong><small>Öffnen <ArrowRight size={14}/></small></button>
+            <button onClick={() => setTab('projects')}><span>AKTIVE PROJEKTE</span><strong>{metrics.activeProjects.toString().padStart(2, '0')}</strong><small>{projects.length} total <ArrowRight size={14}/></small></button>
+            <button onClick={() => setTab('invoices')}><span>OFFENE RECHNUNGEN</span><strong style={{fontSize:24}}>{money(metrics.open)}</strong><small>{invoices.length} Dokumente <ArrowRight size={14}/></small></button>
+            <button onClick={() => setTab('offers')}><span>OFFERTEN-PIPELINE</span><strong style={{fontSize:24}}>{money(metrics.offerPipeline)}</strong><small>{offers.length} Offerten <ArrowRight size={14}/></small></button>
           </div>
+          <div className="hsv-rowtop" style={{margin:'18px 0'}}><strong>Bezahlter Rechnungswert: {money(metrics.paid)}</strong><small>Dev-Kontext inkl. archivierter Kopien</small></div>
           <div className="hsv-intro">
             <span className="hsv-big-logo">{settings?.logo_url ? <img src={settings.logo_url} alt="Business Logo"/> : businessName.charAt(0)}</span>
             <div><span>ECHTER DEV-KONTEXT</span><h2>{businessName}</h2><p>Dieser Workspace enthält eine isolierte Kopie des bestehenden CRM-Kontexts. Änderungen hier betreffen nicht die freigegebenen Live-Workspaces.</p><button onClick={() => setTab('branding')}>Business bearbeiten <ArrowRight size={15}/></button></div>
@@ -876,8 +883,8 @@ export default function StudioPage() {
             <button onClick={() => void invoiceAction(invoice, 'download')}>PDF</button>
             {invoice.status === 'draft' && !invoice.is_legacy && <button onClick={() => void openInvoiceDraft(invoice)}>Bearbeiten</button>}
             {invoice.status === 'draft' && !invoice.is_legacy && <button onClick={() => void deleteInvoice(invoice)}><Trash2 size={16}/></button>}
-            {(invoice.status === 'sent' || invoice.status === 'overdue') && <button onClick={() => void invoiceAction(invoice, 'mark_paid')}>Bezahlt</button>}
-            {invoice.status !== 'paid' && invoice.status !== 'cancelled' && <button onClick={() => void invoiceAction(invoice, 'cancel')}>Stornieren</button>}
+            {!invoice.is_legacy && (invoice.status === 'sent' || invoice.status === 'overdue') && <button onClick={() => void invoiceAction(invoice, 'mark_paid')}>Bezahlt</button>}
+            {!invoice.is_legacy && invoice.status !== 'paid' && invoice.status !== 'cancelled' && <button onClick={() => void invoiceAction(invoice, 'cancel')}>Stornieren</button>}
           </div>)}</div>
           <p className="hsv-warning">Der E-Mail-Versand ist in dieser Dev-Preview absichtlich serverseitig gesperrt.</p>
         </>}
