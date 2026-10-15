@@ -76,8 +76,12 @@ type Product = {
   id:string; workspace_id:string; name:string; description:string; sku:string;
   unit_price_rappen:number; tax_rate:number; active:boolean; created_at:string; updated_at:string;
 };
+type TeamMember = {
+  membership_id:string; user_id:string; role:'owner'|'admin'|'member'|'accountant';
+  email:string; display_name:string; created_at:string;
+};
 
-type Tab = 'overview' | 'customers' | 'projects' | 'invoices' | 'offers' | 'catalog' | 'emails' | 'portal' | 'branding';
+type Tab = 'overview' | 'customers' | 'projects' | 'invoices' | 'offers' | 'catalog' | 'emails' | 'portal' | 'team' | 'branding';
 type LineDraft = { description: string; quantity: number; unitPrice: number };
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -122,12 +126,15 @@ export default function StudioPage() {
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplateRow[]>([]);
   const [portal, setPortal] = useState<PortalData>({ memberships:[], invites:[], requests:[], files:[], reviews:[], activity:[] });
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [busy, setBusy] = useState(true);
   const [backendError, setBackendError] = useState('');
   const [notice, setNotice] = useState('');
 
   const [businessOpen, setBusinessOpen] = useState(false);
-  const [businessDraft, setBusinessDraft] = useState({ name:'', slug:'', invoicePrefix:'HIVE' });
+  const [businessDraft, setBusinessDraft] = useState({ name:'', invoicePrefix:'HIVE' });
+  const [teamOpen, setTeamOpen] = useState(false);
+  const [teamDraft, setTeamDraft] = useState<{email:string;role:'admin'|'member'|'accountant'}>({ email:'', role:'member' });
   const [customerOpen, setCustomerOpen] = useState(false);
   const [customerDraft, setCustomerDraft] = useState({
     id: '', company: '', contactName: '', email: '', phone: '',
@@ -237,7 +244,7 @@ export default function StudioPage() {
         body:JSON.stringify(businessDraft),
       });
       setBusinessOpen(false);
-      setBusinessDraft({ name:'', slug:'', invoicePrefix:'HIVE' });
+      setBusinessDraft({ name:'', invoicePrefix:'HIVE' });
       setWorkspaces((current) => [...current.filter((item) => item.id !== data.workspace.id), data.workspace]);
       setActiveWorkspaceId(data.workspace.id);
       setNotice('Business erstellt.');
@@ -247,15 +254,70 @@ export default function StudioPage() {
   }
 
   function updateBusinessName(name:string) {
-    const slug=name.toLowerCase()
-      .normalize('NFKD')
-      .replace(/[^a-z0-9]+/g,'-')
-      .replace(/^-+|-+$/g,'')
-      .slice(0,70);
     const prefix=name.toUpperCase()
       .replace(/[^A-Z0-9]+/g,'')
       .slice(0,8) || 'HIVE';
-    setBusinessDraft({ name, slug, invoicePrefix:prefix });
+    setBusinessDraft({ name, invoicePrefix:prefix });
+  }
+
+  const loadTeam = useCallback(async (workspaceId:string) => {
+    if (!workspaceId) return;
+    const workspace = workspaces.find((item) => item.id === workspaceId);
+    if (!workspace || !['owner','admin'].includes(workspace.role)) {
+      setTeamMembers([]);
+      return;
+    }
+    try {
+      const data = await requestJson<{members:TeamMember[]}>(`/api/hive/team?workspace=${encodeURIComponent(workspaceId)}`);
+      setTeamMembers(data.members);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Team konnte nicht geladen werden.');
+    }
+  }, [workspaces]);
+
+  async function addTeamMember(event:FormEvent) {
+    event.preventDefault();
+    if (!activeWorkspaceId) return;
+    try {
+      await requestJson('/api/hive/team', {
+        method:'POST',
+        body:JSON.stringify({ action:'add', workspaceId:activeWorkspaceId, email:teamDraft.email, role:teamDraft.role }),
+      });
+      setTeamOpen(false);
+      setTeamDraft({email:'',role:'member'});
+      setNotice('Teammitglied hinzugefügt.');
+      await loadTeam(activeWorkspaceId);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Teammitglied konnte nicht hinzugefügt werden.');
+    }
+  }
+
+  async function updateTeamRole(member:TeamMember, role:'admin'|'member'|'accountant') {
+    if (!activeWorkspaceId) return;
+    try {
+      await requestJson('/api/hive/team', {
+        method:'POST',
+        body:JSON.stringify({ action:'role', workspaceId:activeWorkspaceId, userId:member.user_id, role }),
+      });
+      setNotice('Rolle aktualisiert.');
+      await loadTeam(activeWorkspaceId);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Rolle konnte nicht geändert werden.');
+    }
+  }
+
+  async function removeTeamMember(member:TeamMember) {
+    if (!activeWorkspaceId || !confirm(`${member.display_name || member.email} wirklich aus dem Team entfernen?`)) return;
+    try {
+      await requestJson('/api/hive/team', {
+        method:'POST',
+        body:JSON.stringify({ action:'remove', workspaceId:activeWorkspaceId, userId:member.user_id }),
+      });
+      setNotice('Teammitglied entfernt.');
+      await loadTeam(activeWorkspaceId);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Teammitglied konnte nicht entfernt werden.');
+    }
   }
 
   const loadWorkspaceData = useCallback(async (workspaceId: string) => {
@@ -294,6 +356,7 @@ export default function StudioPage() {
 
   useEffect(() => { void loadWorkspaces(); }, [loadWorkspaces]);
   useEffect(() => { if (activeWorkspaceId) void loadWorkspaceData(activeWorkspaceId); }, [activeWorkspaceId, loadWorkspaceData]);
+  useEffect(() => { if (tab === 'team' && activeWorkspaceId) void loadTeam(activeWorkspaceId); }, [tab, activeWorkspaceId, loadTeam]);
 
   const invoiceTotal = useMemo(
     () => invoiceDraft.lines.reduce((sum, line) => sum + Math.round(line.quantity * line.unitPrice * 100), 0),
@@ -1085,6 +1148,7 @@ export default function StudioPage() {
     ['catalog', 'Leistungen', Package],
     ['emails', 'E-Mail', Mail],
     ['portal', 'Portal', ShieldCheck],
+    ...(['owner','admin'].includes(activeWorkspace?.role || '') ? [['team', 'Team', Users] as const] : []),
     ['branding', 'Business', Settings2],
   ] as const;
 
@@ -1097,7 +1161,7 @@ export default function StudioPage() {
           {workspaces.map((workspace) => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}
         </select>
         <button className="hsv-outline" type="button" onClick={() => {
-          setBusinessDraft({ name:'', slug:'', invoicePrefix:'HIVE' });
+          setBusinessDraft({ name:'', invoicePrefix:'HIVE' });
           setBusinessOpen(true);
         }}><Plus size={14}/> Business</button>
       </div>
@@ -1280,6 +1344,32 @@ export default function StudioPage() {
           </div>)}</div>
         </>}
 
+        {tab === 'team' && <>
+          <div className="hsv-rowtop">
+            <strong>{teamMembers.length} Teammitglieder</strong>
+            {activeWorkspace?.role === 'owner' && <button className="hsv-primary" onClick={() => { setTeamDraft({email:'',role:'member'}); setTeamOpen(true); }}><Plus size={15}/> Mitglied hinzufügen</button>}
+          </div>
+          <div className="hsv-intro" style={{marginBottom:18}}>
+            <span className="hsv-big-logo"><Users size={26}/></span>
+            <div><span>BUSINESS TEAM</span><h2>Rollen & Zugriff</h2><p>Owner verwalten das Team. Admins können Business-Daten verwalten, Accountants Finanzen bearbeiten und Members Projekte/Kunden nutzen.</p></div>
+          </div>
+          <div className="hsv-table">
+            {teamMembers.map((member) => <div key={member.membership_id}>
+              <span className="hsv-letter">{(member.display_name || member.email || '?').charAt(0).toUpperCase()}</span>
+              <span className="hsv-grow"><strong>{member.display_name || member.email}</strong><small>{member.email} · seit {new Date(member.created_at).toLocaleDateString('de-CH')}</small></span>
+              {member.role === 'owner' ? <strong>Owner</strong> : activeWorkspace?.role === 'owner' ? <>
+                <select value={member.role} onChange={(e) => void updateTeamRole(member, e.target.value as 'admin'|'member'|'accountant')}>
+                  <option value="admin">Admin</option>
+                  <option value="member">Member</option>
+                  <option value="accountant">Accountant</option>
+                </select>
+                <button aria-label="Teammitglied entfernen" onClick={() => void removeTeamMember(member)}><Trash2 size={15}/></button>
+              </> : <strong>{member.role}</strong>}
+            </div>)}
+          </div>
+          {activeWorkspace?.role === 'owner' && <p className="hsv-warning">Neue Personen müssen sich aktuell einmal bei Hive anmelden, bevor sie per E-Mail einem Team hinzugefügt werden können. Sobald Clerk vollständig aktiviert ist, kann daraus direkt ein echter Invite werden.</p>}
+        </>}
+
         {tab === 'branding' && settings && <form className="hsv-branding" onSubmit={saveSettings}>
           <div className="hsv-brand-preview"><span>{settings.logo_url ? <img src={settings.logo_url} alt="Logo"/> : settings.business_name.charAt(0)}</span><div><strong>{settings.business_name}</strong><small>{activeWorkspace?.role} · Dev-Workspace</small></div></div>
           <label>Business-Name<input value={settings.business_name} onChange={(e) => setSettings({ ...settings, business_name: e.target.value })}/></label>
@@ -1327,10 +1417,21 @@ export default function StudioPage() {
     {businessOpen && <Modal title="Neues Business" onClose={() => setBusinessOpen(false)}>
       <form onSubmit={createBusiness}>
         <label>Name<input required minLength={2} value={businessDraft.name} onChange={(e) => updateBusinessName(e.target.value)} placeholder="z.B. Wedding Vocals"/></label>
-        <label>Slug<div style={{display:'flex',alignItems:'center',gap:8}}><span style={{fontSize:12,opacity:.6}}>hive-dev-</span><input required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" value={businessDraft.slug} onChange={(e) => setBusinessDraft({ ...businessDraft, slug:e.target.value.toLowerCase().replace(/[^a-z0-9-]/g,'') })}/></div></label>
         <label>Rechnungspräfix<input required maxLength={12} pattern="[A-Z0-9-]+" value={businessDraft.invoicePrefix} onChange={(e) => setBusinessDraft({ ...businessDraft, invoicePrefix:e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g,'') })} placeholder="WV"/></label>
-        <p className="hsv-warning">Wird als isolierter Dev-Business-Workspace erstellt. Live-Workspaces bleiben unberührt.</p>
+        <p className="hsv-warning">Hive erzeugt den technischen Dev-Slug automatisch. Live-Workspaces bleiben unberührt.</p>
         <button className="hsv-primary" type="submit">Business erstellen <Check size={15}/></button>
+      </form>
+    </Modal>}
+
+    {teamOpen && <Modal title="Teammitglied hinzufügen" onClose={() => setTeamOpen(false)}>
+      <form onSubmit={addTeamMember}>
+        <label>E-Mail<input required type="email" value={teamDraft.email} onChange={(e) => setTeamDraft({ ...teamDraft, email:e.target.value })} placeholder="name@example.com"/></label>
+        <label>Rolle<select value={teamDraft.role} onChange={(e) => setTeamDraft({ ...teamDraft, role:e.target.value as 'admin'|'member'|'accountant' })}>
+          <option value="member">Member · Projekte & Kunden</option>
+          <option value="accountant">Accountant · Finanzen</option>
+          <option value="admin">Admin · Business verwalten</option>
+        </select></label>
+        <button className="hsv-primary" type="submit">Hinzufügen <Check size={15}/></button>
       </form>
     </Modal>}
 
