@@ -2,18 +2,26 @@
 
 begin;
 
-insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
-values(
-  'workspace-assets',
-  'workspace-assets',
-  true,
-  5242880,
-  array['image/png','image/jpeg','image/webp']::text[]
-)
-on conflict(id) do update
-set public=true,
-    file_size_limit=excluded.file_size_limit,
-    allowed_mime_types=excluded.allowed_mime_types;
+do $branding_bucket$
+begin
+  if to_regclass('storage.buckets') is not null then
+    execute $sql$
+      insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
+      values(
+        'workspace-assets',
+        'workspace-assets',
+        true,
+        5242880,
+        array['image/png','image/jpeg','image/webp']::text[]
+      )
+      on conflict(id) do update
+      set public=true,
+          file_size_limit=excluded.file_size_limit,
+          allowed_mime_types=excluded.allowed_mime_types
+    $sql$;
+  end if;
+end;
+$branding_bucket$;
 
 create or replace function public.can_manage_workspace_asset(
   p_bucket_id text,
