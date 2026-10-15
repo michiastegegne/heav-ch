@@ -125,7 +125,7 @@ grant execute on function public.is_workspace_member(uuid, public.workspace_role
 -- written against auth.uid(). Rewrite only routines that already contain an
 -- explicit Studio-owner or workspace-membership authorization guard;
 -- customer-facing RPCs without those guards are deliberately excluded.
-do $
+do $hive_bridge$
 declare
   v_function record;
   v_source text;
@@ -164,7 +164,7 @@ begin
     );
   end loop;
 end;
-$;
+$hive_bridge$;
 
 -- Replace the one workspace-membership policy that still compared auth.uid()
 -- directly. Other workspace policies already call is_workspace_member().
@@ -215,7 +215,7 @@ returns void
 language plpgsql
 security definer
 set search_path = pg_catalog, public
-as $
+as $hive_project_delete$
 declare
   v_workspace uuid;
 begin
@@ -257,7 +257,7 @@ begin
   where id = p_project_id
     and workspace_id = v_workspace;
 end;
-$;
+$hive_project_delete$;
 
 revoke all on function public.delete_workspace_project(uuid) from public, anon;
 grant execute on function public.delete_workspace_project(uuid) to authenticated;
@@ -271,7 +271,7 @@ returns void
 language plpgsql
 security definer
 set search_path = pg_catalog, public
-as $
+as $hive_customer_delete$
 declare
   v_workspace uuid;
 begin
@@ -305,7 +305,7 @@ begin
   where id = p_customer_id
     and workspace_id = v_workspace;
 end;
-$;
+$hive_customer_delete$;
 
 revoke all on function public.delete_workspace_customer(uuid, uuid) from public, anon;
 grant execute on function public.delete_workspace_customer(uuid, uuid) to authenticated;
