@@ -2,9 +2,16 @@ import { z } from 'zod';
 import { assertWorkspaceAllowed, jsonError, requireHiveDataAccess } from '@/lib/hive/access';
 
 const idSchema = z.string().uuid();
-const actionSchema = z.object({
-  action: z.enum(['share', 'withdraw', 'delete']),
-});
+const actionSchema = z.discriminatedUnion('action', [
+  z.object({ action: z.enum(['share', 'withdraw', 'delete']) }),
+  z.object({
+    action: z.literal('convert'),
+    issueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  }).refine((value) => value.dueDate >= value.issueDate, {
+    message: 'Fälligkeitsdatum liegt vor dem Rechnungsdatum',
+  }),
+]);
 const draftSchema = z.object({
   workspaceId: z.string().uuid(),
   customerId: z.string().uuid(),
@@ -126,9 +133,28 @@ export async function POST(
     const supabase = await requireHiveDataAccess();
     const offer = await resolveOffer(supabase, offerId);
 
+    if (action.action === 'convert') {
+      const { data, error } = await supabase.rpc('convert_workspace_offer_to_invoice_draft', {
+        p_offer_id: offerId,
+        p_issue_date: action.issueDate,
+        p_due_date: action.dueDate,
+      });
+      if (error) {
+        const message = String(error.message || '');
+        if (message.includes('only accepted')) {
+          return Response.json({ error: 'Nur angenommene Offerten können in Rechnungen umgewandelt werden.' }, { status: 409 });
+        }
+        if (message.includes('already converted')) {
+          return Response.json({ error: 'Für diese Offerte existiert bereits eine Rechnung.' }, { status: 409 });
+        }
+        throw error;
+      }
+      return Response.json({ ok: true, invoice: Array.isArray(data) ? data[0] : data });
+    }
+
     const rpc =
-      action === 'share' ? 'share_workspace_offer'
-      : action === 'withdraw' ? 'withdraw_workspace_offer'
+      action.action === 'share' ? 'share_workspace_offer'
+      : action.action === 'withdraw' ? 'withdraw_workspace_offer'
       : 'delete_workspace_offer';
 
     const { error } = await supabase.rpc(rpc, { p_offer_id: offerId });
