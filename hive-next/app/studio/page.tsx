@@ -915,7 +915,7 @@ export default function StudioPage() {
               <span className="auth-kicker">{template.template_key.replaceAll('_',' ').toUpperCase()}</span>
               <label>Betreff<input value={template.subject_template} onChange={(e) => setEmailTemplates((current) => current.map((item,i) => i === index ? { ...item, subject_template:e.target.value } : item))}/></label>
               <label>Text<textarea rows={7} value={template.text_template} onChange={(e) => setEmailTemplates((current) => current.map((item,i) => i === index ? { ...item, text_template:e.target.value } : item))}/></label>
-              <small>Variablen: {{first_name}}, {{company_name}}, {{owner_name}}, {{invoice_number}}, {{offer_number}}, {{amount}}, {{due_date}}, {{portal_link}}</small>
+              <small>{'Variablen: {{first_name}}, {{company_name}}, {{owner_name}}, {{invoice_number}}, {{offer_number}}, {{amount}}, {{due_date}}, {{portal_link}}'}</small>
               <button className="hsv-primary" type="button" onClick={() => void saveEmailTemplate(template)}>Vorlage speichern <Check size={15}/></button>
             </div>)}
           </div>
