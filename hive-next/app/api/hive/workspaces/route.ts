@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { createClerkSupabaseServerClient } from '@/lib/supabase/clerk-server';
+import { allowedWorkspaceIds } from '@/lib/hive/access';
 
 export async function GET() {
   if (process.env.HIVE_CLERK_DB_BRIDGE_ENABLED !== 'true') {
@@ -17,9 +18,15 @@ export async function GET() {
 
   try {
     const supabase = await createClerkSupabaseServerClient();
+    const allowed = [...allowedWorkspaceIds()];
+    if (allowed.length === 0) {
+      return NextResponse.json({ error: 'Preview workspaces are not configured' }, { status: 503 });
+    }
+
     const { data, error } = await supabase
       .from('workspace_memberships')
       .select('workspace_id, role, workspaces(id, name, slug, status)')
+      .in('workspace_id', allowed)
       .order('created_at');
 
     if (error) {
