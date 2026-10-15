@@ -126,6 +126,8 @@ export default function StudioPage() {
   const [backendError, setBackendError] = useState('');
   const [notice, setNotice] = useState('');
 
+  const [businessOpen, setBusinessOpen] = useState(false);
+  const [businessDraft, setBusinessDraft] = useState({ name:'', slug:'', invoicePrefix:'HIVE' });
   const [customerOpen, setCustomerOpen] = useState(false);
   const [customerDraft, setCustomerDraft] = useState({
     id: '', company: '', contactName: '', email: '', phone: '',
@@ -187,6 +189,35 @@ export default function StudioPage() {
       setBusy(false);
     }
   }, []);
+
+  async function createBusiness(event: FormEvent) {
+    event.preventDefault();
+    try {
+      const data = await requestJson<{ workspace: Workspace }>('/api/hive/workspaces', {
+        method:'POST',
+        body:JSON.stringify(businessDraft),
+      });
+      setBusinessOpen(false);
+      setBusinessDraft({ name:'', slug:'', invoicePrefix:'HIVE' });
+      setWorkspaces((current) => [...current.filter((item) => item.id !== data.workspace.id), data.workspace]);
+      setActiveWorkspaceId(data.workspace.id);
+      setNotice('Business erstellt.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Business konnte nicht erstellt werden.');
+    }
+  }
+
+  function updateBusinessName(name:string) {
+    const slug=name.toLowerCase()
+      .normalize('NFKD')
+      .replace(/[^a-z0-9]+/g,'-')
+      .replace(/^-+|-+$/g,'')
+      .slice(0,70);
+    const prefix=name.toUpperCase()
+      .replace(/[^A-Z0-9]+/g,'')
+      .slice(0,8) || 'HIVE';
+    setBusinessDraft({ name, slug, invoicePrefix:prefix });
+  }
 
   const loadWorkspaceData = useCallback(async (workspaceId: string) => {
     if (!workspaceId) return;
@@ -994,6 +1025,10 @@ export default function StudioPage() {
         <select aria-label="Business auswählen" value={activeWorkspaceId} onChange={(event) => setActiveWorkspaceId(event.target.value)}>
           {workspaces.map((workspace) => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}
         </select>
+        <button className="hsv-outline" type="button" onClick={() => {
+          setBusinessDraft({ name:'', slug:'', invoicePrefix:'HIVE' });
+          setBusinessOpen(true);
+        }}><Plus size={14}/> Business</button>
       </div>
       <span className="hsv-mode">DEV DATABASE · E-MAIL-VERSAND GESPERRT</span>
       <a className="hsv-back" href="/account">Account <ArrowRight size={15}/></a>
@@ -1221,6 +1256,16 @@ export default function StudioPage() {
     </div>
 
     {notice && <div className="hsv-toast" role="status">{notice}<button aria-label="Schliessen" onClick={() => setNotice('')}><X size={16}/></button></div>}
+
+    {businessOpen && <Modal title="Neues Business" onClose={() => setBusinessOpen(false)}>
+      <form onSubmit={createBusiness}>
+        <label>Name<input required minLength={2} value={businessDraft.name} onChange={(e) => updateBusinessName(e.target.value)} placeholder="z.B. Wedding Vocals"/></label>
+        <label>Slug<div style={{display:'flex',alignItems:'center',gap:8}}><span style={{fontSize:12,opacity:.6}}>hive-dev-</span><input required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" value={businessDraft.slug} onChange={(e) => setBusinessDraft({ ...businessDraft, slug:e.target.value.toLowerCase().replace(/[^a-z0-9-]/g,'') })}/></div></label>
+        <label>Rechnungspräfix<input required maxLength={12} pattern="[A-Z0-9-]+" value={businessDraft.invoicePrefix} onChange={(e) => setBusinessDraft({ ...businessDraft, invoicePrefix:e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g,'') })} placeholder="WV"/></label>
+        <p className="hsv-warning">Wird als isolierter Dev-Business-Workspace erstellt. Live-Workspaces bleiben unberührt.</p>
+        <button className="hsv-primary" type="submit">Business erstellen <Check size={15}/></button>
+      </form>
+    </Modal>}
 
     {fileOpen && <Modal title="Datei hochladen" onClose={() => setFileOpen(false)}>
       <form onSubmit={uploadPortalFile}>
