@@ -47,7 +47,7 @@ export async function POST(
       );
     }
 
-    if (action === 'send') {
+    if (action === 'send' && process.env.HIVE_ENABLE_EMAIL_SEND !== 'true') {
       return Response.json(
         { error: 'E-Mail-Versand ist in der Hive-Dev-Preview deaktiviert.' },
         { status: 403 },
@@ -68,6 +68,7 @@ export async function POST(
     }
 
     const payload: Record<string, string> = { invoiceId, action };
+    if (action === 'send') payload.requestKey = crypto.randomUUID();
 
     const upstream = await fetch(`${supabaseUrl}/functions/v1/invoice-document`, {
       method: 'POST',
