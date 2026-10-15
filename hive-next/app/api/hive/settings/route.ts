@@ -38,8 +38,8 @@ const fields = 'workspace_id, business_name, legal_name, contact_name, email, ph
 export async function GET(request: Request) {
   try {
     const workspaceId = workspaceSchema.parse(new URL(request.url).searchParams.get('workspace'));
-    assertWorkspaceAllowed(workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(workspaceId, supabase);
     const { data, error } = await supabase.from('workspace_settings').select(fields).eq('workspace_id', workspaceId).single();
     if (error) throw error;
     return Response.json({ settings: data }, { headers: { 'Cache-Control': 'private, no-store' } });
@@ -51,8 +51,8 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const payload = settingsSchema.parse(await request.json());
-    assertWorkspaceAllowed(payload.workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(payload.workspaceId, supabase);
 
     const updates: Record<string, unknown> = {};
     const map: Record<string, string> = {
