@@ -35,6 +35,13 @@ http.createServer(async(req,res)=>{
   if(req.method==='POST'){const c={id:crypto.randomUUID(),...body};customers.push(c);return reply(c,201);}
   rows=customers.filter(c=>c.workspace_id===scope);
  }
+ if(table==='invoices'&&scope===a)rows=[
+  {id:'30000000-0000-4000-8000-000000000001',workspace_id:a,customer_id:customers[0].id,invoice_number:'TEST-2026-001',status:'overdue',due_date:'2026-10-10',total_rappen:260000,currency:'CHF',number_finalized:true,is_legacy:true,customers:{company:'Nordkunde'}},
+  {id:'30000000-0000-4000-8000-000000000002',workspace_id:a,customer_id:customers[0].id,invoice_number:'TEST-2026-002',status:'sent',due_date:'2026-10-30',total_rappen:420000,currency:'CHF',number_finalized:true,is_legacy:true,customers:{company:'Atelier Seefeld'}},
+  {id:'30000000-0000-4000-8000-000000000003',workspace_id:a,customer_id:customers[0].id,invoice_number:'TEST-2026-003',status:'paid',due_date:'2026-09-30',total_rappen:1280000,currency:'CHF',number_finalized:true,is_legacy:true,customers:{company:'Atelier Seefeld'}}];
+ if(table==='projects'&&scope===a)rows=[
+ {id:'40000000-0000-4000-8000-000000000001',workspace_id:a,customer_id:customers[0].id,title:'Herbstkampagne — Brand Film',status:'active',due_date:'2026-10-28',budget_rappen:420000,customers:{company:'Atelier Seefeld'}},
+ {id:'40000000-0000-4000-8000-000000000002',workspace_id:a,customer_id:customers[0].id,title:'Portraits für das neue Team',status:'planning',due_date:'2026-11-04',budget_rappen:180000,customers:{company:'Nordkunde'}}];
  if(table==='workspace_settings')rows=[{workspace_id:scope,business_name:workspaces.find(w=>w.id===scope)?.name,email:'owner@example.test',currency:'CHF',accent_color:'#ff0000',default_tax_rate:0,default_due_days:30}];
  const id=url.searchParams.get('id')?.replace('eq.','');if(id)rows=rows.filter(x=>x.id===id);
  return reply(req.headers.accept?.includes('vnd.pgrst.object')?(rows[0]||null):rows);

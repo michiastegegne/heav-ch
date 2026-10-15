@@ -2,11 +2,13 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowLeft, ArrowRight, BriefcaseBusiness, Check, CreditCard, FileText,
+  ArrowLeft, ArrowRight, ArrowUpRight, BriefcaseBusiness, Check, CreditCard, FileText,
   LayoutDashboard, Mail, Package, Plus, RefreshCw, Search, Settings2, ShieldCheck, Trash2, Users, X,
 } from 'lucide-react';
 import { createPublicSupabaseBrowserClient } from '@/lib/supabase/public-browser';
+import WorkspaceOverview from './workspace-overview';
 import './studio.css';
+import './workspace-design.css';
 
 type Workspace = { id: string; name: string; slug: string; status: string; role: string };
 type Customer = {
@@ -108,6 +110,8 @@ const afterDays = (days: number) => {
 };
 const money = (rappen: number, currency = 'CHF') =>
   new Intl.NumberFormat('de-CH', { style: 'currency', currency }).format((Number(rappen) || 0) / 100);
+const stateLabel:Record<string,string> = { planning:'Geplant', active:'In Arbeit', completed:'Abgeschlossen', on_hold:'Pausiert', draft:'Entwurf', sent:'Offen', paid:'Bezahlt', overdue:'Überfällig', cancelled:'Storniert', accepted:'Angenommen', withdrawn:'Zurückgezogen', expired:'Abgelaufen' };
+const shortDate = (value:string) => value ? new Intl.DateTimeFormat('de-CH',{day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date(value+'T12:00:00')) : '—';
 const customerName = (customer?: Partial<Customer> | null) =>
   customer?.company?.trim() || customer?.contact_name?.trim() || 'Ohne Name';
 const relatedName = (relation?: { company?: string | null; contact_name?: string | null } | null) =>
@@ -131,6 +135,9 @@ async function requestJson<T>(input: string, init?: RequestInit): Promise<T> {
 
 export default function StudioPage() {
   const [tab, setTab] = useState<Tab>('overview');
+  const [listQuery, setListQuery] = useState('');
+  const [listStatus, setListStatus] = useState('all');
+  useEffect(() => { setListQuery(''); setListStatus('all'); }, [tab]);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState('');
   const currentWorkspace = useRef(activeWorkspaceId);
@@ -1270,7 +1277,7 @@ export default function StudioPage() {
           <span>HIVE BACKEND</span>
           <h2>Backend vorbereitet.</h2>
           <p>{backendError}</p>
-          <p>Die Datenbank und Dev-Kopien sind verbunden. Für den Zugriff fehlt noch die aktivierte Clerk-Session.</p>
+          <p>Bitte melde dich erneut an oder versuche es in einem Moment nochmals.</p>
           <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
             <a href="/login">Zum Login</a>
             <button className="hsv-outline" onClick={() => void loadWorkspaces()}><RefreshCw size={14}/> Erneut prüfen</button>
@@ -1281,7 +1288,7 @@ export default function StudioPage() {
   }
 
   const nav = [
-    ['overview', 'Überblick', LayoutDashboard],
+    ['overview', 'Übersicht', LayoutDashboard],
     ['customers', 'Kunden', Users],
     ['projects', 'Projekte', BriefcaseBusiness],
     ['invoices', 'Rechnungen', CreditCard],
@@ -1293,6 +1300,14 @@ export default function StudioPage() {
     ...(['owner','admin'].includes(activeWorkspace?.role || '') ? [['team', 'Team', Users] as const] : []),
     ['branding', 'Business', Settings2],
   ] as const;
+
+  const matchesList = (...values:unknown[]) => values.filter(Boolean).join(' ').toLocaleLowerCase('de-CH').includes(listQuery.toLocaleLowerCase('de-CH').trim());
+  const visibleCustomers = customers.filter(c => matchesList(customerName(c), c.email, c.city));
+  const visibleProjects = projects.filter(p => matchesList(p.title,relatedName(p.customers)) && (listStatus === 'all' || p.status === listStatus));
+  const visibleInvoices = invoices.filter(i => matchesList(i.invoice_number,relatedName(i.customers)) && (listStatus === 'all' || i.status === listStatus));
+  const visibleOffers = offers.filter(o => matchesList(o.title,o.offer_number,relatedName(o.customers)) && (listStatus === 'all' || o.status === listStatus));
+  const listTabs = ['customers','projects','invoices','offers'].includes(tab);
+  const headingCopy:Partial<Record<Tab,string>> = {overview:'Dein Studio auf einen Blick.',customers:'Kontakte, Beziehungen und die gemeinsame Arbeit.',projects:'Von der ersten Idee bis zur letzten Abgabe.',invoices:'Rechnungen, Fälligkeiten und Zahlungseingänge.',offers:'Aus Anfragen werden konkrete Aufträge.',catalog:'Deine Leistungen und Preise an einem Ort.',portal:'Dokumente und Freigaben für deine Kunden.',activity:'Was sich in deinem Workspace verändert hat.'};
 
   return <div className="hsv" style={{ '--business-accent': accent } as React.CSSProperties}>
     <header className="hsv-top">
@@ -1314,60 +1329,51 @@ export default function StudioPage() {
           setBusinessOpen(true);
         }}><Plus size={14}/> Business</button>
       </div>
-      <button className="hsv-outline" type="button" onClick={() => setSearchOpen(true)}><Search size={14}/> Suche <kbd>⌘K</kbd></button>
-      <span className="hsv-mode">DEV-WORKSPACE · VERSAND GESPERRT</span>
-      <a className="hsv-back" href="/account">Account <ArrowRight size={15}/></a>
+      <button className="hsv-outline" type="button" onClick={() => setSearchOpen(true)}><Search size={14}/> Suchen … <kbd>⌘K</kbd></button>
+      <span className="hsv-mode"><span/> Entwicklungsumgebung</span>
+      <a className="hsv-back" href="/account">Mein Konto <ArrowRight size={15}/></a>
     </header>
 
     <div className="hsv-layout">
       <nav className="hsv-nav" aria-label="Business-Module">
-        {nav.map(([id, label, Icon]) => <button key={id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}><Icon size={17}/>{label}</button>)}
+        <span className="hive-nav-label">WORKSPACE</span>
+        {nav.map(([id, label, Icon]) => <div className="hive-nav-item" key={id}>{(id === 'invoices' || id === 'emails' || id === 'team' || (id === 'branding' && !['owner','admin'].includes(activeWorkspace?.role || ''))) && <span className="hive-nav-label">{id === 'invoices' ? 'FINANZEN' : id === 'emails' ? 'ZUSAMMENARBEIT' : 'VERWALTUNG'}</span>}<button aria-current={tab === id ? 'page' : undefined} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}><Icon size={16}/>{label}{id === 'customers' && customers.length>0 && <span className="hive-nav-count">{customers.length}</span>}</button></div>)}
+        <div className="hive-nav-bottom"><ShieldCheck size={15}/><div><strong>Geschützter Workspace</strong><span>E-Mail-Versand deaktiviert</span></div></div>
       </nav>
 
       <main className="hsv-main">
+        <div className="hive-breadcrumb"><span>{businessName.replace(/^Hive Dev · /,'')}</span><span>/</span><strong>{nav.find(([id])=>id===tab)?.[1]}</strong><time>{new Intl.DateTimeFormat('de-CH',{weekday:'short',day:'2-digit',month:'long',year:'numeric'}).format(new Date())}</time></div>
         <div className="hsv-heading">
-          <span>HIVE / {businessName.toUpperCase()}</span>
-          <h1>{tab === 'overview' ? 'Dein Business.' : nav.find(([id]) => id === tab)?.[1] + '.'}</h1>
-          <p>{busy ? 'Daten werden geladen…' : 'Kunden, Projekte und Finanzen im Überblick.'}</p>
+          <div><h1>{nav.find(([id]) => id === tab)?.[1]}</h1><p>{busy ? 'Daten werden geladen …' : (headingCopy[tab] || 'Alles Wichtige an einem Ort.')}</p></div>
+          {tab === 'overview' && <button className="hsv-primary" disabled={!customers.length || busy} onClick={()=>void openProject()}><Plus size={15}/> Neues Projekt</button>}
         </div>
+        {listTabs && <div className="hive-list-tools"><label><Search size={15}/><input aria-label="Liste durchsuchen" placeholder="Suchen nach Name, Kunde oder Nummer …" value={listQuery} onChange={e=>setListQuery(e.target.value)}/>{listQuery&&<button aria-label="Suche leeren" onClick={()=>setListQuery('')}><X size={13}/></button>}</label>{tab !== 'customers'&&<select aria-label="Status filtern" value={listStatus} onChange={e=>setListStatus(e.target.value)}><option value="all">Alle Status</option>{(tab==='projects'?['planning','active','on_hold','completed']:tab==='invoices'?['draft','sent','overdue','paid','cancelled']:['draft','sent','accepted','withdrawn','expired']).map(value=><option value={value} key={value}>{stateLabel[value]}</option>)}</select>}<span>{tab === 'customers'?visibleCustomers.length:tab === 'projects'?visibleProjects.length:tab === 'invoices'?visibleInvoices.length:visibleOffers.length} Einträge</span></div>}
 
         {backendError ? <div className="hsv-empty" role="alert"><strong>Workspace konnte nicht geladen werden.</strong><p>{backendError}</p><button className="hsv-outline" onClick={() => void loadWorkspaceData(activeWorkspaceId)}>Erneut versuchen</button></div> : loadedWorkspaceId !== activeWorkspaceId ? <div className="hsv-empty" role="status">Business wird geladen …</div> : <>
-        {tab === 'overview' && <>
-          <div className="hsv-cards">
-            <button onClick={() => setTab('customers')}><span>KUNDEN</span><strong>{customers.length.toString().padStart(2, '0')}</strong><small>Öffnen <ArrowRight size={14}/></small></button>
-            <button onClick={() => setTab('projects')}><span>AKTIVE PROJEKTE</span><strong>{metrics.activeProjects.toString().padStart(2, '0')}</strong><small>{projects.length} total <ArrowRight size={14}/></small></button>
-            <button onClick={() => setTab('invoices')}><span>OFFENE RECHNUNGEN</span><strong style={{fontSize:24}}>{money(metrics.open)}</strong><small>{invoices.length} Dokumente <ArrowRight size={14}/></small></button>
-            <button onClick={() => setTab('offers')}><span>OFFERTEN-PIPELINE</span><strong style={{fontSize:24}}>{money(metrics.offerPipeline)}</strong><small>{offers.length} Offerten <ArrowRight size={14}/></small></button>
-          </div>
-          <div className="hsv-rowtop" style={{margin:'18px 0'}}><strong>Bezahlter Rechnungswert: {money(metrics.paid)}</strong><small>Dev-Kontext inkl. archivierter Kopien</small></div>
-          <div className="hsv-intro">
-            <span className="hsv-big-logo">{settings?.logo_url ? <img src={settings.logo_url} alt="Business Logo"/> : businessName.charAt(0)}</span>
-            <div><span>ECHTER DEV-KONTEXT</span><h2>{businessName}</h2><p>Dieser Workspace enthält eine isolierte Kopie des bestehenden CRM-Kontexts. Änderungen hier betreffen nicht die freigegebenen Live-Workspaces.</p><button onClick={() => setTab('branding')}>Business bearbeiten <ArrowRight size={15}/></button></div>
-          </div>
-        </>}
+        {tab === 'overview' && <WorkspaceOverview invoices={invoices} projects={projects} customerCount={customers.length} offerCount={offers.filter(o=>o.status==='draft'||o.status==='sent').length} activity={activityFeed} onNavigate={setTab} onProject={id=>void loadProjectWorkspace(id)} onCreateProject={()=>void openProject()}/>}
 
         {tab === 'customers' && <>
           <div className="hsv-rowtop"><strong>{customers.length} Kunden</strong><button className="hsv-primary" onClick={() => openCustomer()}><Plus size={15}/> Kunde hinzufügen</button></div>
-          <div className="hsv-table">{customers.map((customer) => <div key={customer.id}>
+          <div className="hive-table-labels hive-customer-labels"><span>Kunde</span><span>Kontakt / Standort</span><span>Aktionen</span></div><div className="hsv-table hive-customer-table">{visibleCustomers.map((customer) => <div key={customer.id}>
             <span className="hsv-letter">{customerName(customer).charAt(0).toUpperCase()}</span>
-            <span className="hsv-grow"><strong>{customerName(customer)}</strong><small>{customer.email || 'Dev-Kopie · E-Mail entfernt'} · {[customer.postal_code, customer.city].filter(Boolean).join(' ') || 'Keine Adresse'}</small></span>
-            <button onClick={() => void openCustomerWorkspace(customer)}>Workspace</button>
+            <span className="hsv-grow"><strong>{customerName(customer)}</strong><small>{customer.contact_name && customer.contact_name !== customerName(customer) ? customer.contact_name : 'Kundenkontakt'}</small></span><span className="hive-contact-cell"><span>{customer.email || 'E-Mail nicht hinterlegt'}</span><small>{[customer.postal_code, customer.city].filter(Boolean).join(' ') || 'Standort nicht hinterlegt'}</small></span>
+            <button onClick={() => void openCustomerWorkspace(customer)}>Kundenakte <ArrowUpRight size={13}/></button>
             <button onClick={() => void openDepartments(customer)}>Abteilungen</button>
             <button onClick={() => openCustomer(customer)}>Bearbeiten</button>
             <button aria-label="Kunde löschen" onClick={() => void deleteCustomer(customer)}><Trash2 size={16}/></button>
-          </div>)}</div>
+          </div>)}{!visibleCustomers.length && <div className="hive-no-results"><Search size={17}/><span>Keine passenden Einträge.</span><small>{listQuery || listStatus !== 'all' ? 'Passe die Suche oder den Statusfilter an.' : 'Neue Einträge erscheinen hier.'}</small></div>}</div>
         </>}
 
         {tab === 'projects' && <>
           <div className="hsv-rowtop"><strong>{projects.length} Projekte</strong><button className="hsv-primary" disabled={!customers.length} onClick={() => void openProject()}><Plus size={15}/> Projekt erstellen</button></div>
-          <div className="hsv-table">{projects.map((project) => <div key={project.id}>
+          <div className="hsv-table">{visibleProjects.map((project) => <div key={project.id}>
             <span className="hsv-letter"><BriefcaseBusiness size={16}/></span>
-            <span className="hsv-grow"><strong>{project.title}</strong><small>{relatedName(project.customers)} · {project.status.replace('_', ' ')}</small></span>
-            <strong>{money(project.budget_rappen)}</strong>
+            <span className="hsv-grow"><strong>{project.title}</strong><small>{relatedName(project.customers)}</small></span>
+            <span className="hive-status">{stateLabel[project.status] || project.status}</span><strong className="hive-table-amount">{money(project.budget_rappen)}</strong>
             <button onClick={() => void loadProjectWorkspace(project.id)}>Workspace</button>
             <button onClick={() => void openProject(project)}>Bearbeiten</button>
             <button aria-label="Projekt löschen" onClick={() => void deleteProject(project)}><Trash2 size={16}/></button>
-          </div>)}</div>
+          </div>)}{!visibleProjects.length && <div className="hive-no-results"><Search size={17}/><span>Keine passenden Einträge.</span><small>{listQuery || listStatus !== 'all' ? 'Passe die Suche oder den Statusfilter an.' : 'Neue Einträge erscheinen hier.'}</small></div>}</div>
         </>}
 
         {tab === 'invoices' && <>
@@ -1375,9 +1381,9 @@ export default function StudioPage() {
             setInvoiceDraft({ id:'', customerId: customers[0]?.id || '', projectId: '', issueDate: today(), dueDate: afterDays(settings?.default_due_days || 30), taxRate: Number(settings?.default_tax_rate || 0), notes: '', lines: [{ description: '', quantity: 1, unitPrice: 0 }] });
             setInvoiceOpen(true);
           }}><Plus size={15}/> Rechnung erstellen</button></div>
-          <div className="hsv-table">{invoices.map((invoice) => <div key={invoice.id}>
+          <div className="hive-table-labels hive-invoice-labels"><span>Rechnung / Kunde</span><span>Status</span><span>Fälligkeit</span><span>Betrag / Aktionen</span></div><div className="hsv-table hive-invoice-table">{visibleInvoices.map((invoice) => <div key={invoice.id}>
             <span className="hsv-letter"><CreditCard size={16}/></span>
-            <span className="hsv-grow"><strong>{invoice.number_finalized ? invoice.invoice_number : 'Entwurf'}</strong><small>{relatedName(invoice.customers)} · {invoice.number_finalized ? invoice.status : invoice.invoice_number}</small></span>
+            <span className="hsv-grow"><strong>{invoice.number_finalized ? invoice.invoice_number : 'Entwurf'}</strong><small>{relatedName(invoice.customers)}</small></span><span className={`hive-status status-${invoice.status}`}>{stateLabel[invoice.status] || invoice.status}</span><span className="hive-table-date">{shortDate(invoice.due_date)}</span>
             <strong>{money(invoice.total_rappen, invoice.currency)}</strong>
             {invoice.number_finalized && <button onClick={() => void invoiceAction(invoice, 'download')}>PDF</button>}
             {!invoice.is_legacy && invoice.number_finalized && ['draft','sent','overdue'].includes(invoice.status) && <button onClick={() => void invoiceAction(invoice, 'send')}>E-Mail</button>}
@@ -1386,7 +1392,7 @@ export default function StudioPage() {
             {invoice.status === 'draft' && !invoice.is_legacy && !invoice.number_finalized && <button onClick={() => void deleteInvoice(invoice)}><Trash2 size={16}/></button>}
             {!invoice.is_legacy && (invoice.status === 'sent' || invoice.status === 'overdue') && <button onClick={() => void invoiceAction(invoice, 'mark_paid')}>Bezahlt</button>}
             {!invoice.is_legacy && invoice.number_finalized && invoice.status !== 'paid' && invoice.status !== 'cancelled' && <button onClick={() => void invoiceAction(invoice, 'cancel')}>Stornieren</button>}
-          </div>)}</div>
+          </div>)}{!visibleInvoices.length && <div className="hive-no-results"><Search size={17}/><span>Keine passenden Einträge.</span><small>{listQuery || listStatus !== 'all' ? 'Passe die Suche oder den Statusfilter an.' : 'Neue Einträge erscheinen hier.'}</small></div>}</div>
           <p className="hsv-warning">Der E-Mail-Versand ist in dieser Dev-Preview absichtlich serverseitig gesperrt.</p>
         </>}
 
@@ -1395,10 +1401,10 @@ export default function StudioPage() {
             setOfferDraft({ id:'', customerId: customers[0]?.id || '', projectId: '', title: '', issueDate: today(), validUntil: afterDays(30), taxRate: Number(settings?.default_tax_rate || 0), notes: '', terms: 'Diese Offerte ist bis zum angegebenen Datum gültig.', lines: [{ description: '', quantity: 1, unitPrice: 0 }] });
             setOfferOpen(true);
           }}><Plus size={15}/> Offerte erstellen</button></div>
-          <div className="hsv-table">{offers.map((offer) => <div key={offer.id}>
+          <div className="hsv-table">{visibleOffers.map((offer) => <div key={offer.id}>
             <span className="hsv-letter"><FileText size={16}/></span>
-            <span className="hsv-grow"><strong>{offer.offer_number} · {offer.title}</strong><small>{relatedName(offer.customers)} · {offer.status} · gültig bis {offer.valid_until}</small></span>
-            <strong>{money(offer.total_rappen)}</strong>
+            <span className="hsv-grow"><strong>{offer.offer_number} · {offer.title}</strong><small>{relatedName(offer.customers)} · gültig bis {shortDate(offer.valid_until)}</small></span>
+            <span className="hive-status">{stateLabel[offer.status] || offer.status}</span><strong className="hive-table-amount">{money(offer.total_rappen)}</strong>
             <button onClick={() => openOfferDocument(offer)}>Drucken/PDF</button>
             {offer.status === 'draft' && <button onClick={() => void openOfferDraft(offer)}>Bearbeiten</button>}
             {offer.status === 'draft' && <button onClick={() => void offerAction(offer, 'share')}>Portal freigeben</button>}
@@ -1407,7 +1413,7 @@ export default function StudioPage() {
             {offer.status === 'accepted' && !convertedOfferIds.has(offer.id) && <button onClick={() => void convertOfferToInvoice(offer)}>Rechnung erstellen</button>}
             {offer.status === 'accepted' && convertedOfferIds.has(offer.id) && <small>Rechnung erstellt</small>}
             {offer.status === 'draft' && <button aria-label="Offerte löschen" onClick={() => void offerAction(offer, 'delete')}><Trash2 size={16}/></button>}
-          </div>)}</div>
+          </div>)}{!visibleOffers.length && <div className="hive-no-results"><Search size={17}/><span>Keine passenden Einträge.</span><small>{listQuery || listStatus !== 'all' ? 'Passe die Suche oder den Statusfilter an.' : 'Neue Einträge erscheinen hier.'}</small></div>}</div>
         </>}
 
         {tab === 'catalog' && <>
