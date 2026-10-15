@@ -19,8 +19,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ id:st
     const customerId = idSchema.parse(id);
     const depId = idSchema.parse(departmentId);
     const payload = updateSchema.parse(await request.json());
-    assertWorkspaceAllowed(payload.workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(payload.workspaceId, supabase);
 
     if (payload.isDefault === true) {
       const { error: unsetError } = await supabase.from('customer_departments')
@@ -60,8 +60,8 @@ export async function DELETE(request: Request, context: { params: Promise<{ id:s
     const customerId = idSchema.parse(id);
     const depId = idSchema.parse(departmentId);
     const workspaceId = z.string().uuid().parse(new URL(request.url).searchParams.get('workspace'));
-    assertWorkspaceAllowed(workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(workspaceId, supabase);
 
     const { data: department, error: lookupError } = await supabase.from('customer_departments')
       .select('id,is_default')
