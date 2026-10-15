@@ -162,7 +162,7 @@ export default function StudioPage() {
     customerId:'', projectId:'', title:'', kind:'document', file:null,
   });
   const [offerDraft, setOfferDraft] = useState({
-    customerId: '', projectId: '', title: '', issueDate: today(), validUntil: afterDays(30),
+    id:'', customerId: '', projectId: '', title: '', issueDate: today(), validUntil: afterDays(30),
     taxRate: 0, notes: '', terms: 'Diese Offerte ist bis zum angegebenen Datum gültig.',
     lines: [{ description: '', quantity: 1, unitPrice: 0 }] as LineDraft[],
   });
@@ -654,31 +654,68 @@ export default function StudioPage() {
     });
   }
 
+  async function openOfferDraft(offer: Offer) {
+    if (!activeWorkspaceId || offer.status !== 'draft') return;
+    try {
+      const data = await requestJson<{
+        offer: Offer & { notes:string; terms:string };
+        items:Array<{description:string;quantity:number|string;unit_price_rappen:number}>;
+      }>(`/api/hive/offers/${offer.id}?workspace=${encodeURIComponent(activeWorkspaceId)}`);
+      setOfferDraft({
+        id:offer.id,
+        customerId:data.offer.customer_id,
+        projectId:data.offer.project_id || '',
+        title:data.offer.title,
+        issueDate:data.offer.issue_date,
+        validUntil:data.offer.valid_until,
+        taxRate:Number(data.offer.tax_rate || 0),
+        notes:data.offer.notes || '',
+        terms:data.offer.terms || 'Diese Offerte ist bis zum angegebenen Datum gültig.',
+        lines:data.items.map((item) => ({
+          description:item.description,
+          quantity:Number(item.quantity),
+          unitPrice:Number(item.unit_price_rappen) / 100,
+        })),
+      });
+      setOfferOpen(true);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Offertenentwurf konnte nicht geladen werden.');
+    }
+  }
+
   async function createOffer(event: FormEvent) {
     event.preventDefault();
     if (!activeWorkspaceId) return;
     try {
-      await requestJson('/api/hive/offers', {
-        method: 'POST',
-        body: JSON.stringify({
-          workspaceId: activeWorkspaceId,
-          customerId: offerDraft.customerId,
-          projectId: offerDraft.projectId || null,
-          title: offerDraft.title,
-          issueDate: offerDraft.issueDate,
-          validUntil: offerDraft.validUntil,
-          taxRate: offerDraft.taxRate,
-          notes: offerDraft.notes,
-          terms: offerDraft.terms,
-          items: offerDraft.lines.map((line) => ({
-            description: line.description,
-            quantity: line.quantity,
-            unitPriceRappen: Math.round(line.unitPrice * 100),
-          })),
-        }),
-      });
+      const payload = {
+        workspaceId: activeWorkspaceId,
+        customerId: offerDraft.customerId,
+        projectId: offerDraft.projectId || null,
+        title: offerDraft.title,
+        issueDate: offerDraft.issueDate,
+        validUntil: offerDraft.validUntil,
+        taxRate: offerDraft.taxRate,
+        notes: offerDraft.notes,
+        terms: offerDraft.terms,
+        items: offerDraft.lines.map((line) => ({
+          description: line.description,
+          quantity: line.quantity,
+          unitPriceRappen: Math.round(line.unitPrice * 100),
+        })),
+      };
+      if (offerDraft.id) {
+        await requestJson(`/api/hive/offers/${offerDraft.id}`, {
+          method:'PATCH',
+          body:JSON.stringify(payload),
+        });
+      } else {
+        await requestJson('/api/hive/offers', {
+          method:'POST',
+          body:JSON.stringify(payload),
+        });
+      }
       setOfferOpen(false);
-      setNotice('Offertenentwurf erstellt.');
+      setNotice(offerDraft.id ? 'Offertenentwurf aktualisiert.' : 'Offertenentwurf erstellt.');
       await loadWorkspaceData(activeWorkspaceId);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Offerte konnte nicht erstellt werden.');
@@ -986,13 +1023,14 @@ export default function StudioPage() {
 
         {tab === 'offers' && <>
           <div className="hsv-rowtop"><strong>{offers.length} Offerten</strong><button className="hsv-primary" disabled={!customers.length} onClick={() => {
-            setOfferDraft({ customerId: customers[0]?.id || '', projectId: '', title: '', issueDate: today(), validUntil: afterDays(30), taxRate: Number(settings?.default_tax_rate || 0), notes: '', terms: 'Diese Offerte ist bis zum angegebenen Datum gültig.', lines: [{ description: '', quantity: 1, unitPrice: 0 }] });
+            setOfferDraft({ id:'', customerId: customers[0]?.id || '', projectId: '', title: '', issueDate: today(), validUntil: afterDays(30), taxRate: Number(settings?.default_tax_rate || 0), notes: '', terms: 'Diese Offerte ist bis zum angegebenen Datum gültig.', lines: [{ description: '', quantity: 1, unitPrice: 0 }] });
             setOfferOpen(true);
           }}><Plus size={15}/> Offerte erstellen</button></div>
           <div className="hsv-table">{offers.map((offer) => <div key={offer.id}>
             <span className="hsv-letter"><FileText size={16}/></span>
             <span className="hsv-grow"><strong>{offer.offer_number} · {offer.title}</strong><small>{relatedName(offer.customers)} · {offer.status} · gültig bis {offer.valid_until}</small></span>
             <strong>{money(offer.total_rappen)}</strong>
+            {offer.status === 'draft' && <button onClick={() => void openOfferDraft(offer)}>Bearbeiten</button>}
             {offer.status === 'draft' && <button onClick={() => void offerAction(offer, 'share')}>Portal freigeben</button>}
             {offer.status === 'sent' && <button onClick={() => void offerAction(offer, 'withdraw')}>Zurückziehen</button>}
             {offer.status === 'draft' && <button aria-label="Offerte löschen" onClick={() => void offerAction(offer, 'delete')}><Trash2 size={16}/></button>}
@@ -1288,7 +1326,7 @@ export default function StudioPage() {
       </form>
     </DocumentModal>}
 
-    {offerOpen && <DocumentModal title="Offerte erstellen" lines={offerDraft.lines} total={offerTotal} taxRate={offerDraft.taxRate} onClose={() => setOfferOpen(false)}
+    {offerOpen && <DocumentModal title={offerDraft.id ? 'Offerte bearbeiten' : 'Offerte erstellen'} lines={offerDraft.lines} total={offerTotal} taxRate={offerDraft.taxRate} onClose={() => setOfferOpen(false)}
       onAddLine={() => setOfferDraft({ ...offerDraft, lines: [...offerDraft.lines, { description: '', quantity: 1, unitPrice: 0 }] })}
       onLineChange={(index, line) => setOfferDraft({ ...offerDraft, lines: offerDraft.lines.map((current, i) => i === index ? line : current) })}
       onLineDelete={(index) => setOfferDraft({ ...offerDraft, lines: offerDraft.lines.filter((_, i) => i !== index) })}>
@@ -1300,7 +1338,7 @@ export default function StudioPage() {
         <label>Steuersatz %<input type="number" min="0" max="100" step="0.1" value={offerDraft.taxRate} onChange={(e) => setOfferDraft({ ...offerDraft, taxRate: Number(e.target.value) })}/></label>
         {products.some((product) => product.active) && <label>Leistung hinzufügen<select defaultValue="" onChange={(e) => { if (e.target.value) addProductToOffer(e.target.value); e.currentTarget.value=''; }}><option value="">Aus Katalog wählen…</option>{products.filter((product) => product.active).map((product) => <option key={product.id} value={product.id}>{product.name} · {money(product.unit_price_rappen)}</option>)}</select></label>}
         <label>Bedingungen<textarea required rows={3} value={offerDraft.terms} onChange={(e) => setOfferDraft({ ...offerDraft, terms: e.target.value })}/></label>
-        <button className="hsv-primary" type="submit">Offertenentwurf erstellen <Check size={15}/></button>
+        <button className="hsv-primary" type="submit">{offerDraft.id ? 'Änderungen speichern' : 'Offertenentwurf erstellen'} <Check size={15}/></button>
       </form>
     </DocumentModal>}
   </div>;
