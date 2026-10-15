@@ -85,8 +85,8 @@ export async function GET(request: Request) {
       workspace: url.searchParams.get('workspace'),
       project: url.searchParams.get('project'),
     });
-    assertWorkspaceAllowed(query.workspace);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(query.workspace, supabase);
     const project = await verifyProject(supabase, query.workspace, query.project);
 
     const [tasks, deliverables, files, activity] = await Promise.all([
@@ -133,8 +133,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const payload = actionSchema.parse(await request.json());
-    assertWorkspaceAllowed(payload.workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(payload.workspaceId, supabase);
     await verifyProject(supabase, payload.workspaceId, payload.projectId);
 
     const { data: actorId, error: actorError } = await supabase.rpc('current_app_user_id');
