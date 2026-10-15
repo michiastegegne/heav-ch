@@ -1,54 +1,662 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, ArrowRight, Building2, Check, ChevronDown, CreditCard, Download, FilePlus2, FolderOpen, ImagePlus, LayoutDashboard, Plus, Printer, Settings2, Trash2, Users, X } from 'lucide-react';
+
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ArrowLeft, ArrowRight, BriefcaseBusiness, Check, CreditCard, FileText,
+  LayoutDashboard, Mail, Plus, RefreshCw, Settings2, Trash2, Users, X,
+} from 'lucide-react';
 import './studio.css';
 
-type Customer = { id: string; name: string; email: string; address: string };
-type Line = { id: string; description: string; quantity: number; unitPrice: number };
-type Invoice = { id: string; number: string; customerId: string; issueDate: string; dueDate: string; lines: Line[]; taxRate: number; status: 'draft' | 'sent' | 'paid'; note: string; createdAt: number };
-type Business = { id: string; name: string; logo?: string; accent: string; address: string; iban: string; email: string };
-type Data = { businesses: Business[]; activeBusinessId: string; customers: Record<string, Customer[]>; invoices: Record<string, Invoice[]> };
-const STORAGE = 'hive-studio-prototype-v1';
-const defaultBusiness: Business = { id: 'personal', name: 'Michias Tegegne', accent: '#191919', address: '', iban: '', email: '' };
-const emptyData: Data = { businesses: [defaultBusiness], activeBusinessId: 'personal', customers: { personal: [] }, invoices: { personal: [] } };
-const uuid = () => crypto.randomUUID();
-const today = () => { const d = new Date(); const y = d.getFullYear(); const m = String(d.getMonth()+1).padStart(2,'0'); const day = String(d.getDate()).padStart(2,'0'); return y+'-'+m+'-'+day; };
-const nextMonth = (date: string) => { const d = new Date(date+'T12:00:00'); d.setDate(d.getDate()+30); return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-'); };
-const cash = (value: number) => new Intl.NumberFormat('de-CH',{style:'currency',currency:'CHF'}).format(value);
-const round = (n:number) => Math.round((n + Number.EPSILON)*100)/100;
-const invoiceAmount = (invoice: Invoice) => { const sub = invoice.lines.reduce((sum,line)=>sum + Math.round(line.quantity * Math.round(line.unitPrice*100)),0);const tax = Math.round(sub * invoice.taxRate/100);return {subtotal:sub/100,tax:tax/100,total:(sub+tax)/100}; };
-function makeInvoice(n: number, businessId: string): Invoice { const now=today();return {id:uuid(),number:'ENTWURF-'+businessId.toUpperCase().slice(0,4)+'-'+String(n).padStart(3,'0'),customerId:'',issueDate:now,dueDate:nextMonth(now),lines:[{id:uuid(),description:'',quantity:1,unitPrice:0}],taxRate:0,status:'draft',note:'',createdAt:Date.now()}; }
+type Workspace = { id: string; name: string; slug: string; status: string; role: string };
+type Customer = {
+  id: string; workspace_id: string; company: string | null; contact_name: string | null;
+  email: string | null; phone: string | null; address_line1: string | null;
+  postal_code: string | null; city: string | null; country: string | null; notes: string | null;
+};
+type Project = {
+  id: string; workspace_id: string; customer_id: string; title: string; description: string | null;
+  status: 'planning' | 'active' | 'completed' | 'on_hold'; budget_rappen: number;
+  start_date: string | null; due_date: string | null;
+  customers?: { company?: string | null; contact_name?: string | null } | null;
+};
+type Invoice = {
+  id: string; workspace_id: string; customer_id: string; project_id: string | null;
+  invoice_number: string; issue_date: string; due_date: string;
+  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled'; currency: string;
+  tax_rate: number; subtotal_rappen: number; tax_rappen: number; total_rappen: number;
+  sent_at: string | null; paid_at: string | null;
+  customers?: { company?: string | null; contact_name?: string | null } | null;
+};
+type Offer = {
+  id: string; workspace_id: string; customer_id: string; project_id: string | null;
+  offer_number: string; title: string; issue_date: string; valid_until: string; status: string;
+  subtotal_rappen: number; tax_rappen: number; total_rappen: number; accepted_at: string | null;
+  customers?: { company?: string | null; contact_name?: string | null } | null;
+};
+type EmailLog = {
+  id: string; template_key: string; status: string; recipient_email: string;
+  recipient_name: string; subject: string; error_message: string | null; created_at: string;
+};
+type Settings = {
+  workspace_id: string; business_name: string; legal_name: string; contact_name: string; email: string;
+  phone: string; website_url: string; address_line1: string; postal_code: string; city: string;
+  country: string; logo_url: string; primary_color: string; secondary_color: string; accent_color: string;
+  invoice_sender_name: string; iban: string; bank_name: string; account_holder: string;
+  uid_number: string; vat_number: string; vat_enabled: boolean; default_tax_rate: number;
+  default_due_days: number; currency: string; invoice_prefix: string;
+};
+
+type Tab = 'overview' | 'customers' | 'projects' | 'invoices' | 'offers' | 'emails' | 'branding';
+type LineDraft = { description: string; quantity: number; unitPrice: number };
+
+const today = () => new Date().toISOString().slice(0, 10);
+const afterDays = (days: number) => {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+};
+const money = (rappen: number, currency = 'CHF') =>
+  new Intl.NumberFormat('de-CH', { style: 'currency', currency }).format((Number(rappen) || 0) / 100);
+const customerName = (customer?: Partial<Customer> | null) =>
+  customer?.company?.trim() || customer?.contact_name?.trim() || 'Ohne Name';
+const relatedName = (relation?: { company?: string | null; contact_name?: string | null } | null) =>
+  relation?.company?.trim() || relation?.contact_name?.trim() || 'Kunde';
+
+async function requestJson<T>(input: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(input, {
+    ...init,
+    headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
+    cache: 'no-store',
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = typeof data?.error === 'string' ? data.error : 'Anfrage fehlgeschlagen';
+    const error = new Error(message) as Error & { status?: number };
+    error.status = response.status;
+    throw error;
+  }
+  return data as T;
+}
 
 export default function StudioPage() {
- const [data,setData]=useState<Data>(emptyData); const [loaded,setLoaded]=useState(false);
- const [tab,setTab]=useState<'overview'|'invoices'|'customers'|'branding'>('overview');
- const [editor,setEditor]=useState<Invoice|null>(null);const [customerDialog,setCustomerDialog]=useState(false);
- const [businessDialog,setBusinessDialog]=useState(false);const [customerDraft,setCustomerDraft]=useState<Customer>({id:'',name:'',email:'',address:''});
- const [message,setMessage]=useState('');
- useEffect(()=>{try{const parsed=JSON.parse(localStorage.getItem(STORAGE)||'null');if(parsed && Array.isArray(parsed.businesses) && parsed.businesses.length && typeof parsed.activeBusinessId==='string'){setData(parsed);}}catch{}setLoaded(true);},[]);
- useEffect(()=>{if(loaded){try{localStorage.setItem(STORAGE,JSON.stringify(data));}catch{setMessage('Speicher voll – Logo bitte kleiner wählen.');}}},[loaded,data]);
- const business=data.businesses.find(b=>b.id===data.activeBusinessId) || data.businesses[0] || defaultBusiness;
- const customers=data.customers[business.id]||[];const invoices=data.invoices[business.id]||[];
- const updateBusiness=(patch:Partial<Business>)=>setData(d=>({...d,businesses:d.businesses.map(b=>b.id===business.id?{...b,...patch}:b)}));
- const saveInvoice=(invoice:Invoice)=>{if(!invoice.customerId || !customers.some(c=>c.id===invoice.customerId)){setMessage('Bitte zuerst einen gültigen Kunden auswählen.');return;}if(invoice.dueDate<invoice.issueDate){setMessage('Fälligkeitsdatum liegt vor dem Rechnungsdatum.');return;}if(invoice.lines.length===0 || invoice.lines.some(l=>!l.description.trim()||!Number.isFinite(l.quantity)||l.quantity<=0||!Number.isFinite(l.unitPrice)||l.unitPrice<0)){setMessage('Alle Positionen brauchen eine Beschreibung, positive Menge und gültigen Preis.');return;}if(!Number.isFinite(invoice.taxRate)||invoice.taxRate<0||invoice.taxRate>100){setMessage('Ungültiger Steuersatz.');return;}setData(d=>({...d,invoices:{...d.invoices,[business.id]:[...(d.invoices[business.id]||[]).filter(i=>i.id!==invoice.id),invoice].sort((a,b)=>b.createdAt-a.createdAt)}}));setEditor(null);setMessage('Entwurf lokal gespeichert – keine Rechnung versendet.');};
- const deleteInvoice=(id:string)=>{const item=invoices.find(i=>i.id===id);if(item?.status!=='draft')return;if(!confirm('Diesen lokalen Rechnungsentwurf löschen?'))return;setData(d=>({...d,invoices:{...d.invoices,[business.id]:(d.invoices[business.id]||[]).filter(i=>i.id!==id)}}));};
- const saveCustomer=()=>{if(!customerDraft.name.trim()){setMessage('Bitte Kundennamen eingeben.');return;}if(customerDraft.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerDraft.email)){setMessage('Ungültige E-Mail-Adresse.');return;}const c={...customerDraft,id:customerDraft.id||uuid(),name:customerDraft.name.trim()};setData(d=>({...d,customers:{...d.customers,[business.id]:[...(d.customers[business.id]||[]).filter(x=>x.id!==c.id),c]}}));setCustomerDialog(false);setCustomerDraft({id:'',name:'',email:'',address:''});};
- const saveLogo=(file?:File)=>{if(!file)return;if(!file.type.startsWith('image/')||file.size>350000){setMessage('Nur Bilder bis 350 KB werden in der lokalen Vorschau unterstützt.');return;}const reader=new FileReader();reader.onload=()=>updateBusiness({logo:typeof reader.result==='string'?reader.result:undefined});reader.readAsDataURL(file);};
- const addBusiness=(name:string)=>{const clean=name.trim();if(!clean)return;const id=uuid();setData(d=>({...d,businesses:[...d.businesses,{id,name:clean,accent:'#191919',address:'',iban:'',email:''}],activeBusinessId:id,customers:{...d.customers,[id]:[]},invoices:{...d.invoices,[id]:[]}}));setBusinessDialog(false);setTab('branding');};
- const [newBusinessName,setNewBusinessName]=useState('');
- const countDraft=invoices.filter(i=>i.status==='draft').length;
- return <div className="hsv" style={{'--business-accent':business.accent} as React.CSSProperties}>
-  <header className="hsv-top"><div className="hsv-identity"><a className="hsv-hive" href="/">hive.</a><span className="hsv-divider"/><span className="hsv-logo">{business.logo?<img src={business.logo} alt={business.name+' Logo'}/>:business.name.charAt(0).toUpperCase()}</span><select aria-label="Business auswählen" value={business.id} onChange={e=>setData(d=>({...d,activeBusinessId:e.target.value}))}>{data.businesses.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select><button title="Neues Business" aria-label="Business hinzufügen" className="hsv-icon" onClick={()=>setBusinessDialog(true)}><Plus size={17}/></button></div><span className="hsv-mode">LOCAL PROTOTYPE · KEINE ECHTEN RECHNUNGEN</span><a className="hsv-back" href="/"><ArrowLeft size={15}/> Workspace</a></header>
-  <div className="hsv-layout"><nav className="hsv-nav" aria-label="Business-Module">{([{id:'overview',text:'Überblick',icon:LayoutDashboard},{id:'invoices',text:'Rechnungen',icon:CreditCard},{id:'customers',text:'Kunden',icon:Users},{id:'branding',text:'Branding & Business',icon:Settings2}] as const).map(x=><button key={x.id} className={tab===x.id?'on':''} onClick={()=>{setTab(x.id);setEditor(null);}}><x.icon size={17}/>{x.text}</button>)}</nav>
-  <main className="hsv-main"><div className="hsv-heading"><span>HIVE / {business.name.toUpperCase()}</span><h1>{tab==='overview'?'Dein Business.':tab==='invoices'?'Rechnungen.':tab==='customers'?'Kunden.':'Deine Brand.'}</h1><p>{tab==='overview'?'Ein Workspace, der zu deinem Unternehmen passt.':tab==='invoices'?'Erstelle lokale Rechnungsentwürfe mit Positionen und Schweizer Franken.':tab==='customers'?'Kontakte für deine Projekte und Rechnungen.':'Gestalte diesen Workspace mit deinem eigenen Absender und Logo.'}</p></div>
-  {tab==='overview'&&<><div className="hsv-cards"><button onClick={()=>setTab('invoices')}><span>RECHNUNGSENTWÜRFE</span><strong>{countDraft.toString().padStart(2,'0')}</strong><small>Verwalten <ArrowRight size={14}/></small></button><button onClick={()=>setTab('customers')}><span>KUNDEN</span><strong>{customers.length.toString().padStart(2,'0')}</strong><small>Öffnen <ArrowRight size={14}/></small></button></div><div className="hsv-intro"><span className="hsv-big-logo">{business.logo?<img src={business.logo} alt={business.name+' Logo'}/>:business.name.charAt(0).toUpperCase()}</span><div><span>DEIN WORKSPACE</span><h2>{business.name}</h2><p>Dein Logo und deine Farben erscheinen hier. Über die Einstellungen kannst du das Design dieses Businesses ändern.</p><button onClick={()=>setTab('branding')}>Branding bearbeiten <ArrowRight size={15}/></button></div></div></>}
-  {tab==='customers'&&<><div className="hsv-rowtop"><strong>{customers.length} Kunden</strong><button className="hsv-primary" onClick={()=>{setCustomerDraft({id:'',name:'',email:'',address:''});setCustomerDialog(true);}}><Plus size={15}/> Kunde hinzufügen</button></div>{customers.length?<div className="hsv-table">{customers.map(c=><div key={c.id}><span className="hsv-letter">{c.name[0]?.toUpperCase()}</span><span className="hsv-grow"><strong>{c.name}</strong><small>{c.email||'Keine E-Mail'}</small></span><button onClick={()=>{setCustomerDraft(c);setCustomerDialog(true);}}>Bearbeiten</button><button onClick={()=>{if(invoices.some(i=>i.customerId===c.id)){setMessage('Kunde wird von einer Rechnung verwendet und kann nicht gelöscht werden.');return;}if(confirm('Kunden lokal löschen?'))setData(d=>({...d,customers:{...d.customers,[business.id]:customers.filter(x=>x.id!==c.id)}}));}} title="Kunden löschen" aria-label={c.name+' löschen'}><Trash2 size={16}/></button></div>)}</div>:<p className="hsv-empty">Noch keine Kunden vorhanden. Lege deinen ersten Kontakt an.</p>}</>}
-  {tab==='invoices'&&<><div className="hsv-rowtop"><strong>{invoices.length} Rechnungsentwürfe</strong><button className="hsv-primary" onClick={()=>{if(!customers.length){setTab('customers');setMessage('Erstelle zuerst einen Kunden.');return;}setEditor(makeInvoice(invoices.length+1,business.id));}}><FilePlus2 size={16}/> Rechnung erstellen</button></div>{invoices.length?<div className="hsv-table">{invoices.map(i=><div key={i.id}><span className="hsv-letter"><CreditCard size={17}/></span><span className="hsv-grow"><strong>{i.number}</strong><small>{customers.find(c=>c.id===i.customerId)?.name||'Kunde fehlt'} · {i.issueDate}</small></span><strong>{cash(invoiceAmount(i).total)}</strong><button onClick={()=>setEditor(structuredClone(i))}>Öffnen</button>{i.status==='draft'&&<button aria-label={i.number+' löschen'} onClick={()=>deleteInvoice(i.id)}><Trash2 size={16}/></button>}</div>)}</div>:<p className="hsv-empty">Noch keine Rechnungsentwürfe. Erstelle deine erste Rechnung.</p>}<p className="hsv-warning">Entwürfe sind keine rechtsgültig ausgestellten oder verschickten Rechnungen. PDF wird ausschliesslich per Browser-Druckvorschau erzeugt.</p></>}
-  {tab==='branding'&&<div className="hsv-branding"><div className="hsv-brand-preview"><span>{business.logo?<img src={business.logo} alt="Logo Vorschau"/>:business.name.charAt(0).toUpperCase()}</span><div><strong>{business.name}</strong><small>Individuelle Workspace-Identität</small></div></div><label className="hsv-upload"><ImagePlus size={18}/> Logo auswählen (max. 350 KB)<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={e=>saveLogo(e.target.files?.[0])}/></label>{business.logo&&<button className="hsv-outline" onClick={()=>updateBusiness({logo:undefined})}>Logo entfernen</button>}<label>Business-Name<input value={business.name} onChange={e=>updateBusiness({name:e.target.value})} maxLength={100}/></label><label>Absenderadresse<textarea value={business.address} onChange={e=>updateBusiness({address:e.target.value})} placeholder="Strasse, PLZ Ort, Schweiz" rows={3}/></label><label>Kontakt-E-Mail<input value={business.email} onChange={e=>updateBusiness({email:e.target.value})} placeholder="hello@example.ch" type="email"/></label><label>IBAN<input value={business.iban} onChange={e=>updateBusiness({iban:e.target.value})} placeholder="CH00 0000 0000 0000 0000 0"/></label><label>Brand-Farbe<div className="hsv-color"><input type="color" value={business.accent} onChange={e=>updateBusiness({accent:e.target.value})}/><span>{business.accent}</span></div></label><p className="hsv-warning">Einstellungen werden aktuell nur in diesem Browser gespeichert. Kein Team-Sync und kein Produktionsversand.</p></div>}
-  </main></div>
-  {message&&<div role="status" className="hsv-toast">{message}<button onClick={()=>setMessage('')} aria-label="Schliessen"><X size={16}/></button></div>}
-  {customerDialog&&<div className="hsv-overlay" onMouseDown={e=>{if(e.target===e.currentTarget)setCustomerDialog(false);}}><form className="hsv-dialog" onSubmit={e=>{e.preventDefault();saveCustomer();}}><button type="button" className="hsv-close" aria-label="Schliessen" onClick={()=>setCustomerDialog(false)}><X size={18}/></button><span>KUNDENVERWALTUNG</span><h2>{customerDraft.id?'Kunde bearbeiten':'Neuer Kunde'}</h2><label>Name oder Firma<input autoFocus value={customerDraft.name} onChange={e=>setCustomerDraft(d=>({...d,name:e.target.value}))} required maxLength={120}/></label><label>E-Mail<input value={customerDraft.email} onChange={e=>setCustomerDraft(d=>({...d,email:e.target.value}))} type="email" maxLength={200}/></label><label>Rechnungsadresse<textarea rows={3} value={customerDraft.address} onChange={e=>setCustomerDraft(d=>({...d,address:e.target.value}))}/></label><button className="hsv-primary" type="submit">Speichern <Check size={16}/></button></form></div>}
-  {businessDialog&&<div className="hsv-overlay" onMouseDown={e=>{if(e.target===e.currentTarget)setBusinessDialog(false);}}><form className="hsv-dialog" onSubmit={e=>{e.preventDefault();addBusiness(newBusinessName);setNewBusinessName('');}}><button type="button" className="hsv-close" onClick={()=>setBusinessDialog(false)} aria-label="Schliessen"><X size={18}/></button><span>NEUER WORKSPACE</span><h2>Business hinzufügen.</h2><label>Business-Name<input autoFocus required maxLength={100} value={newBusinessName} onChange={e=>setNewBusinessName(e.target.value)}/></label><button className="hsv-primary" type="submit">Business erstellen <Plus size={15}/></button></form></div>}
-  {editor&&<div className="hsv-overlay hsv-invoice-overlay"><div className="hsv-invoice-editor"><div className="hsv-editorbar"><div><small>HIVE / RECHNUNGSENTWURF</small><strong>{editor.number}</strong></div><button className="hsv-outline" onClick={()=>window.print()}><Printer size={15}/> Drucken / PDF</button><button className="hsv-primary" onClick={()=>saveInvoice(editor)}>Entwurf speichern <Check size={15}/></button><button className="hsv-icon" aria-label="Schliessen" onClick={()=>setEditor(null)}><X size={18}/></button></div><div className="hsv-paper"><div className="hsv-paperhead"><div><span className="hsv-bill-logo">{business.logo?<img src={business.logo} alt={business.name+' Logo'}/>:business.name[0]?.toUpperCase()}</span><strong>{business.name}</strong><small>{business.address||'Absenderadresse nicht erfasst'}<br/>{business.email}</small></div><div className="hsv-documentname"><span>ENTWURF · NICHT VERSENDEN</span><h2>Rechnung</h2><small>{editor.number}</small></div></div><div className="hsv-paperinfo"><label>Kunde<select value={editor.customerId} onChange={e=>setEditor(i=>i?{...i,customerId:e.target.value}:i)}><option value="">Bitte auswählen</option>{customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Rechnungsdatum<input type="date" value={editor.issueDate} onChange={e=>setEditor(i=>i?{...i,issueDate:e.target.value}:i)}/></label><label>Fällig am<input type="date" value={editor.dueDate} onChange={e=>setEditor(i=>i?{...i,dueDate:e.target.value}:i)}/></label></div><div className="hsv-address">{customers.find(c=>c.id===editor.customerId)?.address||'Rechnungsadresse des Kunden'}</div><div className="hsv-lines"><div className="hsv-lineheader"><span>Beschreibung</span><span>Menge</span><span>CHF / Einheit</span><span>Betrag</span><span/></div>{editor.lines.map(line=><div className="hsv-line" key={line.id}><input aria-label="Beschreibung" placeholder="Leistung" value={line.description} onChange={e=>setEditor(i=>i?{...i,lines:i.lines.map(l=>l.id===line.id?{...l,description:e.target.value}:l)}:i)}/><input aria-label="Menge" type="number" min="0.01" step="0.01" value={line.quantity} onChange={e=>setEditor(i=>i?{...i,lines:i.lines.map(l=>l.id===line.id?{...l,quantity:Number(e.target.value)}:l)}:i)}/><input aria-label="Einzelpreis CHF" type="number" min="0" step="0.01" value={line.unitPrice} onChange={e=>setEditor(i=>i?{...i,lines:i.lines.map(l=>l.id===line.id?{...l,unitPrice:Number(e.target.value)}:l)}:i)}/><strong>{cash(round(line.quantity*line.unitPrice))}</strong><button aria-label="Position löschen" onClick={()=>setEditor(i=>i?{...i,lines:i.lines.filter(l=>l.id!==line.id)}:i)}><Trash2 size={15}/></button></div>)}</div><button className="hsv-addline" onClick={()=>setEditor(i=>i?{...i,lines:[...i.lines,{id:uuid(),description:'',quantity:1,unitPrice:0}]}:i)}><Plus size={15}/> Position hinzufügen</button><div className="hsv-bill-total"><div><span>Zwischensumme</span><strong>{cash(invoiceAmount(editor).subtotal)}</strong></div><div><label>Steuersatz in % <input type="number" step="0.1" min="0" max="100" value={editor.taxRate} onChange={e=>setEditor(i=>i?{...i,taxRate:Number(e.target.value)}:i)}/></label><strong>{cash(invoiceAmount(editor).tax)}</strong></div><div className="hsv-grand"><span>Gesamtbetrag</span><strong>{cash(invoiceAmount(editor).total)}</strong></div></div><label className="hsv-note">Notiz<textarea rows={2} value={editor.note} placeholder="Zahlungsbedingungen oder Bemerkungen" onChange={e=>setEditor(i=>i?{...i,note:e.target.value}:i)}/></label><div className="hsv-bill-foot">IBAN: {business.iban||'Noch nicht erfasst'}<br/>Nur Vorschau · Nicht für echten Rechnungsversand</div></div></div></div>}
- </div>;
+  const [tab, setTab] = useState<Tab>('overview');
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState('');
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [emails, setEmails] = useState<EmailLog[]>([]);
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [busy, setBusy] = useState(true);
+  const [backendError, setBackendError] = useState('');
+  const [notice, setNotice] = useState('');
+
+  const [customerOpen, setCustomerOpen] = useState(false);
+  const [customerDraft, setCustomerDraft] = useState({
+    id: '', company: '', contactName: '', email: '', phone: '',
+    addressLine1: '', postalCode: '', city: '', country: 'Schweiz', notes: '',
+  });
+  const [projectOpen, setProjectOpen] = useState(false);
+  const [projectDraft, setProjectDraft] = useState({
+    id: '', customerId: '', title: '', description: '', status: 'planning' as Project['status'],
+    budget: 0, startDate: '', dueDate: '',
+  });
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [invoiceDraft, setInvoiceDraft] = useState({
+    customerId: '', projectId: '', issueDate: today(), dueDate: afterDays(30),
+    taxRate: 0, notes: '', lines: [{ description: '', quantity: 1, unitPrice: 0 }] as LineDraft[],
+  });
+  const [offerOpen, setOfferOpen] = useState(false);
+  const [offerDraft, setOfferDraft] = useState({
+    customerId: '', projectId: '', title: '', issueDate: today(), validUntil: afterDays(30),
+    taxRate: 0, notes: '', terms: 'Diese Offerte ist bis zum angegebenen Datum gültig.',
+    lines: [{ description: '', quantity: 1, unitPrice: 0 }] as LineDraft[],
+  });
+
+  const activeWorkspace = workspaces.find((workspace) => workspace.id === activeWorkspaceId) || null;
+  const businessName = settings?.business_name || activeWorkspace?.name || 'Hive';
+  const accent = settings?.accent_color || '#191919';
+
+  const loadWorkspaces = useCallback(async () => {
+    setBusy(true);
+    setBackendError('');
+    try {
+      const data = await requestJson<{ workspaces: Workspace[] }>('/api/hive/workspaces');
+      setWorkspaces(data.workspaces);
+      setActiveWorkspaceId((current) =>
+        data.workspaces.some((workspace) => workspace.id === current) ? current : (data.workspaces[0]?.id || ''),
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Backend nicht erreichbar';
+      setBackendError(message);
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
+  const loadWorkspaceData = useCallback(async (workspaceId: string) => {
+    if (!workspaceId) return;
+    setBusy(true);
+    setBackendError('');
+    try {
+      const q = encodeURIComponent(workspaceId);
+      const [customerData, projectData, invoiceData, offerData, emailData, settingsData] = await Promise.all([
+        requestJson<{ customers: Customer[] }>(`/api/hive/customers?workspace=${q}`),
+        requestJson<{ projects: Project[] }>(`/api/hive/projects?workspace=${q}`),
+        requestJson<{ invoices: Invoice[] }>(`/api/hive/invoices?workspace=${q}`),
+        requestJson<{ offers: Offer[] }>(`/api/hive/offers?workspace=${q}`),
+        requestJson<{ emails: EmailLog[] }>(`/api/hive/emails?workspace=${q}`),
+        requestJson<{ settings: Settings }>(`/api/hive/settings?workspace=${q}`),
+      ]);
+      setCustomers(customerData.customers);
+      setProjects(projectData.projects);
+      setInvoices(invoiceData.invoices);
+      setOffers(offerData.offers);
+      setEmails(emailData.emails);
+      setSettings(settingsData.settings);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Workspace konnte nicht geladen werden';
+      setBackendError(message);
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
+  useEffect(() => { void loadWorkspaces(); }, [loadWorkspaces]);
+  useEffect(() => { if (activeWorkspaceId) void loadWorkspaceData(activeWorkspaceId); }, [activeWorkspaceId, loadWorkspaceData]);
+
+  const invoiceTotal = useMemo(
+    () => invoiceDraft.lines.reduce((sum, line) => sum + Math.round(line.quantity * line.unitPrice * 100), 0),
+    [invoiceDraft.lines],
+  );
+  const offerTotal = useMemo(
+    () => offerDraft.lines.reduce((sum, line) => sum + Math.round(line.quantity * line.unitPrice * 100), 0),
+    [offerDraft.lines],
+  );
+
+  async function saveCustomer(event: FormEvent) {
+    event.preventDefault();
+    if (!activeWorkspaceId) return;
+    try {
+      const payload = { workspaceId: activeWorkspaceId, ...customerDraft };
+      if (customerDraft.id) {
+        await requestJson(`/api/hive/customers/${customerDraft.id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+      } else {
+        await requestJson('/api/hive/customers', { method: 'POST', body: JSON.stringify(payload) });
+      }
+      setCustomerOpen(false);
+      setNotice(customerDraft.id ? 'Kunde aktualisiert.' : 'Kunde erstellt.');
+      await loadWorkspaceData(activeWorkspaceId);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Kunde konnte nicht gespeichert werden.');
+    }
+  }
+
+  async function deleteCustomer(customer: Customer) {
+    if (!activeWorkspaceId || !confirm(`${customerName(customer)} wirklich löschen?`)) return;
+    try {
+      await requestJson(`/api/hive/customers/${customer.id}?workspace=${encodeURIComponent(activeWorkspaceId)}`, { method: 'DELETE' });
+      setNotice('Kunde gelöscht.');
+      await loadWorkspaceData(activeWorkspaceId);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Kunde konnte nicht gelöscht werden.');
+    }
+  }
+
+  async function saveProject(event: FormEvent) {
+    event.preventDefault();
+    if (!activeWorkspaceId) return;
+    try {
+      const payload = {
+        workspaceId: activeWorkspaceId,
+        customerId: projectDraft.customerId,
+        title: projectDraft.title,
+        description: projectDraft.description,
+        status: projectDraft.status,
+        budgetRappen: Math.round(projectDraft.budget * 100),
+        startDate: projectDraft.startDate || null,
+        dueDate: projectDraft.dueDate || null,
+      };
+      if (projectDraft.id) {
+        await requestJson(`/api/hive/projects/${projectDraft.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            workspaceId: activeWorkspaceId,
+            title: payload.title,
+            description: payload.description,
+            status: payload.status,
+            budgetRappen: payload.budgetRappen,
+            startDate: payload.startDate,
+            dueDate: payload.dueDate,
+          }),
+        });
+      } else {
+        await requestJson('/api/hive/projects', { method: 'POST', body: JSON.stringify(payload) });
+      }
+      setProjectOpen(false);
+      setNotice(projectDraft.id ? 'Projekt aktualisiert.' : 'Projekt erstellt.');
+      await loadWorkspaceData(activeWorkspaceId);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Projekt konnte nicht gespeichert werden.');
+    }
+  }
+
+  async function deleteProject(project: Project) {
+    if (!activeWorkspaceId || !confirm(`${project.title} wirklich löschen?`)) return;
+    try {
+      await requestJson(`/api/hive/projects/${project.id}`, { method: 'DELETE' });
+      setNotice('Projekt gelöscht.');
+      await loadWorkspaceData(activeWorkspaceId);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Projekt konnte nicht gelöscht werden.');
+    }
+  }
+
+  async function createInvoice(event: FormEvent) {
+    event.preventDefault();
+    if (!activeWorkspaceId) return;
+    try {
+      await requestJson('/api/hive/invoices', {
+        method: 'POST',
+        body: JSON.stringify({
+          workspaceId: activeWorkspaceId,
+          customerId: invoiceDraft.customerId,
+          projectId: invoiceDraft.projectId || null,
+          issueDate: invoiceDraft.issueDate,
+          dueDate: invoiceDraft.dueDate,
+          taxRate: invoiceDraft.taxRate,
+          notes: invoiceDraft.notes,
+          items: invoiceDraft.lines.map((line) => ({
+            description: line.description,
+            quantity: line.quantity,
+            unitPriceRappen: Math.round(line.unitPrice * 100),
+          })),
+        }),
+      });
+      setInvoiceOpen(false);
+      setNotice('Rechnungsentwurf erstellt.');
+      await loadWorkspaceData(activeWorkspaceId);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Rechnung konnte nicht erstellt werden.');
+    }
+  }
+
+  async function invoiceAction(invoice: Invoice, action: 'download' | 'mark_paid' | 'cancel') {
+    try {
+      if (action === 'download') {
+        const response = await fetch(`/api/hive/invoices/${invoice.id}/action`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }),
+        });
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error?.error || 'PDF konnte nicht geladen werden.');
+        }
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `${invoice.invoice_number}.pdf`;
+        anchor.click();
+        URL.revokeObjectURL(url);
+        return;
+      }
+      await requestJson(`/api/hive/invoices/${invoice.id}/action`, {
+        method: 'POST', body: JSON.stringify({ action }),
+      });
+      setNotice(action === 'mark_paid' ? 'Rechnung als bezahlt markiert.' : 'Rechnung storniert.');
+      if (activeWorkspaceId) await loadWorkspaceData(activeWorkspaceId);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Rechnungsaktion fehlgeschlagen.');
+    }
+  }
+
+  async function deleteInvoice(invoice: Invoice) {
+    if (!confirm(`${invoice.invoice_number} wirklich löschen?`)) return;
+    try {
+      await requestJson(`/api/hive/invoices/${invoice.id}`, { method: 'DELETE' });
+      setNotice('Rechnungsentwurf gelöscht.');
+      if (activeWorkspaceId) await loadWorkspaceData(activeWorkspaceId);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Rechnung konnte nicht gelöscht werden.');
+    }
+  }
+
+  async function createOffer(event: FormEvent) {
+    event.preventDefault();
+    if (!activeWorkspaceId) return;
+    try {
+      await requestJson('/api/hive/offers', {
+        method: 'POST',
+        body: JSON.stringify({
+          workspaceId: activeWorkspaceId,
+          customerId: offerDraft.customerId,
+          projectId: offerDraft.projectId || null,
+          title: offerDraft.title,
+          issueDate: offerDraft.issueDate,
+          validUntil: offerDraft.validUntil,
+          taxRate: offerDraft.taxRate,
+          notes: offerDraft.notes,
+          terms: offerDraft.terms,
+          items: offerDraft.lines.map((line) => ({
+            description: line.description,
+            quantity: line.quantity,
+            unitPriceRappen: Math.round(line.unitPrice * 100),
+          })),
+        }),
+      });
+      setOfferOpen(false);
+      setNotice('Offertenentwurf erstellt.');
+      await loadWorkspaceData(activeWorkspaceId);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Offerte konnte nicht erstellt werden.');
+    }
+  }
+
+  async function saveSettings(event: FormEvent) {
+    event.preventDefault();
+    if (!activeWorkspaceId || !settings) return;
+    try {
+      const data = await requestJson<{ settings: Settings }>('/api/hive/settings', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          workspaceId: activeWorkspaceId,
+          businessName: settings.business_name,
+          legalName: settings.legal_name,
+          contactName: settings.contact_name,
+          email: settings.email,
+          phone: settings.phone,
+          websiteUrl: settings.website_url,
+          addressLine1: settings.address_line1,
+          postalCode: settings.postal_code,
+          city: settings.city,
+          country: settings.country,
+          logoUrl: settings.logo_url,
+          primaryColor: settings.primary_color,
+          secondaryColor: settings.secondary_color,
+          accentColor: settings.accent_color,
+          invoiceSenderName: settings.invoice_sender_name,
+          iban: settings.iban,
+          bankName: settings.bank_name,
+          accountHolder: settings.account_holder,
+          uidNumber: settings.uid_number,
+          vatNumber: settings.vat_number,
+          vatEnabled: settings.vat_enabled,
+          defaultTaxRate: Number(settings.default_tax_rate),
+          defaultDueDays: Number(settings.default_due_days),
+          currency: settings.currency,
+          invoicePrefix: settings.invoice_prefix,
+        }),
+      });
+      setSettings(data.settings);
+      setNotice('Business-Einstellungen gespeichert.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Einstellungen konnten nicht gespeichert werden.');
+    }
+  }
+
+  const openCustomer = (customer?: Customer) => {
+    setCustomerDraft(customer ? {
+      id: customer.id, company: customer.company || '', contactName: customer.contact_name || '',
+      email: customer.email || '', phone: customer.phone || '', addressLine1: customer.address_line1 || '',
+      postalCode: customer.postal_code || '', city: customer.city || '', country: customer.country || 'Schweiz',
+      notes: customer.notes || '',
+    } : {
+      id: '', company: '', contactName: '', email: '', phone: '', addressLine1: '',
+      postalCode: '', city: '', country: 'Schweiz', notes: '',
+    });
+    setCustomerOpen(true);
+  };
+
+  const openProject = (project?: Project) => {
+    setProjectDraft(project ? {
+      id: project.id, customerId: project.customer_id, title: project.title,
+      description: project.description || '', status: project.status,
+      budget: project.budget_rappen / 100, startDate: project.start_date || '', dueDate: project.due_date || '',
+    } : {
+      id: '', customerId: customers[0]?.id || '', title: '', description: '', status: 'planning',
+      budget: 0, startDate: '', dueDate: '',
+    });
+    setProjectOpen(true);
+  };
+
+  if (backendError && !workspaces.length) {
+    return <main className="auth-shell" style={{ gridTemplateColumns: '1fr' }}>
+      <section className="auth-panel">
+        <div className="auth-setup">
+          <span>HIVE BACKEND</span>
+          <h2>Backend vorbereitet.</h2>
+          <p>{backendError}</p>
+          <p>Die Datenbank und Dev-Kopien sind verbunden. Für den Zugriff fehlt noch die aktivierte Clerk-Session.</p>
+          <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
+            <a href="/login">Zum Login</a>
+            <button className="hsv-outline" onClick={() => void loadWorkspaces()}><RefreshCw size={14}/> Erneut prüfen</button>
+          </div>
+        </div>
+      </section>
+    </main>;
+  }
+
+  const nav = [
+    ['overview', 'Überblick', LayoutDashboard],
+    ['customers', 'Kunden', Users],
+    ['projects', 'Projekte', BriefcaseBusiness],
+    ['invoices', 'Rechnungen', CreditCard],
+    ['offers', 'Offerten', FileText],
+    ['emails', 'E-Mail', Mail],
+    ['branding', 'Business', Settings2],
+  ] as const;
+
+  return <div className="hsv" style={{ '--business-accent': accent } as React.CSSProperties}>
+    <header className="hsv-top">
+      <div className="hsv-identity">
+        <a className="hsv-hive" href="/">hive.</a><span className="hsv-divider"/>
+        <span className="hsv-logo">{settings?.logo_url ? <img src={settings.logo_url} alt="Business Logo"/> : businessName.charAt(0)}</span>
+        <select aria-label="Business auswählen" value={activeWorkspaceId} onChange={(event) => setActiveWorkspaceId(event.target.value)}>
+          {workspaces.map((workspace) => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}
+        </select>
+      </div>
+      <span className="hsv-mode">DEV DATABASE · E-MAIL-VERSAND GESPERRT</span>
+      <a className="hsv-back" href="/account">Account <ArrowRight size={15}/></a>
+    </header>
+
+    <div className="hsv-layout">
+      <nav className="hsv-nav" aria-label="Business-Module">
+        {nav.map(([id, label, Icon]) => <button key={id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}><Icon size={17}/>{label}</button>)}
+      </nav>
+
+      <main className="hsv-main">
+        <div className="hsv-heading">
+          <span>HIVE / {businessName.toUpperCase()}</span>
+          <h1>{tab === 'overview' ? 'Dein Business.' : nav.find(([id]) => id === tab)?.[1] + '.'}</h1>
+          <p>{busy ? 'Daten werden geladen…' : 'Echte Dev-Daten aus Supabase. Produktions-Workspaces bleiben gesperrt.'}</p>
+        </div>
+
+        {tab === 'overview' && <>
+          <div className="hsv-cards">
+            <button onClick={() => setTab('customers')}><span>KUNDEN</span><strong>{customers.length.toString().padStart(2, '0')}</strong><small>Öffnen <ArrowRight size={14}/></small></button>
+            <button onClick={() => setTab('projects')}><span>PROJEKTE</span><strong>{projects.length.toString().padStart(2, '0')}</strong><small>Öffnen <ArrowRight size={14}/></small></button>
+            <button onClick={() => setTab('invoices')}><span>RECHNUNGEN</span><strong>{invoices.length.toString().padStart(2, '0')}</strong><small>Öffnen <ArrowRight size={14}/></small></button>
+            <button onClick={() => setTab('offers')}><span>OFFERTEN</span><strong>{offers.length.toString().padStart(2, '0')}</strong><small>Öffnen <ArrowRight size={14}/></small></button>
+          </div>
+          <div className="hsv-intro">
+            <span className="hsv-big-logo">{settings?.logo_url ? <img src={settings.logo_url} alt="Business Logo"/> : businessName.charAt(0)}</span>
+            <div><span>ECHTER DEV-KONTEXT</span><h2>{businessName}</h2><p>Dieser Workspace enthält eine isolierte Kopie des bestehenden CRM-Kontexts. Änderungen hier betreffen nicht die freigegebenen Live-Workspaces.</p><button onClick={() => setTab('branding')}>Business bearbeiten <ArrowRight size={15}/></button></div>
+          </div>
+        </>}
+
+        {tab === 'customers' && <>
+          <div className="hsv-rowtop"><strong>{customers.length} Kunden</strong><button className="hsv-primary" onClick={() => openCustomer()}><Plus size={15}/> Kunde hinzufügen</button></div>
+          <div className="hsv-table">{customers.map((customer) => <div key={customer.id}>
+            <span className="hsv-letter">{customerName(customer).charAt(0).toUpperCase()}</span>
+            <span className="hsv-grow"><strong>{customerName(customer)}</strong><small>{customer.email || 'Dev-Kopie · E-Mail entfernt'} · {[customer.postal_code, customer.city].filter(Boolean).join(' ') || 'Keine Adresse'}</small></span>
+            <button onClick={() => openCustomer(customer)}>Bearbeiten</button>
+            <button aria-label="Kunde löschen" onClick={() => void deleteCustomer(customer)}><Trash2 size={16}/></button>
+          </div>)}</div>
+        </>}
+
+        {tab === 'projects' && <>
+          <div className="hsv-rowtop"><strong>{projects.length} Projekte</strong><button className="hsv-primary" disabled={!customers.length} onClick={() => openProject()}><Plus size={15}/> Projekt erstellen</button></div>
+          <div className="hsv-table">{projects.map((project) => <div key={project.id}>
+            <span className="hsv-letter"><BriefcaseBusiness size={16}/></span>
+            <span className="hsv-grow"><strong>{project.title}</strong><small>{relatedName(project.customers)} · {project.status.replace('_', ' ')}</small></span>
+            <strong>{money(project.budget_rappen)}</strong>
+            <button onClick={() => openProject(project)}>Bearbeiten</button>
+            <button aria-label="Projekt löschen" onClick={() => void deleteProject(project)}><Trash2 size={16}/></button>
+          </div>)}</div>
+        </>}
+
+        {tab === 'invoices' && <>
+          <div className="hsv-rowtop"><strong>{invoices.length} Rechnungen</strong><button className="hsv-primary" disabled={!customers.length} onClick={() => {
+            setInvoiceDraft({ customerId: customers[0]?.id || '', projectId: '', issueDate: today(), dueDate: afterDays(settings?.default_due_days || 30), taxRate: Number(settings?.default_tax_rate || 0), notes: '', lines: [{ description: '', quantity: 1, unitPrice: 0 }] });
+            setInvoiceOpen(true);
+          }}><Plus size={15}/> Rechnung erstellen</button></div>
+          <div className="hsv-table">{invoices.map((invoice) => <div key={invoice.id}>
+            <span className="hsv-letter"><CreditCard size={16}/></span>
+            <span className="hsv-grow"><strong>{invoice.invoice_number}</strong><small>{relatedName(invoice.customers)} · {invoice.status}</small></span>
+            <strong>{money(invoice.total_rappen, invoice.currency)}</strong>
+            <button onClick={() => void invoiceAction(invoice, 'download')}>PDF</button>
+            {invoice.status === 'draft' && <button onClick={() => void deleteInvoice(invoice)}><Trash2 size={16}/></button>}
+            {(invoice.status === 'sent' || invoice.status === 'overdue') && <button onClick={() => void invoiceAction(invoice, 'mark_paid')}>Bezahlt</button>}
+            {invoice.status !== 'paid' && invoice.status !== 'cancelled' && <button onClick={() => void invoiceAction(invoice, 'cancel')}>Stornieren</button>}
+          </div>)}</div>
+          <p className="hsv-warning">Der E-Mail-Versand ist in dieser Dev-Preview absichtlich serverseitig gesperrt.</p>
+        </>}
+
+        {tab === 'offers' && <>
+          <div className="hsv-rowtop"><strong>{offers.length} Offerten</strong><button className="hsv-primary" disabled={!customers.length} onClick={() => {
+            setOfferDraft({ customerId: customers[0]?.id || '', projectId: '', title: '', issueDate: today(), validUntil: afterDays(30), taxRate: Number(settings?.default_tax_rate || 0), notes: '', terms: 'Diese Offerte ist bis zum angegebenen Datum gültig.', lines: [{ description: '', quantity: 1, unitPrice: 0 }] });
+            setOfferOpen(true);
+          }}><Plus size={15}/> Offerte erstellen</button></div>
+          <div className="hsv-table">{offers.map((offer) => <div key={offer.id}>
+            <span className="hsv-letter"><FileText size={16}/></span>
+            <span className="hsv-grow"><strong>{offer.offer_number} · {offer.title}</strong><small>{relatedName(offer.customers)} · {offer.status} · gültig bis {offer.valid_until}</small></span>
+            <strong>{money(offer.total_rappen)}</strong>
+          </div>)}</div>
+        </>}
+
+        {tab === 'emails' && <>
+          <div className="hsv-rowtop"><strong>{emails.length} E-Mail-Ereignisse</strong><button className="hsv-outline" onClick={() => activeWorkspaceId && void loadWorkspaceData(activeWorkspaceId)}><RefreshCw size={14}/> Aktualisieren</button></div>
+          <div className="hsv-table">{emails.map((email) => <div key={email.id}>
+            <span className="hsv-letter"><Mail size={16}/></span>
+            <span className="hsv-grow"><strong>{email.subject}</strong><small>{email.template_key} · {email.status} · {new Date(email.created_at).toLocaleString('de-CH')}</small></span>
+            <small>{email.recipient_email}</small>
+          </div>)}</div>
+          <p className="hsv-warning">Historische Empfänger in der Dev-Kopie wurden neutralisiert.</p>
+        </>}
+
+        {tab === 'branding' && settings && <form className="hsv-branding" onSubmit={saveSettings}>
+          <div className="hsv-brand-preview"><span>{settings.logo_url ? <img src={settings.logo_url} alt="Logo"/> : settings.business_name.charAt(0)}</span><div><strong>{settings.business_name}</strong><small>{activeWorkspace?.role} · Dev-Workspace</small></div></div>
+          <label>Business-Name<input value={settings.business_name} onChange={(e) => setSettings({ ...settings, business_name: e.target.value })}/></label>
+          <label>Logo-URL<input value={settings.logo_url} onChange={(e) => setSettings({ ...settings, logo_url: e.target.value })} placeholder="https://…"/></label>
+          <label>Kontakt-E-Mail<input type="email" value={settings.email} onChange={(e) => setSettings({ ...settings, email: e.target.value })}/></label>
+          <label>Adresse<input value={settings.address_line1} onChange={(e) => setSettings({ ...settings, address_line1: e.target.value })}/></label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12 }}>
+            <label>PLZ<input value={settings.postal_code} onChange={(e) => setSettings({ ...settings, postal_code: e.target.value })}/></label>
+            <label>Ort<input value={settings.city} onChange={(e) => setSettings({ ...settings, city: e.target.value })}/></label>
+          </div>
+          <label>IBAN<input value={settings.iban} onChange={(e) => setSettings({ ...settings, iban: e.target.value })}/></label>
+          <label>Rechnungspräfix<input value={settings.invoice_prefix} onChange={(e) => setSettings({ ...settings, invoice_prefix: e.target.value.toUpperCase() })}/></label>
+          <label>Standard-Steuersatz %<input type="number" min="0" max="100" step="0.1" value={settings.default_tax_rate} onChange={(e) => setSettings({ ...settings, default_tax_rate: Number(e.target.value) })}/></label>
+          <label>Accent-Farbe<div className="hsv-color"><input type="color" value={settings.accent_color} onChange={(e) => setSettings({ ...settings, accent_color: e.target.value })}/><span>{settings.accent_color}</span></div></label>
+          <button className="hsv-primary" type="submit">Speichern <Check size={15}/></button>
+        </form>}
+      </main>
+    </div>
+
+    {notice && <div className="hsv-toast" role="status">{notice}<button aria-label="Schliessen" onClick={() => setNotice('')}><X size={16}/></button></div>}
+
+    {customerOpen && <Modal title={customerDraft.id ? 'Kunde bearbeiten' : 'Neuer Kunde'} onClose={() => setCustomerOpen(false)}>
+      <form onSubmit={saveCustomer}>
+        <label>Firma<input value={customerDraft.company} onChange={(e) => setCustomerDraft({ ...customerDraft, company: e.target.value })}/></label>
+        <label>Kontaktperson<input value={customerDraft.contactName} onChange={(e) => setCustomerDraft({ ...customerDraft, contactName: e.target.value })}/></label>
+        <label>E-Mail<input type="email" value={customerDraft.email} onChange={(e) => setCustomerDraft({ ...customerDraft, email: e.target.value })}/></label>
+        <label>Telefon<input value={customerDraft.phone} onChange={(e) => setCustomerDraft({ ...customerDraft, phone: e.target.value })}/></label>
+        <label>Adresse<input value={customerDraft.addressLine1} onChange={(e) => setCustomerDraft({ ...customerDraft, addressLine1: e.target.value })}/></label>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12 }}><label>PLZ<input value={customerDraft.postalCode} onChange={(e) => setCustomerDraft({ ...customerDraft, postalCode: e.target.value })}/></label><label>Ort<input value={customerDraft.city} onChange={(e) => setCustomerDraft({ ...customerDraft, city: e.target.value })}/></label></div>
+        <label>Notiz<textarea rows={3} value={customerDraft.notes} onChange={(e) => setCustomerDraft({ ...customerDraft, notes: e.target.value })}/></label>
+        <button className="hsv-primary" type="submit">Speichern <Check size={15}/></button>
+      </form>
+    </Modal>}
+
+    {projectOpen && <Modal title={projectDraft.id ? 'Projekt bearbeiten' : 'Neues Projekt'} onClose={() => setProjectOpen(false)}>
+      <form onSubmit={saveProject}>
+        {!projectDraft.id && <label>Kunde<select required value={projectDraft.customerId} onChange={(e) => setProjectDraft({ ...projectDraft, customerId: e.target.value })}>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customerName(customer)}</option>)}</select></label>}
+        <label>Projektname<input required value={projectDraft.title} onChange={(e) => setProjectDraft({ ...projectDraft, title: e.target.value })}/></label>
+        <label>Status<select value={projectDraft.status} onChange={(e) => setProjectDraft({ ...projectDraft, status: e.target.value as Project['status'] })}><option value="planning">Planung</option><option value="active">Aktiv</option><option value="on_hold">Pausiert</option><option value="completed">Abgeschlossen</option></select></label>
+        <label>Budget CHF<input type="number" min="0" step="0.01" value={projectDraft.budget} onChange={(e) => setProjectDraft({ ...projectDraft, budget: Number(e.target.value) })}/></label>
+        <label>Beschreibung<textarea rows={3} value={projectDraft.description} onChange={(e) => setProjectDraft({ ...projectDraft, description: e.target.value })}/></label>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><label>Start<input type="date" value={projectDraft.startDate} onChange={(e) => setProjectDraft({ ...projectDraft, startDate: e.target.value })}/></label><label>Fällig<input type="date" value={projectDraft.dueDate} onChange={(e) => setProjectDraft({ ...projectDraft, dueDate: e.target.value })}/></label></div>
+        <button className="hsv-primary" type="submit">Speichern <Check size={15}/></button>
+      </form>
+    </Modal>}
+
+    {invoiceOpen && <DocumentModal title="Rechnung erstellen" lines={invoiceDraft.lines} total={invoiceTotal} taxRate={invoiceDraft.taxRate} onClose={() => setInvoiceOpen(false)}
+      onAddLine={() => setInvoiceDraft({ ...invoiceDraft, lines: [...invoiceDraft.lines, { description: '', quantity: 1, unitPrice: 0 }] })}
+      onLineChange={(index, line) => setInvoiceDraft({ ...invoiceDraft, lines: invoiceDraft.lines.map((current, i) => i === index ? line : current) })}
+      onLineDelete={(index) => setInvoiceDraft({ ...invoiceDraft, lines: invoiceDraft.lines.filter((_, i) => i !== index) })}>
+      <form onSubmit={createInvoice}>
+        <label>Kunde<select required value={invoiceDraft.customerId} onChange={(e) => setInvoiceDraft({ ...invoiceDraft, customerId: e.target.value, projectId: '' })}>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customerName(customer)}</option>)}</select></label>
+        <label>Projekt<select value={invoiceDraft.projectId} onChange={(e) => setInvoiceDraft({ ...invoiceDraft, projectId: e.target.value })}><option value="">Kein Projekt</option>{projects.filter((project) => project.customer_id === invoiceDraft.customerId).map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}</select></label>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><label>Datum<input required type="date" value={invoiceDraft.issueDate} onChange={(e) => setInvoiceDraft({ ...invoiceDraft, issueDate: e.target.value })}/></label><label>Fällig<input required type="date" value={invoiceDraft.dueDate} onChange={(e) => setInvoiceDraft({ ...invoiceDraft, dueDate: e.target.value })}/></label></div>
+        <label>Steuersatz %<input type="number" min="0" max="100" step="0.1" value={invoiceDraft.taxRate} onChange={(e) => setInvoiceDraft({ ...invoiceDraft, taxRate: Number(e.target.value) })}/></label>
+        <label>Notiz<textarea rows={2} value={invoiceDraft.notes} onChange={(e) => setInvoiceDraft({ ...invoiceDraft, notes: e.target.value })}/></label>
+        <button className="hsv-primary" type="submit">Rechnungsentwurf erstellen <Check size={15}/></button>
+      </form>
+    </DocumentModal>}
+
+    {offerOpen && <DocumentModal title="Offerte erstellen" lines={offerDraft.lines} total={offerTotal} taxRate={offerDraft.taxRate} onClose={() => setOfferOpen(false)}
+      onAddLine={() => setOfferDraft({ ...offerDraft, lines: [...offerDraft.lines, { description: '', quantity: 1, unitPrice: 0 }] })}
+      onLineChange={(index, line) => setOfferDraft({ ...offerDraft, lines: offerDraft.lines.map((current, i) => i === index ? line : current) })}
+      onLineDelete={(index) => setOfferDraft({ ...offerDraft, lines: offerDraft.lines.filter((_, i) => i !== index) })}>
+      <form onSubmit={createOffer}>
+        <label>Kunde<select required value={offerDraft.customerId} onChange={(e) => setOfferDraft({ ...offerDraft, customerId: e.target.value, projectId: '' })}>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customerName(customer)}</option>)}</select></label>
+        <label>Projekt<select value={offerDraft.projectId} onChange={(e) => setOfferDraft({ ...offerDraft, projectId: e.target.value })}><option value="">Kein Projekt</option>{projects.filter((project) => project.customer_id === offerDraft.customerId).map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}</select></label>
+        <label>Titel<input required value={offerDraft.title} onChange={(e) => setOfferDraft({ ...offerDraft, title: e.target.value })}/></label>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><label>Datum<input type="date" value={offerDraft.issueDate} onChange={(e) => setOfferDraft({ ...offerDraft, issueDate: e.target.value })}/></label><label>Gültig bis<input type="date" value={offerDraft.validUntil} onChange={(e) => setOfferDraft({ ...offerDraft, validUntil: e.target.value })}/></label></div>
+        <label>Steuersatz %<input type="number" min="0" max="100" step="0.1" value={offerDraft.taxRate} onChange={(e) => setOfferDraft({ ...offerDraft, taxRate: Number(e.target.value) })}/></label>
+        <label>Bedingungen<textarea required rows={3} value={offerDraft.terms} onChange={(e) => setOfferDraft({ ...offerDraft, terms: e.target.value })}/></label>
+        <button className="hsv-primary" type="submit">Offertenentwurf erstellen <Check size={15}/></button>
+      </form>
+    </DocumentModal>}
+  </div>;
+}
+
+function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  return <div className="hsv-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <div className="hsv-dialog">
+      <button type="button" className="hsv-close" aria-label="Schliessen" onClick={onClose}><X size={18}/></button>
+      <span>HIVE CRM</span><h2>{title}</h2>{children}
+    </div>
+  </div>;
+}
+
+function DocumentModal({
+  title, lines, total, taxRate, onClose, onAddLine, onLineChange, onLineDelete, children,
+}: {
+  title: string; lines: LineDraft[]; total: number; taxRate: number; onClose: () => void;
+  onAddLine: () => void; onLineChange: (index: number, line: LineDraft) => void;
+  onLineDelete: (index: number) => void; children: React.ReactNode;
+}) {
+  const tax = Math.round(total * taxRate / 100);
+  return <div className="hsv-overlay hsv-invoice-overlay">
+    <div className="hsv-invoice-editor">
+      <div className="hsv-editorbar"><div><small>HIVE / DEV</small><strong>{title}</strong></div><button className="hsv-icon" onClick={onClose} aria-label="Schliessen"><X size={18}/></button></div>
+      <div className="hsv-paper" style={{ maxWidth: 850 }}>
+        {children}
+        <div className="hsv-lines" style={{ marginTop: 28 }}>
+          <div className="hsv-lineheader"><span>Beschreibung</span><span>Menge</span><span>CHF / Einheit</span><span>Betrag</span><span/></div>
+          {lines.map((line, index) => <div className="hsv-line" key={index}>
+            <input required value={line.description} placeholder="Leistung" onChange={(e) => onLineChange(index, { ...line, description: e.target.value })}/>
+            <input required type="number" min="0.01" step="0.01" value={line.quantity} onChange={(e) => onLineChange(index, { ...line, quantity: Number(e.target.value) })}/>
+            <input required type="number" min="0" step="0.01" value={line.unitPrice} onChange={(e) => onLineChange(index, { ...line, unitPrice: Number(e.target.value) })}/>
+            <strong>{money(Math.round(line.quantity * line.unitPrice * 100))}</strong>
+            <button type="button" onClick={() => onLineDelete(index)}><Trash2 size={15}/></button>
+          </div>)}
+        </div>
+        <button type="button" className="hsv-addline" onClick={onAddLine}><Plus size={15}/> Position hinzufügen</button>
+        <div className="hsv-bill-total"><div><span>Zwischensumme</span><strong>{money(total)}</strong></div><div><span>Steuern</span><strong>{money(tax)}</strong></div><div className="hsv-grand"><span>Gesamt</span><strong>{money(total + tax)}</strong></div></div>
+      </div>
+    </div>
+  </div>;
 }
