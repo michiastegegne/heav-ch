@@ -31,8 +31,8 @@ const defaults: Record<z.infer<typeof keySchema>, { subject_template:string; tex
 export async function GET(request: Request) {
   try {
     const workspaceId = z.string().uuid().parse(new URL(request.url).searchParams.get('workspace'));
-    assertWorkspaceAllowed(workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(workspaceId, supabase);
 
     const { data, error } = await supabase
       .from('email_templates')
@@ -56,8 +56,8 @@ export async function GET(request: Request) {
 export async function PUT(request: Request) {
   try {
     const payload = bodySchema.parse(await request.json());
-    assertWorkspaceAllowed(payload.workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(payload.workspaceId, supabase);
 
     const { data: workspace, error: workspaceError } = await supabase
       .from('workspaces')
