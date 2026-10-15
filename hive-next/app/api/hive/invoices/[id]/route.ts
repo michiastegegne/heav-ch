@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { jsonError, requireHiveDataAccess } from '@/lib/hive/access';
+import { assertWorkspaceAllowed, jsonError, requireHiveDataAccess } from '@/lib/hive/access';
 
 const idSchema = z.string().uuid();
 
@@ -11,6 +11,13 @@ export async function DELETE(
     const { id } = await context.params;
     const invoiceId = idSchema.parse(id);
     const supabase = await requireHiveDataAccess();
+    const { data: invoice, error: invoiceLookupError } = await supabase
+      .from('invoices')
+      .select('workspace_id')
+      .eq('id', invoiceId)
+      .single();
+    if (invoiceLookupError || !invoice) throw invoiceLookupError || new Error('Invoice not found');
+    assertWorkspaceAllowed(invoice.workspace_id);
 
     const { error } = await supabase.rpc('delete_draft_invoice', {
       p_invoice_id: invoiceId,
