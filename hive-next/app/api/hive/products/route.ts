@@ -14,8 +14,8 @@ const createSchema = z.object({
 export async function GET(request: Request) {
   try {
     const workspaceId = workspaceSchema.parse(new URL(request.url).searchParams.get('workspace'));
-    assertWorkspaceAllowed(workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(workspaceId, supabase);
 
     const { data, error } = await supabase
       .from('products')
@@ -34,8 +34,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const payload = createSchema.parse(await request.json());
-    assertWorkspaceAllowed(payload.workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(payload.workspaceId, supabase);
 
     const { data: workspace, error: workspaceError } = await supabase
       .from('workspaces')
