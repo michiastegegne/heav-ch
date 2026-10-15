@@ -1,3 +1,4 @@
+import { auth } from '@clerk/nextjs/server';
 import { z } from 'zod';
 import { assertWorkspaceAllowed, jsonError, requireHiveDataAccess } from '@/lib/hive/access';
 
@@ -90,6 +91,36 @@ export async function POST(request: Request) {
     const payload = actionSchema.parse(await request.json());
     const supabase = await requireHiveDataAccess();
     await assertWorkspaceAllowed(payload.workspaceId, supabase);
+
+    if (payload.action === 'create_invite' && process.env.HIVE_ENABLE_EMAIL_SEND === 'true') {
+      const { getToken } = await auth();
+      const token = await getToken();
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      if (!token) return Response.json({ error:'Authentication required' }, { status:401 });
+      if (!supabaseUrl || !supabaseKey) {
+        return Response.json({ error:'Portal invitation backend is not configured' }, { status:503 });
+      }
+
+      const upstream = await fetch(`${supabaseUrl}/functions/v1/portal-send-invite`, {
+        method:'POST',
+        headers:{
+          Authorization:`Bearer ${token}`,
+          apikey:supabaseKey,
+          'Content-Type':'application/json',
+        },
+        body:JSON.stringify({
+          customerId:payload.customerId,
+          departmentId:payload.departmentId || null,
+        }),
+        cache:'no-store',
+      });
+      const data = await upstream.json().catch(() => ({ error:'Portal-Einladung konnte nicht versendet werden.' }));
+      return Response.json(
+        upstream.ok ? { ...data, emailSent:true } : data,
+        { status:upstream.status, headers:{ 'Cache-Control':'private, no-store' } },
+      );
+    }
 
     if (payload.action === 'create_invite') {
       const { data: customer, error: customerError } = await supabase
