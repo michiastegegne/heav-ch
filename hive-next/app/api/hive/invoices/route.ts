@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     await assertWorkspaceAllowed(workspaceId, supabase);
     const { data, error } = await supabase
       .from('invoices')
-      .select('id, workspace_id, customer_id, project_id, invoice_number, issue_date, due_date, status, currency, tax_rate, subtotal_rappen, tax_rappen, total_rappen, sent_at, paid_at, is_legacy, number_finalized, created_at, customers(company, contact_name)')
+      .select('id, workspace_id, customer_id, project_id, source_offer_id, invoice_number, issue_date, due_date, status, currency, tax_rate, subtotal_rappen, tax_rappen, total_rappen, sent_at, paid_at, is_legacy, number_finalized, created_at, customers(company, contact_name)')
       .eq('workspace_id', workspaceId)
       .order('issue_date', { ascending: false });
     if (error) throw error;
