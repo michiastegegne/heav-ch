@@ -25,7 +25,7 @@ export async function POST(
       .eq('id', invoiceId)
       .single();
     if (invoiceLookupError || !invoice) throw invoiceLookupError || new Error('Invoice not found');
-    assertWorkspaceAllowed(invoice.workspace_id);
+    await assertWorkspaceAllowed(invoice.workspace_id, supabase);
 
     if (action === 'issue') {
       if (invoice.is_legacy) {
