@@ -8,13 +8,18 @@ export async function loadEmailTemplate(
   ownerId: string,
   templateKey: string,
   fallback: EmailTemplate,
+  workspaceId?: string | null,
 ): Promise<EmailTemplate> {
-  const { data, error } = await client
+  let query = client
     .from("email_templates")
     .select("subject_template,text_template")
-    .eq("owner_id", ownerId)
-    .eq("template_key", templateKey)
-    .maybeSingle();
+    .eq("template_key", templateKey);
+
+  query = workspaceId
+    ? query.eq("workspace_id", workspaceId)
+    : query.eq("owner_id", ownerId);
+
+  const { data, error } = await query.maybeSingle();
   if (error) throw error;
   return data?.subject_template && data?.text_template ? data : fallback;
 }
