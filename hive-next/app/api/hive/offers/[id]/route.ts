@@ -34,7 +34,7 @@ async function resolveOffer(
     .eq('id', offerId)
     .single();
   if (error || !data) throw error || new Error('Offer not found');
-  assertWorkspaceAllowed(data.workspace_id);
+  await assertWorkspaceAllowed(data.workspace_id, supabase);
   return data;
 }
 
@@ -46,8 +46,8 @@ export async function GET(
     const { id } = await context.params;
     const offerId = idSchema.parse(id);
     const workspaceId = z.string().uuid().parse(new URL(request.url).searchParams.get('workspace'));
-    assertWorkspaceAllowed(workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(workspaceId, supabase);
     const offer = await resolveOffer(supabase, offerId);
     if (offer.workspace_id !== workspaceId) {
       return Response.json({ error:'Offerte gehört nicht zu diesem Business.' }, { status:409 });
@@ -80,8 +80,8 @@ export async function PATCH(
     const { id } = await context.params;
     const offerId = idSchema.parse(id);
     const payload = draftSchema.parse(await request.json());
-    assertWorkspaceAllowed(payload.workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(payload.workspaceId, supabase);
     const offer = await resolveOffer(supabase, offerId);
     if (offer.workspace_id !== payload.workspaceId) {
       return Response.json({ error:'Offerte gehört nicht zu diesem Business.' }, { status:409 });
