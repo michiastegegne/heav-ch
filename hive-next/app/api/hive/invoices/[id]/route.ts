@@ -30,7 +30,7 @@ async function resolveInvoice(
     .eq('id', invoiceId)
     .single();
   if (error || !data) throw error || new Error('Invoice not found');
-  assertWorkspaceAllowed(data.workspace_id);
+  await assertWorkspaceAllowed(data.workspace_id, supabase);
   return data;
 }
 
@@ -42,8 +42,8 @@ export async function GET(
     const { id } = await context.params;
     const invoiceId = idSchema.parse(id);
     const workspaceId = workspaceSchema.parse(new URL(request.url).searchParams.get('workspace'));
-    assertWorkspaceAllowed(workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(workspaceId, supabase);
     const invoice = await resolveInvoice(supabase, invoiceId);
     if (invoice.workspace_id !== workspaceId) {
       return Response.json({ error: 'Rechnung gehört nicht zu diesem Business.' }, { status: 409 });
@@ -71,8 +71,8 @@ export async function PATCH(
     const { id } = await context.params;
     const invoiceId = idSchema.parse(id);
     const payload = draftSchema.parse(await request.json());
-    assertWorkspaceAllowed(payload.workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(payload.workspaceId, supabase);
     const invoice = await resolveInvoice(supabase, invoiceId);
     if (invoice.workspace_id !== payload.workspaceId) {
       return Response.json({ error: 'Rechnung gehört nicht zu diesem Business.' }, { status: 409 });
