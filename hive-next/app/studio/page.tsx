@@ -26,7 +26,7 @@ type Project = {
   customers?: { company?: string | null; contact_name?: string | null } | null;
 };
 type Invoice = {
-  id: string; workspace_id: string; customer_id: string; project_id: string | null;
+  id: string; workspace_id: string; customer_id: string; project_id: string | null; source_offer_id:string|null;
   invoice_number: string; issue_date: string; due_date: string;
   status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled'; currency: string;
   tax_rate: number; subtotal_rappen: number; tax_rappen: number; total_rappen: number;
@@ -263,6 +263,10 @@ export default function StudioPage() {
   const offerTotal = useMemo(
     () => offerDraft.lines.reduce((sum, line) => sum + Math.round(line.quantity * line.unitPrice * 100), 0),
     [offerDraft.lines],
+  );
+  const convertedOfferIds = useMemo(
+    () => new Set(invoices.map((invoice) => invoice.source_offer_id).filter(Boolean)),
+    [invoices],
   );
   const metrics = useMemo(() => ({
     paid: invoices.filter((invoice) => invoice.status === 'paid').reduce((sum, invoice) => sum + Number(invoice.total_rappen || 0), 0),
@@ -592,6 +596,25 @@ export default function StudioPage() {
       if (activeWorkspaceId) await loadWorkspaceData(activeWorkspaceId);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Rechnung konnte nicht gelöscht werden.');
+    }
+  }
+
+  async function convertOfferToInvoice(offer: Offer) {
+    if (!activeWorkspaceId) return;
+    try {
+      await requestJson(`/api/hive/offers/${offer.id}`, {
+        method:'POST',
+        body:JSON.stringify({
+          action:'convert',
+          issueDate:today(),
+          dueDate:afterDays(settings?.default_due_days || 30),
+        }),
+      });
+      setNotice('Rechnungsentwurf aus Offerte erstellt.');
+      await loadWorkspaceData(activeWorkspaceId);
+      setTab('invoices');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Offerte konnte nicht in eine Rechnung umgewandelt werden.');
     }
   }
 
@@ -1114,6 +1137,8 @@ export default function StudioPage() {
             {offer.status === 'draft' && <button onClick={() => void openOfferDraft(offer)}>Bearbeiten</button>}
             {offer.status === 'draft' && <button onClick={() => void offerAction(offer, 'share')}>Portal freigeben</button>}
             {offer.status === 'sent' && <button onClick={() => void offerAction(offer, 'withdraw')}>Zurückziehen</button>}
+            {offer.status === 'accepted' && !convertedOfferIds.has(offer.id) && <button onClick={() => void convertOfferToInvoice(offer)}>Rechnung erstellen</button>}
+            {offer.status === 'accepted' && convertedOfferIds.has(offer.id) && <small>Rechnung erstellt</small>}
             {offer.status === 'draft' && <button aria-label="Offerte löschen" onClick={() => void offerAction(offer, 'delete')}><Trash2 size={16}/></button>}
           </div>)}</div>
         </>}
