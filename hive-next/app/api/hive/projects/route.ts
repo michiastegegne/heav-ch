@@ -7,6 +7,7 @@ const dateValue = z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.literal(''
 const projectSchema = z.object({
   workspaceId: z.string().uuid(),
   customerId: z.string().uuid(),
+  departmentId: z.union([z.string().uuid(), z.literal(''), z.null()]).default(null),
   title: z.string().trim().min(1).max(180),
   description: z.string().trim().max(6000).default(''),
   status: z.enum(['planning', 'active', 'completed', 'on_hold']).default('planning'),
@@ -41,16 +42,18 @@ export async function POST(request: Request) {
     const supabase = await requireHiveDataAccess();
     await assertWorkspaceAllowed(payload.workspaceId, supabase);
 
-    const { data: department, error: departmentError } = await supabase
+    let departmentQuery = supabase
       .from('customer_departments')
       .select('id')
       .eq('workspace_id', payload.workspaceId)
       .eq('customer_id', payload.customerId)
-      .eq('is_default', true)
-      .eq('active', true)
-      .single();
+      .eq('active', true);
+    departmentQuery = payload.departmentId
+      ? departmentQuery.eq('id', payload.departmentId)
+      : departmentQuery.eq('is_default', true);
+    const { data: department, error: departmentError } = await departmentQuery.single();
     if (departmentError || !department) {
-      return Response.json({ error: 'Aktive Standardabteilung für den Kunden fehlt' }, { status: 409 });
+      return Response.json({ error: 'Gewählte aktive Kundenabteilung fehlt.' }, { status: 409 });
     }
 
     const { data, error } = await supabase
