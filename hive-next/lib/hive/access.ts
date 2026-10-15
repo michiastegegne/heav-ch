@@ -1,3 +1,5 @@
+import { usesClerk } from '@/lib/hive/auth-provider';
+import { createSessionSupabaseClient } from '@/lib/supabase/session-server';
 import { ZodError } from 'zod';
 import { auth } from '@clerk/nextjs/server';
 import { createClerkSupabaseServerClient } from '@/lib/supabase/clerk-server';
@@ -9,6 +11,15 @@ export class HiveAccessError extends Error {
 }
 
 export async function requireHiveDataAccess() {
+  if (!usesClerk()) {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      throw new HiveAccessError(503, 'Die Anmeldung ist noch nicht eingerichtet.');
+    }
+    const supabase = await createSessionSupabaseClient();
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) throw new HiveAccessError(401, 'Bitte melde dich erneut an.');
+    return supabase;
+  }
   if (process.env.HIVE_CLERK_DB_BRIDGE_ENABLED !== 'true') {
     throw new HiveAccessError(503, 'Clerk database bridge is not enabled yet');
   }
@@ -55,4 +66,14 @@ export async function assertWorkspaceAllowed(
   if (error || data !== true) {
     throw new HiveAccessError(403, 'Workspace is not available in this preview');
   }
+}
+
+export async function getHiveAccessToken() {
+  if (usesClerk()) {
+    const { getToken } = await auth();
+    return getToken();
+  }
+  const supabase = await requireHiveDataAccess();
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token ?? null;
 }

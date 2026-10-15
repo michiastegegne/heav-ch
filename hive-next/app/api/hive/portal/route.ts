@@ -1,6 +1,5 @@
-import { auth } from '@clerk/nextjs/server';
 import { z } from 'zod';
-import { assertWorkspaceAllowed, jsonError, requireHiveDataAccess } from '@/lib/hive/access';
+import { getHiveAccessToken, assertWorkspaceAllowed, jsonError, requireHiveDataAccess } from '@/lib/hive/access';
 
 const workspaceSchema = z.string().uuid();
 const actionSchema = z.discriminatedUnion('action', [
@@ -93,8 +92,7 @@ export async function POST(request: Request) {
     await assertWorkspaceAllowed(payload.workspaceId, supabase);
 
     if (payload.action === 'create_invite' && process.env.HIVE_ENABLE_EMAIL_SEND === 'true') {
-      const { getToken } = await auth();
-      const token = await getToken();
+      const token = await getHiveAccessToken();
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
       if (!token) return Response.json({ error:'Authentication required' }, { status:401 });

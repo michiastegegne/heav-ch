@@ -1,7 +1,11 @@
+import PasswordForm from './password-form';
+import { usesClerk } from '@/lib/hive/auth-provider';
 import { SignIn } from '@clerk/nextjs';
 
+export const dynamic = 'force-dynamic';
+
 export default function LoginPage() {
-  const configured = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+  const configured = usesClerk();
   return (
     <main className="auth-shell">
       <section className="auth-brand">
@@ -9,7 +13,7 @@ export default function LoginPage() {
         <div>
           <span className="auth-kicker">CREATIVE BUSINESS OS</span>
           <h1>Work starts here.</h1>
-          <p>Apple, E-Mail und Passkeys – ohne klassisches Passwort-Chaos.</p>
+          <p>Kunden, Projekte und Finanzen. An einem Ort.</p>
         </div>
         <small>Dein Business. Deine Brand. Dein Workspace.</small>
       </section>
@@ -34,11 +38,13 @@ export default function LoginPage() {
               },
             }}
           />
+        ) : process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? (
+          <PasswordForm/>
         ) : (
           <div className="auth-setup">
             <span>AUTH SETUP</span>
-            <h2>Clerk ist vorbereitet.</h2>
-            <p>Für die funktionierende Anmeldung fehlen nur noch die Clerk-Schlüssel in Vercel. Die bestehende Supabase-Datenbank wurde dafür nicht verändert.</p>
+            <h2>Dein Workspace wird vorbereitet.</h2>
+            <p>Die Verbindung zur Anmeldung ist noch nicht vollständig eingerichtet. Bitte versuche es später erneut.</p>
             <a href="/">Zur Preview</a>
           </div>
         )}

@@ -44,16 +44,19 @@ npm run dev
 
 Required variables are documented in `.env.example`.
 
-## Current external dependency
+## Authentication
 
-The remaining login dependency is the Clerk project configuration and keys:
+When both Clerk keys are configured, Clerk and its explicit database bridge gate remain active. Without Clerk keys, Hive uses existing Supabase Auth accounts with password login and server-managed HttpOnly cookies. Signup and outbound authentication emails are not enabled by this fallback.
 
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-- `CLERK_SECRET_KEY`
-- enabled Clerk/Supabase third-party auth integration
-- `HIVE_CLERK_DB_BRIDGE_ENABLED=true` after the integration has been verified
+The server verifies every session with `getUser()` before database access. Workspace RLS and preview allowlisting apply to both providers. The root URL opens the actual CRM at `/studio`; it no longer opens the local-storage prototype.
 
-The database bridge and workspace-compatible RLS are already implemented. Do not expose Supabase service-role or Resend secret keys to browser code.
+Required for the existing Supabase login:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- existing Supabase account credentials
+
+`HIVE_CLERK_DB_BRIDGE_ENABLED` only controls the Clerk bridge. Keep it false until Clerk integration is verified. Keep `HIVE_ENABLE_EMAIL_SEND=false` for previews.
 
 ## Deployment
 

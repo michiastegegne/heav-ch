@@ -1,6 +1,5 @@
-import { auth } from '@clerk/nextjs/server';
 import { z } from 'zod';
-import { assertWorkspaceAllowed, jsonError, requireHiveDataAccess } from '@/lib/hive/access';
+import { getHiveAccessToken, assertWorkspaceAllowed, jsonError, requireHiveDataAccess } from '@/lib/hive/access';
 
 const idSchema = z.string().uuid();
 const actionSchema = z.object({
@@ -54,8 +53,7 @@ export async function POST(
       );
     }
 
-    const { getToken } = await auth();
-    const token = await getToken();
+    const token = await getHiveAccessToken();
 
     if (!token) {
       return Response.json({ error: 'Authentication required' }, { status: 401 });

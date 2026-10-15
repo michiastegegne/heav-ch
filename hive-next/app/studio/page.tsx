@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft, ArrowRight, BriefcaseBusiness, Check, CreditCard, FileText,
   LayoutDashboard, Mail, Package, Plus, RefreshCw, Search, Settings2, ShieldCheck, Trash2, Users, X,
@@ -133,6 +133,10 @@ export default function StudioPage() {
   const [tab, setTab] = useState<Tab>('overview');
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState('');
+  const currentWorkspace = useRef(activeWorkspaceId);
+  currentWorkspace.current = activeWorkspaceId;
+  const workspaceRequest = useRef(0);
+  const [loadedWorkspaceId, setLoadedWorkspaceId] = useState('');
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -199,8 +203,8 @@ export default function StudioPage() {
   });
 
   const activeWorkspace = workspaces.find((workspace) => workspace.id === activeWorkspaceId) || null;
-  const businessName = settings?.business_name || activeWorkspace?.name || 'Hive';
-  const accent = settings?.accent_color || '#191919';
+  const businessName = (loadedWorkspaceId === activeWorkspaceId ? settings?.business_name : null) || activeWorkspace?.name || 'Hive';
+  const accent = '#171717';
 
   const loadWorkspaces = useCallback(async () => {
     setBusy(true);
@@ -343,6 +347,7 @@ export default function StudioPage() {
 
   const loadWorkspaceData = useCallback(async (workspaceId: string) => {
     if (!workspaceId) return;
+    const requestId = ++workspaceRequest.current;
     setBusy(true);
     setBackendError('');
     try {
@@ -359,6 +364,8 @@ export default function StudioPage() {
         requestJson<{ activity: UnifiedActivity[] }>(`/api/hive/activity?workspace=${q}`),
         requestJson<{ settings: Settings }>(`/api/hive/settings?workspace=${q}`),
       ]);
+      if (requestId !== workspaceRequest.current || currentWorkspace.current !== workspaceId) return;
+      setLoadedWorkspaceId(workspaceId);
       setCustomers(customerData.customers);
       setProjects(projectData.projects);
       setInvoices(invoiceData.invoices);
@@ -370,10 +377,11 @@ export default function StudioPage() {
       setActivityFeed(activityData.activity);
       setSettings(settingsData.settings);
     } catch (error) {
+      if (requestId !== workspaceRequest.current || currentWorkspace.current !== workspaceId) return;
       const message = error instanceof Error ? error.message : 'Workspace konnte nicht geladen werden';
       setBackendError(message);
     } finally {
-      setBusy(false);
+      if (requestId === workspaceRequest.current && currentWorkspace.current === workspaceId) setBusy(false);
     }
   }, []);
 
@@ -1291,7 +1299,14 @@ export default function StudioPage() {
       <div className="hsv-identity">
         <a className="hsv-hive" href="/">hive.</a><span className="hsv-divider"/>
         <span className="hsv-logo">{settings?.logo_url ? <img src={settings.logo_url} alt="Business Logo"/> : businessName.charAt(0)}</span>
-        <select aria-label="Business auswählen" value={activeWorkspaceId} onChange={(event) => setActiveWorkspaceId(event.target.value)}>
+        <select aria-label="Business auswählen" value={activeWorkspaceId} onChange={(event) => {
+          setCustomerOpen(false); setProjectOpen(false); setInvoiceOpen(false); setOfferOpen(false);
+          setDepartmentOpen(false); setProjectWorkspaceOpen(false); setCustomerWorkspaceOpen(false);
+          setProductOpen(false); setInviteOpen(false); setFileOpen(false); setTeamOpen(false);
+          setSearchOpen(false); setSearchQuery(''); setTeamMembers([]);
+          setScopeDepartments([]); setSettings(null);
+          setActiveWorkspaceId(event.target.value);
+        }}>
           {workspaces.map((workspace) => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}
         </select>
         <button className="hsv-outline" type="button" onClick={() => {
@@ -1300,7 +1315,7 @@ export default function StudioPage() {
         }}><Plus size={14}/> Business</button>
       </div>
       <button className="hsv-outline" type="button" onClick={() => setSearchOpen(true)}><Search size={14}/> Suche <kbd>⌘K</kbd></button>
-      <span className="hsv-mode">DEV DATABASE · E-MAIL-VERSAND GESPERRT</span>
+      <span className="hsv-mode">DEV-WORKSPACE · VERSAND GESPERRT</span>
       <a className="hsv-back" href="/account">Account <ArrowRight size={15}/></a>
     </header>
 
@@ -1313,9 +1328,10 @@ export default function StudioPage() {
         <div className="hsv-heading">
           <span>HIVE / {businessName.toUpperCase()}</span>
           <h1>{tab === 'overview' ? 'Dein Business.' : nav.find(([id]) => id === tab)?.[1] + '.'}</h1>
-          <p>{busy ? 'Daten werden geladen…' : 'Echte Dev-Daten aus Supabase. Produktions-Workspaces bleiben gesperrt.'}</p>
+          <p>{busy ? 'Daten werden geladen…' : 'Kunden, Projekte und Finanzen im Überblick.'}</p>
         </div>
 
+        {backendError ? <div className="hsv-empty" role="alert"><strong>Workspace konnte nicht geladen werden.</strong><p>{backendError}</p><button className="hsv-outline" onClick={() => void loadWorkspaceData(activeWorkspaceId)}>Erneut versuchen</button></div> : loadedWorkspaceId !== activeWorkspaceId ? <div className="hsv-empty" role="status">Business wird geladen …</div> : <>
         {tab === 'overview' && <>
           <div className="hsv-cards">
             <button onClick={() => setTab('customers')}><span>KUNDEN</span><strong>{customers.length.toString().padStart(2, '0')}</strong><small>Öffnen <ArrowRight size={14}/></small></button>
@@ -1570,6 +1586,7 @@ export default function StudioPage() {
             <button className="hsv-outline" type="button" onClick={() => void archiveBusiness()}><Trash2 size={15}/> Business archivieren</button>
           </div>}
         </form>}
+        </>}
       </main>
     </div>
 

@@ -52,6 +52,9 @@ jobs:
         working-directory: hive-next
         run: npm run build
 
+      - name: Verify Hive login and workspace flows
+        run: npx playwright test --config playwright.hive.config.js
+
       - name: Check Edge Functions
         run: deno check --config supabase/functions/deno.json supabase/functions/*/index.ts
 

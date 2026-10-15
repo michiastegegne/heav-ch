@@ -15,10 +15,13 @@ export async function GET() {
   try {
     const supabase = await requireHiveDataAccess();
     const configured = allowedWorkspaceIds();
+    const { data: actorId, error: actorError } = await supabase.rpc('current_app_user_id');
+    if (actorError || !actorId) throw actorError || new Error('Authentication required');
 
     const { data, error } = await supabase
       .from('workspace_memberships')
       .select('workspace_id, role, workspaces(id, name, slug, status)')
+      .eq('user_id', actorId)
       .order('created_at');
 
     if (error) throw error;

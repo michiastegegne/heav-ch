@@ -1,7 +1,14 @@
+import { usesClerk } from '@/lib/hive/auth-provider';
+import { createSessionSupabaseClient } from '@/lib/supabase/session-server';
+import SignoutButton from './signout-button';
 import { UserProfile } from '@clerk/nextjs';
 
-export default function AccountPage() {
-  const configured = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+export const dynamic = 'force-dynamic';
+
+export default async function AccountPage() {
+  const configured = usesClerk();
+
+  const user = !configured ? (await (await createSessionSupabaseClient()).auth.getUser()).data.user : null;
 
   return (
     <main className="account-shell">
@@ -12,7 +19,7 @@ export default function AccountPage() {
       <section className="account-content">
         <span className="auth-kicker">ACCOUNT & SECURITY</span>
         <h1>Dein Login.</h1>
-        <p>Verwalte deine Anmeldung, Geräte und – sobald in Clerk aktiviert – deine Passkeys.</p>
+        <p>Dein Konto und deine aktuelle Anmeldung.</p>
 
         {configured ? (
           <UserProfile
@@ -27,9 +34,10 @@ export default function AccountPage() {
           />
         ) : (
           <div className="auth-setup">
-            <span>AUTH SETUP</span>
-            <h2>Noch nicht verbunden.</h2>
-            <p>Clerk ist im Code vorbereitet. Für Account- und Passkey-Verwaltung fehlen noch die Clerk-Schlüssel in Vercel.</p>
+            <span>ANGEMELDET</span>
+            <h2>{user?.email}</h2>
+            <p>Mit deinem bestehenden Konto verbunden.</p>
+            <SignoutButton/>
           </div>
         )}
       </section>
