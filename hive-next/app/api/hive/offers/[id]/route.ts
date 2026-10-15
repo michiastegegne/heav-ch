@@ -1,9 +1,10 @@
+import { auth } from '@clerk/nextjs/server';
 import { z } from 'zod';
 import { assertWorkspaceAllowed, jsonError, requireHiveDataAccess } from '@/lib/hive/access';
 
 const idSchema = z.string().uuid();
 const actionSchema = z.discriminatedUnion('action', [
-  z.object({ action: z.enum(['share', 'withdraw', 'delete']) }),
+  z.object({ action: z.enum(['share', 'withdraw', 'delete', 'send']) }),
   z.object({
     action: z.literal('convert'),
     issueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -132,6 +133,39 @@ export async function POST(
     const action = actionSchema.parse(await request.json());
     const supabase = await requireHiveDataAccess();
     const offer = await resolveOffer(supabase, offerId);
+
+    if (action.action === 'send') {
+      if (process.env.HIVE_ENABLE_EMAIL_SEND !== 'true') {
+        return Response.json(
+          { error:'E-Mail-Versand ist in der Hive-Dev-Preview deaktiviert.' },
+          { status:403 },
+        );
+      }
+      const { getToken } = await auth();
+      const token = await getToken();
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      if (!token) return Response.json({ error:'Authentication required' }, { status:401 });
+      if (!supabaseUrl || !supabaseKey) {
+        return Response.json({ error:'Offer email backend is not configured' }, { status:503 });
+      }
+
+      const upstream = await fetch(`${supabaseUrl}/functions/v1/offer-send`, {
+        method:'POST',
+        headers:{
+          Authorization:`Bearer ${token}`,
+          apikey:supabaseKey,
+          'Content-Type':'application/json',
+        },
+        body:JSON.stringify({ offerId, requestKey:crypto.randomUUID() }),
+        cache:'no-store',
+      });
+      const data = await upstream.json().catch(() => ({ error:'Offertenversand fehlgeschlagen.' }));
+      return Response.json(data, {
+        status:upstream.status,
+        headers:{ 'Cache-Control':'private, no-store' },
+      });
+    }
 
     if (action.action === 'convert') {
       const { data, error } = await supabase.rpc('convert_workspace_offer_to_invoice_draft', {
