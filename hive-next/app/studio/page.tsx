@@ -36,7 +36,7 @@ type Invoice = {
 type Offer = {
   id: string; workspace_id: string; customer_id: string; project_id: string | null;
   offer_number: string; title: string; issue_date: string; valid_until: string; status: string;
-  subtotal_rappen: number; tax_rappen: number; total_rappen: number; accepted_at: string | null;
+  tax_rate: number; subtotal_rappen: number; tax_rappen: number; total_rappen: number; accepted_at: string | null;
   customers?: { company?: string | null; contact_name?: string | null } | null;
 };
 type EmailLog = {
