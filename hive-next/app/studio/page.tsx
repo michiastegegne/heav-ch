@@ -53,6 +53,15 @@ type PortalFile = { id:string; customer_id:string; project_id:string|null; title
 type PortalReview = { id:string; customer_id:string; reviewer_name:string; body:string; status:string; published_at:string|null; created_at:string };
 type PortalActivity = { id:string; customer_id:string|null; actor_type:string; visibility:string; event_type:string; entity_type:string; summary:string; created_at:string };
 type PortalData = { memberships:PortalMembership[]; invites:PortalInvite[]; requests:PortalRequest[]; files:PortalFile[]; reviews:PortalReview[]; activity:PortalActivity[] };
+type ProjectTask = { id:string; title:string; description:string; status:'todo'|'in_progress'|'blocked'|'done'; priority:'low'|'normal'|'high'; due_date:string|null; completed_at:string|null };
+type ProjectDeliverable = { id:string; title:string; description:string; status:'planned'|'in_progress'|'review'|'approved'|'delivered'; due_date:string|null; file_id:string|null; delivered_at:string|null };
+type ProjectWorkspaceData = {
+  project: Pick<Project,'id'|'title'|'status'|'budget_rappen'|'start_date'|'due_date'>;
+  tasks: ProjectTask[];
+  deliverables: ProjectDeliverable[];
+  files: Array<{id:string;title:string;original_filename:string;kind:string;published_at:string|null}>;
+  activity: Array<{id:string;event_type:string;entity_type:string;summary:string;visibility:string;created_at:string}>;
+};
 
 type Tab = 'overview' | 'customers' | 'projects' | 'invoices' | 'offers' | 'emails' | 'portal' | 'branding';
 type LineDraft = { description: string; quantity: number; unitPrice: number };
@@ -107,6 +116,11 @@ export default function StudioPage() {
     addressLine1: '', postalCode: '', city: '', country: 'Schweiz', notes: '',
   });
   const [projectOpen, setProjectOpen] = useState(false);
+  const [projectWorkspaceOpen, setProjectWorkspaceOpen] = useState(false);
+  const [projectWorkspace, setProjectWorkspace] = useState<ProjectWorkspaceData | null>(null);
+  const [projectWorkspaceId, setProjectWorkspaceId] = useState('');
+  const [taskDraft, setTaskDraft] = useState({ title:'', description:'', priority:'normal' as ProjectTask['priority'], dueDate:'' });
+  const [deliverableDraft, setDeliverableDraft] = useState({ title:'', description:'', dueDate:'', fileId:'' });
   const [projectDraft, setProjectDraft] = useState({
     id: '', customerId: '', title: '', description: '', status: 'planning' as Project['status'],
     budget: 0, startDate: '', dueDate: '',
@@ -257,6 +271,61 @@ export default function StudioPage() {
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Projekt konnte nicht gespeichert werden.');
     }
+  }
+
+  async function loadProjectWorkspace(projectId: string) {
+    if (!activeWorkspaceId) return;
+    try {
+      const data = await requestJson<ProjectWorkspaceData>(
+        `/api/hive/project-workspace?workspace=${encodeURIComponent(activeWorkspaceId)}&project=${encodeURIComponent(projectId)}`,
+      );
+      setProjectWorkspace(data);
+      setProjectWorkspaceId(projectId);
+      setProjectWorkspaceOpen(true);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Projekt-Workspace konnte nicht geladen werden.');
+    }
+  }
+
+  async function projectWorkspaceAction(payload: Record<string, unknown>, successMessage: string) {
+    if (!activeWorkspaceId || !projectWorkspaceId) return;
+    try {
+      await requestJson('/api/hive/project-workspace', {
+        method:'POST',
+        body:JSON.stringify({ workspaceId:activeWorkspaceId, projectId:projectWorkspaceId, ...payload }),
+      });
+      setNotice(successMessage);
+      const data = await requestJson<ProjectWorkspaceData>(
+        `/api/hive/project-workspace?workspace=${encodeURIComponent(activeWorkspaceId)}&project=${encodeURIComponent(projectWorkspaceId)}`,
+      );
+      setProjectWorkspace(data);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Projekt-Aktion fehlgeschlagen.');
+    }
+  }
+
+  async function createProjectTask(event: FormEvent) {
+    event.preventDefault();
+    await projectWorkspaceAction({
+      action:'create_task',
+      title:taskDraft.title,
+      description:taskDraft.description,
+      priority:taskDraft.priority,
+      dueDate:taskDraft.dueDate || null,
+    }, 'Task erstellt.');
+    setTaskDraft({ title:'', description:'', priority:'normal', dueDate:'' });
+  }
+
+  async function createProjectDeliverable(event: FormEvent) {
+    event.preventDefault();
+    await projectWorkspaceAction({
+      action:'create_deliverable',
+      title:deliverableDraft.title,
+      description:deliverableDraft.description,
+      dueDate:deliverableDraft.dueDate || null,
+      fileId:deliverableDraft.fileId || null,
+    }, 'Deliverable erstellt.');
+    setDeliverableDraft({ title:'', description:'', dueDate:'', fileId:'' });
   }
 
   async function deleteProject(project: Project) {
@@ -639,6 +708,7 @@ export default function StudioPage() {
             <span className="hsv-letter"><BriefcaseBusiness size={16}/></span>
             <span className="hsv-grow"><strong>{project.title}</strong><small>{relatedName(project.customers)} · {project.status.replace('_', ' ')}</small></span>
             <strong>{money(project.budget_rappen)}</strong>
+            <button onClick={() => void loadProjectWorkspace(project.id)}>Workspace</button>
             <button onClick={() => openProject(project)}>Bearbeiten</button>
             <button aria-label="Projekt löschen" onClick={() => void deleteProject(project)}><Trash2 size={16}/></button>
           </div>)}</div>
@@ -782,6 +852,62 @@ export default function StudioPage() {
         <button className="hsv-primary" type="submit">Hochladen <Check size={15}/></button>
       </form>
     </Modal>}
+
+    {projectWorkspaceOpen && projectWorkspace && <div className="hsv-overlay">
+      <div className="hsv-invoice-editor">
+        <div className="hsv-editorbar">
+          <div><small>PROJECT WORKSPACE</small><strong>{projectWorkspace.project.title}</strong></div>
+          <button className="hsv-icon" onClick={() => setProjectWorkspaceOpen(false)} aria-label="Schliessen"><X size={18}/></button>
+        </div>
+        <div className="hsv-paper" style={{ maxWidth: 1050 }}>
+          <div className="hsv-cards" style={{ gridTemplateColumns:'repeat(3,minmax(0,1fr))' }}>
+            <button type="button"><span>TASKS</span><strong>{projectWorkspace.tasks.length.toString().padStart(2,'0')}</strong><small>{projectWorkspace.tasks.filter((task) => task.status === 'done').length} erledigt</small></button>
+            <button type="button"><span>DELIVERABLES</span><strong>{projectWorkspace.deliverables.length.toString().padStart(2,'0')}</strong><small>{projectWorkspace.deliverables.filter((item) => item.status === 'delivered').length} geliefert</small></button>
+            <button type="button"><span>BUDGET</span><strong style={{fontSize:24}}>{money(projectWorkspace.project.budget_rappen)}</strong><small>{projectWorkspace.project.status}</small></button>
+          </div>
+
+          <div className="hsv-rowtop" style={{marginTop:28}}><strong>Tasks</strong></div>
+          <div className="hsv-table">{projectWorkspace.tasks.map((task) => <div key={task.id}>
+            <button className="hsv-letter" onClick={() => void projectWorkspaceAction({
+              action:'update_task',
+              taskId:task.id,
+              status:task.status === 'done' ? 'todo' : 'done',
+            }, task.status === 'done' ? 'Task wieder geöffnet.' : 'Task erledigt.')}>{task.status === 'done' ? <Check size={16}/> : '•'}</button>
+            <span className="hsv-grow"><strong>{task.title}</strong><small>{task.priority} · {task.status.replace('_',' ')}{task.due_date ? ` · fällig ${task.due_date}` : ''}</small></span>
+            {task.status !== 'done' && <button onClick={() => void projectWorkspaceAction({ action:'update_task', taskId:task.id, status: task.status === 'in_progress' ? 'blocked' : 'in_progress' }, 'Task-Status aktualisiert.')}>{task.status === 'in_progress' ? 'Blockieren' : 'Starten'}</button>}
+            <button onClick={() => void projectWorkspaceAction({ action:'delete_task', taskId:task.id }, 'Task gelöscht.')}><Trash2 size={15}/></button>
+          </div>)}</div>
+          <form onSubmit={createProjectTask} className="hsv-branding" style={{marginTop:16}}>
+            <label>Neuer Task<input required value={taskDraft.title} onChange={(e) => setTaskDraft({ ...taskDraft, title:e.target.value })} placeholder="z.B. Final Cut exportieren"/></label>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+              <label>Priorität<select value={taskDraft.priority} onChange={(e) => setTaskDraft({ ...taskDraft, priority:e.target.value as ProjectTask['priority'] })}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option></select></label>
+              <label>Fällig<input type="date" value={taskDraft.dueDate} onChange={(e) => setTaskDraft({ ...taskDraft, dueDate:e.target.value })}/></label>
+            </div>
+            <button className="hsv-primary" type="submit"><Plus size={15}/> Task</button>
+          </form>
+
+          <div className="hsv-rowtop" style={{marginTop:34}}><strong>Deliverables</strong></div>
+          <div className="hsv-table">{projectWorkspace.deliverables.map((item) => <div key={item.id}>
+            <span className="hsv-letter"><FileText size={15}/></span>
+            <span className="hsv-grow"><strong>{item.title}</strong><small>{item.status.replace('_',' ')}{item.due_date ? ` · fällig ${item.due_date}` : ''}{item.file_id ? ' · Datei verknüpft' : ''}</small></span>
+            <button onClick={() => void projectWorkspaceAction({
+              action:'update_deliverable',
+              deliverableId:item.id,
+              status:item.status === 'planned' ? 'in_progress' : item.status === 'in_progress' ? 'review' : item.status === 'review' ? 'approved' : item.status === 'approved' ? 'delivered' : 'delivered',
+            }, 'Deliverable aktualisiert.')}>{item.status === 'delivered' ? 'Geliefert' : 'Weiter'}</button>
+            <button onClick={() => void projectWorkspaceAction({ action:'delete_deliverable', deliverableId:item.id }, 'Deliverable gelöscht.')}><Trash2 size={15}/></button>
+          </div>)}</div>
+          <form onSubmit={createProjectDeliverable} className="hsv-branding" style={{marginTop:16}}>
+            <label>Neues Deliverable<input required value={deliverableDraft.title} onChange={(e) => setDeliverableDraft({ ...deliverableDraft, title:e.target.value })} placeholder="z.B. Final Campaign Video"/></label>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+              <label>Fällig<input type="date" value={deliverableDraft.dueDate} onChange={(e) => setDeliverableDraft({ ...deliverableDraft, dueDate:e.target.value })}/></label>
+              <label>Datei<select value={deliverableDraft.fileId} onChange={(e) => setDeliverableDraft({ ...deliverableDraft, fileId:e.target.value })}><option value="">Noch keine</option>{projectWorkspace.files.map((file) => <option key={file.id} value={file.id}>{file.title}</option>)}</select></label>
+            </div>
+            <button className="hsv-primary" type="submit"><Plus size={15}/> Deliverable</button>
+          </form>
+        </div>
+      </div>
+    </div>}
 
     {inviteOpen && <Modal title="Portal-Einladung" onClose={() => setInviteOpen(false)}>
       <form onSubmit={createPortalInvite}>
