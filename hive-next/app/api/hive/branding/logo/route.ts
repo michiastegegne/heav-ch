@@ -24,8 +24,8 @@ const schema = z.discriminatedUnion('action',[
 export async function POST(request:Request){
   try{
     const payload=schema.parse(await request.json());
-    assertWorkspaceAllowed(payload.workspaceId);
     const supabase=await requireHiveDataAccess();
+    await assertWorkspaceAllowed(payload.workspaceId, supabase);
 
     const { data:allowed, error:allowedError }=await supabase.rpc('is_workspace_member',{
       p_workspace_id:payload.workspaceId,
