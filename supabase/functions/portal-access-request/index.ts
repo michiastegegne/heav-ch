@@ -1,20 +1,35 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import { RequestBodyError, readJsonBody } from "../_shared/http.ts";
 
-const allowedOrigins = new Set(["https://heav.ch", "https://www.heav.ch", "http://127.0.0.1:4179", "http://localhost:4179"]);
+const allowedOrigins = new Set([
+  "https://heav.ch",
+  "https://www.heav.ch",
+  "http://127.0.0.1:4179",
+  "http://localhost:4179",
+]);
 const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const text = (value: unknown, limit: number) => String(value ?? "").trim().slice(0, limit);
 
 Deno.serve(async (request) => {
   const origin = request.headers.get("origin") || "";
-  const headers = { ...corsHeaders, "Access-Control-Allow-Origin": allowedOrigins.has(origin) ? origin : "https://heav.ch", Vary: "Origin" };
+  const headers = {
+    ...corsHeaders,
+    "Access-Control-Allow-Origin": allowedOrigins.has(origin) ? origin : "https://heav.ch",
+    Vary: "Origin",
+  };
   if (request.method === "OPTIONS") return new Response("ok", { headers });
-  if (request.method !== "POST") return Response.json({ error: "Method not allowed" }, { status: 405, headers });
-  if (origin && !allowedOrigins.has(origin)) return Response.json({ error: "Origin not allowed" }, { status: 403, headers });
+  if (request.method !== "POST") {
+    return Response.json({ error: "Method not allowed" }, { status: 405, headers });
+  }
+  if (origin && !allowedOrigins.has(origin)) {
+    return Response.json({ error: "Origin not allowed" }, { status: 403, headers });
+  }
+
   try {
     const body = await readJsonBody(request) as Record<string, unknown>;
     const contactName = text(body.contactName, 160);
@@ -23,25 +38,49 @@ Deno.serve(async (request) => {
     const phone = text(body.phone, 80);
     const message = text(body.message, 2000);
     const honeypot = text(body.website, 200);
+    const workspaceSlug = text(body.workspaceSlug || "michias-tegegne", 120).toLowerCase();
     const elapsed = Date.now() - Number(body.startedAt || 0);
-    if (honeypot || !Number.isFinite(elapsed) || elapsed < 1800) return Response.json({ ok: true }, { headers });
-    if (contactName.length < 2 || !emailPattern.test(email)) throw new Error("Invalid request details.");
+
+    if (honeypot || !Number.isFinite(elapsed) || elapsed < 1800) {
+      return Response.json({ ok: true }, { headers });
+    }
+    if (
+      contactName.length < 2 ||
+      !emailPattern.test(email) ||
+      !slugPattern.test(workspaceSlug)
+    ) {
+      throw new Error("Invalid request details.");
+    }
 
     const service = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
       { auth: { autoRefreshToken: false, persistSession: false } },
     );
-    const { data: owner, error: ownerError } = await service.from("company_settings").select("owner_id, email").limit(1).maybeSingle();
-    if (ownerError || !owner?.owner_id) throw new Error("Portal owner is not configured.");
-    const { error: insertError } = await service.from("customer_portal_requests").insert({
-      owner_id: owner.owner_id,
-      contact_name: contactName,
-      company,
-      email,
-      phone,
-      message,
-    });
+
+    const { data: workspace, error: workspaceError } = await service
+      .from("workspaces")
+      .select("id,owner_id,status")
+      .eq("slug", workspaceSlug)
+      .eq("status", "active")
+      .maybeSingle();
+    if (workspaceError || !workspace?.id || !workspace.owner_id) {
+      // Keep the public response generic so workspace existence cannot be enumerated.
+      return Response.json({ ok: true }, { headers });
+    }
+
+    const { error: insertError } = await service
+      .from("customer_portal_requests")
+      .insert({
+        workspace_id: workspace.id,
+        owner_id: workspace.owner_id,
+        contact_name: contactName,
+        company,
+        email,
+        phone,
+        message,
+      });
+
     // Duplicate pending requests deliberately receive the same response so an
     // attacker cannot enumerate existing customer e-mail addresses.
     if (insertError && insertError.code !== "23505") throw insertError;
@@ -49,7 +88,9 @@ Deno.serve(async (request) => {
   } catch (error) {
     console.error("portal access request rejected", error);
     const status = error instanceof RequestBodyError ? error.status : 400;
-    const message = error instanceof RequestBodyError ? error.message : "Request could not be accepted.";
+    const message = error instanceof RequestBodyError
+      ? error.message
+      : "Request could not be accepted.";
     return Response.json({ error: message }, { status, headers });
   }
 });
