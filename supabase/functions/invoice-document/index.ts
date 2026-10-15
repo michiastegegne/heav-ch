@@ -57,6 +57,7 @@ type Settings = {
 };
 type Invoice = {
   id: string;
+  workspace_id: string;
   owner_id: string;
   customer_id: string;
   invoice_number: string;
@@ -1166,22 +1167,17 @@ if (import.meta.main) {
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
         { auth: { autoRefreshToken: false, persistSession: false } },
       );
-      const { data: userData, error: userError } = await supabase.auth
-        .getUser();
-      if (userError || !userData.user) throw new Error("Sitzung ungültig.");
+      const { data: actorId, error: actorError } = await supabase.rpc(
+        "current_app_user_id",
+      );
+      if (actorError || !actorId) throw new Error("Sitzung ungültig.");
+
       const { invoiceId, action, requestKey } = await request.json();
       if (
         !invoiceId ||
         !["download", "send", "mark_paid", "cancel"].includes(action)
       ) throw new Error("Ungültige Rechnungsaktion.");
-      if (action !== "download") {
-        const { data: ownerAllowed, error: ownerError } = await supabase.rpc(
-          "is_studio_owner",
-        );
-        if (ownerError || ownerAllowed !== true) {
-          throw new Error("Studio-Zugriff erforderlich.");
-        }
-      }
+
       if (
         action === "send" &&
         !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -1189,6 +1185,28 @@ if (import.meta.main) {
       ) {
         throw new Error("Ungültige Versandanforderung.");
       }
+
+      const { data: storedInvoice, error: invoiceError } = await supabase
+        .from("invoices")
+        .select("*, invoice_items(*)")
+        .eq("id", invoiceId)
+        .single();
+      if (invoiceError || !storedInvoice) {
+        throw invoiceError || new Error("Rechnung nicht gefunden.");
+      }
+
+      const { data: accountantAllowed, error: accountantError } =
+        await supabase.rpc("is_workspace_member", {
+          p_workspace_id: storedInvoice.workspace_id,
+          p_required: "accountant",
+        });
+      if (accountantError) throw accountantError;
+
+      const canManage = accountantAllowed === true;
+      if (action !== "download" && !canManage) {
+        throw new Error("Rechnungszugriff für dieses Business fehlt.");
+      }
+
       if (["mark_paid", "cancel"].includes(action)) {
         const { error } = await supabase.rpc("record_invoice_action", {
           p_invoice_id: invoiceId,
@@ -1198,18 +1216,6 @@ if (import.meta.main) {
         });
         if (error) throw error;
         return Response.json({ ok: true }, { headers: responseCors });
-      }
-      const { data: storedInvoice, error: invoiceError } = await supabase
-        .from("invoices")
-        .select("*, invoice_items(*)")
-        .eq("id", invoiceId)
-        .single();
-      if (invoiceError || !storedInvoice) {
-        throw invoiceError || new Error("Rechnung nicht gefunden.");
-      }
-      const isOwner = storedInvoice.owner_id === userData.user.id;
-      if (!isOwner && action !== "download") {
-        throw new Error("Diese Rechnungsaktion ist nur für HEAV verfügbar.");
       }
       if (storedInvoice.is_legacy) {
         throw new Error(
@@ -1233,7 +1239,7 @@ if (import.meta.main) {
       }
       const pdfBytes = await createInvoicePdf(invoice, settings);
       if (action === "download") {
-        if (isOwner) {
+        if (canManage) {
           const { error: eventError } = await supabase.rpc(
             "record_invoice_action",
             {
