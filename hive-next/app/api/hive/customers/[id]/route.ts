@@ -25,8 +25,8 @@ export async function PATCH(
     const { id } = await context.params;
     const customerId = idSchema.parse(id);
     const payload = updateSchema.parse(await request.json());
-    assertWorkspaceAllowed(payload.workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(payload.workspaceId, supabase);
 
     const updates: Record<string, unknown> = {};
     if (payload.company !== undefined) updates.company = payload.company || null;
@@ -63,8 +63,8 @@ export async function DELETE(
     const customerId = idSchema.parse(id);
     const url = new URL(request.url);
     const workspaceId = z.string().uuid().parse(url.searchParams.get('workspace'));
-    assertWorkspaceAllowed(workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(workspaceId, supabase);
 
     const { error } = await supabase.rpc('delete_workspace_customer', {
       p_customer_id: customerId,
