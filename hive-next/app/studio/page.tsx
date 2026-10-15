@@ -3,7 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft, ArrowRight, BriefcaseBusiness, Check, CreditCard, FileText,
-  LayoutDashboard, Mail, Plus, RefreshCw, Settings2, Trash2, Users, X,
+  LayoutDashboard, Mail, Plus, RefreshCw, Settings2, ShieldCheck, Trash2, Users, X,
 } from 'lucide-react';
 import './studio.css';
 
@@ -45,8 +45,15 @@ type Settings = {
   uid_number: string; vat_number: string; vat_enabled: boolean; default_tax_rate: number;
   default_due_days: number; currency: string; invoice_prefix: string;
 };
+type PortalMembership = { id:string; customer_id:string; department_id:string; user_id:string; role:string; status:string; invited_at:string; accepted_at:string|null; revoked_at:string|null; created_at:string };
+type PortalInvite = { id:string; customer_id:string; department_id:string; email:string; expires_at:string; accepted_at:string|null; revoked_at:string|null; created_at:string };
+type PortalRequest = { id:string; customer_id:string|null; company:string; contact_name:string; email:string; phone:string; message:string; status:string; reviewed_at:string|null; created_at:string };
+type PortalFile = { id:string; customer_id:string; project_id:string|null; title:string; original_filename:string; kind:string; bytes:number|null; download_enabled:boolean; published_at:string|null; expires_at:string|null; created_at:string };
+type PortalReview = { id:string; customer_id:string; reviewer_name:string; body:string; status:string; published_at:string|null; created_at:string };
+type PortalActivity = { id:string; customer_id:string|null; actor_type:string; visibility:string; event_type:string; entity_type:string; summary:string; created_at:string };
+type PortalData = { memberships:PortalMembership[]; invites:PortalInvite[]; requests:PortalRequest[]; files:PortalFile[]; reviews:PortalReview[]; activity:PortalActivity[] };
 
-type Tab = 'overview' | 'customers' | 'projects' | 'invoices' | 'offers' | 'emails' | 'branding';
+type Tab = 'overview' | 'customers' | 'projects' | 'invoices' | 'offers' | 'emails' | 'portal' | 'branding';
 type LineDraft = { description: string; quantity: number; unitPrice: number };
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -87,6 +94,7 @@ export default function StudioPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [emails, setEmails] = useState<EmailLog[]>([]);
+  const [portal, setPortal] = useState<PortalData>({ memberships:[], invites:[], requests:[], files:[], reviews:[], activity:[] });
   const [settings, setSettings] = useState<Settings | null>(null);
   const [busy, setBusy] = useState(true);
   const [backendError, setBackendError] = useState('');
@@ -108,6 +116,8 @@ export default function StudioPage() {
     taxRate: 0, notes: '', lines: [{ description: '', quantity: 1, unitPrice: 0 }] as LineDraft[],
   });
   const [offerOpen, setOfferOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteDraft, setInviteDraft] = useState({ customerId:'', email:'' });
   const [offerDraft, setOfferDraft] = useState({
     customerId: '', projectId: '', title: '', issueDate: today(), validUntil: afterDays(30),
     taxRate: 0, notes: '', terms: 'Diese Offerte ist bis zum angegebenen Datum gültig.',
@@ -141,12 +151,13 @@ export default function StudioPage() {
     setBackendError('');
     try {
       const q = encodeURIComponent(workspaceId);
-      const [customerData, projectData, invoiceData, offerData, emailData, settingsData] = await Promise.all([
+      const [customerData, projectData, invoiceData, offerData, emailData, portalData, settingsData] = await Promise.all([
         requestJson<{ customers: Customer[] }>(`/api/hive/customers?workspace=${q}`),
         requestJson<{ projects: Project[] }>(`/api/hive/projects?workspace=${q}`),
         requestJson<{ invoices: Invoice[] }>(`/api/hive/invoices?workspace=${q}`),
         requestJson<{ offers: Offer[] }>(`/api/hive/offers?workspace=${q}`),
         requestJson<{ emails: EmailLog[] }>(`/api/hive/emails?workspace=${q}`),
+        requestJson<PortalData>(`/api/hive/portal?workspace=${q}`),
         requestJson<{ settings: Settings }>(`/api/hive/settings?workspace=${q}`),
       ]);
       setCustomers(customerData.customers);
@@ -154,6 +165,7 @@ export default function StudioPage() {
       setInvoices(invoiceData.invoices);
       setOffers(offerData.offers);
       setEmails(emailData.emails);
+      setPortal(portalData);
       setSettings(settingsData.settings);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Workspace konnte nicht geladen werden';
@@ -353,6 +365,29 @@ export default function StudioPage() {
     }
   }
 
+  async function portalAction(payload: Record<string, unknown>, successMessage: string) {
+    if (!activeWorkspaceId) return;
+    try {
+      await requestJson('/api/hive/portal', {
+        method: 'POST',
+        body: JSON.stringify({ workspaceId: activeWorkspaceId, ...payload }),
+      });
+      setNotice(successMessage);
+      await loadWorkspaceData(activeWorkspaceId);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Portal-Aktion fehlgeschlagen.');
+    }
+  }
+
+  async function createPortalInvite(event: FormEvent) {
+    event.preventDefault();
+    await portalAction(
+      { action: 'create_invite', customerId: inviteDraft.customerId, email: inviteDraft.email },
+      'Dev-Einladung angelegt. Es wurde keine E-Mail versendet.',
+    );
+    setInviteOpen(false);
+  }
+
   async function saveSettings(event: FormEvent) {
     event.preventDefault();
     if (!activeWorkspaceId || !settings) return;
@@ -444,6 +479,7 @@ export default function StudioPage() {
     ['invoices', 'Rechnungen', CreditCard],
     ['offers', 'Offerten', FileText],
     ['emails', 'E-Mail', Mail],
+    ['portal', 'Portal', ShieldCheck],
     ['branding', 'Business', Settings2],
   ] as const;
 
@@ -545,6 +581,61 @@ export default function StudioPage() {
           <p className="hsv-warning">Historische Empfänger in der Dev-Kopie wurden neutralisiert.</p>
         </>}
 
+        {tab === 'portal' && <>
+          <div className="hsv-rowtop">
+            <strong>{portal.memberships.length} Mitglieder · {portal.invites.length} Einladungen</strong>
+            <button className="hsv-primary" disabled={!customers.length} onClick={() => {
+              setInviteDraft({ customerId: customers[0]?.id || '', email: '' });
+              setInviteOpen(true);
+            }}><Plus size={15}/> Portal-Einladung</button>
+          </div>
+
+          <div className="hsv-intro" style={{ marginBottom: 18 }}>
+            <span className="hsv-big-logo"><ShieldCheck size={26}/></span>
+            <div><span>KUNDENPORTAL</span><h2>Zugänge & Freigaben</h2><p>Einladungen, Portal-Mitglieder, Dateien, Reviews und Kundenanfragen laufen pro Business und Department. Im Dev-Modus wird keine Einladung per E-Mail versendet.</p></div>
+          </div>
+
+          <div className="hsv-rowtop"><strong>Mitglieder</strong></div>
+          <div className="hsv-table">{portal.memberships.length ? portal.memberships.map((member) => <div key={member.id}>
+            <span className="hsv-letter"><Users size={16}/></span>
+            <span className="hsv-grow"><strong>{customerName(customers.find((customer) => customer.id === member.customer_id))}</strong><small>{member.role} · {member.status}</small></span>
+            {member.status === 'active' && <button onClick={() => void portalAction({ action:'revoke_membership', membershipId:member.id }, 'Portal-Zugang widerrufen.')}>Widerrufen</button>}
+          </div>) : <p className="hsv-empty">Noch keine Portal-Mitglieder.</p>}</div>
+
+          <div className="hsv-rowtop" style={{ marginTop: 24 }}><strong>Einladungen</strong></div>
+          <div className="hsv-table">{portal.invites.length ? portal.invites.map((invite) => <div key={invite.id}>
+            <span className="hsv-letter"><Mail size={16}/></span>
+            <span className="hsv-grow"><strong>{invite.email}</strong><small>{customerName(customers.find((customer) => customer.id === invite.customer_id))} · gültig bis {new Date(invite.expires_at).toLocaleDateString('de-CH')}</small></span>
+            {!invite.accepted_at && !invite.revoked_at && <button onClick={() => void portalAction({ action:'revoke_invite', inviteId:invite.id }, 'Einladung widerrufen.')}>Widerrufen</button>}
+          </div>) : <p className="hsv-empty">Keine offenen Einladungen.</p>}</div>
+
+          <div className="hsv-rowtop" style={{ marginTop: 24 }}><strong>Kundenanfragen</strong></div>
+          <div className="hsv-table">{portal.requests.length ? portal.requests.map((item) => <div key={item.id}>
+            <span className="hsv-letter"><Mail size={16}/></span>
+            <span className="hsv-grow"><strong>{item.company || item.contact_name}</strong><small>{item.email} · {item.status} · {item.message || 'Keine Nachricht'}</small></span>
+            {item.status === 'pending' && <><button onClick={() => void portalAction({ action:'request_update', requestId:item.id, status:'accepted' }, 'Anfrage akzeptiert.')}>Akzeptieren</button><button onClick={() => void portalAction({ action:'request_update', requestId:item.id, status:'declined' }, 'Anfrage abgelehnt.')}>Ablehnen</button></>}
+          </div>) : <p className="hsv-empty">Keine Portal-Anfragen.</p>}</div>
+
+          <div className="hsv-rowtop" style={{ marginTop: 24 }}><strong>Reviews</strong></div>
+          <div className="hsv-table">{portal.reviews.length ? portal.reviews.map((review) => <div key={review.id}>
+            <span className="hsv-letter"><FileText size={16}/></span>
+            <span className="hsv-grow"><strong>{review.reviewer_name}</strong><small>{customerName(customers.find((customer) => customer.id === review.customer_id))} · {review.status} · {review.body}</small></span>
+            {review.status === 'pending' && <><button onClick={() => void portalAction({ action:'review_update', reviewId:review.id, status:'approved' }, 'Review freigegeben.')}>Freigeben</button><button onClick={() => void portalAction({ action:'review_update', reviewId:review.id, status:'rejected' }, 'Review abgelehnt.')}>Ablehnen</button></>}
+          </div>) : <p className="hsv-empty">Keine Reviews.</p>}</div>
+
+          <div className="hsv-rowtop" style={{ marginTop: 24 }}><strong>Dateien</strong></div>
+          <div className="hsv-table">{portal.files.length ? portal.files.map((file) => <div key={file.id}>
+            <span className="hsv-letter"><FileText size={16}/></span>
+            <span className="hsv-grow"><strong>{file.title}</strong><small>{file.original_filename} · {file.kind} · {file.published_at ? 'veröffentlicht' : 'Entwurf'}</small></span>
+          </div>) : <p className="hsv-empty">Keine Portal-Dateien.</p>}</div>
+
+          <div className="hsv-rowtop" style={{ marginTop: 24 }}><strong>Letzte Aktivität</strong></div>
+          <div className="hsv-table">{portal.activity.slice(0, 20).map((item) => <div key={item.id}>
+            <span className="hsv-letter"><RefreshCw size={15}/></span>
+            <span className="hsv-grow"><strong>{item.summary}</strong><small>{item.event_type} · {new Date(item.created_at).toLocaleString('de-CH')}</small></span>
+          </div>)}</div>
+        </>}
+
         {tab === 'branding' && settings && <form className="hsv-branding" onSubmit={saveSettings}>
           <div className="hsv-brand-preview"><span>{settings.logo_url ? <img src={settings.logo_url} alt="Logo"/> : settings.business_name.charAt(0)}</span><div><strong>{settings.business_name}</strong><small>{activeWorkspace?.role} · Dev-Workspace</small></div></div>
           <label>Business-Name<input value={settings.business_name} onChange={(e) => setSettings({ ...settings, business_name: e.target.value })}/></label>
@@ -565,6 +656,15 @@ export default function StudioPage() {
     </div>
 
     {notice && <div className="hsv-toast" role="status">{notice}<button aria-label="Schliessen" onClick={() => setNotice('')}><X size={16}/></button></div>}
+
+    {inviteOpen && <Modal title="Portal-Einladung" onClose={() => setInviteOpen(false)}>
+      <form onSubmit={createPortalInvite}>
+        <label>Kunde<select required value={inviteDraft.customerId} onChange={(e) => setInviteDraft({ ...inviteDraft, customerId:e.target.value })}>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customerName(customer)}</option>)}</select></label>
+        <label>E-Mail<input required type="email" value={inviteDraft.email} onChange={(e) => setInviteDraft({ ...inviteDraft, email:e.target.value })} placeholder="test@example.com"/></label>
+        <p className="hsv-warning">Dev-Modus: Die Einladung wird gespeichert, aber nicht versendet.</p>
+        <button className="hsv-primary" type="submit">Einladung anlegen <Check size={15}/></button>
+      </form>
+    </Modal>}
 
     {customerOpen && <Modal title={customerDraft.id ? 'Kunde bearbeiten' : 'Neuer Kunde'} onClose={() => setCustomerOpen(false)}>
       <form onSubmit={saveCustomer}>
