@@ -54,6 +54,14 @@ export async function PATCH(request: Request) {
     const supabase = await requireHiveDataAccess();
     await assertWorkspaceAllowed(payload.workspaceId, supabase);
 
+    if (payload.businessName !== undefined) {
+      const { error: renameError } = await supabase.rpc('rename_workspace_business', {
+        p_workspace_id: payload.workspaceId,
+        p_name: payload.businessName,
+      });
+      if (renameError) throw renameError;
+    }
+
     const updates: Record<string, unknown> = {};
     const map: Record<string, string> = {
       businessName: 'business_name', legalName: 'legal_name', contactName: 'contact_name',
