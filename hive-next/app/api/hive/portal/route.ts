@@ -199,12 +199,17 @@ export async function POST(request: Request) {
       return Response.json({ ok: true });
     }
 
-    const { error } = await supabase.from('customer_portal_requests')
-      .update({ status: payload.status, reviewed_at: new Date().toISOString() })
-      .eq('id', payload.requestId)
-      .eq('workspace_id', payload.workspaceId);
+    const { data: customerId, error } = await supabase.rpc('process_workspace_portal_request', {
+      p_workspace_id: payload.workspaceId,
+      p_request_id: payload.requestId,
+      p_action: payload.status === 'accepted' ? 'accept' : 'decline',
+    });
     if (error) throw error;
-    return Response.json({ ok: true });
+    return Response.json({
+      ok: true,
+      customerId: customerId || null,
+      customerCreatedOrMatched: payload.status === 'accepted',
+    });
   } catch (error) {
     return jsonError(error);
   }
