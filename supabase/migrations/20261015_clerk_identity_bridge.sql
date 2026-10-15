@@ -120,6 +120,48 @@ $$;
 revoke all on function public.is_workspace_member(uuid, public.workspace_role) from public, anon;
 grant execute on function public.is_workspace_member(uuid, public.workspace_role) to authenticated;
 
+
+-- Owner-facing SECURITY DEFINER routines were historically written against
+-- auth.uid(). Rewrite only routines that already contain the immutable
+-- is_studio_owner() guard; customer-facing RPCs are deliberately excluded.
+do $
+declare
+  v_function record;
+  v_source text;
+begin
+  for v_function in
+    select procedure.oid,
+           namespace.nspname,
+           procedure.proname,
+           procedure.prosrc,
+           pg_get_function_arguments(procedure.oid) as arguments,
+           pg_get_function_result(procedure.oid) as result
+    from pg_proc procedure
+    join pg_namespace namespace on namespace.oid = procedure.pronamespace
+    where namespace.nspname = 'public'
+      and procedure.prosecdef
+      and procedure.prolang = (select oid from pg_language where lanname = 'plpgsql')
+      and position('public.is_studio_owner()' in procedure.prosrc) > 0
+      and position('auth.uid()' in procedure.prosrc) > 0
+  loop
+    v_source := replace(
+      v_function.prosrc,
+      'auth.uid()',
+      'public.current_app_user_id()'
+    );
+
+    execute format(
+      'create or replace function %I.%I(%s) returns %s language plpgsql security definer set search_path = pg_catalog, public as %L',
+      v_function.nspname,
+      v_function.proname,
+      v_function.arguments,
+      v_function.result,
+      v_source
+    );
+  end loop;
+end;
+$;
+
 -- Replace the one workspace-membership policy that still compared auth.uid()
 -- directly. Other workspace policies already call is_workspace_member().
 drop policy if exists "workspace members read memberships" on public.workspace_memberships;
