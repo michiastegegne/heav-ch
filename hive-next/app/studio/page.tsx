@@ -339,6 +339,24 @@ export default function StudioPage() {
     }
   }
 
+  async function offerAction(offer: Offer, action: 'share' | 'withdraw' | 'delete') {
+    if (action === 'delete' && !confirm(`${offer.offer_number} wirklich löschen?`)) return;
+    try {
+      await requestJson(`/api/hive/offers/${offer.id}`, {
+        method: 'POST',
+        body: JSON.stringify({ action }),
+      });
+      setNotice(
+        action === 'share' ? 'Offerte im Kundenportal freigegeben. Keine E-Mail wurde versendet.'
+        : action === 'withdraw' ? 'Offerte zurückgezogen.'
+        : 'Offertenentwurf gelöscht.',
+      );
+      if (activeWorkspaceId) await loadWorkspaceData(activeWorkspaceId);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Offertenaktion fehlgeschlagen.');
+    }
+  }
+
   async function createOffer(event: FormEvent) {
     event.preventDefault();
     if (!activeWorkspaceId) return;
@@ -652,6 +670,9 @@ export default function StudioPage() {
             <span className="hsv-letter"><FileText size={16}/></span>
             <span className="hsv-grow"><strong>{offer.offer_number} · {offer.title}</strong><small>{relatedName(offer.customers)} · {offer.status} · gültig bis {offer.valid_until}</small></span>
             <strong>{money(offer.total_rappen)}</strong>
+            {offer.status === 'draft' && <button onClick={() => void offerAction(offer, 'share')}>Portal freigeben</button>}
+            {offer.status === 'sent' && <button onClick={() => void offerAction(offer, 'withdraw')}>Zurückziehen</button>}
+            {offer.status === 'draft' && <button aria-label="Offerte löschen" onClick={() => void offerAction(offer, 'delete')}><Trash2 size={16}/></button>}
           </div>)}</div>
         </>}
 
