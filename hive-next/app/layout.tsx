@@ -20,7 +20,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             appearance={{
               variables: {
                 colorPrimary: '#191919',
-                colorText: '#191919',
                 colorBackground: '#ffffff',
                 borderRadius: '6px',
               },
