@@ -24,6 +24,8 @@ Deno.serve(async (request) => {
   const service = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
   try {
     const runDate = new Date().toISOString().slice(0, 10);
+    const { error: overdueError } = await service.rpc("refresh_overdue_invoices", { p_run_date: runDate });
+    if (overdueError) throw overdueError;
     const { data: reminders, error: claimError } = await service.rpc("claim_invoice_reminders", { p_run_date: runDate });
     if (claimError) throw claimError;
     const claimedReminders = (reminders || []) as Array<Record<string, any>>;
