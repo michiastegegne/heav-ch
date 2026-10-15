@@ -30,7 +30,7 @@ type Invoice = {
   invoice_number: string; issue_date: string; due_date: string;
   status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled'; currency: string;
   tax_rate: number; subtotal_rappen: number; tax_rappen: number; total_rappen: number;
-  sent_at: string | null; paid_at: string | null; is_legacy: boolean;
+  sent_at: string | null; paid_at: string | null; is_legacy: boolean; number_finalized:boolean;
   customers?: { company?: string | null; contact_name?: string | null } | null;
 };
 type Offer = {
@@ -520,7 +520,7 @@ export default function StudioPage() {
     }
   }
 
-  async function invoiceAction(invoice: Invoice, action: 'download' | 'mark_paid' | 'cancel') {
+  async function invoiceAction(invoice: Invoice, action: 'issue' | 'download' | 'mark_paid' | 'cancel') {
     try {
       if (action === 'download') {
         const response = await fetch(`/api/hive/invoices/${invoice.id}/action`, {
@@ -542,7 +542,11 @@ export default function StudioPage() {
       await requestJson(`/api/hive/invoices/${invoice.id}/action`, {
         method: 'POST', body: JSON.stringify({ action }),
       });
-      setNotice(action === 'mark_paid' ? 'Rechnung als bezahlt markiert.' : 'Rechnung storniert.');
+      setNotice(
+        action === 'issue' ? 'Rechnung ausgestellt und final nummeriert.'
+        : action === 'mark_paid' ? 'Rechnung als bezahlt markiert.'
+        : 'Rechnung storniert.',
+      );
       if (activeWorkspaceId) await loadWorkspaceData(activeWorkspaceId);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Rechnungsaktion fehlgeschlagen.');
@@ -1010,11 +1014,12 @@ export default function StudioPage() {
           }}><Plus size={15}/> Rechnung erstellen</button></div>
           <div className="hsv-table">{invoices.map((invoice) => <div key={invoice.id}>
             <span className="hsv-letter"><CreditCard size={16}/></span>
-            <span className="hsv-grow"><strong>{invoice.invoice_number}</strong><small>{relatedName(invoice.customers)} · {invoice.status}</small></span>
+            <span className="hsv-grow"><strong>{invoice.number_finalized ? invoice.invoice_number : 'Entwurf'}</strong><small>{relatedName(invoice.customers)} · {invoice.number_finalized ? invoice.status : invoice.invoice_number}</small></span>
             <strong>{money(invoice.total_rappen, invoice.currency)}</strong>
-            <button onClick={() => void invoiceAction(invoice, 'download')}>PDF</button>
-            {invoice.status === 'draft' && !invoice.is_legacy && <button onClick={() => void openInvoiceDraft(invoice)}>Bearbeiten</button>}
-            {invoice.status === 'draft' && !invoice.is_legacy && <button onClick={() => void deleteInvoice(invoice)}><Trash2 size={16}/></button>}
+            {invoice.number_finalized && <button onClick={() => void invoiceAction(invoice, 'download')}>PDF</button>}
+            {invoice.status === 'draft' && !invoice.is_legacy && !invoice.number_finalized && <button onClick={() => void openInvoiceDraft(invoice)}>Bearbeiten</button>}
+            {invoice.status === 'draft' && !invoice.is_legacy && !invoice.number_finalized && <button onClick={() => void invoiceAction(invoice, 'issue')}>Ausstellen</button>}
+            {invoice.status === 'draft' && !invoice.is_legacy && !invoice.number_finalized && <button onClick={() => void deleteInvoice(invoice)}><Trash2 size={16}/></button>}
             {!invoice.is_legacy && (invoice.status === 'sent' || invoice.status === 'overdue') && <button onClick={() => void invoiceAction(invoice, 'mark_paid')}>Bezahlt</button>}
             {!invoice.is_legacy && invoice.status !== 'paid' && invoice.status !== 'cancelled' && <button onClick={() => void invoiceAction(invoice, 'cancel')}>Stornieren</button>}
           </div>)}</div>
