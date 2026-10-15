@@ -262,4 +262,52 @@ $;
 revoke all on function public.delete_workspace_project(uuid) from public, anon;
 grant execute on function public.delete_workspace_project(uuid) to authenticated;
 
+
+create or replace function public.delete_workspace_customer(
+  p_customer_id uuid,
+  p_workspace_id uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $
+declare
+  v_workspace uuid;
+begin
+  select customer.workspace_id
+    into v_workspace
+  from public.customers customer
+  where customer.id = p_customer_id
+    and customer.workspace_id = p_workspace_id
+  for update;
+
+  if v_workspace is null then
+    raise exception 'customer not found';
+  end if;
+
+  if not public.is_workspace_member(v_workspace, 'admin') then
+    raise exception 'workspace admin access required' using errcode = '42501';
+  end if;
+
+  if exists (select 1 from public.projects where customer_id = p_customer_id and workspace_id = v_workspace)
+    or exists (select 1 from public.invoices where customer_id = p_customer_id and workspace_id = v_workspace)
+    or exists (select 1 from public.offers where customer_id = p_customer_id and workspace_id = v_workspace)
+    or exists (select 1 from public.customer_portal_memberships where customer_id = p_customer_id and workspace_id = v_workspace)
+    or exists (select 1 from public.customer_portal_invites where customer_id = p_customer_id and workspace_id = v_workspace)
+    or exists (select 1 from public.customer_files where customer_id = p_customer_id and workspace_id = v_workspace)
+    or exists (select 1 from public.customer_reviews where customer_id = p_customer_id and workspace_id = v_workspace)
+  then
+    raise exception 'customer has linked records';
+  end if;
+
+  delete from public.customers
+  where id = p_customer_id
+    and workspace_id = v_workspace;
+end;
+$;
+
+revoke all on function public.delete_workspace_customer(uuid, uuid) from public, anon;
+grant execute on function public.delete_workspace_customer(uuid, uuid) to authenticated;
+
 commit;
