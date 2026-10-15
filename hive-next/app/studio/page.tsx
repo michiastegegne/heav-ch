@@ -658,7 +658,7 @@ export default function StudioPage() {
     }
   }
 
-  async function invoiceAction(invoice: Invoice, action: 'issue' | 'download' | 'mark_paid' | 'cancel') {
+  async function invoiceAction(invoice: Invoice, action: 'issue' | 'download' | 'send' | 'mark_paid' | 'cancel') {
     try {
       if (action === 'download') {
         const response = await fetch(`/api/hive/invoices/${invoice.id}/action`, {
@@ -682,6 +682,7 @@ export default function StudioPage() {
       });
       setNotice(
         action === 'issue' ? 'Rechnung ausgestellt und final nummeriert.'
+        : action === 'send' ? 'Rechnung per E-Mail versendet.'
         : action === 'mark_paid' ? 'Rechnung als bezahlt markiert.'
         : 'Rechnung storniert.',
       );
@@ -721,7 +722,7 @@ export default function StudioPage() {
     }
   }
 
-  async function offerAction(offer: Offer, action: 'share' | 'withdraw' | 'delete') {
+  async function offerAction(offer: Offer, action: 'share' | 'withdraw' | 'delete' | 'send') {
     if (action === 'delete' && !confirm(`${offer.offer_number} wirklich löschen?`)) return;
     try {
       await requestJson(`/api/hive/offers/${offer.id}`, {
@@ -729,7 +730,8 @@ export default function StudioPage() {
         body: JSON.stringify({ action }),
       });
       setNotice(
-        action === 'share' ? 'Offerte im Kundenportal freigegeben. Keine E-Mail wurde versendet.'
+        action === 'share' ? 'Offerte im Kundenportal freigegeben.'
+        : action === 'send' ? 'Offerte per E-Mail versendet.'
         : action === 'withdraw' ? 'Offerte zurückgezogen.'
         : 'Offertenentwurf gelöscht.',
       );
@@ -1228,6 +1230,7 @@ export default function StudioPage() {
             <span className="hsv-grow"><strong>{invoice.number_finalized ? invoice.invoice_number : 'Entwurf'}</strong><small>{relatedName(invoice.customers)} · {invoice.number_finalized ? invoice.status : invoice.invoice_number}</small></span>
             <strong>{money(invoice.total_rappen, invoice.currency)}</strong>
             {invoice.number_finalized && <button onClick={() => void invoiceAction(invoice, 'download')}>PDF</button>}
+            {!invoice.is_legacy && invoice.number_finalized && ['draft','sent','overdue'].includes(invoice.status) && <button onClick={() => void invoiceAction(invoice, 'send')}>E-Mail</button>}
             {invoice.status === 'draft' && !invoice.is_legacy && !invoice.number_finalized && <button onClick={() => void openInvoiceDraft(invoice)}>Bearbeiten</button>}
             {invoice.status === 'draft' && !invoice.is_legacy && !invoice.number_finalized && <button onClick={() => void invoiceAction(invoice, 'issue')}>Ausstellen</button>}
             {invoice.status === 'draft' && !invoice.is_legacy && !invoice.number_finalized && <button onClick={() => void deleteInvoice(invoice)}><Trash2 size={16}/></button>}
@@ -1248,6 +1251,7 @@ export default function StudioPage() {
             <strong>{money(offer.total_rappen)}</strong>
             {offer.status === 'draft' && <button onClick={() => void openOfferDraft(offer)}>Bearbeiten</button>}
             {offer.status === 'draft' && <button onClick={() => void offerAction(offer, 'share')}>Portal freigeben</button>}
+            {offer.status === 'sent' && <button onClick={() => void offerAction(offer, 'send')}>E-Mail</button>}
             {offer.status === 'sent' && <button onClick={() => void offerAction(offer, 'withdraw')}>Zurückziehen</button>}
             {offer.status === 'accepted' && !convertedOfferIds.has(offer.id) && <button onClick={() => void convertOfferToInvoice(offer)}>Rechnung erstellen</button>}
             {offer.status === 'accepted' && convertedOfferIds.has(offer.id) && <small>Rechnung erstellt</small>}
