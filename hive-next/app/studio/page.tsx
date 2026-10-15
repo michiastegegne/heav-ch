@@ -14,6 +14,11 @@ type Customer = {
   email: string | null; phone: string | null; address_line1: string | null;
   postal_code: string | null; city: string | null; country: string | null; notes: string | null;
 };
+type Department = {
+  id:string; workspace_id:string; customer_id:string; name:string; code:string;
+  contact_name:string; contact_email:string; contact_phone:string;
+  is_default:boolean; active:boolean; created_at:string; updated_at:string;
+};
 type Project = {
   id: string; workspace_id: string; customer_id: string; title: string; description: string | null;
   status: 'planning' | 'active' | 'completed' | 'on_hold'; budget_rappen: number;
@@ -125,6 +130,12 @@ export default function StudioPage() {
   const [customerDraft, setCustomerDraft] = useState({
     id: '', company: '', contactName: '', email: '', phone: '',
     addressLine1: '', postalCode: '', city: '', country: 'Schweiz', notes: '',
+  });
+  const [departmentOpen, setDepartmentOpen] = useState(false);
+  const [departmentCustomer, setDepartmentCustomer] = useState<Customer | null>(null);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [departmentDraft, setDepartmentDraft] = useState({
+    id:'', name:'', code:'', contactName:'', contactEmail:'', contactPhone:'', isDefault:false, active:true,
   });
   const [projectOpen, setProjectOpen] = useState(false);
   const [projectWorkspaceOpen, setProjectWorkspaceOpen] = useState(false);
@@ -256,6 +267,89 @@ export default function StudioPage() {
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Kunde konnte nicht gelöscht werden.');
     }
+  }
+
+  async function openDepartments(customer: Customer) {
+    if (!activeWorkspaceId) return;
+    try {
+      const data = await requestJson<{ departments:Department[] }>(
+        `/api/hive/customers/${customer.id}/departments?workspace=${encodeURIComponent(activeWorkspaceId)}`,
+      );
+      setDepartmentCustomer(customer);
+      setDepartments(data.departments);
+      setDepartmentDraft({ id:'', name:'', code:'', contactName:'', contactEmail:'', contactPhone:'', isDefault:false, active:true });
+      setDepartmentOpen(true);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Abteilungen konnten nicht geladen werden.');
+    }
+  }
+
+  async function reloadDepartments() {
+    if (!activeWorkspaceId || !departmentCustomer) return;
+    const data = await requestJson<{ departments:Department[] }>(
+      `/api/hive/customers/${departmentCustomer.id}/departments?workspace=${encodeURIComponent(activeWorkspaceId)}`,
+    );
+    setDepartments(data.departments);
+  }
+
+  async function saveDepartment(event: FormEvent) {
+    event.preventDefault();
+    if (!activeWorkspaceId || !departmentCustomer) return;
+    try {
+      const payload = {
+        workspaceId:activeWorkspaceId,
+        name:departmentDraft.name,
+        code:departmentDraft.code,
+        contactName:departmentDraft.contactName,
+        contactEmail:departmentDraft.contactEmail,
+        contactPhone:departmentDraft.contactPhone,
+        isDefault:departmentDraft.isDefault,
+        active:departmentDraft.active,
+      };
+      if (departmentDraft.id) {
+        await requestJson(
+          `/api/hive/customers/${departmentCustomer.id}/departments/${departmentDraft.id}`,
+          { method:'PATCH', body:JSON.stringify(payload) },
+        );
+      } else {
+        await requestJson(
+          `/api/hive/customers/${departmentCustomer.id}/departments`,
+          { method:'POST', body:JSON.stringify(payload) },
+        );
+      }
+      setNotice(departmentDraft.id ? 'Abteilung aktualisiert.' : 'Abteilung erstellt.');
+      setDepartmentDraft({ id:'', name:'', code:'', contactName:'', contactEmail:'', contactPhone:'', isDefault:false, active:true });
+      await reloadDepartments();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Abteilung konnte nicht gespeichert werden.');
+    }
+  }
+
+  async function deleteDepartment(department: Department) {
+    if (!activeWorkspaceId || !departmentCustomer || !confirm(`${department.name} wirklich löschen?`)) return;
+    try {
+      await requestJson(
+        `/api/hive/customers/${departmentCustomer.id}/departments/${department.id}?workspace=${encodeURIComponent(activeWorkspaceId)}`,
+        { method:'DELETE' },
+      );
+      setNotice('Abteilung gelöscht.');
+      await reloadDepartments();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Abteilung konnte nicht gelöscht werden.');
+    }
+  }
+
+  function editDepartment(department: Department) {
+    setDepartmentDraft({
+      id:department.id,
+      name:department.name,
+      code:department.code || '',
+      contactName:department.contact_name || '',
+      contactEmail:department.contact_email || '',
+      contactPhone:department.contact_phone || '',
+      isDefault:department.is_default,
+      active:department.active,
+    });
   }
 
   async function saveProject(event: FormEvent) {
@@ -854,6 +948,7 @@ export default function StudioPage() {
           <div className="hsv-table">{customers.map((customer) => <div key={customer.id}>
             <span className="hsv-letter">{customerName(customer).charAt(0).toUpperCase()}</span>
             <span className="hsv-grow"><strong>{customerName(customer)}</strong><small>{customer.email || 'Dev-Kopie · E-Mail entfernt'} · {[customer.postal_code, customer.city].filter(Boolean).join(' ') || 'Keine Adresse'}</small></span>
+            <button onClick={() => void openDepartments(customer)}>Abteilungen</button>
             <button onClick={() => openCustomer(customer)}>Bearbeiten</button>
             <button aria-label="Kunde löschen" onClick={() => void deleteCustomer(customer)}><Trash2 size={16}/></button>
           </div>)}</div>
@@ -1112,6 +1207,46 @@ export default function StudioPage() {
         <button className="hsv-primary" type="submit">Einladung anlegen <Check size={15}/></button>
       </form>
     </Modal>}
+
+    {departmentOpen && departmentCustomer && <div className="hsv-overlay">
+      <div className="hsv-invoice-editor">
+        <div className="hsv-editorbar">
+          <div><small>KUNDE / ABTEILUNGEN</small><strong>{customerName(departmentCustomer)}</strong></div>
+          <button className="hsv-icon" onClick={() => setDepartmentOpen(false)} aria-label="Schliessen"><X size={18}/></button>
+        </div>
+        <div className="hsv-paper" style={{maxWidth:950}}>
+          <div className="hsv-rowtop"><strong>{departments.length} Abteilungen</strong><small>Portal, Dateien und Ansprechpartner pro Department</small></div>
+          <div className="hsv-table">
+            {departments.map((department) => <div key={department.id}>
+              <span className="hsv-letter">{department.name.charAt(0).toUpperCase()}</span>
+              <span className="hsv-grow">
+                <strong>{department.name}{department.is_default ? ' · Standard' : ''}</strong>
+                <small>{department.code || 'Ohne Code'} · {department.contact_email || 'Keine E-Mail'} · {department.active ? 'aktiv' : 'inaktiv'}</small>
+              </span>
+              <button onClick={() => editDepartment(department)}>Bearbeiten</button>
+              {!department.is_default && <button aria-label="Abteilung löschen" onClick={() => void deleteDepartment(department)}><Trash2 size={15}/></button>}
+            </div>)}
+          </div>
+
+          <form onSubmit={saveDepartment} className="hsv-branding" style={{marginTop:22}}>
+            <span className="auth-kicker">{departmentDraft.id ? 'ABTEILUNG BEARBEITEN' : 'NEUE ABTEILUNG'}</span>
+            <label>Name<input required minLength={2} value={departmentDraft.name} onChange={(e) => setDepartmentDraft({ ...departmentDraft, name:e.target.value })} placeholder="z.B. Marketing"/></label>
+            <label>Code<input value={departmentDraft.code} onChange={(e) => setDepartmentDraft({ ...departmentDraft, code:e.target.value })} placeholder="MKT"/></label>
+            <label>Kontaktperson<input value={departmentDraft.contactName} onChange={(e) => setDepartmentDraft({ ...departmentDraft, contactName:e.target.value })}/></label>
+            <label>E-Mail<input type="email" value={departmentDraft.contactEmail} onChange={(e) => setDepartmentDraft({ ...departmentDraft, contactEmail:e.target.value })}/></label>
+            <label>Telefon<input value={departmentDraft.contactPhone} onChange={(e) => setDepartmentDraft({ ...departmentDraft, contactPhone:e.target.value })}/></label>
+            <div style={{display:'flex',gap:18,flexWrap:'wrap'}}>
+              <label><input type="checkbox" checked={departmentDraft.isDefault} onChange={(e) => setDepartmentDraft({ ...departmentDraft, isDefault:e.target.checked })}/> Standardabteilung</label>
+              <label><input type="checkbox" checked={departmentDraft.active} onChange={(e) => setDepartmentDraft({ ...departmentDraft, active:e.target.checked })}/> Aktiv</label>
+            </div>
+            <div style={{display:'flex',gap:10}}>
+              <button className="hsv-primary" type="submit">Speichern <Check size={15}/></button>
+              {departmentDraft.id && <button className="hsv-outline" type="button" onClick={() => setDepartmentDraft({ id:'', name:'', code:'', contactName:'', contactEmail:'', contactPhone:'', isDefault:false, active:true })}>Neu</button>}
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>}
 
     {customerOpen && <Modal title={customerDraft.id ? 'Kunde bearbeiten' : 'Neuer Kunde'} onClose={() => setCustomerOpen(false)}>
       <form onSubmit={saveCustomer}>
