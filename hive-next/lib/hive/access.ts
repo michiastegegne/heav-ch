@@ -1,3 +1,4 @@
+import { ZodError } from 'zod';
 import { auth } from '@clerk/nextjs/server';
 import { createClerkSupabaseServerClient } from '@/lib/supabase/clerk-server';
 
@@ -21,6 +22,12 @@ export async function requireHiveDataAccess() {
 export function jsonError(error: unknown) {
   if (error instanceof HiveAccessError) {
     return Response.json({ error: error.message }, { status: error.status });
+  }
+  if (error instanceof ZodError) {
+    return Response.json(
+      { error: 'Ungültige Eingabe', issues: error.issues.map((issue) => ({ path: issue.path, message: issue.message })) },
+      { status: 400 },
+    );
   }
   return Response.json({ error: 'Request failed' }, { status: 500 });
 }
