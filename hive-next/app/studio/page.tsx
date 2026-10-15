@@ -6,6 +6,7 @@ import {
   LayoutDashboard, Mail, Package, Plus, RefreshCw, Search, Settings2, ShieldCheck, Trash2, Users, X,
 } from 'lucide-react';
 import { createPublicSupabaseBrowserClient } from '@/lib/supabase/public-browser';
+import ThemeToggle from '@/app/components/theme-toggle';
 import WorkspaceOverview from './workspace-overview';
 import './studio.css';
 import './workspace-design.css';
@@ -1331,6 +1332,7 @@ export default function StudioPage() {
       </div>
       <button className="hsv-outline" type="button" onClick={() => setSearchOpen(true)}><Search size={14}/> Suchen … <kbd>⌘K</kbd></button>
       <span className="hsv-mode"><span/> Entwicklungsumgebung</span>
+      <ThemeToggle/>
       <a className="hsv-back" href="/account">Mein Konto <ArrowRight size={15}/></a>
     </header>
 

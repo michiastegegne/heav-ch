@@ -1,0 +1,54 @@
+/* The selected appearance applies to authentication and all workspace surfaces. */
+html[data-theme=light]{color-scheme:light}
+html[data-theme=dark]{color-scheme:dark;background:#111;color:#ededed;--dark-canvas:#111;--dark-surface:#181818;--dark-raised:#202020;--dark-border:#2d2d2d;--dark-text:#ededed;--dark-muted:#a1a1a1}
+.hive-theme-toggle{display:inline-flex;align-items:center;justify-content:center;flex:none;width:32px;height:32px;min-height:32px;padding:0;border:1px solid #e3e3e3;border-radius:6px;background:transparent;color:#666;cursor:pointer}
+.hive-theme-toggle:hover{background:#f1f1f1;color:#222}.hive-theme-toggle:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+.auth-brand-top,.account-appearance{display:flex;align-items:center;justify-content:space-between;gap:18px}.auth-brand-top .hive-theme-toggle{border-color:#444;color:#ccc}.auth-brand-top .hive-theme-toggle:hover{background:#333;color:white}
+html[data-theme=dark] body{background:var(--dark-canvas);color:var(--dark-text)}
+html[data-theme=dark] .hsv{--hive-ink:var(--dark-text);--hive-muted:var(--dark-muted);--hive-line:var(--dark-border);--hive-soft:var(--dark-raised);background:var(--dark-canvas);color:var(--dark-text)}
+html[data-theme=dark] :is(.hsv-top,.hsv-main,.hsv-layout,.hive-overview){background:var(--dark-canvas);color:var(--dark-text)}
+html[data-theme=dark] .hsv-nav{background:#151515;border-color:#292929}
+html[data-theme=dark] :is(.hive-panel,.hsv-table,.hsv-dialog,.hsv-paper,.hsv-invoice-editor,.hsv-empty,.hive-timeline-mark,.hsv-intro){background:var(--dark-surface);color:var(--dark-text);border-color:var(--dark-border)}
+html[data-theme=dark] :is(.hive-attention,.hsv-brand-preview,.hsv-big-logo,.hsv-letter){background:var(--dark-raised);color:var(--dark-text);border-color:var(--dark-border)}
+html[data-theme=dark] :is(.hive-finance-labels,.hive-panel-foot,.hive-table-labels,.hsv-editorbar,.hsv-lineheader){background:#161616;color:var(--dark-muted);border-color:var(--dark-border)}
+html[data-theme=dark] :is(.hive-finance-row,.hive-project-focus>button){background:var(--dark-surface);color:var(--dark-text);border-color:var(--dark-border)}
+html[data-theme=dark] :is(.hive-finance-row:hover,.hive-project-focus>button:hover,.hsv-table>div:hover){background:#202020}
+html[data-theme=dark] .hsv-table>div{border-color:var(--dark-border)}
+html[data-theme=dark] :is(.hsv-nav button,.hsv-back,.hsv-identity select,.hsv-table button,.hsv-icon,.hsv-close){color:#b3b3b3}
+html[data-theme=dark] .hsv-nav button.on{background:#2b2b2b;color:#f0f0f0}
+html[data-theme=dark] .hsv-nav button:hover{background:#252525;color:#f0f0f0}
+html[data-theme=dark] :is(.hive-nav-bottom,.hsv-top,.hsv-rowtop,.hive-list-tools,.hive-kpis,.hive-kpis button,.hive-panel-heading){border-color:var(--dark-border)}
+html[data-theme=dark] :is(.hsv-hive,.hsv-heading h1,.hsv-grow strong,.hive-record strong,.hive-amount,.hive-attention-title,.hive-panel-heading h2,.hive-panel-foot strong){color:var(--dark-text)}
+html[data-theme=dark] :is(.hsv-heading p,.hive-record small,.hsv-grow small,.hive-contact-cell,.hive-contact-cell small,.hive-eyebrow,.hive-nav-label,.hive-kpis button>span,.hive-kpis small,.hive-due,.hive-due small,.hive-project-due,.hive-attention p,.hive-activity-panel li p,.hive-quiet-empty p,.hive-activity-empty,.hsv-warning,.hive-no-results,.hive-no-results>span,.hive-breadcrumb,.hive-breadcrumb>span:first-child,.hive-breadcrumb strong){color:var(--dark-muted)}
+html[data-theme=dark] :is(.hive-panel-heading>button,.hive-text-link,.hive-attention>button,.hive-quiet-empty button,.hive-quiet-empty strong){color:#ccc}
+html[data-theme=dark] .hive-kpis button:hover strong{color:#bcbcbc}
+html[data-theme=dark] :is(.hive-status,.hive-panel-heading h2>span){background:#252525;color:#c2c2c2;border-color:#3a3a3a}
+html[data-theme=dark] .status-overdue{background:#323232;color:white;border-color:#777}
+html[data-theme=dark] .status-paid{background:#202020;color:#aaa;border-color:#303030}
+html[data-theme=dark] .hive-status-dot{background:#ddd}
+html[data-theme=dark] .hive-activity-panel li:not(:last-child):before{background:var(--dark-border)}
+html[data-theme=dark] :is(.hive-list-tools>label,.hive-list-tools select,.hsv-outline,.hsv-top>.hsv-outline,.hsv-identity>.hsv-outline,.hive-theme-toggle){background:#1c1c1c;color:#bfbfbf;border-color:#383838}
+html[data-theme=dark] :is(.hive-theme-toggle:hover,.hsv-outline:hover,.hsv-table button:hover){background:#2b2b2b;color:white;border-color:#494949}
+html[data-theme=dark] .hsv :is(input,select,textarea){color:#e7e7e7;background:#202020;border-color:#414141}
+html[data-theme=dark] .hive-list-tools input{background:transparent;border:0}
+html[data-theme=dark] .hsv-identity select{background:transparent;border:0}
+html[data-theme=dark] .hsv input::placeholder,html[data-theme=dark] .hsv textarea::placeholder{color:#929292}
+html[data-theme=dark] :is(.hsv-dialog label,.hsv-branding label,.hsv-paper label){color:#bdbdbd}
+html[data-theme=dark] :is(.hsv-primary,.hive-login-form>button,.hive-signout){background:#ededed;color:#171717;border-color:#ededed}
+html[data-theme=dark] .hsv-primary:hover{background:white;border-color:white}
+html[data-theme=dark] .hsv :focus-visible{outline-color:#c9c9c9}
+html[data-theme=dark] .hsv-logo{background:#e5e5e5;color:#171717}
+html[data-theme=dark] .hsv-divider{background:#3b3b3b}
+html[data-theme=dark] .hsv-top kbd{border-color:#4b4b4b;color:#aaa}
+html[data-theme=dark] .hsv-overlay{background:#000b}
+html[data-theme=dark] :is(.auth-shell,.auth-panel,.account-shell){background:var(--dark-canvas);color:var(--dark-text)}
+html[data-theme=dark] .auth-brand{background:#171717;color:var(--dark-text);border-right:1px solid var(--dark-border)}
+html[data-theme=dark] :is(.hive-login-form,.auth-setup,.account-head){background:var(--dark-surface);color:var(--dark-text);border-color:var(--dark-border)}
+html[data-theme=dark] :is(.hive-login-form>p,.hive-login-form small,.auth-setup p,.account-content>p,.account-head a){color:var(--dark-muted)}
+html[data-theme=dark] .hive-login-form input{background:#202020;color:var(--dark-text);border-color:#414141}
+html[data-theme=dark] .hive-login-form .hive-auth-error{color:#ff9898}
+html[data-theme=dark] :is(.hive-login-form :focus-visible,.hive-signout:focus-visible){outline-color:#ddd}
+html[data-theme=dark] .auth-setup a{color:#ddd}
+html[data-theme=dark] .auth-clerk-card,html[data-theme=dark] .account-clerk-card{background:#181818!important;color:#ededed!important;border-color:#333!important}
+@media(max-width:460px){.hsv-top .hive-theme-toggle{width:29px;height:29px;min-height:29px}.hsv-identity select{max-width:145px}.hsv-top{gap:8px}}
+@media print{html[data-theme=dark],html[data-theme=dark] body,html[data-theme=dark] .hsv-paper{color-scheme:light;background:white!important;color:black!important}.hive-theme-toggle{display:none!important}html[data-theme=dark] .hsv-paper :is(input,select,textarea){background:white!important;color:black!important;border-color:#ccc!important}}

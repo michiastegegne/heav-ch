@@ -1,3 +1,4 @@
+import ThemeToggle from '@/app/components/theme-toggle';
 import { usesClerk } from '@/lib/hive/auth-provider';
 import { createSessionSupabaseClient } from '@/lib/supabase/session-server';
 import SignoutButton from './signout-button';
@@ -14,7 +15,7 @@ export default async function AccountPage() {
     <main className="account-shell">
       <header className="account-head">
         <a href="/studio">← Studio</a>
-        <strong>hive.</strong>
+        <div className="account-appearance"><ThemeToggle/><strong>hive.</strong></div>
       </header>
       <section className="account-content">
         <span className="auth-kicker">ACCOUNT & SECURITY</span>

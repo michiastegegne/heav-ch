@@ -2,6 +2,7 @@ import { usesClerk } from '@/lib/hive/auth-provider';
 import type { Metadata } from 'next';
 import { ClerkProvider } from '@clerk/nextjs';
 import './globals.css';
+import './theme.css';
 
 export const metadata: Metadata = {
   title: 'Hive — Creative Business OS',
@@ -11,8 +12,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const clerkConfigured = usesClerk();
   return (
-    <html lang="de-CH">
+    <html lang="de-CH" data-theme="dark" suppressHydrationWarning>
       <body>
+        <script dangerouslySetInnerHTML={{ __html: `try { document.documentElement.dataset.theme = localStorage.getItem('hive-appearance') === 'light' ? 'light' : 'dark'; } catch {}` }}/>
         {clerkConfigured ? (
           <ClerkProvider
             signInUrl="/login"

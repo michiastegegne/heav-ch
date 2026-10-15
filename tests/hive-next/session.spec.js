@@ -52,6 +52,7 @@ test('late workspace responses cannot overwrite the selected business',async({pa
  await expect(page.getByText('Nordkunde',{exact:true})).toBeVisible();
 });
 for(const width of [390,1440])test(`monochrome workspace fits ${width}px`,async({page})=>{
+ await page.addInitScript(() => localStorage.setItem('hive-appearance','light'));
  await page.setViewportSize({width,height:950});await login(page);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
  const button=page.locator('.hsv-nav button.on');
@@ -75,4 +76,34 @@ test('customer lists support search and invoice lists support status filtering',
  await page.getByLabel('Status filtern').selectOption('paid');
  await expect(page.getByText('TEST-2026-001',{exact:true})).toHaveCount(0);
  await expect(page.getByText('TEST-2026-003',{exact:true})).toBeVisible();
+});
+
+for(const width of [390,1440])test(`dark appearance persists across login, reload and forms at ${width}px`,async({page})=>{
+ await page.setViewportSize({width,height:950});
+ await page.goto('/login');
+ await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
+ await page.getByRole('button',{name:'Hellen Modus aktivieren'}).click();
+ await expect(page.locator('html')).toHaveAttribute('data-theme','light');
+ await page.reload();
+ await expect(page.locator('html')).toHaveAttribute('data-theme','light');
+ await login(page);
+ await expect(page.locator('html')).toHaveAttribute('data-theme','light');
+ await page.getByRole('button',{name:'Dunklen Modus aktivieren'}).click();
+ await page.reload();
+ await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
+ await expect(page.locator('.hive-kpis button')).toHaveCount(4);
+ await expect(page.locator('.hive-panel').first()).toHaveCSS('background-color','rgb(24, 24, 24)');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+ await expect(page.getByText('Dein Studio auf einen Blick.',{exact:true})).toBeVisible();
+ await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+ await page.screenshot({path:`../../outputs/hive-darkmode-ready-${width}.png`,fullPage:true,animations:'disabled'});
+ await page.getByRole('navigation').getByRole('button',{name:/Kunden/}).click();
+ await page.getByRole('button',{name:'Kunde hinzufügen',exact:true}).click();
+ await expect(page.getByLabel('Firma',{exact:true})).toHaveCSS('background-color','rgb(32, 32, 32)');
+ await expect(page.locator('.hsv-dialog')).toHaveCSS('background-color','rgb(24, 24, 24)');
+ await page.getByRole('button',{name:'Schliessen',exact:true}).click();
+ await page.goto('/account');
+ await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
+ await page.getByRole('button',{name:'Hellen Modus aktivieren'}).click();
+ await expect(page.locator('html')).toHaveAttribute('data-theme','light');
 });

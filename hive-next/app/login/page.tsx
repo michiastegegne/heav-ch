@@ -1,3 +1,4 @@
+import ThemeToggle from '@/app/components/theme-toggle';
 import PasswordForm from './password-form';
 import { usesClerk } from '@/lib/hive/auth-provider';
 import { SignIn } from '@clerk/nextjs';
@@ -9,7 +10,7 @@ export default function LoginPage() {
   return (
     <main className="auth-shell">
       <section className="auth-brand">
-        <a href="/" className="auth-wordmark">hive.</a>
+        <div className="auth-brand-top"><a href="/" className="auth-wordmark">hive.</a><ThemeToggle/></div>
         <div>
           <span className="auth-kicker">CREATIVE BUSINESS OS</span>
           <h1>Work starts here.</h1>
