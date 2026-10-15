@@ -209,6 +209,60 @@ using (
 
 
 
+
+-- Workspace policies for offers and email audit data.
+drop policy if exists "owner manages offers" on public.offers;
+drop policy if exists "workspace accountants manage offers" on public.offers;
+create policy "workspace accountants manage offers"
+on public.offers
+for all
+to authenticated
+using (public.is_workspace_member(workspace_id, 'accountant'))
+with check (public.is_workspace_member(workspace_id, 'accountant'));
+
+drop policy if exists "owner manages offer items" on public.offer_items;
+drop policy if exists "workspace accountants manage offer items" on public.offer_items;
+create policy "workspace accountants manage offer items"
+on public.offer_items
+for all
+to authenticated
+using (public.is_workspace_member(workspace_id, 'accountant'))
+with check (public.is_workspace_member(workspace_id, 'accountant'));
+
+drop policy if exists "owner reads offer events" on public.offer_events;
+drop policy if exists "owner creates offer events" on public.offer_events;
+drop policy if exists "workspace accountants read offer events" on public.offer_events;
+drop policy if exists "workspace accountants create offer events" on public.offer_events;
+create policy "workspace accountants read offer events"
+on public.offer_events
+for select
+to authenticated
+using (public.is_workspace_member(workspace_id, 'accountant'));
+create policy "workspace accountants create offer events"
+on public.offer_events
+for insert
+to authenticated
+with check (public.is_workspace_member(workspace_id, 'accountant'));
+
+drop policy if exists "studio owner reads email logs" on public.email_delivery_logs;
+drop policy if exists "owner reads email logs" on public.email_delivery_logs;
+drop policy if exists "workspace accountants read email logs" on public.email_delivery_logs;
+create policy "workspace accountants read email logs"
+on public.email_delivery_logs
+for select
+to authenticated
+using (public.is_workspace_member(workspace_id, 'accountant'));
+
+drop policy if exists "owner manages email templates" on public.email_templates;
+drop policy if exists "studio owner manages email templates" on public.email_templates;
+drop policy if exists "workspace admins manage email templates" on public.email_templates;
+create policy "workspace admins manage email templates"
+on public.email_templates
+for all
+to authenticated
+using (public.is_workspace_member(workspace_id, 'admin'))
+with check (public.is_workspace_member(workspace_id, 'admin'));
+
 -- Workspace-aware invoice mutations for Hive.
 create or replace function public.record_invoice_action(
   p_invoice_id uuid,
