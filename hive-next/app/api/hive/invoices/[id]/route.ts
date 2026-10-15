@@ -26,7 +26,7 @@ async function resolveInvoice(
 ) {
   const { data, error } = await supabase
     .from('invoices')
-    .select('id, workspace_id, customer_id, project_id, invoice_number, issue_date, due_date, status, currency, tax_rate, subtotal_rappen, tax_rappen, total_rappen, notes, is_legacy, created_at')
+    .select('id, workspace_id, customer_id, project_id, invoice_number, issue_date, due_date, status, currency, tax_rate, subtotal_rappen, tax_rappen, total_rappen, notes, is_legacy, number_finalized, created_at')
     .eq('id', invoiceId)
     .single();
   if (error || !data) throw error || new Error('Invoice not found');
@@ -123,14 +123,17 @@ export async function DELETE(
       return Response.json({ error: 'Archivierte Dev-Kopien können nicht gelöscht werden.' }, { status: 409 });
     }
 
-    const { error } = await supabase.rpc('delete_draft_invoice', {
+    const { error } = await supabase.rpc('delete_workspace_invoice_draft', {
       p_invoice_id: invoiceId,
     });
 
     if (error) {
       const message = String(error.message || '');
-      if (message.includes('only draft invoices')) {
-        return Response.json({ error: 'Nur Rechnungsentwürfe können gelöscht werden.' }, { status: 409 });
+      if (message.includes('only unissued draft invoices')) {
+        return Response.json({ error: 'Nur noch nicht ausgestellte Rechnungsentwürfe können gelöscht werden.' }, { status: 409 });
+      }
+      if (message.includes('issued invoice is immutable')) {
+        return Response.json({ error: 'Ausgestellte Rechnungen sind unveränderlich.' }, { status: 409 });
       }
       if (message.includes('send is in progress')) {
         return Response.json({ error: 'Die Rechnung wird gerade versendet und kann nicht gelöscht werden.' }, { status: 409 });
