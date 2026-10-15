@@ -129,7 +129,7 @@ export async function POST(
   try {
     const { id } = await context.params;
     const offerId = idSchema.parse(id);
-    const { action } = actionSchema.parse(await request.json());
+    const action = actionSchema.parse(await request.json());
     const supabase = await requireHiveDataAccess();
     const offer = await resolveOffer(supabase, offerId);
 
