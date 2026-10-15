@@ -3,7 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft, ArrowRight, BriefcaseBusiness, Check, CreditCard, FileText,
-  LayoutDashboard, Mail, Plus, RefreshCw, Settings2, ShieldCheck, Trash2, Users, X,
+  LayoutDashboard, Mail, Package, Plus, RefreshCw, Settings2, ShieldCheck, Trash2, Users, X,
 } from 'lucide-react';
 import { createPublicSupabaseBrowserClient } from '@/lib/supabase/public-browser';
 import './studio.css';
@@ -62,8 +62,12 @@ type ProjectWorkspaceData = {
   files: Array<{id:string;title:string;original_filename:string;kind:string;published_at:string|null}>;
   activity: Array<{id:string;event_type:string;entity_type:string;summary:string;visibility:string;created_at:string}>;
 };
+type Product = {
+  id:string; workspace_id:string; name:string; description:string; sku:string;
+  unit_price_rappen:number; tax_rate:number; active:boolean; created_at:string; updated_at:string;
+};
 
-type Tab = 'overview' | 'customers' | 'projects' | 'invoices' | 'offers' | 'emails' | 'portal' | 'branding';
+type Tab = 'overview' | 'customers' | 'projects' | 'invoices' | 'offers' | 'catalog' | 'emails' | 'portal' | 'branding';
 type LineDraft = { description: string; quantity: number; unitPrice: number };
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -103,6 +107,7 @@ export default function StudioPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [emails, setEmails] = useState<EmailLog[]>([]);
   const [portal, setPortal] = useState<PortalData>({ memberships:[], invites:[], requests:[], files:[], reviews:[], activity:[] });
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -131,6 +136,8 @@ export default function StudioPage() {
     taxRate: 0, notes: '', lines: [{ description: '', quantity: 1, unitPrice: 0 }] as LineDraft[],
   });
   const [offerOpen, setOfferOpen] = useState(false);
+  const [productOpen, setProductOpen] = useState(false);
+  const [productDraft, setProductDraft] = useState({ id:'', name:'', description:'', sku:'', unitPrice:0, taxRate:0, active:true });
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteDraft, setInviteDraft] = useState({ customerId:'', email:'' });
   const [fileOpen, setFileOpen] = useState(false);
@@ -170,11 +177,12 @@ export default function StudioPage() {
     setBackendError('');
     try {
       const q = encodeURIComponent(workspaceId);
-      const [customerData, projectData, invoiceData, offerData, emailData, portalData, settingsData] = await Promise.all([
+      const [customerData, projectData, invoiceData, offerData, productData, emailData, portalData, settingsData] = await Promise.all([
         requestJson<{ customers: Customer[] }>(`/api/hive/customers?workspace=${q}`),
         requestJson<{ projects: Project[] }>(`/api/hive/projects?workspace=${q}`),
         requestJson<{ invoices: Invoice[] }>(`/api/hive/invoices?workspace=${q}`),
         requestJson<{ offers: Offer[] }>(`/api/hive/offers?workspace=${q}`),
+        requestJson<{ products: Product[] }>(`/api/hive/products?workspace=${q}`),
         requestJson<{ emails: EmailLog[] }>(`/api/hive/emails?workspace=${q}`),
         requestJson<PortalData>(`/api/hive/portal?workspace=${q}`),
         requestJson<{ settings: Settings }>(`/api/hive/settings?workspace=${q}`),
@@ -183,6 +191,7 @@ export default function StudioPage() {
       setProjects(projectData.projects);
       setInvoices(invoiceData.invoices);
       setOffers(offerData.offers);
+      setProducts(productData.products);
       setEmails(emailData.emails);
       setPortal(portalData);
       setSettings(settingsData.settings);
@@ -426,6 +435,82 @@ export default function StudioPage() {
     }
   }
 
+  async function saveProduct(event: FormEvent) {
+    event.preventDefault();
+    if (!activeWorkspaceId) return;
+    try {
+      const payload = {
+        workspaceId:activeWorkspaceId,
+        name:productDraft.name,
+        description:productDraft.description,
+        sku:productDraft.sku,
+        unitPriceRappen:Math.round(productDraft.unitPrice * 100),
+        taxRate:productDraft.taxRate,
+        active:productDraft.active,
+      };
+      if (productDraft.id) {
+        await requestJson(`/api/hive/products/${productDraft.id}`, {
+          method:'PATCH',
+          body:JSON.stringify(payload),
+        });
+      } else {
+        await requestJson('/api/hive/products', {
+          method:'POST',
+          body:JSON.stringify(payload),
+        });
+      }
+      setProductOpen(false);
+      setNotice(productDraft.id ? 'Leistung aktualisiert.' : 'Leistung erstellt.');
+      await loadWorkspaceData(activeWorkspaceId);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Leistung konnte nicht gespeichert werden.');
+    }
+  }
+
+  async function deleteProduct(product: Product) {
+    if (!activeWorkspaceId || !confirm(`${product.name} wirklich löschen?`)) return;
+    try {
+      await requestJson(`/api/hive/products/${product.id}?workspace=${encodeURIComponent(activeWorkspaceId)}`, { method:'DELETE' });
+      setNotice('Leistung gelöscht.');
+      await loadWorkspaceData(activeWorkspaceId);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Leistung konnte nicht gelöscht werden.');
+    }
+  }
+
+  function openProduct(product?: Product) {
+    setProductDraft(product ? {
+      id:product.id,
+      name:product.name,
+      description:product.description || '',
+      sku:product.sku || '',
+      unitPrice:product.unit_price_rappen / 100,
+      taxRate:Number(product.tax_rate || 0),
+      active:product.active,
+    } : { id:'', name:'', description:'', sku:'', unitPrice:0, taxRate:Number(settings?.default_tax_rate || 0), active:true });
+    setProductOpen(true);
+  }
+
+  function addProductToInvoice(productId: string) {
+    const product = products.find((item) => item.id === productId);
+    if (!product) return;
+    setInvoiceDraft({
+      ...invoiceDraft,
+      taxRate:Number(product.tax_rate || invoiceDraft.taxRate),
+      lines:[...invoiceDraft.lines, { description:product.name, quantity:1, unitPrice:product.unit_price_rappen / 100 }],
+    });
+  }
+
+  function addProductToOffer(productId: string) {
+    const product = products.find((item) => item.id === productId);
+    if (!product) return;
+    setOfferDraft({
+      ...offerDraft,
+      taxRate:Number(product.tax_rate || offerDraft.taxRate),
+      lines:[...offerDraft.lines, { description:product.name, quantity:1, unitPrice:product.unit_price_rappen / 100 }],
+    });
+  }
+
   async function createOffer(event: FormEvent) {
     event.preventDefault();
     if (!activeWorkspaceId) return;
@@ -649,6 +734,7 @@ export default function StudioPage() {
     ['projects', 'Projekte', BriefcaseBusiness],
     ['invoices', 'Rechnungen', CreditCard],
     ['offers', 'Offerten', FileText],
+    ['catalog', 'Leistungen', Package],
     ['emails', 'E-Mail', Mail],
     ['portal', 'Portal', ShieldCheck],
     ['branding', 'Business', Settings2],
@@ -743,6 +829,17 @@ export default function StudioPage() {
             {offer.status === 'draft' && <button onClick={() => void offerAction(offer, 'share')}>Portal freigeben</button>}
             {offer.status === 'sent' && <button onClick={() => void offerAction(offer, 'withdraw')}>Zurückziehen</button>}
             {offer.status === 'draft' && <button aria-label="Offerte löschen" onClick={() => void offerAction(offer, 'delete')}><Trash2 size={16}/></button>}
+          </div>)}</div>
+        </>}
+
+        {tab === 'catalog' && <>
+          <div className="hsv-rowtop"><strong>{products.length} Leistungen</strong><button className="hsv-primary" onClick={() => openProduct()}><Plus size={15}/> Leistung erstellen</button></div>
+          <div className="hsv-table">{products.map((product) => <div key={product.id}>
+            <span className="hsv-letter"><Package size={16}/></span>
+            <span className="hsv-grow"><strong>{product.name}</strong><small>{product.sku || 'Ohne SKU'} · {product.active ? 'aktiv' : 'inaktiv'} · {Number(product.tax_rate)}% Steuer</small></span>
+            <strong>{money(product.unit_price_rappen)}</strong>
+            <button onClick={() => openProduct(product)}>Bearbeiten</button>
+            <button aria-label="Leistung löschen" onClick={() => void deleteProduct(product)}><Trash2 size={16}/></button>
           </div>)}</div>
         </>}
 
@@ -853,6 +950,20 @@ export default function StudioPage() {
       </form>
     </Modal>}
 
+    {productOpen && <Modal title={productDraft.id ? 'Leistung bearbeiten' : 'Neue Leistung'} onClose={() => setProductOpen(false)}>
+      <form onSubmit={saveProduct}>
+        <label>Name<input required value={productDraft.name} onChange={(e) => setProductDraft({ ...productDraft, name:e.target.value })} placeholder="z.B. Event Video"/></label>
+        <label>Beschreibung<textarea rows={3} value={productDraft.description} onChange={(e) => setProductDraft({ ...productDraft, description:e.target.value })}/></label>
+        <label>SKU<input value={productDraft.sku} onChange={(e) => setProductDraft({ ...productDraft, sku:e.target.value })} placeholder="VIDEO-EVENT"/></label>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+          <label>Preis CHF<input required type="number" min="0" step="0.01" value={productDraft.unitPrice} onChange={(e) => setProductDraft({ ...productDraft, unitPrice:Number(e.target.value) })}/></label>
+          <label>Steuersatz %<input type="number" min="0" max="100" step="0.1" value={productDraft.taxRate} onChange={(e) => setProductDraft({ ...productDraft, taxRate:Number(e.target.value) })}/></label>
+        </div>
+        <label><input type="checkbox" checked={productDraft.active} onChange={(e) => setProductDraft({ ...productDraft, active:e.target.checked })}/> Aktiv</label>
+        <button className="hsv-primary" type="submit">Speichern <Check size={15}/></button>
+      </form>
+    </Modal>}
+
     {projectWorkspaceOpen && projectWorkspace && <div className="hsv-overlay">
       <div className="hsv-invoice-editor">
         <div className="hsv-editorbar">
@@ -952,6 +1063,7 @@ export default function StudioPage() {
         <label>Projekt<select value={invoiceDraft.projectId} onChange={(e) => setInvoiceDraft({ ...invoiceDraft, projectId: e.target.value })}><option value="">Kein Projekt</option>{projects.filter((project) => project.customer_id === invoiceDraft.customerId).map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}</select></label>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><label>Datum<input required type="date" value={invoiceDraft.issueDate} onChange={(e) => setInvoiceDraft({ ...invoiceDraft, issueDate: e.target.value })}/></label><label>Fällig<input required type="date" value={invoiceDraft.dueDate} onChange={(e) => setInvoiceDraft({ ...invoiceDraft, dueDate: e.target.value })}/></label></div>
         <label>Steuersatz %<input type="number" min="0" max="100" step="0.1" value={invoiceDraft.taxRate} onChange={(e) => setInvoiceDraft({ ...invoiceDraft, taxRate: Number(e.target.value) })}/></label>
+        {products.some((product) => product.active) && <label>Leistung hinzufügen<select defaultValue="" onChange={(e) => { if (e.target.value) addProductToInvoice(e.target.value); e.currentTarget.value=''; }}><option value="">Aus Katalog wählen…</option>{products.filter((product) => product.active).map((product) => <option key={product.id} value={product.id}>{product.name} · {money(product.unit_price_rappen)}</option>)}</select></label>}
         <label>Notiz<textarea rows={2} value={invoiceDraft.notes} onChange={(e) => setInvoiceDraft({ ...invoiceDraft, notes: e.target.value })}/></label>
         <button className="hsv-primary" type="submit">Rechnungsentwurf erstellen <Check size={15}/></button>
       </form>
@@ -967,6 +1079,7 @@ export default function StudioPage() {
         <label>Titel<input required value={offerDraft.title} onChange={(e) => setOfferDraft({ ...offerDraft, title: e.target.value })}/></label>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><label>Datum<input type="date" value={offerDraft.issueDate} onChange={(e) => setOfferDraft({ ...offerDraft, issueDate: e.target.value })}/></label><label>Gültig bis<input type="date" value={offerDraft.validUntil} onChange={(e) => setOfferDraft({ ...offerDraft, validUntil: e.target.value })}/></label></div>
         <label>Steuersatz %<input type="number" min="0" max="100" step="0.1" value={offerDraft.taxRate} onChange={(e) => setOfferDraft({ ...offerDraft, taxRate: Number(e.target.value) })}/></label>
+        {products.some((product) => product.active) && <label>Leistung hinzufügen<select defaultValue="" onChange={(e) => { if (e.target.value) addProductToOffer(e.target.value); e.currentTarget.value=''; }}><option value="">Aus Katalog wählen…</option>{products.filter((product) => product.active).map((product) => <option key={product.id} value={product.id}>{product.name} · {money(product.unit_price_rappen)}</option>)}</select></label>}
         <label>Bedingungen<textarea required rows={3} value={offerDraft.terms} onChange={(e) => setOfferDraft({ ...offerDraft, terms: e.target.value })}/></label>
         <button className="hsv-primary" type="submit">Offertenentwurf erstellen <Check size={15}/></button>
       </form>
