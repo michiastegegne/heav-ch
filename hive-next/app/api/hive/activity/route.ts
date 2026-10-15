@@ -2,6 +2,17 @@ import { z } from 'zod';
 import { assertWorkspaceAllowed, jsonError, requireHiveDataAccess } from '@/lib/hive/access';
 
 const workspaceSchema = z.string().uuid();
+const invoiceLabels:Record<string,string> = {
+  created:'Rechnung erstellt', updated:'Rechnung bearbeitet', issued:'Rechnung ausgestellt',
+  downloaded:'Rechnungs-PDF geöffnet', sent:'Rechnung versendet', resent:'Rechnung erneut versendet',
+  paid:'Rechnung als bezahlt erfasst', cancelled:'Rechnung storniert', send_failed:'Rechnungsversand fehlgeschlagen',
+  reminder_sent:'Zahlungserinnerung versendet', overdue:'Rechnung ist überfällig',
+};
+const offerLabels:Record<string,string> = {
+  created:'Offerte erstellt', updated:'Offerte bearbeitet', shared:'Offerte im Portal freigegeben',
+  emailed:'Offerte per E-Mail versendet', accepted:'Offerte angenommen', withdrawn:'Offerte zurückgezogen',
+  converted:'Offerte in Rechnung umgewandelt',
+};
 
 type FeedItem = {
   id:string;
@@ -79,7 +90,7 @@ export async function GET(request:Request) {
         kind:item.kind,
         entityType:'invoice',
         entityId:item.invoice_id,
-        summary:`Rechnung · ${item.kind.replaceAll('_',' ')}`,
+        summary:invoiceLabels[item.kind] || 'Rechnung aktualisiert',
         meta:item.recipient || '',
         createdAt:item.created_at,
       })),
@@ -89,7 +100,7 @@ export async function GET(request:Request) {
         kind:item.kind,
         entityType:'offer',
         entityId:item.offer_id,
-        summary:`Offerte · ${item.kind.replaceAll('_',' ')}`,
+        summary:offerLabels[item.kind] || 'Offerte aktualisiert',
         meta:'',
         createdAt:item.created_at,
       })),
