@@ -25,8 +25,8 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const workspaceId = workspaceQuery.parse(url.searchParams.get('workspace'));
-    assertWorkspaceAllowed(workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(workspaceId, supabase);
 
     const { data, error } = await supabase
       .from('offers')
@@ -50,8 +50,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const payload = offerSchema.parse(await request.json());
-    assertWorkspaceAllowed(payload.workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(payload.workspaceId, supabase);
 
     const { data, error } = await supabase.rpc('create_workspace_offer', {
       p_workspace_id: payload.workspaceId,
