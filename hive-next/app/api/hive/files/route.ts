@@ -4,6 +4,7 @@ import { assertWorkspaceAllowed, jsonError, requireHiveDataAccess } from '@/lib/
 const commonSchema = z.object({
   workspaceId: z.string().uuid(),
   customerId: z.string().uuid(),
+  departmentId: z.union([z.string().uuid(), z.literal(''), z.null()]).default(null),
   projectId: z.union([z.string().uuid(), z.literal(''), z.null()]).default(null),
   title: z.string().trim().min(1).max(200),
   filename: z.string().trim().min(1).max(240),
@@ -34,6 +35,7 @@ async function resolveScope(
   supabase: Awaited<ReturnType<typeof requireHiveDataAccess>>,
   workspaceId: string,
   customerId: string,
+  departmentId: string | null,
   projectId: string | null,
 ) {
   const { data: customer, error: customerError } = await supabase
@@ -44,26 +46,32 @@ async function resolveScope(
     .single();
   if (customerError || !customer) throw customerError || new Error('Customer not found');
 
-  const { data: department, error: departmentError } = await supabase
-    .from('customer_departments')
-    .select('id')
-    .eq('customer_id', customerId)
-    .eq('workspace_id', workspaceId)
-    .eq('is_default', true)
-    .eq('active', true)
-    .single();
-  if (departmentError || !department) throw departmentError || new Error('Default department not found');
-
   if (projectId) {
     const { data: project, error: projectError } = await supabase
       .from('projects')
-      .select('id')
+      .select('id,department_id')
       .eq('id', projectId)
       .eq('workspace_id', workspaceId)
       .eq('customer_id', customerId)
       .single();
     if (projectError || !project) throw projectError || new Error('Project does not belong to customer');
+    if (departmentId && project.department_id !== departmentId) {
+      throw new Error('Project does not belong to selected department');
+    }
+    return { ownerId: customer.owner_id, departmentId: project.department_id };
   }
+
+  let departmentQuery = supabase
+    .from('customer_departments')
+    .select('id')
+    .eq('customer_id', customerId)
+    .eq('workspace_id', workspaceId)
+    .eq('active', true);
+  departmentQuery = departmentId
+    ? departmentQuery.eq('id', departmentId)
+    : departmentQuery.eq('is_default', true);
+  const { data: department, error: departmentError } = await departmentQuery.single();
+  if (departmentError || !department) throw departmentError || new Error('Department not found');
 
   return { ownerId: customer.owner_id, departmentId: department.id };
 }
@@ -77,6 +85,7 @@ export async function POST(request: Request) {
       supabase,
       payload.workspaceId,
       payload.customerId,
+      payload.departmentId || null,
       payload.projectId || null,
     );
 
