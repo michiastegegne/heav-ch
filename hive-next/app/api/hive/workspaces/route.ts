@@ -33,8 +33,21 @@ export async function GET() {
       return NextResponse.json({ error: 'Unable to load permitted workspaces' }, { status: 500 });
     }
 
+    const workspaces = (data ?? []).flatMap((membership) => {
+      const raw = membership.workspaces;
+      const workspace = Array.isArray(raw) ? raw[0] : raw;
+      if (!workspace) return [];
+      return [{
+        id: workspace.id,
+        name: workspace.name,
+        slug: workspace.slug,
+        status: workspace.status,
+        role: membership.role,
+      }];
+    });
+
     return NextResponse.json(
-      { workspaces: data ?? [] },
+      { workspaces },
       { headers: { 'Cache-Control': 'private, no-store' } },
     );
   } catch {
