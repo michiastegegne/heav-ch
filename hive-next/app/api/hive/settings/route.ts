@@ -29,9 +29,11 @@ const settingsSchema = z.object({
   defaultDueDays: z.number().int().min(1).max(180).optional(),
   currency: z.string().regex(/^[A-Z]{3}$/).optional(),
   invoicePrefix: z.string().regex(/^[A-Z0-9-]{1,12}$/).optional(),
+  invoiceRemindersEnabled: z.boolean().optional(),
+  invoiceReminderDays: z.number().int().min(1).max(30).optional(),
 });
 
-const fields = 'workspace_id, business_name, legal_name, contact_name, email, phone, website_url, address_line1, postal_code, city, country, logo_url, dark_logo_url, icon_url, primary_color, secondary_color, accent_color, invoice_sender_name, iban, bank_name, account_holder, uid_number, vat_number, vat_enabled, default_tax_rate, default_due_days, currency, invoice_prefix, invoice_number_format, updated_at';
+const fields = 'workspace_id, business_name, legal_name, contact_name, email, phone, website_url, address_line1, postal_code, city, country, logo_url, dark_logo_url, icon_url, primary_color, secondary_color, accent_color, invoice_sender_name, iban, bank_name, account_holder, uid_number, vat_number, vat_enabled, default_tax_rate, default_due_days, currency, invoice_prefix, invoice_number_format, invoice_reminders_enabled, invoice_reminder_days, updated_at';
 
 export async function GET(request: Request) {
   try {
@@ -62,6 +64,7 @@ export async function PATCH(request: Request) {
       accountHolder: 'account_holder', uidNumber: 'uid_number', vatNumber: 'vat_number',
       vatEnabled: 'vat_enabled', defaultTaxRate: 'default_tax_rate',
       defaultDueDays: 'default_due_days', currency: 'currency', invoicePrefix: 'invoice_prefix',
+      invoiceRemindersEnabled: 'invoice_reminders_enabled', invoiceReminderDays: 'invoice_reminder_days',
     };
     for (const [key, column] of Object.entries(map)) {
       const value = payload[key as keyof typeof payload];
