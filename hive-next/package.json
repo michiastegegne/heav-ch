@@ -16,7 +16,8 @@
     "lucide-react": "^0.468.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.57.0",
-    "zod": "^4.0.0"
+    "zod": "^4.0.0",
+    "@clerk/nextjs": "^7.9.15"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
