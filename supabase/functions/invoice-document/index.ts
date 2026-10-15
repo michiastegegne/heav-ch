@@ -1306,7 +1306,7 @@ if (import.meta.main) {
       const template = await loadEmailTemplate(service, invoice.owner_id, "invoice_send", {
         subject_template: "Rechnung {{invoice_number}} von {{company_name}}",
         text_template: buildInvoiceText(invoice, settings),
-      });
+      }, invoice.workspace_id);
       const templateValues = { first_name: firstName, invoice_number: invoice.invoice_number, amount: formatCHF(invoice.total_rappen), due_date: invoice.due_date, company_name: settings.company_name, owner_name: settings.owner_name };
       const subject = applyEmailTemplate(template.subject_template, templateValues);
       const text = applyEmailTemplate(template.text_template, templateValues);
@@ -1339,7 +1339,7 @@ if (import.meta.main) {
         throw sendError;
       }
       if (!emailResponse.ok) {
-        await logEmail(service, { owner_id: invoice.owner_id, template_key: "invoice_send", status: "failed", recipient_email: customer.email, recipient_name: firstName, customer_id: invoice.customer_id, invoice_id: invoice.id, subject, text_body: text, error_message: String(emailData.message || "provider error"), idempotency_key: idempotencyKey });
+        await logEmail(service, { workspace_id: invoice.workspace_id, owner_id: invoice.owner_id, template_key: "invoice_send", status: "failed", recipient_email: customer.email, recipient_name: firstName, customer_id: invoice.customer_id, invoice_id: invoice.id, subject, text_body: text, error_message: String(emailData.message || "provider error"), idempotency_key: idempotencyKey });
         const { error: completionError } = await supabase.rpc(
           "complete_invoice_send",
           {
@@ -1371,7 +1371,7 @@ if (import.meta.main) {
       if (completionError) {
         throw completionError;
       }
-      await logEmail(service, { owner_id: invoice.owner_id, template_key: "invoice_send", status: "sent", recipient_email: customer.email, recipient_name: firstName, customer_id: invoice.customer_id, invoice_id: invoice.id, subject, text_body: text, provider_id: emailData.id || null, idempotency_key: idempotencyKey });
+      await logEmail(service, { workspace_id: invoice.workspace_id, owner_id: invoice.owner_id, template_key: "invoice_send", status: "sent", recipient_email: customer.email, recipient_name: firstName, customer_id: invoice.customer_id, invoice_id: invoice.id, subject, text_body: text, provider_id: emailData.id || null, idempotency_key: idempotencyKey });
       return Response.json({ ok: true, emailId: emailData.id }, {
         headers: responseCors,
       });
