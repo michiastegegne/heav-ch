@@ -35,7 +35,13 @@ export async function GET(request: Request) {
       .order('issue_date', { ascending: false });
 
     if (error) throw error;
-    return Response.json({ offers: data ?? [] }, { headers: { 'Cache-Control': 'private, no-store' } });
+    const offers = (data ?? []).map((offer) => ({
+      ...offer,
+      tax_rate: Number(offer.subtotal_rappen) > 0
+        ? Math.round((Number(offer.tax_rappen) / Number(offer.subtotal_rappen)) * 10000) / 100
+        : 0,
+    }));
+    return Response.json({ offers }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     return jsonError(error);
   }
