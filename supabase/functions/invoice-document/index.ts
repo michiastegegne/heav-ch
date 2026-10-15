@@ -64,6 +64,7 @@ type Invoice = {
   payment_reference: string;
   project_title_snapshot?: string | null;
   is_legacy?: boolean;
+  number_finalized?: boolean;
   issue_date: string;
   due_date: string;
   sent_at?: string | null;
@@ -1220,6 +1221,11 @@ if (import.meta.main) {
       if (storedInvoice.is_legacy) {
         throw new Error(
           "Diese historische Rechnung wurde vor der unveränderlichen Archivierung erstellt und kann nicht neu als Zahlungsdokument erzeugt oder versendet werden.",
+        );
+      }
+      if (storedInvoice.number_finalized === false) {
+        throw new Error(
+          "Dieser Rechnungsentwurf muss zuerst ausgestellt und final nummeriert werden.",
         );
       }
       if (!storedInvoice.customer_snapshot || !storedInvoice.issuer_snapshot) {
