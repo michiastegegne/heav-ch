@@ -1,10 +1,11 @@
 import { z } from 'zod';
-import { jsonError, requireHiveDataAccess } from '@/lib/hive/access';
+import { assertWorkspaceAllowed, jsonError, requireHiveDataAccess } from '@/lib/hive/access';
 
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const workspaceId = z.string().uuid().parse(url.searchParams.get('workspace'));
+    assertWorkspaceAllowed(workspaceId);
     const supabase = await requireHiveDataAccess();
 
     const { data, error } = await supabase
