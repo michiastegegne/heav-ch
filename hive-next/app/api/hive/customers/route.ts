@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { jsonError, requireHiveDataAccess } from '@/lib/hive/access';
+import { assertWorkspaceAllowed, jsonError, requireHiveDataAccess } from '@/lib/hive/access';
 
 const workspaceQuery = z.string().uuid();
 
@@ -22,6 +22,7 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const workspaceId = workspaceQuery.parse(url.searchParams.get('workspace'));
+    assertWorkspaceAllowed(workspaceId);
     const supabase = await requireHiveDataAccess();
     const { data, error } = await supabase
       .from('customers')
@@ -38,6 +39,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const payload = customerSchema.parse(await request.json());
+    assertWorkspaceAllowed(payload.workspaceId);
     const supabase = await requireHiveDataAccess();
     const { data, error } = await supabase
       .from('customers')
