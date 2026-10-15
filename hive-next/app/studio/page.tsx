@@ -1138,9 +1138,33 @@ export default function StudioPage() {
         }),
       });
       setSettings(data.settings);
+      setWorkspaces((current) => current.map((workspace) =>
+        workspace.id === activeWorkspaceId
+          ? { ...workspace, name:data.settings.business_name }
+          : workspace
+      ));
       setNotice('Business-Einstellungen gespeichert.');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Einstellungen konnten nicht gespeichert werden.');
+    }
+  }
+
+  async function archiveBusiness() {
+    if (!activeWorkspaceId || !activeWorkspace) return;
+    if (!activeWorkspace.slug.startsWith('hive-dev-')) {
+      setNotice('Live-Workspaces können in der Preview nicht archiviert werden.');
+      return;
+    }
+    if (!confirm(`${businessName} wirklich archivieren? Die Daten bleiben erhalten, der Workspace verschwindet aber aus dem aktiven Switcher.`)) return;
+    try {
+      await requestJson(`/api/hive/workspaces/${activeWorkspaceId}`, { method:'DELETE' });
+      const remaining=workspaces.filter((workspace) => workspace.id !== activeWorkspaceId);
+      setWorkspaces(remaining);
+      setActiveWorkspaceId(remaining[0]?.id || '');
+      setTab('overview');
+      setNotice('Business archiviert.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Business konnte nicht archiviert werden.');
     }
   }
 
@@ -1465,6 +1489,11 @@ export default function StudioPage() {
           <label>Reminder vor Fälligkeit (Tage)<input type="number" min="1" max="30" value={settings.invoice_reminder_days} onChange={(e) => setSettings({ ...settings, invoice_reminder_days:Number(e.target.value) })}/></label>
           <label>Accent-Farbe<div className="hsv-color"><input type="color" value={settings.accent_color} onChange={(e) => setSettings({ ...settings, accent_color: e.target.value })}/><span>{settings.accent_color}</span></div></label>
           <button className="hsv-primary" type="submit">Speichern <Check size={15}/></button>
+          {activeWorkspace?.role === 'owner' && activeWorkspace.slug.startsWith('hive-dev-') && <div style={{marginTop:28,paddingTop:22,borderTop:'1px solid rgba(0,0,0,.15)'}}>
+            <span className="auth-kicker">DANGER ZONE</span>
+            <p style={{margin:'8px 0 14px'}}>Archivieren entfernt das Business aus dem aktiven Switcher. Die Daten werden nicht gelöscht.</p>
+            <button className="hsv-outline" type="button" onClick={() => void archiveBusiness()}><Trash2 size={15}/> Business archivieren</button>
+          </div>}
         </form>}
       </main>
     </div>
