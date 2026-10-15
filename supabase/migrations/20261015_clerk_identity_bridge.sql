@@ -121,9 +121,10 @@ revoke all on function public.is_workspace_member(uuid, public.workspace_role) f
 grant execute on function public.is_workspace_member(uuid, public.workspace_role) to authenticated;
 
 
--- Owner-facing SECURITY DEFINER routines were historically written against
--- auth.uid(). Rewrite only routines that already contain the immutable
--- is_studio_owner() guard; customer-facing RPCs are deliberately excluded.
+-- Owner-facing and workspace-aware SECURITY DEFINER routines were historically
+-- written against auth.uid(). Rewrite only routines that already contain an
+-- explicit Studio-owner or workspace-membership authorization guard;
+-- customer-facing RPCs without those guards are deliberately excluded.
 do $
 declare
   v_function record;
@@ -141,7 +142,10 @@ begin
     where namespace.nspname = 'public'
       and procedure.prosecdef
       and procedure.prolang = (select oid from pg_language where lanname = 'plpgsql')
-      and position('public.is_studio_owner()' in procedure.prosrc) > 0
+      and (
+        position('public.is_studio_owner()' in procedure.prosrc) > 0
+        or position('public.is_workspace_member(' in procedure.prosrc) > 0
+      )
       and position('auth.uid()' in procedure.prosrc) > 0
   loop
     v_source := replace(
