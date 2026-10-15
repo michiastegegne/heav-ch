@@ -569,7 +569,7 @@ export default function StudioPage() {
   }
 
   async function openInvoiceDraft(invoice: Invoice) {
-    if (!activeWorkspaceId || invoice.is_legacy || invoice.status !== 'draft') return;
+    if (!activeWorkspaceId || invoice.is_legacy || invoice.status !== 'draft' || invoice.number_finalized) return;
     try {
       const data = await requestJson<{
         invoice: Invoice & { notes?:string|null };
@@ -1168,7 +1168,7 @@ export default function StudioPage() {
             {invoice.status === 'draft' && !invoice.is_legacy && !invoice.number_finalized && <button onClick={() => void invoiceAction(invoice, 'issue')}>Ausstellen</button>}
             {invoice.status === 'draft' && !invoice.is_legacy && !invoice.number_finalized && <button onClick={() => void deleteInvoice(invoice)}><Trash2 size={16}/></button>}
             {!invoice.is_legacy && (invoice.status === 'sent' || invoice.status === 'overdue') && <button onClick={() => void invoiceAction(invoice, 'mark_paid')}>Bezahlt</button>}
-            {!invoice.is_legacy && invoice.status !== 'paid' && invoice.status !== 'cancelled' && <button onClick={() => void invoiceAction(invoice, 'cancel')}>Stornieren</button>}
+            {!invoice.is_legacy && invoice.number_finalized && invoice.status !== 'paid' && invoice.status !== 'cancelled' && <button onClick={() => void invoiceAction(invoice, 'cancel')}>Stornieren</button>}
           </div>)}</div>
           <p className="hsv-warning">Der E-Mail-Versand ist in dieser Dev-Preview absichtlich serverseitig gesperrt.</p>
         </>}
