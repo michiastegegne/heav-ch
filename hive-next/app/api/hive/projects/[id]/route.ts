@@ -22,8 +22,8 @@ export async function PATCH(
     const { id } = await context.params;
     const projectId = idSchema.parse(id);
     const payload = updateSchema.parse(await request.json());
-    assertWorkspaceAllowed(payload.workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(payload.workspaceId, supabase);
 
     const updates: Record<string, unknown> = {};
     if (payload.title !== undefined) updates.title = payload.title;
@@ -61,7 +61,7 @@ export async function DELETE(
       .eq('id', projectId)
       .single();
     if (projectLookupError || !project) throw projectLookupError || new Error('Project not found');
-    assertWorkspaceAllowed(project.workspace_id);
+    await assertWorkspaceAllowed(project.workspace_id, supabase);
     const { error } = await supabase.rpc('delete_workspace_project', {
       p_project_id: projectId,
     });
