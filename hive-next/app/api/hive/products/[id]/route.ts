@@ -20,8 +20,8 @@ export async function PATCH(
     const { id } = await context.params;
     const productId = idSchema.parse(id);
     const payload = updateSchema.parse(await request.json());
-    assertWorkspaceAllowed(payload.workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(payload.workspaceId, supabase);
 
     const updates: Record<string, unknown> = {};
     if (payload.name !== undefined) updates.name = payload.name;
@@ -54,8 +54,8 @@ export async function DELETE(
     const { id } = await context.params;
     const productId = idSchema.parse(id);
     const workspaceId = z.string().uuid().parse(new URL(request.url).searchParams.get('workspace'));
-    assertWorkspaceAllowed(workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(workspaceId, supabase);
 
     const { error } = await supabase
       .from('products')
