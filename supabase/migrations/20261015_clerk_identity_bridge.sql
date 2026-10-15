@@ -519,6 +519,122 @@ $hive_delete_draft_invoice$;
 revoke all on function public.delete_draft_invoice(uuid) from public, anon;
 grant execute on function public.delete_draft_invoice(uuid) to authenticated;
 
+
+-- Workspace-aware offer creation for Hive. The legacy create_offer routine
+-- remains untouched for the old HEAV app during the migration window.
+create or replace function public.create_workspace_offer(
+  p_workspace_id uuid,
+  p_customer_id uuid,
+  p_project_id uuid,
+  p_title text,
+  p_issue_date date,
+  p_valid_until date,
+  p_tax_rate numeric,
+  p_notes text,
+  p_terms text,
+  p_items jsonb
+)
+returns table(offer_id uuid, offer_number text)
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $hive_create_offer$
+declare
+  v_owner uuid;
+  v_settings public.workspace_settings%rowtype;
+  v_offer_id uuid;
+  v_year integer;
+  v_sequence bigint;
+  v_number text;
+  v_subtotal bigint;
+  v_tax bigint;
+begin
+  if not public.is_workspace_member(p_workspace_id, 'accountant') then
+    raise exception 'workspace accountant access required' using errcode = '42501';
+  end if;
+
+  if p_issue_date is null or p_valid_until is null or p_valid_until < p_issue_date then
+    raise exception 'valid offer dates are required';
+  end if;
+  if length(trim(coalesce(p_title, ''))) < 2 then raise exception 'offer title is required'; end if;
+  if length(trim(coalesce(p_terms, ''))) < 20 then raise exception 'offer terms are required'; end if;
+  if p_tax_rate is null or p_tax_rate < 0 or p_tax_rate > 100 then raise exception 'invalid tax rate'; end if;
+
+  select workspace.owner_id into v_owner
+  from public.workspaces workspace
+  where workspace.id = p_workspace_id and workspace.status = 'active';
+  if v_owner is null then raise exception 'workspace not found'; end if;
+
+  select * into v_settings
+  from public.workspace_settings
+  where workspace_id = p_workspace_id;
+
+  if not exists (
+    select 1 from public.customers
+    where id = p_customer_id and workspace_id = p_workspace_id
+  ) then
+    raise exception 'customer not found';
+  end if;
+
+  if p_project_id is not null and not exists (
+    select 1 from public.projects
+    where id = p_project_id
+      and workspace_id = p_workspace_id
+      and customer_id = p_customer_id
+  ) then
+    raise exception 'project not found or customer mismatch';
+  end if;
+
+  v_subtotal := public.validated_offer_subtotal(p_items);
+  v_tax := round(v_subtotal * p_tax_rate / 100.0)::bigint;
+  v_year := extract(year from p_issue_date)::integer;
+
+  insert into public.offer_number_counters(
+    workspace_id, owner_id, offer_year, last_value
+  )
+  values (p_workspace_id, v_owner, v_year, 1)
+  on conflict (workspace_id, offer_year)
+  do update set last_value = public.offer_number_counters.last_value + 1
+  returning last_value into v_sequence;
+
+  v_number := v_settings.invoice_prefix || '-O-' || v_year::text || '-' ||
+    lpad(v_sequence::text, greatest(3, length(v_sequence::text)), '0');
+
+  insert into public.offers(
+    workspace_id, owner_id, customer_id, project_id, offer_number,
+    title, issue_date, valid_until, notes, terms,
+    subtotal_rappen, tax_rappen, total_rappen
+  )
+  values (
+    p_workspace_id, v_owner, p_customer_id, p_project_id, v_number,
+    trim(p_title), p_issue_date, p_valid_until, coalesce(p_notes, ''),
+    trim(p_terms), v_subtotal, v_tax, v_subtotal + v_tax
+  )
+  returning id into v_offer_id;
+
+  insert into public.offer_items(
+    workspace_id, owner_id, offer_id, position, description, quantity, unit_price_rappen
+  )
+  select
+    p_workspace_id, v_owner, v_offer_id, ordinality::integer,
+    trim(item->>'description'), (item->>'quantity')::numeric,
+    (item->>'unit_price_rappen')::bigint
+  from jsonb_array_elements(p_items) with ordinality as rows(item, ordinality);
+
+  insert into public.offer_events(
+    workspace_id, owner_id, offer_id, kind, actor_id
+  )
+  values (
+    p_workspace_id, v_owner, v_offer_id, 'created', v_owner
+  );
+
+  return query select v_offer_id, v_number;
+end;
+$hive_create_offer$;
+
+revoke all on function public.create_workspace_offer(uuid, uuid, uuid, text, date, date, numeric, text, text, jsonb) from public, anon;
+grant execute on function public.create_workspace_offer(uuid, uuid, uuid, text, date, date, numeric, text, text, jsonb) to authenticated;
+
 -- SaaS-safe project deletion for the new Hive application.
 -- Financial documents are never deleted implicitly with a project.
 create or replace function public.delete_workspace_project(p_project_id uuid)
