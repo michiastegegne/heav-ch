@@ -2,7 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 
 const validMailbox = (value: unknown) => typeof value === "string" && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value.trim());
 const escapeHtml = (value: unknown) => String(value ?? "").replace(/[&<>\"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char] || char));
-import { applyEmailTemplate, loadEmailTemplate, logEmail } from "../_shared/email.ts";
+import { assertWorkspaceEmailAllowed, applyEmailTemplate, loadEmailTemplate, logEmail } from "../_shared/email.ts";
 
 const formatCHF = (rappen: number) => `CHF ${(Number(rappen || 0) / 100).toFixed(2).replace(".", ",")}`;
 
@@ -38,6 +38,13 @@ Deno.serve(async (request) => {
     let sent = 0;
     let failed = 0;
     for (const reminder of claimedReminders) {
+      try {
+        await assertWorkspaceEmailAllowed(service, reminder.workspace_id);
+      } catch {
+        failed += 1;
+        await service.rpc("complete_invoice_reminder", { p_reminder_id: reminder.reminder_id, p_success: false, p_error: "Workspace email delivery disabled" });
+        continue;
+      }
       const recipient = String(reminder.recipient_email || "").trim().toLowerCase();
       if (!validMailbox(recipient)) {
         failed += 1;

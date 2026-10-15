@@ -43,3 +43,17 @@ export async function logEmail(
     return { error };
   }
 }
+
+// Read the authoritative workspace before any provider call or send reservation.
+// Missing records and lookup failures must never permit delivery.
+export async function assertWorkspaceEmailAllowed(
+  client: { from: (table: string) => any },
+  workspaceId: string,
+): Promise<void> {
+  const { data, error } = await client.from("workspaces")
+    .select("slug,status").eq("id", workspaceId).maybeSingle();
+  if (error || !data || data.status !== "active" ||
+    typeof data.slug !== "string" || !data.slug || data.slug.startsWith("hive-dev-")) {
+    throw new Error("Email delivery is disabled for this workspace.");
+  }
+}

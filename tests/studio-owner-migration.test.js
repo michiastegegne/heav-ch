@@ -137,6 +137,7 @@ test("vollständige Migrationskette schützt alle exponierten SECURITY DEFINER R
     create role anon;
     create role authenticated;
     create role supabase_auth_admin;
+    create role service_role;
     create schema auth;
     create table auth.users (id uuid primary key, email text unique);
     create function auth.uid() returns uuid language sql stable as $$

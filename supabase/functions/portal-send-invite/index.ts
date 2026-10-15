@@ -1,3 +1,4 @@
+import { assertWorkspaceEmailAllowed } from "../_shared/email.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 
 const allowedOrigins = new Set([
@@ -72,6 +73,8 @@ Deno.serve(async (request) => {
     if (adminError || adminAllowed !== true) {
       return reply({ error: "Business-Admin-Zugriff erforderlich." }, 403, headers);
     }
+
+    await assertWorkspaceEmailAllowed(service, customer.workspace_id);
 
     const departmentQuery = service
       .from("customer_departments")

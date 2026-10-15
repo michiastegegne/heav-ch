@@ -2,7 +2,7 @@ name: Verify
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev/hive-workspace-hardening-20261015]
   pull_request:
     branches: [main]
 
@@ -42,7 +42,7 @@ jobs:
 
       - name: Install Hive Next dependencies
         working-directory: hive-next
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Typecheck Hive Next
         working-directory: hive-next

@@ -4,6 +4,8 @@ qa/
 test-results/
 playwright-report/
 node_modules/
+hive-next/.next/
+hive-next/*.tsbuildinfo
 .env
 .env.*
 !.env.example

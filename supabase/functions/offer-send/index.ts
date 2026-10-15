@@ -1,5 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
-import { applyEmailTemplate, loadEmailTemplate, logEmail } from "../_shared/email.ts";
+import { assertWorkspaceEmailAllowed, applyEmailTemplate, loadEmailTemplate, logEmail } from "../_shared/email.ts";
 
 const allowedOrigins = new Set([
   "https://heav.ch",
@@ -140,6 +140,8 @@ Deno.serve(async (request) => {
     if (!settings || !validMailbox(settings.email)) {
       return reply({ error: "Die Business-Antwortadresse ist ungültig." }, 409, headers);
     }
+
+    await assertWorkspaceEmailAllowed(service, offer.workspace_id);
 
     const resendKey = Deno.env.get("RESEND_API_KEY");
     const fromEmail = Deno.env.get("RESEND_FROM_EMAIL");

@@ -3,7 +3,7 @@ import { degrees, PDFDocument, rgb } from "npm:pdf-lib@1.17.1";
 import fontkit from "npm:@pdf-lib/fontkit@1.1.1";
 // @ts-types="npm:@types/qrcode@1.5.5"
 import QRCode from "npm:qrcode@1.5.4";
-import { applyEmailTemplate, loadEmailTemplate, logEmail } from "../_shared/email.ts";
+import { assertWorkspaceEmailAllowed, applyEmailTemplate, loadEmailTemplate, logEmail } from "../_shared/email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Headers":
@@ -1270,6 +1270,8 @@ if (import.meta.main) {
           },
         });
       }
+      await assertWorkspaceEmailAllowed(service, invoice.workspace_id);
+
       const resendKey = Deno.env.get("RESEND_API_KEY");
       const fromEmail = Deno.env.get("RESEND_FROM_EMAIL");
       if (!resendKey || !fromEmail) {
