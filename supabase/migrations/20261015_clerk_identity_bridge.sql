@@ -208,6 +208,317 @@ using (
 );
 
 
+
+-- Workspace-aware invoice mutations for Hive.
+create or replace function public.record_invoice_action(
+  p_invoice_id uuid,
+  p_action text,
+  p_recipient text default null,
+  p_details jsonb default '{}'::jsonb
+)
+returns public.invoice_status
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $hive_record_invoice_action$
+declare
+  v_workspace uuid;
+  v_owner uuid;
+  v_previous public.invoice_status;
+  v_legacy boolean;
+  v_next public.invoice_status;
+  v_kind text;
+begin
+  select invoice.workspace_id, invoice.owner_id, invoice.status, invoice.is_legacy
+    into v_workspace, v_owner, v_previous, v_legacy
+  from public.invoices invoice
+  where invoice.id = p_invoice_id
+  for update;
+
+  if v_workspace is null then raise exception 'invoice not found'; end if;
+  if not public.is_workspace_member(v_workspace, 'accountant') then
+    raise exception 'workspace accountant access required' using errcode = '42501';
+  end if;
+  if v_legacy then raise exception 'legacy invoice is archived and immutable'; end if;
+  if p_action in ('paid', 'cancelled') and exists (
+    select 1 from public.invoice_send_attempts
+    where invoice_id = p_invoice_id
+      and workspace_id = v_workspace
+      and state = 'pending'
+  ) then
+    raise exception 'invoice send is in progress';
+  end if;
+
+  if p_action = 'paid' then
+    if v_previous not in ('sent', 'overdue') then raise exception 'invalid paid transition'; end if;
+    v_next := 'paid';
+    v_kind := 'paid';
+    update public.invoices
+      set status = v_next, paid_at = now()
+      where id = p_invoice_id and workspace_id = v_workspace;
+  elsif p_action = 'cancelled' then
+    if v_previous not in ('draft', 'sent', 'overdue') then raise exception 'invalid cancel transition'; end if;
+    v_next := 'cancelled';
+    v_kind := 'cancelled';
+    update public.invoices
+      set status = v_next
+      where id = p_invoice_id and workspace_id = v_workspace;
+  elsif p_action = 'downloaded' then
+    if v_previous = 'cancelled' then raise exception 'cancelled invoice cannot be downloaded'; end if;
+    v_next := v_previous;
+    v_kind := 'downloaded';
+  elsif p_action = 'send_failed' then
+    v_next := v_previous;
+    v_kind := 'send_failed';
+  else
+    raise exception 'invalid invoice action';
+  end if;
+
+  insert into public.invoice_events (
+    workspace_id, owner_id, invoice_id, kind, recipient, details
+  )
+  values (
+    v_workspace, v_owner, p_invoice_id, v_kind,
+    nullif(trim(p_recipient), ''), coalesce(p_details, '{}'::jsonb)
+  );
+
+  return v_next;
+end;
+$hive_record_invoice_action$;
+
+revoke all on function public.record_invoice_action(uuid, text, text, jsonb) from public, anon;
+grant execute on function public.record_invoice_action(uuid, text, text, jsonb) to authenticated;
+
+create or replace function public.reserve_invoice_send(
+  p_invoice_id uuid,
+  p_request_key uuid
+)
+returns table(attempt_id uuid, idempotency_key text)
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $hive_reserve_invoice_send$
+declare
+  v_workspace uuid;
+  v_owner uuid;
+  v_previous public.invoice_status;
+  v_legacy boolean;
+  v_attempt uuid;
+  v_key text;
+  v_state text;
+begin
+  if p_request_key is null then raise exception 'request key is required'; end if;
+
+  select invoice.workspace_id, invoice.owner_id, invoice.status, invoice.is_legacy
+    into v_workspace, v_owner, v_previous, v_legacy
+  from public.invoices invoice
+  where invoice.id = p_invoice_id
+  for update;
+
+  if v_workspace is null then raise exception 'invoice not found'; end if;
+  if not public.is_workspace_member(v_workspace, 'accountant') then
+    raise exception 'workspace accountant access required' using errcode = '42501';
+  end if;
+  if v_legacy then raise exception 'legacy invoice is archived and cannot be sent'; end if;
+  if v_previous not in ('draft', 'sent', 'overdue') then raise exception 'invoice cannot be sent'; end if;
+
+  select id, invoice_send_attempts.idempotency_key, state
+    into v_attempt, v_key, v_state
+  from public.invoice_send_attempts
+  where invoice_id = p_invoice_id
+    and workspace_id = v_workspace
+    and request_key = p_request_key;
+
+  if v_state = 'sent' then
+    return query select v_attempt, v_key;
+    return;
+  end if;
+
+  v_attempt := null;
+  v_key := null;
+  v_state := null;
+
+  select id, invoice_send_attempts.idempotency_key, state
+    into v_attempt, v_key, v_state
+  from public.invoice_send_attempts
+  where invoice_id = p_invoice_id
+    and workspace_id = v_workspace
+    and state = 'pending';
+
+  if v_attempt is null then
+    select id, invoice_send_attempts.idempotency_key
+      into v_attempt, v_key
+    from public.invoice_send_attempts
+    where invoice_id = p_invoice_id
+      and workspace_id = v_workspace
+      and request_key = p_request_key
+      and state = 'failed';
+
+    if v_attempt is not null then
+      update public.invoice_send_attempts
+      set state = 'pending',
+          previous_status = v_previous,
+          created_at = now(),
+          completed_at = null
+      where id = v_attempt
+        and workspace_id = v_workspace;
+    else
+      v_attempt := gen_random_uuid();
+      v_key := 'invoice-' || p_invoice_id::text || '-' || p_request_key::text;
+      insert into public.invoice_send_attempts(
+        id, workspace_id, owner_id, invoice_id,
+        previous_status, state, request_key, idempotency_key
+      )
+      values (
+        v_attempt, v_workspace, v_owner, p_invoice_id,
+        v_previous, 'pending', p_request_key, v_key
+      );
+    end if;
+  end if;
+
+  return query select v_attempt, v_key;
+end;
+$hive_reserve_invoice_send$;
+
+revoke all on function public.reserve_invoice_send(uuid, uuid) from public, anon;
+grant execute on function public.reserve_invoice_send(uuid, uuid) to authenticated;
+
+create or replace function public.complete_invoice_send(
+  p_attempt_id uuid,
+  p_success boolean,
+  p_recipient text,
+  p_details jsonb default '{}'::jsonb
+)
+returns public.invoice_status
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $hive_complete_invoice_send$
+declare
+  v_workspace uuid;
+  v_owner uuid;
+  v_invoice_id uuid;
+  v_previous public.invoice_status;
+  v_attempt_state text;
+  v_current public.invoice_status;
+  v_kind text;
+begin
+  if p_success is null then raise exception 'success flag is required'; end if;
+
+  select attempt.workspace_id, attempt.owner_id, attempt.invoice_id,
+         attempt.previous_status, attempt.state
+    into v_workspace, v_owner, v_invoice_id, v_previous, v_attempt_state
+  from public.invoice_send_attempts attempt
+  where attempt.id = p_attempt_id
+  for update;
+
+  if v_invoice_id is null then raise exception 'send attempt not found'; end if;
+  if not public.is_workspace_member(v_workspace, 'accountant') then
+    raise exception 'workspace accountant access required' using errcode = '42501';
+  end if;
+
+  select invoice.status
+    into v_current
+  from public.invoices invoice
+  where invoice.id = v_invoice_id
+    and invoice.workspace_id = v_workspace
+  for update;
+
+  if v_attempt_state = 'sent' then return v_current; end if;
+  if v_attempt_state <> 'pending' then raise exception 'send attempt is already completed'; end if;
+
+  if p_success then
+    if v_current <> v_previous or v_current not in ('draft', 'sent', 'overdue') then
+      raise exception 'invoice status changed during send';
+    end if;
+
+    update public.invoice_send_attempts
+      set state = 'sent',
+          provider_id = nullif(p_details->>'resend_id', ''),
+          completed_at = now()
+      where id = p_attempt_id
+        and workspace_id = v_workspace;
+
+    update public.invoices
+      set status = 'sent', sent_at = now()
+      where id = v_invoice_id
+        and workspace_id = v_workspace;
+
+    v_kind := case when v_previous = 'draft' then 'sent' else 'resent' end;
+
+    insert into public.invoice_events(
+      workspace_id, owner_id, invoice_id, kind, recipient, details
+    )
+    values (
+      v_workspace, v_owner, v_invoice_id, v_kind,
+      nullif(trim(p_recipient), ''), coalesce(p_details, '{}'::jsonb)
+    );
+
+    return 'sent';
+  end if;
+
+  update public.invoice_send_attempts
+    set state = 'failed', completed_at = now()
+    where id = p_attempt_id
+      and workspace_id = v_workspace;
+
+  insert into public.invoice_events(
+    workspace_id, owner_id, invoice_id, kind, recipient, details
+  )
+  values (
+    v_workspace, v_owner, v_invoice_id, 'send_failed',
+    nullif(trim(p_recipient), ''), coalesce(p_details, '{}'::jsonb)
+  );
+
+  return v_current;
+end;
+$hive_complete_invoice_send$;
+
+revoke all on function public.complete_invoice_send(uuid, boolean, text, jsonb) from public, anon;
+grant execute on function public.complete_invoice_send(uuid, boolean, text, jsonb) to authenticated;
+
+create or replace function public.delete_draft_invoice(p_invoice_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $hive_delete_draft_invoice$
+declare
+  v_workspace uuid;
+  v_status public.invoice_status;
+  v_legacy boolean;
+begin
+  select invoice.workspace_id, invoice.status, invoice.is_legacy
+    into v_workspace, v_status, v_legacy
+  from public.invoices invoice
+  where invoice.id = p_invoice_id
+  for update;
+
+  if v_workspace is null then raise exception 'invoice not found'; end if;
+  if not public.is_workspace_member(v_workspace, 'accountant') then
+    raise exception 'workspace accountant access required' using errcode = '42501';
+  end if;
+  if v_legacy then raise exception 'legacy invoice is archived and cannot be deleted'; end if;
+  if v_status <> 'draft' then raise exception 'only draft invoices can be deleted'; end if;
+
+  if exists (
+    select 1 from public.invoice_send_attempts
+    where invoice_id = p_invoice_id
+      and workspace_id = v_workspace
+      and state = 'pending'
+  ) then
+    raise exception 'invoice send is in progress';
+  end if;
+
+  delete from public.invoices
+  where id = p_invoice_id
+    and workspace_id = v_workspace;
+end;
+$hive_delete_draft_invoice$;
+
+revoke all on function public.delete_draft_invoice(uuid) from public, anon;
+grant execute on function public.delete_draft_invoice(uuid) to authenticated;
+
 -- SaaS-safe project deletion for the new Hive application.
 -- Financial documents are never deleted implicitly with a project.
 create or replace function public.delete_workspace_project(p_project_id uuid)
