@@ -20,7 +20,7 @@ async function loadFile(
     .eq('id', fileId)
     .single();
   if (error || !data) throw error || new Error('File not found');
-  assertWorkspaceAllowed(data.workspace_id);
+  await assertWorkspaceAllowed(data.workspace_id, supabase);
   return data;
 }
 
@@ -56,8 +56,8 @@ export async function PATCH(
     const { id } = await context.params;
     const fileId = idSchema.parse(id);
     const payload = updateSchema.parse(await request.json());
-    assertWorkspaceAllowed(payload.workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(payload.workspaceId, supabase);
     const file = await loadFile(supabase, fileId);
 
     if (file.workspace_id !== payload.workspaceId) {
