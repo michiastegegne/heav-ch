@@ -20,7 +20,7 @@ type Department = {
   is_default:boolean; active:boolean; created_at:string; updated_at:string;
 };
 type Project = {
-  id: string; workspace_id: string; customer_id: string; title: string; description: string | null;
+  id: string; workspace_id: string; customer_id: string; department_id:string; title: string; description: string | null;
   status: 'planning' | 'active' | 'completed' | 'on_hold'; budget_rappen: number;
   start_date: string | null; due_date: string | null;
   customers?: { company?: string | null; contact_name?: string | null } | null;
@@ -136,6 +136,7 @@ export default function StudioPage() {
   const [departmentOpen, setDepartmentOpen] = useState(false);
   const [departmentCustomer, setDepartmentCustomer] = useState<Customer | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [scopeDepartments, setScopeDepartments] = useState<Department[]>([]);
   const [departmentDraft, setDepartmentDraft] = useState({
     id:'', name:'', code:'', contactName:'', contactEmail:'', contactPhone:'', isDefault:false, active:true,
   });
@@ -146,7 +147,7 @@ export default function StudioPage() {
   const [taskDraft, setTaskDraft] = useState({ title:'', description:'', priority:'normal' as ProjectTask['priority'], dueDate:'' });
   const [deliverableDraft, setDeliverableDraft] = useState({ title:'', description:'', dueDate:'', fileId:'' });
   const [projectDraft, setProjectDraft] = useState({
-    id: '', customerId: '', title: '', description: '', status: 'planning' as Project['status'],
+    id: '', customerId: '', departmentId:'', title: '', description: '', status: 'planning' as Project['status'],
     budget: 0, startDate: '', dueDate: '',
   });
   const [invoiceOpen, setInvoiceOpen] = useState(false);
@@ -158,10 +159,10 @@ export default function StudioPage() {
   const [productOpen, setProductOpen] = useState(false);
   const [productDraft, setProductDraft] = useState({ id:'', name:'', description:'', sku:'', unitPrice:0, taxRate:0, active:true });
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [inviteDraft, setInviteDraft] = useState({ customerId:'', email:'' });
+  const [inviteDraft, setInviteDraft] = useState({ customerId:'', departmentId:'', email:'' });
   const [fileOpen, setFileOpen] = useState(false);
-  const [fileDraft, setFileDraft] = useState<{ customerId:string; projectId:string; title:string; kind:'image'|'video'|'gallery'|'offer'|'document'; file:File|null }>({
-    customerId:'', projectId:'', title:'', kind:'document', file:null,
+  const [fileDraft, setFileDraft] = useState<{ customerId:string; departmentId:string; projectId:string; title:string; kind:'image'|'video'|'gallery'|'offer'|'document'; file:File|null }>({
+    customerId:'', departmentId:'', projectId:'', title:'', kind:'document', file:null,
   });
   const [offerDraft, setOfferDraft] = useState({
     id:'', customerId: '', projectId: '', title: '', issueDate: today(), validUntil: afterDays(30),
@@ -189,6 +190,44 @@ export default function StudioPage() {
       setBusy(false);
     }
   }, []);
+
+  async function loadScopeDepartments(customerId:string) {
+    if (!activeWorkspaceId || !customerId) {
+      setScopeDepartments([]);
+      return [] as Department[];
+    }
+    const data=await requestJson<{departments:Department[]}>(
+      `/api/hive/customers/${customerId}/departments?workspace=${encodeURIComponent(activeWorkspaceId)}`,
+    );
+    const active=data.departments.filter((department) => department.active);
+    setScopeDepartments(active);
+    return active;
+  }
+
+  function preferredDepartmentId(items:Department[]) {
+    return items.find((department) => department.is_default)?.id || items[0]?.id || '';
+  }
+
+  async function openPortalInvite() {
+    const customerId=customers[0]?.id || '';
+    const items=await loadScopeDepartments(customerId);
+    setInviteDraft({ customerId, departmentId:preferredDepartmentId(items), email:'' });
+    setInviteOpen(true);
+  }
+
+  async function openPortalFile() {
+    const customerId=customers[0]?.id || '';
+    const items=await loadScopeDepartments(customerId);
+    setFileDraft({
+      customerId,
+      departmentId:preferredDepartmentId(items),
+      projectId:'',
+      title:'',
+      kind:'document',
+      file:null,
+    });
+    setFileOpen(true);
+  }
 
   async function createBusiness(event: FormEvent) {
     event.preventDefault();
@@ -394,6 +433,7 @@ export default function StudioPage() {
       const payload = {
         workspaceId: activeWorkspaceId,
         customerId: projectDraft.customerId,
+        departmentId: projectDraft.departmentId || null,
         title: projectDraft.title,
         description: projectDraft.description,
         status: projectDraft.status,
@@ -797,7 +837,7 @@ export default function StudioPage() {
   async function createPortalInvite(event: FormEvent) {
     event.preventDefault();
     await portalAction(
-      { action: 'create_invite', customerId: inviteDraft.customerId, email: inviteDraft.email },
+      { action: 'create_invite', customerId: inviteDraft.customerId, departmentId:inviteDraft.departmentId || null, email: inviteDraft.email },
       'Dev-Einladung angelegt. Es wurde keine E-Mail versendet.',
     );
     setInviteOpen(false);
@@ -813,6 +853,7 @@ export default function StudioPage() {
       const common = {
         workspaceId: activeWorkspaceId,
         customerId: fileDraft.customerId,
+        departmentId:fileDraft.departmentId || null,
         projectId: fileDraft.projectId || null,
         title: fileDraft.title || fileDraft.file.name,
         filename: fileDraft.file.name,
@@ -836,7 +877,7 @@ export default function StudioPage() {
         body:JSON.stringify({ action:'complete_upload', storagePath:prepared.storagePath, ...common }),
       });
       setFileOpen(false);
-      setFileDraft({ customerId:'', projectId:'', title:'', kind:'document', file:null });
+      setFileDraft({ customerId:'', departmentId:'', projectId:'', title:'', kind:'document', file:null });
       setNotice('Datei hochgeladen. Sie ist noch nicht im Kundenportal veröffentlicht.');
       await loadWorkspaceData(activeWorkspaceId);
     } catch (error) {
@@ -999,14 +1040,21 @@ export default function StudioPage() {
     setCustomerOpen(true);
   };
 
-  const openProject = (project?: Project) => {
-    setProjectDraft(project ? {
-      id: project.id, customerId: project.customer_id, title: project.title,
-      description: project.description || '', status: project.status,
-      budget: project.budget_rappen / 100, startDate: project.start_date || '', dueDate: project.due_date || '',
-    } : {
-      id: '', customerId: customers[0]?.id || '', title: '', description: '', status: 'planning',
-      budget: 0, startDate: '', dueDate: '',
+  const openProject = async (project?: Project) => {
+    if (project) {
+      setProjectDraft({
+        id: project.id, customerId: project.customer_id, departmentId:project.department_id, title: project.title,
+        description: project.description || '', status: project.status,
+        budget: project.budget_rappen / 100, startDate: project.start_date || '', dueDate: project.due_date || '',
+      });
+      setProjectOpen(true);
+      return;
+    }
+    const customerId=customers[0]?.id || '';
+    const items=await loadScopeDepartments(customerId);
+    setProjectDraft({
+      id:'', customerId, departmentId:preferredDepartmentId(items), title:'', description:'', status:'planning',
+      budget:0, startDate:'', dueDate:'',
     });
     setProjectOpen(true);
   };
@@ -1095,13 +1143,13 @@ export default function StudioPage() {
         </>}
 
         {tab === 'projects' && <>
-          <div className="hsv-rowtop"><strong>{projects.length} Projekte</strong><button className="hsv-primary" disabled={!customers.length} onClick={() => openProject()}><Plus size={15}/> Projekt erstellen</button></div>
+          <div className="hsv-rowtop"><strong>{projects.length} Projekte</strong><button className="hsv-primary" disabled={!customers.length} onClick={() => void openProject()}><Plus size={15}/> Projekt erstellen</button></div>
           <div className="hsv-table">{projects.map((project) => <div key={project.id}>
             <span className="hsv-letter"><BriefcaseBusiness size={16}/></span>
             <span className="hsv-grow"><strong>{project.title}</strong><small>{relatedName(project.customers)} · {project.status.replace('_', ' ')}</small></span>
             <strong>{money(project.budget_rappen)}</strong>
             <button onClick={() => void loadProjectWorkspace(project.id)}>Workspace</button>
-            <button onClick={() => openProject(project)}>Bearbeiten</button>
+            <button onClick={() => void openProject(project)}>Bearbeiten</button>
             <button aria-label="Projekt löschen" onClick={() => void deleteProject(project)}><Trash2 size={16}/></button>
           </div>)}</div>
         </>}
@@ -1177,10 +1225,7 @@ export default function StudioPage() {
         {tab === 'portal' && <>
           <div className="hsv-rowtop">
             <strong>{portal.memberships.length} Mitglieder · {portal.invites.length} Einladungen</strong>
-            <button className="hsv-primary" disabled={!customers.length} onClick={() => {
-              setInviteDraft({ customerId: customers[0]?.id || '', email: '' });
-              setInviteOpen(true);
-            }}><Plus size={15}/> Portal-Einladung</button>
+            <button className="hsv-primary" disabled={!customers.length} onClick={() => void openPortalInvite()}><Plus size={15}/> Portal-Einladung</button>
           </div>
 
           <div className="hsv-intro" style={{ marginBottom: 18 }}>
@@ -1218,10 +1263,7 @@ export default function StudioPage() {
 
           <div className="hsv-rowtop" style={{ marginTop: 24 }}>
             <strong>Dateien</strong>
-            <button className="hsv-primary" disabled={!customers.length} onClick={() => {
-              setFileDraft({ customerId:customers[0]?.id || '', projectId:'', title:'', kind:'document', file:null });
-              setFileOpen(true);
-            }}><Plus size={15}/> Datei hochladen</button>
+            <button className="hsv-primary" disabled={!customers.length} onClick={() => void openPortalFile()}><Plus size={15}/> Datei hochladen</button>
           </div>
           <div className="hsv-table">{portal.files.length ? portal.files.map((file) => <div key={file.id}>
             <span className="hsv-letter"><FileText size={16}/></span>
@@ -1294,8 +1336,17 @@ export default function StudioPage() {
 
     {fileOpen && <Modal title="Datei hochladen" onClose={() => setFileOpen(false)}>
       <form onSubmit={uploadPortalFile}>
-        <label>Kunde<select required value={fileDraft.customerId} onChange={(e) => setFileDraft({ ...fileDraft, customerId:e.target.value, projectId:'' })}>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customerName(customer)}</option>)}</select></label>
-        <label>Projekt<select value={fileDraft.projectId} onChange={(e) => setFileDraft({ ...fileDraft, projectId:e.target.value })}><option value="">Kein Projekt</option>{projects.filter((project) => project.customer_id === fileDraft.customerId).map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}</select></label>
+        <label>Kunde<select required value={fileDraft.customerId} onChange={async (e) => {
+          const customerId=e.target.value;
+          const items=await loadScopeDepartments(customerId);
+          setFileDraft((current) => ({ ...current, customerId, departmentId:preferredDepartmentId(items), projectId:'' }));
+        }}>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customerName(customer)}</option>)}</select></label>
+        <label>Abteilung<select required disabled={Boolean(fileDraft.projectId)} value={fileDraft.departmentId} onChange={(e) => setFileDraft({ ...fileDraft, departmentId:e.target.value })}>{scopeDepartments.map((department) => <option key={department.id} value={department.id}>{department.name}{department.is_default ? ' · Standard' : ''}</option>)}</select></label>
+        <label>Projekt<select value={fileDraft.projectId} onChange={(e) => {
+          const projectId=e.target.value;
+          const project=projects.find((item) => item.id===projectId);
+          setFileDraft({ ...fileDraft, projectId, departmentId:project?.department_id || fileDraft.departmentId });
+        }}><option value="">Kein Projekt</option>{projects.filter((project) => project.customer_id === fileDraft.customerId).map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}</select></label>
         <label>Titel<input value={fileDraft.title} onChange={(e) => setFileDraft({ ...fileDraft, title:e.target.value })} placeholder="z.B. Final Photos"/></label>
         <label>Typ<select value={fileDraft.kind} onChange={(e) => setFileDraft({ ...fileDraft, kind:e.target.value as typeof fileDraft.kind })}><option value="document">Dokument</option><option value="image">Bild</option><option value="video">Video</option><option value="gallery">Galerie</option><option value="offer">Offerte</option></select></label>
         <label>Datei<input required type="file" onChange={(e) => setFileDraft({ ...fileDraft, file:e.target.files?.[0] || null })}/></label>
@@ -1376,7 +1427,12 @@ export default function StudioPage() {
 
     {inviteOpen && <Modal title="Portal-Einladung" onClose={() => setInviteOpen(false)}>
       <form onSubmit={createPortalInvite}>
-        <label>Kunde<select required value={inviteDraft.customerId} onChange={(e) => setInviteDraft({ ...inviteDraft, customerId:e.target.value })}>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customerName(customer)}</option>)}</select></label>
+        <label>Kunde<select required value={inviteDraft.customerId} onChange={async (e) => {
+          const customerId=e.target.value;
+          const items=await loadScopeDepartments(customerId);
+          setInviteDraft((current) => ({ ...current, customerId, departmentId:preferredDepartmentId(items) }));
+        }}>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customerName(customer)}</option>)}</select></label>
+        <label>Abteilung<select required value={inviteDraft.departmentId} onChange={(e) => setInviteDraft({ ...inviteDraft, departmentId:e.target.value })}>{scopeDepartments.map((department) => <option key={department.id} value={department.id}>{department.name}{department.is_default ? ' · Standard' : ''}</option>)}</select></label>
         <label>E-Mail<input required type="email" value={inviteDraft.email} onChange={(e) => setInviteDraft({ ...inviteDraft, email:e.target.value })} placeholder="test@example.com"/></label>
         <p className="hsv-warning">Dev-Modus: Die Einladung wird gespeichert, aber nicht versendet.</p>
         <button className="hsv-primary" type="submit">Einladung anlegen <Check size={15}/></button>
@@ -1438,7 +1494,14 @@ export default function StudioPage() {
 
     {projectOpen && <Modal title={projectDraft.id ? 'Projekt bearbeiten' : 'Neues Projekt'} onClose={() => setProjectOpen(false)}>
       <form onSubmit={saveProject}>
-        {!projectDraft.id && <label>Kunde<select required value={projectDraft.customerId} onChange={(e) => setProjectDraft({ ...projectDraft, customerId: e.target.value })}>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customerName(customer)}</option>)}</select></label>}
+        {!projectDraft.id && <>
+          <label>Kunde<select required value={projectDraft.customerId} onChange={async (e) => {
+            const customerId=e.target.value;
+            const items=await loadScopeDepartments(customerId);
+            setProjectDraft((current) => ({ ...current, customerId, departmentId:preferredDepartmentId(items) }));
+          }}>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customerName(customer)}</option>)}</select></label>
+          <label>Abteilung<select required value={projectDraft.departmentId} onChange={(e) => setProjectDraft({ ...projectDraft, departmentId:e.target.value })}>{scopeDepartments.map((department) => <option key={department.id} value={department.id}>{department.name}{department.is_default ? ' · Standard' : ''}</option>)}</select></label>
+        </>}
         <label>Projektname<input required value={projectDraft.title} onChange={(e) => setProjectDraft({ ...projectDraft, title: e.target.value })}/></label>
         <label>Status<select value={projectDraft.status} onChange={(e) => setProjectDraft({ ...projectDraft, status: e.target.value as Project['status'] })}><option value="planning">Planung</option><option value="active">Aktiv</option><option value="on_hold">Pausiert</option><option value="completed">Abgeschlossen</option></select></label>
         <label>Budget CHF<input type="number" min="0" step="0.01" value={projectDraft.budget} onChange={(e) => setProjectDraft({ ...projectDraft, budget: Number(e.target.value) })}/></label>
