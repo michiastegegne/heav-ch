@@ -31,8 +31,8 @@ export async function GET(request: Request, context: { params: Promise<{ id:stri
     const { id } = await context.params;
     const customerId = idSchema.parse(id);
     const workspaceId = z.string().uuid().parse(new URL(request.url).searchParams.get('workspace'));
-    assertWorkspaceAllowed(workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(workspaceId, supabase);
     await verifyCustomer(supabase, workspaceId, customerId);
 
     const { data, error } = await supabase.from('customer_departments')
@@ -53,8 +53,8 @@ export async function POST(request: Request, context: { params: Promise<{ id:str
     const { id } = await context.params;
     const customerId = idSchema.parse(id);
     const payload = createSchema.parse(await request.json());
-    assertWorkspaceAllowed(payload.workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(payload.workspaceId, supabase);
     const customer = await verifyCustomer(supabase, payload.workspaceId, customerId);
 
     if (payload.isDefault) {
