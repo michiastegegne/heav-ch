@@ -41,9 +41,18 @@ export function allowedWorkspaceIds() {
   );
 }
 
-export function assertWorkspaceAllowed(workspaceId: string) {
-  const allowed = allowedWorkspaceIds();
-  if (allowed.size === 0 || !allowed.has(workspaceId)) {
+export async function assertWorkspaceAllowed(
+  workspaceId: string,
+  supabase: Awaited<ReturnType<typeof createClerkSupabaseServerClient>>,
+) {
+  const configured = allowedWorkspaceIds();
+  if (configured.has(workspaceId)) return;
+
+  const { data, error } = await supabase.rpc('is_hive_preview_workspace', {
+    p_workspace_id: workspaceId,
+  });
+
+  if (error || data !== true) {
     throw new HiveAccessError(403, 'Workspace is not available in this preview');
   }
 }
