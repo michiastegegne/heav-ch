@@ -207,4 +207,59 @@ using (
   )
 );
 
+
+-- SaaS-safe project deletion for the new Hive application.
+-- Financial documents are never deleted implicitly with a project.
+create or replace function public.delete_workspace_project(p_project_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $
+declare
+  v_workspace uuid;
+begin
+  select project.workspace_id
+    into v_workspace
+  from public.projects project
+  where project.id = p_project_id
+  for update;
+
+  if v_workspace is null then
+    raise exception 'project not found';
+  end if;
+
+  if not public.is_workspace_member(v_workspace, 'admin') then
+    raise exception 'workspace admin access required' using errcode = '42501';
+  end if;
+
+  if exists (
+    select 1 from public.invoices invoice
+    where invoice.project_id = p_project_id
+      and invoice.workspace_id = v_workspace
+  ) or exists (
+    select 1 from public.offers offer
+    where offer.project_id = p_project_id
+      and offer.workspace_id = v_workspace
+  ) then
+    raise exception 'project has financial documents';
+  end if;
+
+  delete from public.customer_files
+  where project_id = p_project_id
+    and workspace_id = v_workspace;
+
+  delete from public.activity_events
+  where project_id = p_project_id
+    and workspace_id = v_workspace;
+
+  delete from public.projects
+  where id = p_project_id
+    and workspace_id = v_workspace;
+end;
+$;
+
+revoke all on function public.delete_workspace_project(uuid) from public, anon;
+grant execute on function public.delete_workspace_project(uuid) to authenticated;
+
 commit;
