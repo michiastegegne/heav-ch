@@ -154,7 +154,7 @@ test("Kunde kann eine gültige Offerte genau einmal verbindlich annehmen", async
     insert into public.customer_portal_memberships(owner_id, customer_id, user_id)
       values ('${owner}', '${customer}', '${client}');
     insert into public.offers(id, owner_id, customer_id, offer_number, title, issue_date, valid_until, status, subtotal_rappen, tax_rappen, total_rappen)
-      values ('${offer}', '${owner}', '${customer}', 'HEAV-O-2026-001', 'Filmproduktion', '2026-09-10', '2026-10-10', 'sent', 100000, 8100, 108100);
+      values ('${offer}', '${owner}', '${customer}', 'HEAV-O-2026-001', 'Filmproduktion', current_date, current_date + interval '30 days', 'sent', 100000, 8100, 108100);
     insert into public.offer_items(owner_id, offer_id, position, description, quantity, unit_price_rappen)
       values ('${owner}', '${offer}', 1, 'Produktion', 1, 100000);
     select set_config('request.jwt.claim.sub', '${client}', false);
