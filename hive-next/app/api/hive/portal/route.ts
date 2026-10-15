@@ -36,8 +36,8 @@ const actionSchema = z.discriminatedUnion('action', [
 export async function GET(request: Request) {
   try {
     const workspaceId = workspaceSchema.parse(new URL(request.url).searchParams.get('workspace'));
-    assertWorkspaceAllowed(workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(workspaceId, supabase);
 
     const [memberships, invites, requests, files, reviews, activity] = await Promise.all([
       supabase.from('customer_portal_memberships')
@@ -87,8 +87,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const payload = actionSchema.parse(await request.json());
-    assertWorkspaceAllowed(payload.workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(payload.workspaceId, supabase);
 
     if (payload.action === 'create_invite') {
       const { data: customer, error: customerError } = await supabase
