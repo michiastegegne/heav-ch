@@ -84,6 +84,18 @@ type UnifiedActivity = {
   id:string; source:'activity'|'invoice'|'offer'|'email'; kind:string;
   entityType:string; entityId:string|null; summary:string; meta:string; createdAt:string;
 };
+type CustomerWorkspaceData = {
+  customer: Customer & { created_at?:string; updated_at?:string };
+  departments:Array<{id:string;name:string;code:string;contact_name:string;contact_email:string;is_default:boolean;active:boolean}>;
+  projects:Array<{id:string;title:string;status:string;budget_rappen:number;department_id:string;due_date:string|null}>;
+  invoices:Array<{id:string;invoice_number:string;status:string;currency:string;total_rappen:number;due_date:string;number_finalized:boolean;is_legacy:boolean}>;
+  offers:Array<{id:string;offer_number:string;title:string;status:string;total_rappen:number;valid_until:string}>;
+  files:Array<{id:string;title:string;original_filename:string;kind:string;bytes:number|null;published_at:string|null}>;
+  memberships:Array<{id:string;department_id:string;role:string;status:string;accepted_at:string|null}>;
+  activity:Array<{id:string;event_type:string;entity_type:string;summary:string;visibility:string;created_at:string}>;
+  metrics:{projectCount:number;activeProjectCount:number;paidRappen:number;openRappen:number;offerPipelineRappen:number;fileCount:number;portalMemberCount:number};
+  canViewFinance:boolean;
+};
 
 type Tab = 'overview' | 'customers' | 'projects' | 'invoices' | 'offers' | 'catalog' | 'emails' | 'portal' | 'activity' | 'team' | 'branding';
 type LineDraft = { description: string; quantity: number; unitPrice: number };
@@ -143,6 +155,8 @@ export default function StudioPage() {
   const [teamOpen, setTeamOpen] = useState(false);
   const [teamDraft, setTeamDraft] = useState<{email:string;role:'admin'|'member'|'accountant'}>({ email:'', role:'member' });
   const [customerOpen, setCustomerOpen] = useState(false);
+  const [customerWorkspaceOpen, setCustomerWorkspaceOpen] = useState(false);
+  const [customerWorkspace, setCustomerWorkspace] = useState<CustomerWorkspaceData | null>(null);
   const [customerDraft, setCustomerDraft] = useState({
     id: '', company: '', contactName: '', email: '', phone: '',
     addressLine1: '', postalCode: '', city: '', country: 'Schweiz', notes: '',
@@ -1196,6 +1210,19 @@ export default function StudioPage() {
     }
   }
 
+  async function openCustomerWorkspace(customer:Customer) {
+    if (!activeWorkspaceId) return;
+    try {
+      const data=await requestJson<CustomerWorkspaceData>(
+        `/api/hive/customers/${customer.id}/workspace?workspace=${encodeURIComponent(activeWorkspaceId)}`,
+      );
+      setCustomerWorkspace(data);
+      setCustomerWorkspaceOpen(true);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Kunden-Workspace konnte nicht geladen werden.');
+    }
+  }
+
   const openCustomer = (customer?: Customer) => {
     setCustomerDraft(customer ? {
       id: customer.id, company: customer.company || '', contactName: customer.contact_name || '',
@@ -1308,6 +1335,7 @@ export default function StudioPage() {
           <div className="hsv-table">{customers.map((customer) => <div key={customer.id}>
             <span className="hsv-letter">{customerName(customer).charAt(0).toUpperCase()}</span>
             <span className="hsv-grow"><strong>{customerName(customer)}</strong><small>{customer.email || 'Dev-Kopie · E-Mail entfernt'} · {[customer.postal_code, customer.city].filter(Boolean).join(' ') || 'Keine Adresse'}</small></span>
+            <button onClick={() => void openCustomerWorkspace(customer)}>Workspace</button>
             <button onClick={() => void openDepartments(customer)}>Abteilungen</button>
             <button onClick={() => openCustomer(customer)}>Bearbeiten</button>
             <button aria-label="Kunde löschen" onClick={() => void deleteCustomer(customer)}><Trash2 size={16}/></button>
@@ -1728,6 +1756,76 @@ export default function StudioPage() {
               {departmentDraft.id && <button className="hsv-outline" type="button" onClick={() => setDepartmentDraft({ id:'', name:'', code:'', contactName:'', contactEmail:'', contactPhone:'', isDefault:false, active:true })}>Neu</button>}
             </div>
           </form>
+        </div>
+      </div>
+    </div>}
+
+    {customerWorkspaceOpen && customerWorkspace && <div className="hsv-overlay">
+      <div className="hsv-invoice-editor">
+        <div className="hsv-editorbar">
+          <div><small>CUSTOMER WORKSPACE</small><strong>{customerName(customerWorkspace.customer)}</strong></div>
+          <button className="hsv-icon" onClick={() => setCustomerWorkspaceOpen(false)} aria-label="Schliessen"><X size={18}/></button>
+        </div>
+        <div className="hsv-paper" style={{maxWidth:1100}}>
+          <div className="hsv-intro" style={{marginBottom:20}}>
+            <span className="hsv-big-logo">{customerName(customerWorkspace.customer).charAt(0).toUpperCase()}</span>
+            <div>
+              <span>KUNDE</span>
+              <h2>{customerName(customerWorkspace.customer)}</h2>
+              <p>{[customerWorkspace.customer.email,customerWorkspace.customer.phone,[customerWorkspace.customer.postal_code,customerWorkspace.customer.city].filter(Boolean).join(' ')].filter(Boolean).join(' · ') || 'Keine Kontaktdaten'}</p>
+            </div>
+          </div>
+
+          <div className="hsv-cards" style={{gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))'}}>
+            <button type="button"><span>AKTIVE PROJEKTE</span><strong>{customerWorkspace.metrics.activeProjectCount}</strong><small>{customerWorkspace.metrics.projectCount} total</small></button>
+            {customerWorkspace.canViewFinance && <button type="button"><span>OFFEN</span><strong style={{fontSize:22}}>{money(customerWorkspace.metrics.openRappen)}</strong><small>Rechnungen</small></button>}
+            {customerWorkspace.canViewFinance && <button type="button"><span>BEZAHLT</span><strong style={{fontSize:22}}>{money(customerWorkspace.metrics.paidRappen)}</strong><small>Rechnungswert</small></button>}
+            {customerWorkspace.canViewFinance && <button type="button"><span>PIPELINE</span><strong style={{fontSize:22}}>{money(customerWorkspace.metrics.offerPipelineRappen)}</strong><small>Offerten</small></button>}
+            <button type="button"><span>DATEIEN</span><strong>{customerWorkspace.metrics.fileCount}</strong><small>{customerWorkspace.metrics.portalMemberCount} Portal-User</small></button>
+          </div>
+
+          <div className="hsv-rowtop" style={{marginTop:30}}><strong>Abteilungen</strong></div>
+          <div className="hsv-table">{customerWorkspace.departments.map((department) => <div key={department.id}>
+            <span className="hsv-letter">{department.name.charAt(0).toUpperCase()}</span>
+            <span className="hsv-grow"><strong>{department.name}{department.is_default ? ' · Standard' : ''}</strong><small>{department.contact_name || 'Keine Kontaktperson'} · {department.contact_email || 'Keine E-Mail'} · {department.active ? 'aktiv' : 'inaktiv'}</small></span>
+          </div>)}</div>
+
+          <div className="hsv-rowtop" style={{marginTop:26}}><strong>Projekte</strong></div>
+          <div className="hsv-table">{customerWorkspace.projects.length ? customerWorkspace.projects.map((project) => <div key={project.id}>
+            <span className="hsv-letter"><BriefcaseBusiness size={15}/></span>
+            <span className="hsv-grow"><strong>{project.title}</strong><small>{project.status}{project.due_date ? ` · fällig ${project.due_date}` : ''}</small></span>
+            <strong>{money(project.budget_rappen)}</strong>
+            <button onClick={() => { setCustomerWorkspaceOpen(false); setTab('projects'); void loadProjectWorkspace(project.id); }}>Öffnen</button>
+          </div>) : <p className="hsv-empty">Keine Projekte.</p>}</div>
+
+          {customerWorkspace.canViewFinance && <>
+            <div className="hsv-rowtop" style={{marginTop:26}}><strong>Rechnungen</strong></div>
+            <div className="hsv-table">{customerWorkspace.invoices.length ? customerWorkspace.invoices.map((invoice) => <div key={invoice.id}>
+              <span className="hsv-letter"><CreditCard size={15}/></span>
+              <span className="hsv-grow"><strong>{invoice.number_finalized ? invoice.invoice_number : 'Entwurf'}</strong><small>{invoice.status} · fällig {invoice.due_date}</small></span>
+              <strong>{money(invoice.total_rappen,invoice.currency)}</strong>
+            </div>) : <p className="hsv-empty">Keine Rechnungen.</p>}</div>
+
+            <div className="hsv-rowtop" style={{marginTop:26}}><strong>Offerten</strong></div>
+            <div className="hsv-table">{customerWorkspace.offers.length ? customerWorkspace.offers.map((offer) => <div key={offer.id}>
+              <span className="hsv-letter"><FileText size={15}/></span>
+              <span className="hsv-grow"><strong>{offer.offer_number} · {offer.title}</strong><small>{offer.status} · gültig bis {offer.valid_until}</small></span>
+              <strong>{money(offer.total_rappen)}</strong>
+            </div>) : <p className="hsv-empty">Keine Offerten.</p>}</div>
+          </>}
+
+          <div className="hsv-rowtop" style={{marginTop:26}}><strong>Dateien</strong></div>
+          <div className="hsv-table">{customerWorkspace.files.length ? customerWorkspace.files.map((file) => <div key={file.id}>
+            <span className="hsv-letter"><FileText size={15}/></span>
+            <span className="hsv-grow"><strong>{file.title}</strong><small>{file.original_filename} · {file.kind} · {file.published_at ? 'Portal' : 'intern'}</small></span>
+          </div>) : <p className="hsv-empty">Keine Dateien.</p>}</div>
+
+          <div className="hsv-rowtop" style={{marginTop:26}}><strong>Aktivität</strong></div>
+          <div className="hsv-table">{customerWorkspace.activity.slice(0,25).map((item) => <div key={item.id}>
+            <span className="hsv-letter"><RefreshCw size={14}/></span>
+            <span className="hsv-grow"><strong>{item.summary}</strong><small>{item.event_type} · {item.visibility}</small></span>
+            <small>{new Date(item.created_at).toLocaleString('de-CH')}</small>
+          </div>)}</div>
         </div>
       </div>
     </div>}
