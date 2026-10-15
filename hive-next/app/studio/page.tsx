@@ -876,6 +876,12 @@ export default function StudioPage() {
     });
   }
 
+  function openOfferDocument(offer:Offer) {
+    if (!activeWorkspaceId) return;
+    const url=`/api/hive/offers/${offer.id}/document?workspace=${encodeURIComponent(activeWorkspaceId)}`;
+    window.open(url,'_blank','noopener,noreferrer');
+  }
+
   async function openOfferDraft(offer: Offer) {
     if (!activeWorkspaceId || offer.status !== 'draft') return;
     try {
@@ -1334,6 +1340,7 @@ export default function StudioPage() {
             <span className="hsv-letter"><FileText size={16}/></span>
             <span className="hsv-grow"><strong>{offer.offer_number} · {offer.title}</strong><small>{relatedName(offer.customers)} · {offer.status} · gültig bis {offer.valid_until}</small></span>
             <strong>{money(offer.total_rappen)}</strong>
+            <button onClick={() => openOfferDocument(offer)}>Drucken/PDF</button>
             {offer.status === 'draft' && <button onClick={() => void openOfferDraft(offer)}>Bearbeiten</button>}
             {offer.status === 'draft' && <button onClick={() => void offerAction(offer, 'share')}>Portal freigeben</button>}
             {offer.status === 'sent' && <button onClick={() => void offerAction(offer, 'send')}>E-Mail</button>}
