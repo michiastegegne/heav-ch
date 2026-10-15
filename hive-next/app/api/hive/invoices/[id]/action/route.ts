@@ -4,7 +4,7 @@ import { assertWorkspaceAllowed, jsonError, requireHiveDataAccess } from '@/lib/
 
 const idSchema = z.string().uuid();
 const actionSchema = z.object({
-  action: z.enum(['download', 'send', 'mark_paid', 'cancel']),
+  action: z.enum(['issue', 'download', 'send', 'mark_paid', 'cancel']),
 });
 
 export async function POST(
@@ -21,11 +21,31 @@ export async function POST(
 
     const { data: invoice, error: invoiceLookupError } = await supabase
       .from('invoices')
-      .select('workspace_id')
+      .select('workspace_id, number_finalized, status, is_legacy')
       .eq('id', invoiceId)
       .single();
     if (invoiceLookupError || !invoice) throw invoiceLookupError || new Error('Invoice not found');
     assertWorkspaceAllowed(invoice.workspace_id);
+
+    if (action === 'issue') {
+      if (invoice.is_legacy) {
+        return Response.json({ error:'Archivierte Rechnungen können nicht neu ausgestellt werden.' }, { status:409 });
+      }
+      if (invoice.status !== 'draft') {
+        return Response.json({ error:'Nur Entwürfe können ausgestellt werden.' }, { status:409 });
+      }
+      const { data, error } = await supabase.rpc('issue_workspace_invoice', { p_invoice_id:invoiceId });
+      if (error) throw error;
+      const issued = Array.isArray(data) ? data[0] : data;
+      return Response.json({ ok:true, invoice:issued });
+    }
+
+    if (action === 'download' && !invoice.number_finalized) {
+      return Response.json(
+        { error:'Entwurf zuerst ausstellen, bevor ein Zahlungs-PDF erzeugt wird.' },
+        { status:409 },
+      );
+    }
 
     if (action === 'send') {
       return Response.json(
