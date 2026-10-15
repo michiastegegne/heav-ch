@@ -7,6 +7,7 @@ const actionSchema = z.discriminatedUnion('action', [
     action: z.literal('create_invite'),
     workspaceId: z.string().uuid(),
     customerId: z.string().uuid(),
+    departmentId: z.union([z.string().uuid(), z.literal(''), z.null()]).default(null),
     email: z.string().trim().toLowerCase().email(),
   }),
   z.object({
@@ -101,16 +102,18 @@ export async function POST(request: Request) {
         return Response.json({ error: 'Kunde gehört nicht zu diesem Business.' }, { status: 409 });
       }
 
-      const { data: department, error: departmentError } = await supabase
+      let departmentQuery = supabase
         .from('customer_departments')
         .select('id')
         .eq('customer_id', payload.customerId)
         .eq('workspace_id', payload.workspaceId)
-        .eq('is_default', true)
-        .eq('active', true)
-        .single();
+        .eq('active', true);
+      departmentQuery = payload.departmentId
+        ? departmentQuery.eq('id', payload.departmentId)
+        : departmentQuery.eq('is_default', true);
+      const { data: department, error: departmentError } = await departmentQuery.single();
       if (departmentError || !department) {
-        return Response.json({ error: 'Standardabteilung fehlt.' }, { status: 409 });
+        return Response.json({ error: 'Gewählte aktive Abteilung fehlt.' }, { status: 409 });
       }
 
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
