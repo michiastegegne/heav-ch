@@ -119,8 +119,11 @@ test("Offerten können zuverlässig kopiert und per HEAV-Mail versendet werden",
   assert.match(offerSendSource, /const allowedOrigins = new Set/);
   assert.match(offerSendSource, /origin && !allowedOrigins\.has\(origin\)/);
   assert.match(offerSendSource, /authorization\.startsWith\("Bearer "\)/);
-  assert.match(offerSendSource, /caller\.auth\.getUser\(\)/);
-  assert.match(offerSendSource, /\.eq\("id", offerId\)\.eq\("owner_id", identity\.user\.id\)/);
+  assert.match(offerSendSource, /rpc\("current_app_user_id"\)/);
+  assert.match(offerSendSource, /rpc\(\s*"is_workspace_member"/);
+  assert.match(offerSendSource, /p_required:\s*"accountant"/);
+  assert.match(offerSendSource, /\.eq\("workspace_id", offer\.workspace_id\)/);
+  assert.doesNotMatch(offerSendSource, /caller\.auth\.getUser\(\)/);
   assert.match(offerSendSource, /offer\.status !== "sent"/);
   assert.match(offerSendSource, /offer\.valid_until < new Date\(\)/);
   assert.match(offerSendSource, /customer_portal_memberships/);
