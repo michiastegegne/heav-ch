@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { jsonError, requireHiveDataAccess } from '@/lib/hive/access';
+import { assertWorkspaceAllowed, jsonError, requireHiveDataAccess } from '@/lib/hive/access';
 
 const idSchema = z.string().uuid();
 const dateValue = z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.literal(''), z.null()]);
@@ -22,6 +22,7 @@ export async function PATCH(
     const { id } = await context.params;
     const projectId = idSchema.parse(id);
     const payload = updateSchema.parse(await request.json());
+    assertWorkspaceAllowed(payload.workspaceId);
     const supabase = await requireHiveDataAccess();
 
     const updates: Record<string, unknown> = {};
@@ -54,6 +55,13 @@ export async function DELETE(
     const { id } = await context.params;
     const projectId = idSchema.parse(id);
     const supabase = await requireHiveDataAccess();
+    const { data: project, error: projectLookupError } = await supabase
+      .from('projects')
+      .select('workspace_id')
+      .eq('id', projectId)
+      .single();
+    if (projectLookupError || !project) throw projectLookupError || new Error('Project not found');
+    assertWorkspaceAllowed(project.workspace_id);
     const { error } = await supabase.rpc('delete_workspace_project', {
       p_project_id: projectId,
     });
