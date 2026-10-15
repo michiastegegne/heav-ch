@@ -25,7 +25,7 @@ type Invoice = {
   invoice_number: string; issue_date: string; due_date: string;
   status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled'; currency: string;
   tax_rate: number; subtotal_rappen: number; tax_rappen: number; total_rappen: number;
-  sent_at: string | null; paid_at: string | null;
+  sent_at: string | null; paid_at: string | null; is_legacy: boolean;
   customers?: { company?: string | null; contact_name?: string | null } | null;
 };
 type Offer = {
@@ -132,7 +132,7 @@ export default function StudioPage() {
   });
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [invoiceDraft, setInvoiceDraft] = useState({
-    customerId: '', projectId: '', issueDate: today(), dueDate: afterDays(30),
+    id: '', customerId: '', projectId: '', issueDate: today(), dueDate: afterDays(30),
     taxRate: 0, notes: '', lines: [{ description: '', quantity: 1, unitPrice: 0 }] as LineDraft[],
   });
   const [offerOpen, setOfferOpen] = useState(false);
@@ -352,9 +352,7 @@ export default function StudioPage() {
     event.preventDefault();
     if (!activeWorkspaceId) return;
     try {
-      await requestJson('/api/hive/invoices', {
-        method: 'POST',
-        body: JSON.stringify({
+      const invoicePayload = {
           workspaceId: activeWorkspaceId,
           customerId: invoiceDraft.customerId,
           projectId: invoiceDraft.projectId || null,
@@ -367,13 +365,50 @@ export default function StudioPage() {
             quantity: line.quantity,
             unitPriceRappen: Math.round(line.unitPrice * 100),
           })),
-        }),
-      });
+      };
+      if (invoiceDraft.id) {
+        await requestJson(`/api/hive/invoices/${invoiceDraft.id}`, {
+          method:'PATCH',
+          body:JSON.stringify(invoicePayload),
+        });
+      } else {
+        await requestJson('/api/hive/invoices', {
+          method:'POST',
+          body:JSON.stringify(invoicePayload),
+        });
+      }
       setInvoiceOpen(false);
-      setNotice('Rechnungsentwurf erstellt.');
+      setNotice(invoiceDraft.id ? 'Rechnungsentwurf aktualisiert.' : 'Rechnungsentwurf erstellt.');
       await loadWorkspaceData(activeWorkspaceId);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Rechnung konnte nicht erstellt werden.');
+    }
+  }
+
+  async function openInvoiceDraft(invoice: Invoice) {
+    if (!activeWorkspaceId || invoice.is_legacy || invoice.status !== 'draft') return;
+    try {
+      const data = await requestJson<{
+        invoice: Invoice & { notes?:string|null };
+        items: Array<{description:string;quantity:number|string;unit_price_rappen:number}>;
+      }>(`/api/hive/invoices/${invoice.id}?workspace=${encodeURIComponent(activeWorkspaceId)}`);
+      setInvoiceDraft({
+        id:invoice.id,
+        customerId:data.invoice.customer_id,
+        projectId:data.invoice.project_id || '',
+        issueDate:data.invoice.issue_date,
+        dueDate:data.invoice.due_date,
+        taxRate:Number(data.invoice.tax_rate),
+        notes:data.invoice.notes || '',
+        lines:data.items.map((item) => ({
+          description:item.description,
+          quantity:Number(item.quantity),
+          unitPrice:Number(item.unit_price_rappen) / 100,
+        })),
+      });
+      setInvoiceOpen(true);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Rechnungsentwurf konnte nicht geladen werden.');
     }
   }
 
@@ -802,7 +837,7 @@ export default function StudioPage() {
 
         {tab === 'invoices' && <>
           <div className="hsv-rowtop"><strong>{invoices.length} Rechnungen</strong><button className="hsv-primary" disabled={!customers.length} onClick={() => {
-            setInvoiceDraft({ customerId: customers[0]?.id || '', projectId: '', issueDate: today(), dueDate: afterDays(settings?.default_due_days || 30), taxRate: Number(settings?.default_tax_rate || 0), notes: '', lines: [{ description: '', quantity: 1, unitPrice: 0 }] });
+            setInvoiceDraft({ id:'', customerId: customers[0]?.id || '', projectId: '', issueDate: today(), dueDate: afterDays(settings?.default_due_days || 30), taxRate: Number(settings?.default_tax_rate || 0), notes: '', lines: [{ description: '', quantity: 1, unitPrice: 0 }] });
             setInvoiceOpen(true);
           }}><Plus size={15}/> Rechnung erstellen</button></div>
           <div className="hsv-table">{invoices.map((invoice) => <div key={invoice.id}>
@@ -810,7 +845,8 @@ export default function StudioPage() {
             <span className="hsv-grow"><strong>{invoice.invoice_number}</strong><small>{relatedName(invoice.customers)} · {invoice.status}</small></span>
             <strong>{money(invoice.total_rappen, invoice.currency)}</strong>
             <button onClick={() => void invoiceAction(invoice, 'download')}>PDF</button>
-            {invoice.status === 'draft' && <button onClick={() => void deleteInvoice(invoice)}><Trash2 size={16}/></button>}
+            {invoice.status === 'draft' && !invoice.is_legacy && <button onClick={() => void openInvoiceDraft(invoice)}>Bearbeiten</button>}
+            {invoice.status === 'draft' && !invoice.is_legacy && <button onClick={() => void deleteInvoice(invoice)}><Trash2 size={16}/></button>}
             {(invoice.status === 'sent' || invoice.status === 'overdue') && <button onClick={() => void invoiceAction(invoice, 'mark_paid')}>Bezahlt</button>}
             {invoice.status !== 'paid' && invoice.status !== 'cancelled' && <button onClick={() => void invoiceAction(invoice, 'cancel')}>Stornieren</button>}
           </div>)}</div>
@@ -1054,7 +1090,7 @@ export default function StudioPage() {
       </form>
     </Modal>}
 
-    {invoiceOpen && <DocumentModal title="Rechnung erstellen" lines={invoiceDraft.lines} total={invoiceTotal} taxRate={invoiceDraft.taxRate} onClose={() => setInvoiceOpen(false)}
+    {invoiceOpen && <DocumentModal title={invoiceDraft.id ? 'Rechnung bearbeiten' : 'Rechnung erstellen'} lines={invoiceDraft.lines} total={invoiceTotal} taxRate={invoiceDraft.taxRate} onClose={() => setInvoiceOpen(false)}
       onAddLine={() => setInvoiceDraft({ ...invoiceDraft, lines: [...invoiceDraft.lines, { description: '', quantity: 1, unitPrice: 0 }] })}
       onLineChange={(index, line) => setInvoiceDraft({ ...invoiceDraft, lines: invoiceDraft.lines.map((current, i) => i === index ? line : current) })}
       onLineDelete={(index) => setInvoiceDraft({ ...invoiceDraft, lines: invoiceDraft.lines.filter((_, i) => i !== index) })}>
@@ -1065,7 +1101,7 @@ export default function StudioPage() {
         <label>Steuersatz %<input type="number" min="0" max="100" step="0.1" value={invoiceDraft.taxRate} onChange={(e) => setInvoiceDraft({ ...invoiceDraft, taxRate: Number(e.target.value) })}/></label>
         {products.some((product) => product.active) && <label>Leistung hinzufügen<select defaultValue="" onChange={(e) => { if (e.target.value) addProductToInvoice(e.target.value); e.currentTarget.value=''; }}><option value="">Aus Katalog wählen…</option>{products.filter((product) => product.active).map((product) => <option key={product.id} value={product.id}>{product.name} · {money(product.unit_price_rappen)}</option>)}</select></label>}
         <label>Notiz<textarea rows={2} value={invoiceDraft.notes} onChange={(e) => setInvoiceDraft({ ...invoiceDraft, notes: e.target.value })}/></label>
-        <button className="hsv-primary" type="submit">Rechnungsentwurf erstellen <Check size={15}/></button>
+        <button className="hsv-primary" type="submit">{invoiceDraft.id ? 'Änderungen speichern' : 'Rechnungsentwurf erstellen'} <Check size={15}/></button>
       </form>
     </DocumentModal>}
 
