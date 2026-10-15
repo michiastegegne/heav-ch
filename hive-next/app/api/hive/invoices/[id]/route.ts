@@ -100,6 +100,9 @@ export async function PATCH(
       if (message.includes('only draft')) {
         return Response.json({ error: 'Nur Rechnungsentwürfe können bearbeitet werden.' }, { status: 409 });
       }
+      if (message.includes('issued invoice is immutable')) {
+        return Response.json({ error: 'Ausgestellte Rechnungen sind unveränderlich.' }, { status: 409 });
+      }
       throw error;
     }
 
