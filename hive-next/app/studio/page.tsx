@@ -966,11 +966,26 @@ export default function StudioPage() {
 
   async function createPortalInvite(event: FormEvent) {
     event.preventDefault();
-    await portalAction(
-      { action: 'create_invite', customerId: inviteDraft.customerId, departmentId:inviteDraft.departmentId || null, email: inviteDraft.email },
-      'Dev-Einladung angelegt. Es wurde keine E-Mail versendet.',
-    );
-    setInviteOpen(false);
+    if (!activeWorkspaceId) return;
+    try {
+      const result=await requestJson<{emailSent?:boolean;email?:string;message?:string}>('/api/hive/portal',{
+        method:'POST',
+        body:JSON.stringify({
+          action:'create_invite',
+          workspaceId:activeWorkspaceId,
+          customerId:inviteDraft.customerId,
+          departmentId:inviteDraft.departmentId || null,
+          email:inviteDraft.email,
+        }),
+      });
+      setInviteOpen(false);
+      setNotice(result.emailSent
+        ? `Portal-Einladung an ${result.email || inviteDraft.email} versendet.`
+        : (result.message || 'Dev-Einladung angelegt. Es wurde keine E-Mail versendet.'));
+      await loadWorkspaceData(activeWorkspaceId);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Portal-Einladung konnte nicht erstellt werden.');
+    }
   }
 
   async function uploadPortalFile(event: FormEvent) {
