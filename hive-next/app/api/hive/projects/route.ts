@@ -21,8 +21,8 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const workspaceId = workspaceQuery.parse(url.searchParams.get('workspace'));
-    assertWorkspaceAllowed(workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(workspaceId, supabase);
     const { data, error } = await supabase
       .from('projects')
       .select('id, workspace_id, customer_id, department_id, title, description, status, budget_rappen, start_date, due_date, created_at, updated_at, customers(company, contact_name)')
@@ -38,8 +38,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const payload = projectSchema.parse(await request.json());
-    assertWorkspaceAllowed(payload.workspaceId);
     const supabase = await requireHiveDataAccess();
+    await assertWorkspaceAllowed(payload.workspaceId, supabase);
 
     const { data: department, error: departmentError } = await supabase
       .from('customer_departments')
