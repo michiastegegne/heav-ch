@@ -1181,17 +1181,37 @@ export default function StudioPage() {
         {tab === 'branding' && settings && <form className="hsv-branding" onSubmit={saveSettings}>
           <div className="hsv-brand-preview"><span>{settings.logo_url ? <img src={settings.logo_url} alt="Logo"/> : settings.business_name.charAt(0)}</span><div><strong>{settings.business_name}</strong><small>{activeWorkspace?.role} · Dev-Workspace</small></div></div>
           <label>Business-Name<input value={settings.business_name} onChange={(e) => setSettings({ ...settings, business_name: e.target.value })}/></label>
+          <label>Rechtlicher Name<input value={settings.legal_name} onChange={(e) => setSettings({ ...settings, legal_name:e.target.value })}/></label>
+          <label>Kontaktperson<input value={settings.contact_name} onChange={(e) => setSettings({ ...settings, contact_name:e.target.value })}/></label>
           <label>Business-Logo<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => void uploadBusinessLogo(e.target.files?.[0] || null)}/><small>PNG, JPG oder WebP · max. 5 MB</small></label>
           <label>Logo-URL<input value={settings.logo_url} onChange={(e) => setSettings({ ...settings, logo_url: e.target.value })} placeholder="https://…"/></label>
-          <label>Kontakt-E-Mail<input type="email" value={settings.email} onChange={(e) => setSettings({ ...settings, email: e.target.value })}/></label>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+            <label>Kontakt-E-Mail<input type="email" value={settings.email} onChange={(e) => setSettings({ ...settings, email: e.target.value })}/></label>
+            <label>Telefon<input value={settings.phone} onChange={(e) => setSettings({ ...settings, phone:e.target.value })}/></label>
+          </div>
+          <label>Website<input value={settings.website_url} onChange={(e) => setSettings({ ...settings, website_url:e.target.value })} placeholder="https://…"/></label>
           <label>Adresse<input value={settings.address_line1} onChange={(e) => setSettings({ ...settings, address_line1: e.target.value })}/></label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1.3fr', gap: 12 }}>
             <label>PLZ<input value={settings.postal_code} onChange={(e) => setSettings({ ...settings, postal_code: e.target.value })}/></label>
             <label>Ort<input value={settings.city} onChange={(e) => setSettings({ ...settings, city: e.target.value })}/></label>
+            <label>Land<input value={settings.country} onChange={(e) => setSettings({ ...settings, country:e.target.value })}/></label>
           </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+            <label>UID<input value={settings.uid_number} onChange={(e) => setSettings({ ...settings, uid_number:e.target.value })} placeholder="CHE-…"/></label>
+            <label>MWST-Nummer<input value={settings.vat_number} onChange={(e) => setSettings({ ...settings, vat_number:e.target.value })} placeholder="CHE-123.456.789 MWST"/></label>
+          </div>
+          <label><input type="checkbox" checked={settings.vat_enabled} onChange={(e) => setSettings({ ...settings, vat_enabled:e.target.checked })}/> MWST aktiv</label>
           <label>IBAN<input value={settings.iban} onChange={(e) => setSettings({ ...settings, iban: e.target.value })}/></label>
-          <label>Rechnungspräfix<input value={settings.invoice_prefix} onChange={(e) => setSettings({ ...settings, invoice_prefix: e.target.value.toUpperCase() })}/></label>
-          <label>Standard-Steuersatz %<input type="number" min="0" max="100" step="0.1" value={settings.default_tax_rate} onChange={(e) => setSettings({ ...settings, default_tax_rate: Number(e.target.value) })}/></label>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+            <label>Bank<input value={settings.bank_name} onChange={(e) => setSettings({ ...settings, bank_name:e.target.value })}/></label>
+            <label>Kontoinhaber<input value={settings.account_holder} onChange={(e) => setSettings({ ...settings, account_holder:e.target.value })}/></label>
+          </div>
+          <label>Rechnungs-Absender<input value={settings.invoice_sender_name} onChange={(e) => setSettings({ ...settings, invoice_sender_name:e.target.value })}/></label>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12}}>
+            <label>Rechnungspräfix<input value={settings.invoice_prefix} onChange={(e) => setSettings({ ...settings, invoice_prefix: e.target.value.toUpperCase() })}/></label>
+            <label>Standard-Fälligkeit Tage<input type="number" min="1" max="180" value={settings.default_due_days} onChange={(e) => setSettings({ ...settings, default_due_days:Number(e.target.value) })}/></label>
+            <label>Standard-Steuersatz %<input type="number" min="0" max="100" step="0.1" value={settings.default_tax_rate} onChange={(e) => setSettings({ ...settings, default_tax_rate: Number(e.target.value) })}/></label>
+          </div>
           <label><input type="checkbox" checked={settings.invoice_reminders_enabled} onChange={(e) => setSettings({ ...settings, invoice_reminders_enabled:e.target.checked })}/> Automatische Zahlungserinnerungen</label>
           <label>Reminder vor Fälligkeit (Tage)<input type="number" min="1" max="30" value={settings.invoice_reminder_days} onChange={(e) => setSettings({ ...settings, invoice_reminder_days:Number(e.target.value) })}/></label>
           <label>Accent-Farbe<div className="hsv-color"><input type="color" value={settings.accent_color} onChange={(e) => setSettings({ ...settings, accent_color: e.target.value })}/><span>{settings.accent_color}</span></div></label>
