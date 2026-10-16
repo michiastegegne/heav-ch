@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowLeft, ArrowRight, ArrowUpRight, BriefcaseBusiness, Check, CreditCard, FileText,
+  ArrowLeft, ArrowRight, ArrowUpRight, BriefcaseBusiness, Check, Clock3, CreditCard, FileText,
   LayoutDashboard, Mail, Menu, Package, Plus, RefreshCw, Search, Settings2, ShieldCheck, Trash2, Users, X,
 } from 'lucide-react';
 import { createPublicSupabaseBrowserClient } from '@/lib/supabase/public-browser';
@@ -46,6 +46,14 @@ type Offer = {
   tax_rate: number; subtotal_rappen: number; tax_rappen: number; total_rappen: number; accepted_at: string | null;
   customers?: { company?: string | null; contact_name?: string | null } | null;
 };
+type InvoiceHistoryEvent = {
+  id:string; kind:string; recipient:string|null; details:Record<string,unknown>; created_at:string;
+};
+type InvoiceSendAttempt = {
+  id:string; previous_status:string; state:'pending'|'sent'|'failed'; provider_id:string|null;
+  created_at:string; completed_at:string|null;
+};
+
 type EmailLog = {
   id: string; template_key: string; status: string; recipient_email: string;
   recipient_name: string; subject: string; error_message: string | null; created_at: string;
@@ -200,6 +208,11 @@ export default function StudioPage() {
     budget: 0, startDate: '', dueDate: '',
   });
   const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [invoiceHistoryOpen, setInvoiceHistoryOpen] = useState(false);
+  const [invoiceHistoryInvoice, setInvoiceHistoryInvoice] = useState<Invoice | null>(null);
+  const [invoiceHistoryEvents, setInvoiceHistoryEvents] = useState<InvoiceHistoryEvent[]>([]);
+  const [invoiceSendAttempts, setInvoiceSendAttempts] = useState<InvoiceSendAttempt[]>([]);
+  const [invoiceHistoryBusy, setInvoiceHistoryBusy] = useState(false);
   const [invoiceDraft, setInvoiceDraft] = useState({
     id: '', customerId: '', projectId: '', issueDate: today(), dueDate: afterDays(30),
     taxRate: 0, notes: '', lines: [{ description: '', quantity: 1, unitPrice: 0 }] as LineDraft[],
@@ -216,7 +229,7 @@ export default function StudioPage() {
   const hasOpenOverlay =
     mobileMenuOpen || quickCreateOpen || searchOpen || businessOpen || teamOpen ||
     customerOpen || customerWorkspaceOpen || departmentOpen || projectOpen ||
-    projectWorkspaceOpen || invoiceOpen || offerOpen || productOpen || inviteOpen ||
+    projectWorkspaceOpen || invoiceOpen || invoiceHistoryOpen || offerOpen || productOpen || inviteOpen ||
     fileOpen;
 
   useEffect(() => {
@@ -224,7 +237,7 @@ export default function StudioPage() {
       if (event.key !== 'Escape') return;
       const modalOwnsEscape =
         mobileMenuOpen || quickCreateOpen || searchOpen || businessOpen || teamOpen ||
-        customerOpen || projectOpen || invoiceOpen || offerOpen || productOpen ||
+        customerOpen || projectOpen || invoiceOpen || invoiceHistoryOpen || offerOpen || productOpen ||
         inviteOpen || fileOpen;
       if (modalOwnsEscape) return;
       if (departmentOpen) setDepartmentOpen(false);
@@ -235,7 +248,7 @@ export default function StudioPage() {
     return () => window.removeEventListener('keydown', closeFullscreenWorkspace);
   }, [
     mobileMenuOpen, quickCreateOpen, searchOpen, businessOpen, teamOpen,
-    customerOpen, projectOpen, invoiceOpen, offerOpen, productOpen, inviteOpen,
+    customerOpen, projectOpen, invoiceOpen, invoiceHistoryOpen, offerOpen, productOpen, inviteOpen,
     fileOpen, departmentOpen, customerWorkspaceOpen, projectWorkspaceOpen,
   ]);
 
@@ -854,6 +867,28 @@ export default function StudioPage() {
       setInvoiceOpen(true);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Rechnungsentwurf konnte nicht geladen werden.');
+    }
+  }
+
+  async function openInvoiceHistory(invoice: Invoice) {
+    if (!activeWorkspaceId) return;
+    setInvoiceHistoryInvoice(invoice);
+    setInvoiceHistoryEvents([]);
+    setInvoiceSendAttempts([]);
+    setInvoiceHistoryBusy(true);
+    setInvoiceHistoryOpen(true);
+    try {
+      const data = await requestJson<{
+        events:InvoiceHistoryEvent[];
+        attempts:InvoiceSendAttempt[];
+      }>(`/api/hive/invoices/${invoice.id}/history?workspace=${encodeURIComponent(activeWorkspaceId)}`);
+      setInvoiceHistoryEvents(data.events);
+      setInvoiceSendAttempts(data.attempts);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Rechnungsverlauf konnte nicht geladen werden.');
+      setInvoiceHistoryOpen(false);
+    } finally {
+      setInvoiceHistoryBusy(false);
     }
   }
 
@@ -1504,6 +1539,7 @@ export default function StudioPage() {
             <span className="hsv-grow"><strong>{invoice.number_finalized ? invoice.invoice_number : 'Entwurf'}</strong><small>{relatedName(invoice.customers)}</small></span><span className={`hive-status status-${invoice.status}`}>{stateLabel[invoice.status] || invoice.status}</span><span className="hive-table-date">{shortDate(invoice.due_date)}</span>
             <strong>{money(invoice.total_rappen, invoice.currency)}</strong>
             <div className="hive-record-actions">
+            <button onClick={() => void openInvoiceHistory(invoice)}><Clock3 size={14}/> Verlauf</button>
             {invoice.number_finalized && <button onClick={() => void invoiceAction(invoice, 'download')}>PDF</button>}
             {!invoice.is_legacy && invoice.number_finalized && ['draft','sent','overdue'].includes(invoice.status) && <button onClick={() => void invoiceAction(invoice, 'send')}>E-Mail</button>}
             {invoice.status === 'draft' && !invoice.is_legacy && !invoice.number_finalized && <button onClick={() => void openInvoiceDraft(invoice)}>Bearbeiten</button>}
@@ -2066,6 +2102,56 @@ export default function StudioPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><label>Start<input type="date" value={projectDraft.startDate} onChange={(e) => setProjectDraft({ ...projectDraft, startDate: e.target.value })}/></label><label>Fällig<input type="date" value={projectDraft.dueDate} onChange={(e) => setProjectDraft({ ...projectDraft, dueDate: e.target.value })}/></label></div>
         <button className="hsv-primary" type="submit">Speichern <Check size={15}/></button>
       </form>
+    </Modal>}
+
+    {invoiceHistoryOpen && invoiceHistoryInvoice && <Modal
+      title={invoiceHistoryInvoice.number_finalized ? invoiceHistoryInvoice.invoice_number : 'Rechnungsentwurf'}
+      onClose={() => setInvoiceHistoryOpen(false)}
+    >
+      <div className="hive-invoice-history-summary">
+        <div><span>Status</span><strong>{stateLabel[invoiceHistoryInvoice.status] || invoiceHistoryInvoice.status}</strong></div>
+        <div><span>Betrag</span><strong>{money(invoiceHistoryInvoice.total_rappen, invoiceHistoryInvoice.currency)}</strong></div>
+        <div><span>Fällig</span><strong>{shortDate(invoiceHistoryInvoice.due_date)}</strong></div>
+      </div>
+      <div className="hive-invoice-history" aria-busy={invoiceHistoryBusy}>
+        {invoiceHistoryBusy && <div className="hive-history-loading"><RefreshCw size={16}/><span>Verlauf wird geladen …</span></div>}
+        {!invoiceHistoryBusy && !invoiceHistoryEvents.length && <p className="hsv-empty">Noch keine Audit-Ereignisse.</p>}
+        {!invoiceHistoryBusy && invoiceHistoryEvents.map((event) => {
+          const label:Record<string,string> = {
+            created:'Entwurf erstellt',
+            updated:'Entwurf geändert',
+            issued:'Rechnung ausgestellt',
+            downloaded:'PDF erzeugt',
+            sent:'Rechnung versendet',
+            resent:'Rechnung erneut versendet',
+            paid:'Als bezahlt markiert',
+            cancelled:'Rechnung storniert',
+            send_failed:'Versand fehlgeschlagen',
+            reminder_sent:'Zahlungserinnerung versendet',
+          };
+          const status = typeof event.details?.status === 'string' ? event.details.status : '';
+          const number = typeof event.details?.invoice_number === 'string' ? event.details.invoice_number : '';
+          return <div className={`hive-history-event history-${event.kind}`} key={event.id}>
+            <span className="hive-history-dot"/>
+            <div>
+              <strong>{label[event.kind] || event.kind.replaceAll('_',' ')}</strong>
+              <small>{new Date(event.created_at).toLocaleString('de-CH')}</small>
+              {(event.recipient || status || number) && <p>
+                {event.recipient ? `Empfänger: ${event.recipient}` : ''}
+                {event.recipient && (status || number) ? ' · ' : ''}
+                {number ? number : status ? `Status: ${stateLabel[status] || status}` : ''}
+              </p>}
+            </div>
+          </div>;
+        })}
+      </div>
+      {!!invoiceSendAttempts.length && <details className="hive-history-tech">
+        <summary>Versandtechnik · {invoiceSendAttempts.length} Versuch{invoiceSendAttempts.length === 1 ? '' : 'e'}</summary>
+        {invoiceSendAttempts.map((attempt) => <div key={attempt.id}>
+          <span>{attempt.state === 'sent' ? 'Erfolgreich' : attempt.state === 'failed' ? 'Fehlgeschlagen' : 'Läuft'}</span>
+          <small>{new Date(attempt.created_at).toLocaleString('de-CH')}{attempt.completed_at ? ` → ${new Date(attempt.completed_at).toLocaleString('de-CH')}` : ''}</small>
+        </div>)}
+      </details>}
     </Modal>}
 
     {invoiceOpen && <DocumentEditor onSubmit={createInvoice} saveLabel={invoiceDraft.id ? 'Änderungen speichern' : 'Rechnungsentwurf erstellen'} title={invoiceDraft.id ? 'Rechnung bearbeiten' : 'Rechnung erstellen'} lines={invoiceDraft.lines} total={invoiceTotal} taxRate={invoiceDraft.taxRate} onClose={() => setInvoiceOpen(false)}
