@@ -32,6 +32,14 @@ The cutover requires all three conditions:
 
 If Clerk is explicitly selected but either the keys or the database bridge are missing, protected routes fail closed instead of silently falling back to Supabase Auth.
 
+## New-user onboarding
+
+Legacy users and genuinely new Clerk users are intentionally different flows.
+Legacy users preserve their existing Hive UUID through a one-time migration
+code. A new Clerk identity can explicitly start fresh, which provisions an
+internal `app_users` UUID and first workspace atomically. No account is linked
+or merged by email address.
+
 ## Safe migration plan
 
 1. Configure Clerk in Vercel and enable Apple, email code and passkeys in Clerk.
