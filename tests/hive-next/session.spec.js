@@ -77,6 +77,25 @@ test('mobile-only subnavigation stays hidden on desktop',async({page})=>{
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
 });
 
+test('invoice history is workspace scoped and visible from the invoice list',async({page})=>{
+ await login(page);
+ const foreign=await page.request.get('/api/hive/invoices/30000000-0000-4000-8000-000000000001/history?workspace=033fe942-b8de-4298-9762-5f23550afbd9');
+ expect(foreign.status()).toBe(403);
+
+ await page.getByRole('navigation').getByRole('button',{name:'Rechnungen',exact:true}).click();
+ const invoiceRow=page.locator('.hive-invoice-table>div').filter({hasText:'TEST-2026-001'}).first();
+ await expect(invoiceRow).toBeVisible();
+ await invoiceRow.getByRole('button',{name:/Verlauf/}).click();
+
+ const dialog=page.getByRole('dialog',{name:'TEST-2026-001'});
+ await expect(dialog).toBeVisible();
+ await expect(dialog.getByText('Rechnung ausgestellt',{exact:true})).toBeVisible();
+ await expect(dialog.getByText('Rechnung versendet',{exact:true})).toBeVisible();
+ await expect(dialog.getByText('Status: Überfällig',{exact:true})).toBeVisible();
+ await dialog.getByText(/Versandtechnik/).click();
+ await expect(dialog.getByText('Erfolgreich',{exact:true})).toBeVisible();
+});
+
 test('customer lists support search and invoice lists support status filtering',async({page})=>{
  await login(page);
  await page.getByRole('navigation').getByRole('button',{name:/Kunden/}).click();
