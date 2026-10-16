@@ -634,6 +634,21 @@
   .hive-search-dialog .hsv-table>button>small{font-size:9px;color:var(--mobile-faint)}
 
   /* More / quick-create sheets */
+  .hive-mobile-security{
+    display:flex;
+    align-items:center;
+    gap:11px;
+    margin:0 0 13px;
+    padding:12px 13px;
+    border:1px solid var(--mobile-line);
+    border-radius:14px;
+    background:var(--mobile-bg);
+    color:var(--mobile-muted);
+  }
+  .hive-mobile-security>svg{flex:none;color:var(--mobile-ink)}
+  .hive-mobile-security strong{display:block;color:var(--mobile-ink);font-size:11px;font-weight:600}
+  .hive-mobile-security small{display:block;margin-top:3px;color:var(--mobile-faint);font-size:9px;line-height:1.35}
+
   .hive-mobile-modules{
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
