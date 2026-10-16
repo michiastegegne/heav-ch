@@ -77,6 +77,8 @@ test("account claim card accepts invite links and returns to Studio", async () =
 
   assert.match(source, /team_invite/);
   assert.match(source, /hive_team_/);
+  assert.match(source, /history\.replaceState/);
+  assert.match(source, /params\.delete\('team_invite'\)/);
   assert.match(source, /\/api\/hive\/team\/invite\/claim/);
   assert.match(source, /Studio öffnen/);
 });
