@@ -107,3 +107,33 @@ html[data-theme="dark"] .account-link-success{border-color:#314031;background:#1
   .account-link-form>button{width:100%;min-height:48px}
   .account-link-form input{font-size:16px}
 }
+
+.account-link-clerk{display:grid;gap:12px}
+.account-link-choice{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:4px;
+  padding:4px;
+  border:1px solid #ddd;
+  border-radius:12px;
+  background:#f5f5f3;
+}
+.account-link-choice button{
+  min-height:40px;
+  border:0;
+  border-radius:9px;
+  background:transparent;
+  color:#777;
+  font:inherit;
+  font-size:10px;
+  font-weight:600;
+}
+.account-link-choice button[aria-selected="true"]{
+  background:#171717;
+  color:#fff;
+}
+html[data-theme="dark"] .account-link-choice{border-color:#303030;background:#111}
+html[data-theme="dark"] .account-link-choice button[aria-selected="true"]{background:#f1f1ed;color:#111}
+@media(max-width:760px){
+  .account-link-choice button{min-height:44px}
+}
