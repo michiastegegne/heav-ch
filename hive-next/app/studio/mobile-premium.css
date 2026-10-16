@@ -878,6 +878,18 @@
   .hsv-bill-total .hsv-grand{font-size:17px}
 
   /* Settings / email templates should not look like desktop forms squeezed in. */
+  .hive-settings-save{
+    position:sticky;
+    z-index:16;
+    bottom:calc(84px + env(safe-area-inset-bottom));
+    width:100%;
+    min-height:50px;
+    margin-top:10px;
+    border-radius:13px;
+    box-shadow:0 12px 30px rgba(0,0,0,.16);
+  }
+  html[data-theme="dark"] .hive-settings-save{box-shadow:0 14px 34px rgba(0,0,0,.42)}
+
   .hsv-branding{
     padding:16px;
     border:1px solid var(--mobile-line);
