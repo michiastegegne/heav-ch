@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Check, FileText, LoaderCircle, Plus, Trash2, X } from "lucide-react";
 import "./document-editor.css";
 
@@ -46,6 +46,13 @@ export default function DocumentEditor({
   const submitting = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
   const tax = Math.round((total * taxRate) / 100);
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !submitting.current) onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting.current) return;
