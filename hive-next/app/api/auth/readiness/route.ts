@@ -13,9 +13,17 @@ export async function GET() {
   const identityMigrationEnabled =
     process.env.HIVE_IDENTITY_MIGRATION_ENABLED === 'true';
 
+  const clerkCutoverReady = Boolean(
+    authState.clerkConfigured &&
+    authState.clerkBridgeEnabled &&
+    identityMigrationEnabled &&
+    supabaseConfigured,
+  );
+
   const response = {
     provider: authState.requested,
     ready: authState.ready && supabaseConfigured,
+    clerkCutoverReady,
     issue: authState.issue,
     clerk: {
       configured: authState.clerkConfigured,
