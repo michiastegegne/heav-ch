@@ -2,6 +2,8 @@ import { test, expect } from "@playwright/test";
 test.use({ isMobile: true, hasTouch: true });
 async function login(page) {
   await page.goto("/login");
+  await fits(page);
+  await expect(page.getByRole("heading", { name: "Work starts here.", exact: true })).toBeVisible();
   await page.getByLabel("E-Mail", { exact: true }).fill("owner@example.test");
   await page.getByLabel("Passwort", { exact: true }).fill("test-password");
   await page.getByRole("button", { name: "Anmelden", exact: true }).click();
@@ -137,6 +139,13 @@ for (const appearance of ["light", "dark"])
       await fits(page);
       await page.keyboard.press("Escape");
       await expect(page.getByRole("dialog")).toHaveCount(0);
+      await page.goto("/account");
+      await expect(page.getByRole("heading", { name: "Dein Login.", exact: true })).toBeVisible();
+      await fits(page);
+      await page.goto("/studio");
+      await expect(page.locator(".hive-kpis button")).toHaveCount(4);
+      await fits(page);
+
       await page
         .getByLabel("Business auswählen")
         .selectOption("0540bbcf-343c-456c-8ac0-d6125fc74b84");
