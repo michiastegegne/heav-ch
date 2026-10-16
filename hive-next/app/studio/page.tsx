@@ -13,6 +13,7 @@ import './studio.css';
 import './workspace-design.css';
 import './mobile.css';
 import './studio-polish.css';
+import './mobile-premium.css';
 
 type Workspace = { id: string; name: string; slug: string; status: string; role: string };
 type Customer = {
@@ -140,6 +141,7 @@ async function requestJson<T>(input: string, init?: RequestInit): Promise<T> {
 export default function StudioPage() {
   const [tab, setTab] = useState<Tab>('overview');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [quickCreateOpen, setQuickCreateOpen] = useState(false);
   const [listQuery, setListQuery] = useState('');
   const [listStatus, setListStatus] = useState('all');
   useEffect(() => { setListQuery(''); setListStatus('all'); }, [tab]);
@@ -288,6 +290,44 @@ export default function StudioPage() {
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Business konnte nicht erstellt werden.');
     }
+  }
+
+  function openNewInvoice() {
+    if (!customers.length) {
+      setNotice('Erstelle zuerst einen Kunden.');
+      return;
+    }
+    setInvoiceDraft({
+      id:'',
+      customerId:customers[0]?.id || '',
+      projectId:'',
+      issueDate:today(),
+      dueDate:afterDays(settings?.default_due_days || 30),
+      taxRate:Number(settings?.default_tax_rate || 0),
+      notes:'',
+      lines:[{description:'',quantity:1,unitPrice:0}],
+    });
+    setInvoiceOpen(true);
+  }
+
+  function openNewOffer() {
+    if (!customers.length) {
+      setNotice('Erstelle zuerst einen Kunden.');
+      return;
+    }
+    setOfferDraft({
+      id:'',
+      customerId:customers[0]?.id || '',
+      projectId:'',
+      title:'',
+      issueDate:today(),
+      validUntil:afterDays(30),
+      taxRate:Number(settings?.default_tax_rate || 0),
+      notes:'',
+      terms:'Diese Offerte ist bis zum angegebenen Datum gültig.',
+      lines:[{description:'',quantity:1,unitPrice:0}],
+    });
+    setOfferOpen(true);
   }
 
   function updateBusinessName(name:string) {
@@ -1345,7 +1385,7 @@ export default function StudioPage() {
         <a className="hsv-hive" href="/">hive.</a><span className="hsv-divider"/>
         <span className="hsv-logo">{settings?.logo_url ? <img src={settings.logo_url} alt="Business Logo"/> : businessName.charAt(0)}</span>
         <select aria-label="Business auswählen" value={activeWorkspaceId} onChange={(event) => {
-          setCustomerOpen(false); setProjectOpen(false); setInvoiceOpen(false); setOfferOpen(false);
+          setCustomerOpen(false); setProjectOpen(false); setInvoiceOpen(false); setOfferOpen(false); setQuickCreateOpen(false);
           setDepartmentOpen(false); setProjectWorkspaceOpen(false); setCustomerWorkspaceOpen(false);
           setProductOpen(false); setInviteOpen(false); setFileOpen(false); setTeamOpen(false);
           setSearchOpen(false); setSearchQuery(''); setTeamMembers([]);
@@ -1412,10 +1452,7 @@ export default function StudioPage() {
         </>}
 
         {tab === 'invoices' && <>
-          <div className="hsv-rowtop"><strong>{invoices.length} Rechnungen</strong><button className="hsv-primary" disabled={!customers.length} onClick={() => {
-            setInvoiceDraft({ id:'', customerId: customers[0]?.id || '', projectId: '', issueDate: today(), dueDate: afterDays(settings?.default_due_days || 30), taxRate: Number(settings?.default_tax_rate || 0), notes: '', lines: [{ description: '', quantity: 1, unitPrice: 0 }] });
-            setInvoiceOpen(true);
-          }}><Plus size={15}/> Rechnung erstellen</button></div>
+          <div className="hsv-rowtop"><strong>{invoices.length} Rechnungen</strong><button className="hsv-primary" disabled={!customers.length} onClick={openNewInvoice}><Plus size={15}/> Rechnung erstellen</button></div>
           <div className="hive-table-labels hive-invoice-labels"><span>Rechnung / Kunde</span><span>Status</span><span>Fälligkeit</span><span>Betrag / Aktionen</span></div><div className="hsv-table hive-invoice-table">{visibleInvoices.map((invoice) => <div key={invoice.id}>
             <span className="hsv-letter"><CreditCard size={16}/></span>
             <span className="hsv-grow"><strong>{invoice.number_finalized ? invoice.invoice_number : 'Entwurf'}</strong><small>{relatedName(invoice.customers)}</small></span><span className={`hive-status status-${invoice.status}`}>{stateLabel[invoice.status] || invoice.status}</span><span className="hive-table-date">{shortDate(invoice.due_date)}</span>
@@ -1434,10 +1471,7 @@ export default function StudioPage() {
         </>}
 
         {tab === 'offers' && <>
-          <div className="hsv-rowtop"><strong>{offers.length} Offerten</strong><button className="hsv-primary" disabled={!customers.length} onClick={() => {
-            setOfferDraft({ id:'', customerId: customers[0]?.id || '', projectId: '', title: '', issueDate: today(), validUntil: afterDays(30), taxRate: Number(settings?.default_tax_rate || 0), notes: '', terms: 'Diese Offerte ist bis zum angegebenen Datum gültig.', lines: [{ description: '', quantity: 1, unitPrice: 0 }] });
-            setOfferOpen(true);
-          }}><Plus size={15}/> Offerte erstellen</button></div>
+          <div className="hsv-rowtop"><strong>{offers.length} Offerten</strong><button className="hsv-primary" disabled={!customers.length} onClick={openNewOffer}><Plus size={15}/> Offerte erstellen</button></div>
           <div className="hsv-table hive-offer-table">{visibleOffers.map((offer) => <div key={offer.id}>
             <span className="hsv-letter"><FileText size={16}/></span>
             <span className="hsv-grow"><strong>{offer.offer_number} · {offer.title}</strong><small>{relatedName(offer.customers)} · gültig bis {shortDate(offer.valid_until)}</small></span>
@@ -1636,9 +1670,30 @@ export default function StudioPage() {
     </div>
 
     <nav className="hive-mobile-nav" aria-label="Mobile Navigation">
-      {nav.filter(([id]) => ['overview','customers','projects','invoices'].includes(id)).map(([id,label,Icon]) => <button key={id} aria-current={tab===id?'page':undefined} onClick={() => { setTab(id); setMobileMenuOpen(false); window.scrollTo({top:0}); }}><Icon size={21}/><span>{label}</span></button>)}
-      <button aria-label="Weitere Module" aria-expanded={mobileMenuOpen} aria-current={!['overview','customers','projects','invoices'].includes(tab)?'page':undefined} onClick={() => setMobileMenuOpen(true)}><Menu size={21}/><span>Mehr</span></button>
+      {nav.filter(([id]) => ['overview','customers','projects','invoices'].includes(id)).map(([id,label,Icon]) => <button key={id} aria-current={tab===id?'page':undefined} onClick={() => { setTab(id); setMobileMenuOpen(false); setQuickCreateOpen(false); window.scrollTo({top:0}); }}><Icon size={21}/><span>{label}</span></button>)}
+      <button aria-label="Weitere Module" aria-expanded={mobileMenuOpen} aria-current={!['overview','customers','projects','invoices'].includes(tab)?'page':undefined} onClick={() => { setQuickCreateOpen(false); setMobileMenuOpen(true); }}><Menu size={21}/><span>Mehr</span></button>
     </nav>
+    <button className="hive-mobile-create" type="button" aria-label="Neu erstellen" aria-expanded={quickCreateOpen} onClick={() => { setMobileMenuOpen(false); setQuickCreateOpen(true); }}><Plus size={22}/></button>
+    {quickCreateOpen && <Modal title="Neu erstellen" onClose={() => setQuickCreateOpen(false)}>
+      <div className="hive-mobile-quick-actions">
+        <button type="button" onClick={() => { setQuickCreateOpen(false); openCustomer(); }}>
+          <span><Users size={19}/></span><div><strong>Kunde</strong><small>Kontakt oder Firma anlegen</small></div><ArrowRight size={15}/>
+        </button>
+        <button type="button" disabled={!customers.length} onClick={() => { setQuickCreateOpen(false); void openProject(); }}>
+          <span><BriefcaseBusiness size={19}/></span><div><strong>Projekt</strong><small>Neues Kundenprojekt starten</small></div><ArrowRight size={15}/>
+        </button>
+        <button type="button" disabled={!customers.length} onClick={() => { setQuickCreateOpen(false); openNewInvoice(); }}>
+          <span><CreditCard size={19}/></span><div><strong>Rechnung</strong><small>Entwurf direkt erfassen</small></div><ArrowRight size={15}/>
+        </button>
+        <button type="button" disabled={!customers.length} onClick={() => { setQuickCreateOpen(false); openNewOffer(); }}>
+          <span><FileText size={19}/></span><div><strong>Offerte</strong><small>Angebot für einen Kunden</small></div><ArrowRight size={15}/>
+        </button>
+        <button type="button" disabled={!customers.length} onClick={() => { setQuickCreateOpen(false); void openPortalFile(); }}>
+          <span><Package size={19}/></span><div><strong>Datei</strong><small>Zum Kundenportal hochladen</small></div><ArrowRight size={15}/>
+        </button>
+      </div>
+    </Modal>}
+
     {mobileMenuOpen && <Modal title="Dein Workspace" onClose={() => setMobileMenuOpen(false)}>
       <div className="hive-mobile-modules">{nav.map(([id,label,Icon]) => <button key={id} aria-current={tab===id?'page':undefined} onClick={() => {setTab(id);setMobileMenuOpen(false);window.scrollTo({top:0});}}><Icon size={21}/><span>{label}</span><ArrowRight size={16}/></button>)}</div>
       <a className="hsv-outline" href="/account">Mein Konto <ArrowRight size={16}/></a>
