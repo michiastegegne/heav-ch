@@ -790,6 +790,35 @@
 
   .hsv-warning{font-size:10px;line-height:1.55;color:var(--mobile-muted)}
 
+  /* Defensive overflow + safe text behavior on real phones. */
+  .hsv,.hsv-layout,.hsv-main,.hsv-main>*{min-width:0}
+  .hsv-main{max-width:100vw}
+  .hsv img{max-width:100%;height:auto}
+  .hsv :is(p,small,strong,label,span){overflow-wrap:anywhere}
+  .hsv select{max-width:100%}
+  .hsv input,.hsv textarea{caret-color:currentColor}
+  .hsv-table,.hive-panel,.hive-attention,.hsv-intro,.hsv-branding{max-width:100%}
+  .hsv-table>div>*{min-width:0}
+  .hive-record-actions button{white-space:nowrap}
+  .hive-mobile-nav{padding-bottom:max(6px,calc(env(safe-area-inset-bottom) * .22))}
+  .hive-mobile-create{bottom:calc(82px + max(8px,env(safe-area-inset-bottom)))}
+
+  @media (min-width:390px) and (max-width:760px){
+    .hsv-main{padding-left:18px;padding-right:18px}
+    .hive-kpis{gap:12px}
+    .hsv-table>div{padding:15px}
+  }
+
+  @media (min-width:430px) and (max-width:760px){
+    .hsv-main{padding-left:20px;padding-right:20px}
+    .hive-mobile-nav{left:14px;right:14px}
+    .hive-kpis button,
+    .hive-kpis button:first-child,
+    .hive-kpis button:nth-child(2),
+    .hive-kpis button:nth-child(3),
+    .hive-kpis button:last-child{min-height:140px}
+  }
+
   /* iPhone SE / 320px remains intentionally usable. */
   @media(max-width:360px){
     .hsv-main{padding-left:12px;padding-right:12px}
