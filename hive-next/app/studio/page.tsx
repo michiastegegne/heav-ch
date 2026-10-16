@@ -204,6 +204,7 @@ export default function StudioPage() {
   const [activityFeed, setActivityFeed] = useState<UnifiedActivity[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [busy, setBusy] = useState(true);
+  const [identityReady, setIdentityReady] = useState(false);
   const [backendError, setBackendError] = useState('');
   const [notice, setNotice] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
@@ -560,7 +561,30 @@ export default function StudioPage() {
     }
   }, [workspaces]);
 
-  useEffect(() => { void loadWorkspaces(); }, [loadWorkspaces]);
+  useEffect(() => {
+    let active=true;
+    void (async () => {
+      try {
+        const response=await fetch('/api/auth/identity-link',{cache:'no-store'});
+        const data=await response.json().catch(()=>({}));
+        if (!response.ok) throw new Error(typeof data?.error === 'string' ? data.error : 'Anmeldung konnte nicht geprüft werden.');
+        if (data.provider === 'clerk' && data.linked === false) {
+          window.location.replace('/account?link=required');
+          return;
+        }
+        if (active) setIdentityReady(true);
+      } catch (error) {
+        if (!active) return;
+        setBackendError(error instanceof Error ? error.message : 'Anmeldung konnte nicht geprüft werden.');
+        setBusy(false);
+      }
+    })();
+    return () => { active=false; };
+  }, []);
+
+  useEffect(() => {
+    if (identityReady) void loadWorkspaces();
+  }, [identityReady, loadWorkspaces]);
   useEffect(() => {
     if (!activeWorkspaceId || !workspaces.some((workspace)=>workspace.id===activeWorkspaceId)) return;
     window.localStorage.setItem('hive.activeWorkspace.v2', activeWorkspaceId);
