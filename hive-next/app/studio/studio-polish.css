@@ -935,3 +935,176 @@ html[data-theme="dark"] .hive-loading-panel span:after{
   .hive-business-finance{grid-template-columns:1fr}
   .hive-business-finance>small{grid-column:auto}
 }
+
+/* Project views + board */
+.hive-row-actions{display:flex;align-items:center;gap:9px}
+.hive-view-switch{
+  display:inline-flex;
+  padding:3px;
+  border:1px solid var(--studio-line);
+  border-radius:9px;
+  background:var(--studio-soft);
+}
+.hive-view-switch button{
+  min-height:32px;
+  padding:6px 10px;
+  border:0;
+  border-radius:6px;
+  background:transparent;
+  color:var(--studio-muted);
+  font-size:10px;
+  font-weight:600;
+}
+.hive-view-switch button[aria-pressed="true"]{
+  background:var(--studio-ink);
+  color:var(--studio-surface);
+}
+html[data-theme="dark"] .hive-view-switch button[aria-pressed="true"]{color:#111}
+.hive-project-board{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(230px,1fr));
+  gap:11px;
+  align-items:start;
+}
+.hive-project-column{
+  min-width:0;
+  overflow:hidden;
+  border:1px solid var(--studio-line);
+  border-radius:13px;
+  background:var(--studio-soft);
+}
+.hive-project-column>header{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  min-height:68px;
+  padding:13px;
+  border-bottom:1px solid var(--studio-line);
+}
+.hive-project-column>header>div{display:grid;gap:3px}
+.hive-project-column>header strong{font-size:11px}
+.hive-project-column>header small{color:var(--studio-muted);font-size:9px}
+.hive-project-column>header>span{
+  min-width:25px;
+  height:25px;
+  display:grid;
+  place-items:center;
+  border:1px solid var(--studio-line);
+  border-radius:8px;
+  background:var(--studio-surface);
+  color:var(--studio-muted);
+  font-size:9px;
+  font-weight:600;
+}
+.hive-project-column-body{
+  display:grid;
+  gap:8px;
+  min-height:120px;
+  padding:8px;
+}
+.hive-project-board-card{
+  overflow:hidden;
+  border:1px solid var(--studio-line);
+  border-radius:11px;
+  background:var(--studio-surface);
+  cursor:grab;
+}
+.hive-project-board-card:active{cursor:grabbing}
+.hive-project-board-main{
+  display:grid;
+  grid-template-columns:30px minmax(0,1fr);
+  gap:9px;
+  padding:12px 11px 9px;
+}
+.hive-project-board-main>span{
+  width:30px;height:30px;display:grid;place-items:center;
+  border:1px solid var(--studio-line);
+  border-radius:9px;
+  background:var(--studio-soft);
+  color:var(--studio-muted);
+}
+.hive-project-board-main>div{display:grid;gap:4px;min-width:0}
+.hive-project-board-main strong{
+  overflow:hidden;
+  font-size:11px;
+  line-height:1.35;
+  text-overflow:ellipsis;
+}
+.hive-project-board-main small{color:var(--studio-muted);font-size:9px}
+.hive-project-board-meta{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:0 11px 10px;
+}
+.hive-project-board-meta span{
+  display:flex;align-items:center;gap:5px;
+  color:var(--studio-muted);font-size:9px;
+}
+.hive-project-board-meta strong{font-size:10px;font-weight:600}
+.hive-project-board-card label{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  align-items:center;
+  gap:8px;
+  padding:8px 11px;
+  border-top:1px solid var(--studio-line);
+  color:var(--studio-muted);
+  font-size:9px;
+}
+.hive-project-board-card select{
+  min-width:0;
+  border:1px solid var(--studio-line);
+  border-radius:7px;
+  padding:7px;
+  background:var(--studio-soft);
+  color:var(--studio-ink);
+  font-size:10px;
+}
+.hive-project-board-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  border-top:1px solid var(--studio-line);
+}
+.hive-project-board-actions button{
+  min-height:38px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  border:0;
+  border-right:1px solid var(--studio-line);
+  background:transparent;
+  color:var(--studio-muted);
+  font-size:9px;
+}
+.hive-project-board-actions button:last-child{border-right:0}
+.hive-project-board-actions button:hover{background:var(--studio-soft);color:var(--studio-ink)}
+.hive-project-column-empty{
+  min-height:84px;
+  display:grid;
+  place-items:center;
+  border:1px dashed var(--studio-line);
+  border-radius:9px;
+  color:var(--studio-muted);
+  font-size:9px;
+}
+@media(max-width:1100px){
+  .hive-project-board{grid-template-columns:repeat(2,minmax(230px,1fr))}
+}
+@media(max-width:760px){
+  .hsv-rowtop:has(.hive-view-switch){align-items:flex-start;flex-wrap:wrap}
+  .hive-row-actions{width:100%;justify-content:space-between}
+  .hive-view-switch{flex:1}
+  .hive-view-switch button{flex:1;min-height:40px}
+  .hive-project-board{grid-template-columns:minmax(0,1fr);gap:12px}
+  .hive-project-column{border-radius:16px}
+  .hive-project-column>header{min-height:64px;padding:14px}
+  .hive-project-column-body{padding:9px}
+  .hive-project-board-card{border-radius:13px;cursor:default}
+  .hive-project-board-main{padding:13px}
+  .hive-project-board-card select{min-height:44px;font-size:16px}
+  .hive-project-board-actions button{min-height:44px;font-size:10px}
+}
