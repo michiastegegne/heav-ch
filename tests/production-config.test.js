@@ -20,6 +20,7 @@ const privateBaseCss = await Promise.all([
   readFile(new URL("../portal/assets/portal.css", import.meta.url), "utf8"),
 ]);
 const offerSendSource = await readFile(new URL("../supabase/functions/offer-send/index.ts", import.meta.url), "utf8").catch(() => "");
+const hiveOfferRouteSource = await readFile(new URL("../hive-next/app/api/hive/offers/[id]/route.ts", import.meta.url), "utf8");
 const offerSendReliabilityMigration = await readFile(new URL("../supabase/migrations/20260917_offer_send_reliability.sql", import.meta.url), "utf8");
 
 test("Produktionsfrontend ist mit dem HEAV-Supabase-Projekt verbunden", () => {
@@ -129,6 +130,9 @@ test("Offerten können zuverlässig kopiert und per HEAV-Mail versendet werden",
   assert.match(offerSendSource, /customer_portal_memberships/);
   assert.match(offerSendSource, /\.eq\("status", "active"\)/);
   assert.match(offerSendSource, /requestKey/);
+  assert.match(hiveOfferRouteSource, /action:\s*z\.literal\('send'\),\s*requestKey:\s*z\.string\(\)\.uuid\(\)/s);
+  assert.match(hiveOfferRouteSource, /requestKey:action\.requestKey/);
+  assert.doesNotMatch(hiveOfferRouteSource, /requestKey:\s*crypto\.randomUUID\(\)/);
   assert.match(offerSendSource, /reserve_offer_send/);
   assert.match(offerSendSource, /complete_offer_send/);
   assert.match(offerSendSource, /Idempotency-Key.*reservation\.idempotency_key/s);
