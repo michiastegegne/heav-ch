@@ -1293,3 +1293,34 @@ html[data-theme="dark"] .hive-calendar-day[data-today="true"]>span{color:#111}
     text-align:left;
   }
 }
+
+.hive-kpi-locked{
+  min-height:132px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding:18px;
+  border-right:1px solid var(--studio-line);
+  background:var(--studio-soft);
+}
+.hive-kpi-locked span{color:var(--studio-muted);font-size:10px}
+.hive-kpi-locked strong{margin-top:auto;font-size:29px;line-height:1}
+.hive-kpi-locked small{color:var(--studio-muted);font-size:10px}
+.hive-finance-locked-panel{
+  min-height:170px;
+  display:grid;
+  place-items:center;
+  padding:24px;
+}
+.hive-finance-locked-panel>div{max-width:420px;text-align:center}
+.hive-finance-locked-panel h2{margin:8px 0 7px;font-size:17px}
+.hive-finance-locked-panel p{margin:0;color:var(--studio-muted);font-size:11px;line-height:1.6}
+@media(max-width:760px){
+  .hive-kpi-locked{
+    min-height:132px;
+    padding:15px;
+    border:1px solid var(--mobile-line);
+    border-radius:17px;
+    background:var(--mobile-surface);
+  }
+}
