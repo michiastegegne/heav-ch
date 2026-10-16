@@ -194,6 +194,10 @@ for (const appearance of ["light", "dark"])
       await customerWorkspace.getByRole("button", { name: "Schliessen" }).click();
 
       await nav.getByRole("button", { name: "Projekte", exact: true }).click();
+      await page.getByRole("button", { name: "Kalender", exact: true }).click();
+      await expect(page.locator(".hive-project-agenda")).toBeVisible();
+      await fits(page);
+      await page.getByRole("button", { name: "Liste", exact: true }).click();
       await page.getByRole("button", { name: "Workspace", exact: true }).first().click();
       const projectWorkspace = page.getByRole("dialog", { name: "Workspace Details" });
       await expect(projectWorkspace).toBeVisible();
