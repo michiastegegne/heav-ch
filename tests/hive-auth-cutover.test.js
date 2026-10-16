@@ -11,8 +11,10 @@ test("Hive auth cutover requires an explicit provider and a ready Clerk bridge",
 
   assert.match(source, /HIVE_AUTH_PROVIDER/);
   assert.match(source, /HIVE_CLERK_DB_BRIDGE_ENABLED/);
+  assert.match(source, /HIVE_IDENTITY_MIGRATION_ENABLED/);
   assert.match(source, /clerk_keys_missing/);
   assert.match(source, /clerk_bridge_disabled/);
+  assert.match(source, /clerk_identity_migration_disabled/);
   assert.match(source, /requested === 'clerk' && state\.ready/);
 });
 
