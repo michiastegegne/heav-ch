@@ -5,6 +5,7 @@ import SignoutButton from './signout-button';
 import { UserProfile } from '@clerk/nextjs';
 import IdentityLinkCard from './identity-link-card';
 import TeamInviteCard from './team-invite-card';
+import AuthReadinessCard from './auth-readiness-card';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,6 +57,7 @@ export default async function AccountPage({
             <SignoutButton/>
           </div>
         )}
+        <AuthReadinessCard/>
         {authState.ready && <TeamInviteCard/>}
         {authState.ready && showIdentityMigration && !hasTeamInvite && <IdentityLinkCard provider={authState.requested}/>} 
       </section>
