@@ -67,3 +67,11 @@ Root directory: `hive-next`
 Git branch: `dev/hive-workspace-hardening-20261015`
 
 The Vercel Hobby account can temporarily rate-limit preview deployments after many builds. GitHub CI remains the verification gate while that limit is active.
+
+## UI foundation and portability
+
+The overview and customer directory use local MIT-licensed shadcn/ui components.
+Design rules, upstream sources and self-hosting limits are documented in
+[OPEN_SOURCE_DESIGN.md](docs/OPEN_SOURCE_DESIGN.md). The Dockerfile builds the web
+application without a builder subscription; the existing Supabase backend is
+configured separately and is not migrated by a UI deployment.

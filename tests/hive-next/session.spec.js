@@ -8,7 +8,7 @@ async function login(page){
  await page.getByRole('button',{name:'Anmelden',exact:true}).click();
  await expect(page).toHaveURL(/\/studio$/);
  await expect(page.getByRole('heading',{name:'Übersicht',exact:true})).toBeVisible();
- await expect(page.locator('.hive-kpis button')).toHaveCount(4);
+ await expect(page.locator('.crm-metrics button')).toHaveCount(4);
  await expect(page.getByText('Dein Studio auf einen Blick.',{exact:true})).toBeVisible();
 }
 test('root opens real CRM login; APIs reject anonymous callers and cross-site login',async({page,request})=>{
@@ -72,7 +72,7 @@ for(const width of [390,1440])test(`monochrome workspace fits ${width}px`,async(
  await page.setViewportSize({width,height:950});await login(page);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
  const button=page.locator('.hsv-nav button.on');
- await expect(button).toHaveCSS('background-color','rgb(255, 255, 255)');
+ await expect(button).toHaveCSS('background-color','rgb(244, 244, 245)');
  await page.screenshot({path:`../../outputs/hive-workspace-refined-${width}.png`,fullPage:true,animations:'disabled'});
  await page.getByRole('navigation').getByRole('button',{name:/Kunden/}).click();
  await expect(page.getByText('Nordkunde',{exact:true})).toBeVisible();
@@ -366,16 +366,16 @@ for(const width of [390,1440])test(`dark appearance persists across login, reloa
  await page.getByRole('button',{name:'Dunklen Modus aktivieren'}).click();
  await page.reload();
  await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
- await expect(page.locator('.hive-kpis button')).toHaveCount(4);
- await expect(page.locator('.hive-panel').first()).toHaveCSS('background-color','rgb(21, 31, 50)');
+ await expect(page.locator('.crm-metrics button')).toHaveCount(4);
+ await expect(page.locator('.crm-ui [data-slot=card]').first()).toHaveCSS('background-color','rgb(24, 24, 27)');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
  await expect(page.getByText('Dein Studio auf einen Blick.',{exact:true})).toBeVisible();
  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
  await page.screenshot({path:`../../outputs/hive-darkmode-ready-${width}.png`,fullPage:true,animations:'disabled'});
  await page.getByRole('navigation').getByRole('button',{name:/Kunden/}).click();
  await page.getByRole('button',{name:'Kunde hinzufügen',exact:true}).click();
- await expect(page.getByLabel('Firma',{exact:true})).toHaveCSS('background-color','rgb(27, 40, 64)');
- await expect(page.locator('.hsv-dialog')).toHaveCSS('background-color','rgb(21, 31, 50)');
+ await expect(page.getByLabel('Firma',{exact:true})).toHaveCSS('background-color','rgb(17, 17, 19)');
+ await expect(page.locator('.hsv-dialog')).toHaveCSS('background-color','rgb(24, 24, 27)');
  await page.getByRole('button',{name:'Schliessen',exact:true}).click();
  await page.goto('/account');
  await expect(page.locator('html')).toHaveAttribute('data-theme','dark');

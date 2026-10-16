@@ -8,7 +8,7 @@ async function login(page){
  await page.getByLabel('E-Mail',{exact:true}).fill('owner@example.test');
  await page.getByLabel('Passwort',{exact:true}).fill('test-password');
  await page.getByRole('button',{name:'Anmelden',exact:true}).click();
- await expect(page.locator('.hive-kpis button')).toHaveCount(4);
+ await expect(page.locator('.crm-metrics button')).toHaveCount(4);
 }
 test('backup denies anonymous and unavailable workspaces',async({page,request})=>{
  expect((await request.get(`/api/hive/backup?workspace=${a}`)).status()).toBe(401);

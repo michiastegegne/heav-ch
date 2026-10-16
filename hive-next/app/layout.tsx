@@ -1,10 +1,7 @@
 import { getHiveAuthState } from '@/lib/hive/auth-provider';
 import type { Metadata, Viewport } from 'next';
 import { ClerkProvider } from '@clerk/nextjs';
-import './globals.css';
-import './theme.css';
-import './mobile-auth.css';
-import './glass-shell.css';
+import './ui.css';
 
 export const viewport: Viewport = {
   width: 'device-width',

@@ -7,7 +7,7 @@ async function login(page) {
   await page.getByLabel("E-Mail", { exact: true }).fill("owner@example.test");
   await page.getByLabel("Passwort", { exact: true }).fill("test-password");
   await page.getByRole("button", { name: "Anmelden", exact: true }).click();
-  await expect(page.locator(".hive-kpis button")).toHaveCount(4);
+  await expect(page.locator(".crm-metrics button")).toHaveCount(4);
   await expect(
     page.getByText("Dein Studio auf einen Blick.", { exact: true }),
   ).toBeVisible();
@@ -15,7 +15,7 @@ async function login(page) {
 async function fits(page) {
   expect(
     await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
+      () => document.documentElement.scrollWidth <= (visualViewport?.width || innerWidth),
     ),
   ).toBeTruthy();
   const outside = await page
@@ -226,7 +226,7 @@ for (const appearance of ["light", "dark"])
       await expect(page.getByRole("heading", { name: "Dein Login.", exact: true })).toBeVisible();
       await fits(page);
       await page.goto("/studio");
-      await expect(page.locator(".hive-kpis button")).toHaveCount(4);
+      await expect(page.locator(".crm-metrics button")).toHaveCount(4);
       await fits(page);
 
       const studioNav = page.getByRole("navigation", { name: "Mobile Navigation" });
