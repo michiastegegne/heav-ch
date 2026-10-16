@@ -1066,6 +1066,23 @@ export default function StudioPage() {
     }
   }
 
+  async function duplicateOffer(offer:Offer) {
+    try {
+      await requestJson(`/api/hive/offers/${offer.id}`,{
+        method:'POST',
+        body:JSON.stringify({
+          action:'duplicate',
+          issueDate:today(),
+          validUntil:afterDays(30),
+        }),
+      });
+      setNotice(`Kopie von ${offer.offer_number} erstellt.`);
+      if (activeWorkspaceId) await loadWorkspaceData(activeWorkspaceId);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Offerte konnte nicht dupliziert werden.');
+    }
+  }
+
   async function offerAction(offer: Offer, action: 'share' | 'withdraw' | 'delete' | 'send') {
     if (action === 'delete' && !confirm(`${offer.offer_number} wirklich löschen?`)) return;
     if (action === 'withdraw' && !confirm(`${offer.offer_number} wirklich zurückziehen?`)) return;
@@ -1709,6 +1726,7 @@ export default function StudioPage() {
             <span className="hive-status">{stateLabel[offer.status] || offer.status}</span><strong className="hive-table-amount">{money(offer.total_rappen)}</strong>
             <div className="hive-record-actions">
             <button onClick={() => void openOfferHistory(offer)}><Clock3 size={14}/> Verlauf</button>
+            <button onClick={() => void duplicateOffer(offer)}>Duplizieren</button>
             <button onClick={() => openOfferDocument(offer)}>Drucken/PDF</button>
             {offer.status === 'draft' && <button onClick={() => void openOfferDraft(offer)}>Bearbeiten</button>}
             {offer.status === 'draft' && <button onClick={() => void offerAction(offer, 'share')}>Portal freigeben</button>}
