@@ -169,6 +169,15 @@ test('offer history is workspace scoped and visible from the offer list',async({
  await expect(dialog.getByText('Erfolgreich',{exact:true})).toBeVisible();
 });
 
+test('project calendar shows deadlines across months',async({page})=>{
+ await login(page);
+ await page.getByRole('navigation').getByRole('button',{name:'Projekte',exact:true}).click();
+ await page.getByRole('button',{name:'Kalender',exact:true}).click();
+ await expect(page.getByRole('button',{name:/Herbstkampagne — Brand Film/}).first()).toBeVisible();
+ await page.getByRole('button',{name:'Nächster Monat',exact:true}).click();
+ await expect(page.getByRole('button',{name:/Portraits für das neue Team/}).first()).toBeVisible();
+});
+
 test('project board persists status changes and keeps the preferred view',async({page})=>{
  await login(page);
  await page.getByRole('navigation').getByRole('button',{name:'Projekte',exact:true}).click();
