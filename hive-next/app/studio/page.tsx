@@ -266,6 +266,8 @@ export default function StudioPage() {
   const [offerSendAttempts, setOfferSendAttempts] = useState<OfferSendAttempt[]>([]);
   const [offerHistoryInvoice, setOfferHistoryInvoice] = useState<OfferHistoryInvoice | null>(null);
   const [offerHistoryBusy, setOfferHistoryBusy] = useState(false);
+  const offerSendKeys = useRef(new Map<string,string>());
+  const [offerSendBusyIds, setOfferSendBusyIds] = useState<Set<string>>(() => new Set());
   const [productOpen, setProductOpen] = useState(false);
   const [productDraft, setProductDraft] = useState({ id:'', name:'', description:'', sku:'', unitPrice:0, taxRate:0, active:true });
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -1162,11 +1164,21 @@ export default function StudioPage() {
   async function offerAction(offer: Offer, action: 'share' | 'withdraw' | 'delete' | 'send') {
     if (action === 'delete' && !confirm(`${offer.offer_number} wirklich löschen?`)) return;
     if (action === 'withdraw' && !confirm(`${offer.offer_number} wirklich zurückziehen?`)) return;
+    if (action === 'send' && offerSendBusyIds.has(offer.id)) return;
+
+    let requestKey = '';
+    if (action === 'send') {
+      requestKey = offerSendKeys.current.get(offer.id) || crypto.randomUUID();
+      offerSendKeys.current.set(offer.id, requestKey);
+      setOfferSendBusyIds((current) => new Set(current).add(offer.id));
+    }
+
     try {
       await requestJson(`/api/hive/offers/${offer.id}`, {
         method: 'POST',
-        body: JSON.stringify({ action }),
+        body: JSON.stringify(action === 'send' ? { action, requestKey } : { action }),
       });
+      if (action === 'send') offerSendKeys.current.delete(offer.id);
       setNotice(
         action === 'share' ? 'Offerte im Kundenportal freigegeben.'
         : action === 'send' ? 'Offerte per E-Mail versendet.'
@@ -1175,7 +1187,19 @@ export default function StudioPage() {
       );
       if (activeWorkspaceId) await loadWorkspaceData(activeWorkspaceId);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Offertenaktion fehlgeschlagen.');
+      setNotice(
+        action === 'send'
+          ? `${error instanceof Error ? error.message : 'Offertenversand fehlgeschlagen.'} Ein erneuter Versuch verwendet denselben sicheren Versandauftrag.`
+          : error instanceof Error ? error.message : 'Offertenaktion fehlgeschlagen.',
+      );
+    } finally {
+      if (action === 'send') {
+        setOfferSendBusyIds((current) => {
+          const next = new Set(current);
+          next.delete(offer.id);
+          return next;
+        });
+      }
     }
   }
 
@@ -1807,7 +1831,7 @@ export default function StudioPage() {
             <button onClick={() => openOfferDocument(offer)}>Drucken/PDF</button>
             {offer.status === 'draft' && <button onClick={() => void openOfferDraft(offer)}>Bearbeiten</button>}
             {offer.status === 'draft' && <button onClick={() => void offerAction(offer, 'share')}>Portal freigeben</button>}
-            {offer.status === 'sent' && <button onClick={() => void offerAction(offer, 'send')}>E-Mail</button>}
+            {offer.status === 'sent' && <button disabled={offerSendBusyIds.has(offer.id)} aria-busy={offerSendBusyIds.has(offer.id)} onClick={() => void offerAction(offer, 'send')}>{offerSendBusyIds.has(offer.id) ? 'Wird gesendet …' : 'E-Mail'}</button>}
             {offer.status === 'sent' && <button onClick={() => void offerAction(offer, 'withdraw')}>Zurückziehen</button>}
             {offer.status === 'accepted' && !convertedOfferIds.has(offer.id) && <button onClick={() => void convertOfferToInvoice(offer)}>Rechnung erstellen</button>}
             {offer.status === 'accepted' && convertedOfferIds.has(offer.id) && <small>Rechnung erstellt</small>}
