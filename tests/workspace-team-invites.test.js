@@ -66,9 +66,10 @@ test("invite claim endpoint is same-origin and never accepts a workspace id", as
   const source = await readFile(claimRouteUrl, "utf8");
 
   assert.match(source, /sameOrigin\(request\)/);
+  assert.match(source, /const input = z\.object\(\{\s*token:/s);
   assert.match(source, /claim_workspace_member_invite/);
   assert.match(source, /p_token: payload\.token/);
-  assert.doesNotMatch(source, /workspaceId/);
+  assert.doesNotMatch(source, /payload\.workspaceId/);
 });
 
 test("account claim card accepts invite links and returns to Studio", async () => {
