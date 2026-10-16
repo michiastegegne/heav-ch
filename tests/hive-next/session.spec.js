@@ -130,6 +130,49 @@ test('invoice duplication creates a new draft without reusing the issued number'
  expect(payload.invoice.invoice_number).toBe('ENTWURF-30000000');
 });
 
+test('invoice email retry survives a lost browser response and clears the key only after success',async({page})=>{
+ await login(page);
+ const sendBodies=[];
+ let attempt=0;
+ await page.route('**/api/hive/invoices/30000000-0000-4000-8000-000000000002/action',async route=>{
+   const request=route.request();
+   if(request.method()!=='POST')return route.continue();
+   const body=request.postDataJSON();
+   if(body.action!=='send')return route.continue();
+   sendBodies.push(body);
+   attempt+=1;
+   if(attempt===1){
+     await new Promise(resolve=>setTimeout(resolve,120));
+     return route.abort('failed');
+   }
+   return route.fulfill({
+     status:200,
+     contentType:'application/json',
+     body:JSON.stringify({ok:true}),
+   });
+ });
+
+ await page.getByRole('navigation',{name:'Business-Module'}).getByRole('button',{name:'Rechnungen',exact:true}).click();
+ const row=page.locator('.hive-invoice-table>div').filter({hasText:'TEST-2026-002'}).first();
+ const sendButton=row.getByRole('button',{name:'Rechnung per E-Mail senden',exact:true});
+
+ await sendButton.click();
+ await expect(sendButton).toBeDisabled();
+ await expect(sendButton).toHaveText('Wird gesendet …');
+ await expect(page.getByRole('status')).toContainText('denselben sicheren Versandauftrag');
+ await expect(sendButton).toBeEnabled();
+ expect(sendBodies).toHaveLength(1);
+ const firstKey=sendBodies[0].requestKey;
+ expect(firstKey).toMatch(/^[0-9a-f-]{36}$/i);
+ expect(await page.evaluate((invoiceId)=>sessionStorage.getItem(`hive.invoiceSendRequest.${invoiceId}`),'30000000-0000-4000-8000-000000000002')).toBe(firstKey);
+
+ await sendButton.click();
+ await expect(page.getByRole('status')).toContainText('Rechnung per E-Mail versendet.');
+ expect(sendBodies).toHaveLength(2);
+ expect(sendBodies[1].requestKey).toBe(firstKey);
+ expect(await page.evaluate((invoiceId)=>sessionStorage.getItem(`hive.invoiceSendRequest.${invoiceId}`),'30000000-0000-4000-8000-000000000002')).toBeNull();
+});
+
 test('invoice history is workspace scoped and visible from the invoice list',async({page})=>{
  await login(page);
  const foreign=await page.request.get('/api/hive/invoices/30000000-0000-4000-8000-000000000001/history?workspace=033fe942-b8de-4298-9762-5f23550afbd9');
