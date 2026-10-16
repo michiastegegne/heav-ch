@@ -117,7 +117,7 @@ export default function WorkspaceOverview({
             label: "Offene Forderungen",
             value: money(outstanding),
             note: overdue.length
-              ? `${overdue.length} Rechnungen überfällig`
+              ? `${overdue.length} ${overdue.length === 1 ? "Rechnung" : "Rechnungen"} überfällig`
               : "Keine überfälligen Rechnungen",
             icon: Wallet,
             tab: "invoices" as const,
