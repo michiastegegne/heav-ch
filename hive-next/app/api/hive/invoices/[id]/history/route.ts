@@ -27,7 +27,11 @@ export async function GET(
       return Response.json({ error: 'Rechnung nicht gefunden.' }, { status: 404 });
     }
 
-    const [{ data: events, error: eventsError }, { data: attempts, error: attemptsError }] = await Promise.all([
+    const [
+      { data: events, error: eventsError },
+      { data: attempts, error: attemptsError },
+      { data: documents, error: documentError },
+    ] = await Promise.all([
       supabase
         .from('invoice_events')
         .select('id, kind, recipient, details, created_at')
@@ -40,13 +44,34 @@ export async function GET(
         .eq('workspace_id', workspaceId)
         .eq('invoice_id', invoiceId)
         .order('created_at', { ascending: false }),
+      supabase
+        .from('invoice_documents')
+        .select('version, filename, sha256, bytes, created_at')
+        .eq('workspace_id', workspaceId)
+        .eq('invoice_id', invoiceId)
+        .order('version', { ascending: false })
+        .limit(1),
     ]);
 
     if (eventsError) throw eventsError;
     if (attemptsError) throw attemptsError;
 
+    const missingDocumentMigration =
+      documentError &&
+      (
+        documentError.code === '42P01' ||
+        documentError.code === 'PGRST205' ||
+        String(documentError.message || '').includes('invoice_documents')
+      );
+    if (documentError && !missingDocumentMigration) throw documentError;
+
     return Response.json(
-      { invoice, events: events ?? [], attempts: attempts ?? [] },
+      {
+        invoice,
+        events: events ?? [],
+        attempts: attempts ?? [],
+        document: missingDocumentMigration ? null : documents?.[0] ?? null,
+      },
       { headers: { 'Cache-Control': 'private, no-store' } },
     );
   } catch (error) {
