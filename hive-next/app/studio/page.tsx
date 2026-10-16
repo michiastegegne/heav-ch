@@ -3,7 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft, ArrowRight, ArrowUpRight, BriefcaseBusiness, Building2, Check, Clock3, CreditCard, FileText,
-  LayoutDashboard, Mail, Menu, Package, Plus, RefreshCw, Search, Settings2, ShieldCheck, Trash2, Users, X,
+  LayoutDashboard, Mail, Menu, Package, Plus, RefreshCw, Search, Settings2, ShieldCheck, Smartphone, Trash2, Users, X,
 } from 'lucide-react';
 import { createPublicSupabaseBrowserClient } from '@/lib/supabase/public-browser';
 import ThemeToggle from '@/app/components/theme-toggle';
@@ -12,6 +12,7 @@ import BusinessesOverview, { type BusinessOverviewItem } from './businesses-over
 import ProjectBoard from './project-board';
 import ProjectCalendar from './project-calendar';
 import DocumentEditor from './document-editor';
+import InstallGuide from './install-guide';
 import BackupCard from './backup-card';
 import { orderWorkspaces, preferredWorkspace, workspaceLabel } from '@/lib/hive/workspace-selection';
 import './studio.css';
@@ -19,6 +20,7 @@ import './workspace-design.css';
 import './mobile.css';
 import './studio-polish.css';
 import './mobile-premium.css';
+import './hive-design-system.css';
 
 type Workspace = { id: string; name: string; slug: string; status: string; role: string };
 type Customer = {
@@ -179,6 +181,7 @@ async function requestJson<T>(input: string, init?: RequestInit): Promise<T> {
 export default function StudioPage() {
   const [tab, setTab] = useState<Tab>('overview');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [installOpen, setInstallOpen] = useState(false);
   const [quickCreateOpen, setQuickCreateOpen] = useState(false);
   const [listQuery, setListQuery] = useState('');
   const [listStatus, setListStatus] = useState('all');
@@ -286,7 +289,7 @@ export default function StudioPage() {
     customerId:'', departmentId:'', projectId:'', title:'', kind:'document', file:null,
   });
   const hasOpenOverlay =
-    mobileMenuOpen || quickCreateOpen || searchOpen || businessOpen || teamOpen ||
+    installOpen || mobileMenuOpen || quickCreateOpen || searchOpen || businessOpen || teamOpen ||
     customerOpen || customerWorkspaceOpen || departmentOpen || projectOpen ||
     projectWorkspaceOpen || invoiceOpen || invoiceHistoryOpen || offerOpen || offerHistoryOpen || productOpen || inviteOpen ||
     fileOpen;
@@ -295,7 +298,7 @@ export default function StudioPage() {
     const closeFullscreenWorkspace=(event:KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       const modalOwnsEscape =
-        mobileMenuOpen || quickCreateOpen || searchOpen || businessOpen || teamOpen ||
+        installOpen || mobileMenuOpen || quickCreateOpen || searchOpen || businessOpen || teamOpen ||
         customerOpen || projectOpen || invoiceOpen || invoiceHistoryOpen || offerOpen || offerHistoryOpen || productOpen ||
         inviteOpen || fileOpen;
       if (modalOwnsEscape) return;
@@ -306,7 +309,7 @@ export default function StudioPage() {
     window.addEventListener('keydown', closeFullscreenWorkspace);
     return () => window.removeEventListener('keydown', closeFullscreenWorkspace);
   }, [
-    mobileMenuOpen, quickCreateOpen, searchOpen, businessOpen, teamOpen,
+    installOpen, mobileMenuOpen, quickCreateOpen, searchOpen, businessOpen, teamOpen,
     customerOpen, projectOpen, invoiceOpen, invoiceHistoryOpen, offerOpen, offerHistoryOpen, productOpen, inviteOpen,
     fileOpen, departmentOpen, customerWorkspaceOpen, projectWorkspaceOpen,
   ]);
@@ -688,7 +691,7 @@ export default function StudioPage() {
     };
     document.addEventListener('keydown', handleKey);
     return () => { document.removeEventListener('keydown', handleKey); if (previous?.isConnected) previous.focus({preventScroll:true}); };
-  }, [mobileMenuOpen, quickCreateOpen, searchOpen, businessOpen, teamOpen, customerOpen, departmentOpen, projectOpen, invoiceOpen, invoiceHistoryOpen, offerOpen, offerHistoryOpen, productOpen, inviteOpen, fileOpen, projectWorkspaceOpen, customerWorkspaceOpen]);
+  }, [installOpen, mobileMenuOpen, quickCreateOpen, searchOpen, businessOpen, teamOpen, customerOpen, departmentOpen, projectOpen, invoiceOpen, invoiceHistoryOpen, offerOpen, offerHistoryOpen, productOpen, inviteOpen, fileOpen, projectWorkspaceOpen, customerWorkspaceOpen]);
 
   const invoiceTotal = useMemo(
     () => invoiceDraft.lines.reduce((sum, line) => sum + Math.round(line.quantity * line.unitPrice * 100), 0),
@@ -1766,10 +1769,10 @@ export default function StudioPage() {
   const listTabs = ['customers','projects','invoices','offers'].includes(tab);
   const headingCopy:Partial<Record<Tab,string>> = {businesses:'Alle deine Businesses, getrennt geführt und gemeinsam im Blick.',overview:'Dein Studio auf einen Blick.',customers:'Kontakte, Beziehungen und die gemeinsame Arbeit.',projects:'Von der ersten Idee bis zur letzten Abgabe.',invoices:'Rechnungen, Fälligkeiten und Zahlungseingänge.',offers:'Aus Anfragen werden konkrete Aufträge.',catalog:'Deine Leistungen und Preise an einem Ort.',portal:'Dokumente und Freigaben für deine Kunden.',activity:'Was sich in deinem Workspace verändert hat.'};
 
-  return <div className="hsv" style={{ '--business-accent': accent } as React.CSSProperties}>
+  return <div className="hsv hive-glass-app" style={{ '--business-accent': accent } as React.CSSProperties}>
     <header className="hsv-top">
       <div className="hsv-identity">
-        <a className="hsv-hive" href="/">hive.</a><span className="hsv-divider"/>
+        <a className="hsv-hive" href="/" aria-label="Hive Startseite"><span className="hive-app-mark" aria-hidden="true">h</span><span>hive<span className="hive-wordmark-dot">.</span></span></a><span className="hsv-divider"/>
         <span className="hsv-logo">{settings?.logo_url ? <img src={settings.logo_url} alt="Business Logo"/> : businessName.charAt(0)}</span>
         <select aria-label="Business auswählen" value={activeWorkspaceId} onChange={(event) => switchWorkspace(event.target.value, tab === 'businesses' ? 'businesses' : tab)}>
           {workspaces.map((workspace) => <option key={workspace.id} value={workspace.id}>{workspaceLabel(workspace)}</option>)}
@@ -1780,7 +1783,7 @@ export default function StudioPage() {
         }}><Plus size={14}/> Business</button>
       </div>
       <button className="hsv-outline" aria-label="Workspace durchsuchen" type="button" onClick={() => setSearchOpen(true)}><Search size={14}/> Suchen … <kbd>⌘K</kbd></button>
-      <span className="hsv-mode"><span/> Entwicklungsumgebung</span>
+      <button className="hive-install-trigger" aria-label="Als App installieren" onClick={()=>setInstallOpen(true)}><Smartphone size={17}/><span>Als App installieren</span></button><span className="hsv-mode"><span/> Dev Preview</span>
       <ThemeToggle/>
       <a className="hsv-back" href="/account">Mein Konto <ArrowRight size={15}/></a>
     </header>
@@ -1789,13 +1792,13 @@ export default function StudioPage() {
       <nav className="hsv-nav" aria-label="Business-Module">
         <span className="hive-nav-label">WORKSPACE</span>
         {nav.map(([id, label, Icon]) => <div className="hive-nav-item" key={id}>{(id === 'invoices' || id === 'emails' || id === 'team' || (id === 'branding' && !['owner','admin'].includes(activeWorkspace?.role || ''))) && <span className="hive-nav-label">{id === 'invoices' ? 'FINANZEN' : id === 'emails' ? 'ZUSAMMENARBEIT' : 'VERWALTUNG'}</span>}<button aria-current={tab === id ? 'page' : undefined} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}><Icon size={16}/>{label}{id === 'customers' && customers.length>0 && <span className="hive-nav-count">{customers.length}</span>}</button></div>)}
-        <div className="hive-nav-bottom"><ShieldCheck size={15}/><div><strong>Geschützter Workspace</strong><span>E-Mail-Versand deaktiviert</span></div></div>
+        <div className="hive-sidebar-signature"><span className="hive-app-mark">h</span><div><strong>Dein Raum für Grosses.</strong><small>HIVE · CREATIVE WORKSPACE</small></div></div><div className="hive-nav-bottom"><ShieldCheck size={15}/><div><strong>Geschützter Workspace</strong><span>E-Mail-Versand deaktiviert</span></div></div>
       </nav>
 
       <main className="hsv-main">
         <div className="hive-breadcrumb"><span>{tab === 'businesses' ? 'Hive' : businessName.replace(/^Hive Dev · /,'')}</span><span>/</span><strong>{nav.find(([id])=>id===tab)?.[1]}</strong><time>{new Intl.DateTimeFormat('de-CH',{weekday:'short',day:'2-digit',month:'long',year:'numeric'}).format(new Date())}</time></div>
         <div className="hsv-heading">
-          <div><h1>{nav.find(([id]) => id === tab)?.[1]}</h1><p>{busy ? 'Daten werden geladen …' : (headingCopy[tab] || 'Alles Wichtige an einem Ort.')}</p></div>
+          <div><span className="hive-page-kicker">{tab === 'overview' ? 'ALLES AN EINEM ORT' : 'DEIN WORKSPACE'}</span><h1>{nav.find(([id]) => id === tab)?.[1]}<span className="hive-title-dot" aria-hidden="true">.</span></h1><p>{busy ? 'Daten werden geladen …' : (headingCopy[tab] || 'Alles Wichtige an einem Ort.')}</p></div>
           {tab === 'overview' && <button className="hsv-primary" disabled={!customers.length || busy} onClick={()=>void openProject()}><Plus size={15}/> Neues Projekt</button>}
         </div>
         {listTabs && <div className="hive-list-tools"><label><Search size={15}/><input aria-label="Liste durchsuchen" placeholder="Suchen nach Name, Kunde oder Nummer …" value={listQuery} onChange={e=>setListQuery(e.target.value)}/>{listQuery&&<button aria-label="Suche leeren" onClick={()=>setListQuery('')}><X size={13}/></button>}</label>{tab !== 'customers'&&<select aria-label="Status filtern" value={listStatus} onChange={e=>setListStatus(e.target.value)}><option value="all">Alle Status</option>{(tab==='projects'?['planning','active','on_hold','completed']:tab==='invoices'?['draft','sent','overdue','paid','cancelled']:['draft','sent','accepted','withdrawn','expired']).map(value=><option value={value} key={value}>{stateLabel[value]}</option>)}</select>}<span>{tab === 'customers'?visibleCustomers.length:tab === 'projects'?visibleProjects.length:tab === 'invoices'?visibleInvoices.length:visibleOffers.length} Einträge</span></div>}
@@ -2154,9 +2157,12 @@ export default function StudioPage() {
       </div>
     </Modal>}
 
+    {installOpen && <Modal title="Hive auf deinem iPhone" onClose={()=>setInstallOpen(false)}><InstallGuide/></Modal>}
+
     {mobileMenuOpen && <Modal title="Dein Workspace" onClose={() => setMobileMenuOpen(false)}>
       <div className="hive-mobile-security"><ShieldCheck size={18}/><div><strong>Geschützter Dev-Workspace</strong><small>Live-Daten isoliert · Mailversand gesperrt</small></div></div>
       <div className="hive-mobile-modules">{nav.map(([id,label,Icon]) => <button key={id} aria-current={tab===id?'page':undefined} onClick={() => {setTab(id);setMobileMenuOpen(false);window.scrollTo({top:0});}}><Icon size={21}/><span>{label}</span><ArrowRight size={16}/></button>)}</div>
+      <button className="hsv-outline" onClick={()=>{setMobileMenuOpen(false);setInstallOpen(true);}}><Smartphone size={17}/>Als App installieren</button>
       <a className="hsv-outline" href="/account">Mein Konto <ArrowRight size={16}/></a>
     </Modal>}
 

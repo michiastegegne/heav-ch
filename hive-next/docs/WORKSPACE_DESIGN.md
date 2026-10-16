@@ -1,26 +1,17 @@
 # Hive workspace design
 
-The workspace is a practical editorial interface for a small creative business. Its hierarchy starts with attention and action: unpaid invoices, project dates and recent changes. Numbers are derived from records. Empty sections explain the next useful step.
+The current visual system is **Hive Glass**, introduced on 16 October 2026. Its research, tokens, layout rules, responsive behavior, accessibility decisions and iOS webapp behavior are documented in [APPLE_GLASS_DESIGN.md](APPLE_GLASS_DESIGN.md).
 
-## System
+`app/studio/hive-design-system.css` owns the new appearance. `app/glass-shell.css` extends the same identity to login and account pages. Earlier module styles retain functional layouts for documents, project boards, calendars and detailed workspaces; their old monochrome appearance is superseded by the shared design system.
 
-- White working canvas, quiet grey navigation, restrained black primary actions. No branded accent colour in app chrome. Business branding remains available for documents.
-- DM Sans for interface text. 30px page headings, 15px section headings, 12px row titles; secondary detail stays visually subordinate. Financial amounts use tabular figures.
-- 208px navigation rail with groups for workspace, finance, collaboration and administration. Compact header keeps business selection and global search available.
-- Metrics sit in a ruled strip. Panels enclose related information, with 8px corners. Controls use 5–6px corners; small neutral badges indicate status.
-- Desktop prioritises scan alignment. Mobile uses a safe-area-aware bottom navigation, full-width business selection, two-column metrics, touch-friendly record cards and full-screen document editors. List actions remain accessible.
-- Search and status filters work on loaded workspace records. All status labels are German. Loading/error states must not present another business's records.
+## Functional invariants
 
-`workspace-design.css` owns these visual decisions. `studio.css` retains existing functional form, editor and print layout. `workspace-overview.tsx` owns the overview composition; its data comes from the existing authorised workspace API.
+- All dashboard numbers and visualizations derive from authorized workspace records. No invented trends, financial amounts or activity.
+- Existing role restrictions, workspace isolation, API wiring, preview mail restriction and encrypted backup behavior remain intact.
+- The primary workspace resolves by stable slug (`michias-tegegne`, or its isolated `hive-dev-michias` copy). An explicit still-authorized business choice takes precedence. Visual labels never reassign records.
+- Disabled browser storage does not block business switching. Delayed responses must not populate another business's visible state.
+- Search and document actions remain accessible on desktop and mobile. Sheets own focus, Escape closes the top sheet and focus returns to the originating control.
+- Existing appearance preferences stay in `hive-appearance`. The selected theme applies before content paint; changing the design does not reset the user's saved choice.
+- iOS Home Screen installation runs the existing online application in standalone mode. No sensitive CRM data is cached offline. Physical-device installation remains a manual validation step.
 
-Verify the overview, customer lists, invoice filters, forms and workspace switching on desktop and mobile. Use test fixtures for regression screenshots; verify deployment against real authorised Dev data without changing production data.
-
-## Appearance
-
-The theme button in the workspace header, login and account pages switches between light and dark appearance. Dark is the default. The explicit choice is saved as `hive-appearance` in local storage; a small boot script restores it before the page content paints. Cross-tab storage changes are synchronised. Preferences remain local to the browser.
-
-`app/theme.css` owns the dark surfaces, typography contrast, controls, overlays and form states. Print output stays light; generated PDFs are unchanged. Verify both themes at 390 and 1440 pixels, persistence through login/reload, form legibility and the account-page switch.
-
-## Data protection and business identity
-
-The primary workspace is resolved by stable slug (`michias-tegegne`, or its isolated `hive-dev-michias` preview copy). A still-authorized explicit choice takes precedence; no records are reassigned for presentation. Mobile chrome gives the business name priority. Disabled browser storage must not prevent loading or switching. Owner-only backup cards use the same spacing, touch targets, dark surfaces and status typography. See `docs/BACKUP_AND_RECOVERY.md` for encryption and recovery limits.
+Verify overview, lists, document editors, board/calendar, install instructions, both themes, common mobile widths and desktop. Use test fixtures for screenshots and read-only authenticated checks for the Dev preview. Production data is not mutated for design testing.

@@ -4,14 +4,15 @@ import { ClerkProvider } from '@clerk/nextjs';
 import './globals.css';
 import './theme.css';
 import './mobile-auth.css';
+import './glass-shell.css';
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f4f4f2' },
-    { media: '(prefers-color-scheme: dark)', color: '#101010' },
+    { media: '(prefers-color-scheme: light)', color: '#f0f3fa' },
+    { media: '(prefers-color-scheme: dark)', color: '#0d1424' },
   ],
 };
 
@@ -19,6 +20,7 @@ export const metadata: Metadata = {
   title: 'Hive — Creative Business OS',
   description: 'Workspace for creative businesses',
   applicationName: 'Hive',
+  icons: {apple: [{url:'/icons/hive-180.png',sizes:'180x180',type:'image/png'}]},
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,

@@ -72,7 +72,7 @@ for(const width of [390,1440])test(`monochrome workspace fits ${width}px`,async(
  await page.setViewportSize({width,height:950});await login(page);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
  const button=page.locator('.hsv-nav button.on');
- await expect(button).toHaveCSS('background-color','rgb(237, 237, 237)');
+ await expect(button).toHaveCSS('background-color','rgb(255, 255, 255)');
  await page.screenshot({path:`../../outputs/hive-workspace-refined-${width}.png`,fullPage:true,animations:'disabled'});
  await page.getByRole('navigation').getByRole('button',{name:/Kunden/}).click();
  await expect(page.getByText('Nordkunde',{exact:true})).toBeVisible();
@@ -367,15 +367,15 @@ for(const width of [390,1440])test(`dark appearance persists across login, reloa
  await page.reload();
  await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
  await expect(page.locator('.hive-kpis button')).toHaveCount(4);
- await expect(page.locator('.hive-panel').first()).toHaveCSS('background-color','rgb(24, 24, 24)');
+ await expect(page.locator('.hive-panel').first()).toHaveCSS('background-color','rgb(21, 31, 50)');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
  await expect(page.getByText('Dein Studio auf einen Blick.',{exact:true})).toBeVisible();
  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
  await page.screenshot({path:`../../outputs/hive-darkmode-ready-${width}.png`,fullPage:true,animations:'disabled'});
  await page.getByRole('navigation').getByRole('button',{name:/Kunden/}).click();
  await page.getByRole('button',{name:'Kunde hinzufügen',exact:true}).click();
- await expect(page.getByLabel('Firma',{exact:true})).toHaveCSS('background-color','rgb(32, 32, 32)');
- await expect(page.locator('.hsv-dialog')).toHaveCSS('background-color','rgb(24, 24, 24)');
+ await expect(page.getByLabel('Firma',{exact:true})).toHaveCSS('background-color','rgb(27, 40, 64)');
+ await expect(page.locator('.hsv-dialog')).toHaveCSS('background-color','rgb(21, 31, 50)');
  await page.getByRole('button',{name:'Schliessen',exact:true}).click();
  await page.goto('/account');
  await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
