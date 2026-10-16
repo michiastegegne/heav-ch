@@ -51,7 +51,8 @@ or merged by email address.
 6. Enable RLS on `customer_departments` together with tested workspace policies.
 7. Test cross-workspace reads/writes with two identities.
 8. Verify at least two identities against cross-workspace negative tests.
-9. Set `HIVE_CLERK_DB_BRIDGE_ENABLED=true`.
-10. Set `HIVE_AUTH_PROVIDER=clerk` as the final reversible cutover step.
+9. Ensure Edge Functions used by Clerk sessions do not rely on the legacy platform JWT precheck. `invoice-document` and `offer-send` validate the bearer through the Supabase Data API and therefore use `verify_jwt=false`.
+10. Set `HIVE_CLERK_DB_BRIDGE_ENABLED=true`.
+11. Set `HIVE_AUTH_PROVIDER=clerk` as the final reversible cutover step.
 
 The legacy HEAV app can continue using Supabase Auth during the migration window.
