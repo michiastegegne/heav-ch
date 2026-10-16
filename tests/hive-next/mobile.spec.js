@@ -49,11 +49,11 @@ for (const appearance of ["light", "dark"])
       await quickCreate.click();
       const quickDialog = page.getByRole("dialog", { name: "Neu erstellen" });
       await expect(quickDialog).toBeVisible();
-      await expect(quickDialog.getByRole("button", { name: /Kunde/ })).toBeVisible();
-      await expect(quickDialog.getByRole("button", { name: /Projekt/ })).toBeVisible();
-      await expect(quickDialog.getByRole("button", { name: /Rechnung/ })).toBeVisible();
-      await expect(quickDialog.getByRole("button", { name: /Offerte/ })).toBeVisible();
-      await expect(quickDialog.getByRole("button", { name: /Datei/ })).toBeVisible();
+      await expect(quickDialog.getByRole("button", { name: /^Kunde\b/ })).toBeVisible();
+      await expect(quickDialog.getByRole("button", { name: /^Projekt\b/ })).toBeVisible();
+      await expect(quickDialog.getByRole("button", { name: /^Rechnung\b/ })).toBeVisible();
+      await expect(quickDialog.getByRole("button", { name: /^Offerte\b/ })).toBeVisible();
+      await expect(quickDialog.getByRole("button", { name: /^Datei\b/ })).toBeVisible();
       expect(await page.evaluate(() => document.body.style.overflow)).toBe("hidden");
       await page.keyboard.press("Escape");
       await expect(quickDialog).toHaveCount(0);
