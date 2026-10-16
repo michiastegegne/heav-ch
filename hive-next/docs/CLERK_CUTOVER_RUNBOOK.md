@@ -104,11 +104,14 @@ Before cutover, verify with at least two independent identities:
 After the negative tests pass:
 
 ```
+HIVE_IDENTITY_MIGRATION_ENABLED=true
 HIVE_CLERK_DB_BRIDGE_ENABLED=true
 ```
 
 Keep the active provider on Supabase and verify the readiness endpoint plus a
-normal legacy login once more.
+normal legacy login once more. Hive still stays on Supabase Auth until the final
+provider switch; both readiness gates must already be true before Clerk can be
+selected.
 
 ## Phase 6 — final preview cutover
 
