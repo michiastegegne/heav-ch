@@ -2,12 +2,13 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowLeft, ArrowRight, ArrowUpRight, BriefcaseBusiness, Check, Clock3, CreditCard, FileText,
+  ArrowLeft, ArrowRight, ArrowUpRight, BriefcaseBusiness, Building2, Check, Clock3, CreditCard, FileText,
   LayoutDashboard, Mail, Menu, Package, Plus, RefreshCw, Search, Settings2, ShieldCheck, Trash2, Users, X,
 } from 'lucide-react';
 import { createPublicSupabaseBrowserClient } from '@/lib/supabase/public-browser';
 import ThemeToggle from '@/app/components/theme-toggle';
 import WorkspaceOverview from './workspace-overview';
+import BusinessesOverview, { type BusinessOverviewItem } from './businesses-overview';
 import DocumentEditor from './document-editor';
 import './studio.css';
 import './workspace-design.css';
@@ -123,7 +124,7 @@ type CustomerWorkspaceData = {
   canViewFinance:boolean;
 };
 
-type Tab = 'overview' | 'customers' | 'projects' | 'invoices' | 'offers' | 'catalog' | 'emails' | 'portal' | 'activity' | 'team' | 'branding';
+type Tab = 'businesses' | 'overview' | 'customers' | 'projects' | 'invoices' | 'offers' | 'catalog' | 'emails' | 'portal' | 'activity' | 'team' | 'branding';
 type LineDraft = { description: string; quantity: number; unitPrice: number };
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -165,6 +166,9 @@ export default function StudioPage() {
   const [listStatus, setListStatus] = useState('all');
   useEffect(() => { setListQuery(''); setListStatus('all'); }, [tab]);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [businessesOverview, setBusinessesOverview] = useState<BusinessOverviewItem[]>([]);
+  const [businessesOverviewBusy, setBusinessesOverviewBusy] = useState(false);
+  const [businessesOverviewError, setBusinessesOverviewError] = useState('');
   const [activeWorkspaceId, setActiveWorkspaceId] = useState('');
   const currentWorkspace = useRef(activeWorkspaceId);
   currentWorkspace.current = activeWorkspaceId;
@@ -307,6 +311,31 @@ export default function StudioPage() {
       setBusy(false);
     }
   }, []);
+
+  const loadBusinessesOverview = useCallback(async () => {
+    setBusinessesOverviewBusy(true);
+    setBusinessesOverviewError('');
+    try {
+      const data=await requestJson<{businesses:BusinessOverviewItem[]}>('/api/hive/businesses/overview');
+      setBusinessesOverview(data.businesses);
+    } catch (error) {
+      setBusinessesOverviewError(error instanceof Error ? error.message : 'Businesses konnten nicht geladen werden.');
+    } finally {
+      setBusinessesOverviewBusy(false);
+    }
+  }, []);
+
+  function switchWorkspace(workspaceId:string, nextTab:Tab='overview') {
+    if (!workspaces.some((workspace)=>workspace.id===workspaceId)) return;
+    setCustomerOpen(false); setProjectOpen(false); setInvoiceOpen(false); setInvoiceHistoryOpen(false);
+    setOfferOpen(false); setOfferHistoryOpen(false); setQuickCreateOpen(false); setDepartmentOpen(false);
+    setProjectWorkspaceOpen(false); setCustomerWorkspaceOpen(false); setProductOpen(false); setInviteOpen(false);
+    setFileOpen(false); setTeamOpen(false); setSearchOpen(false); setSearchQuery(''); setTeamMembers([]);
+    setScopeDepartments([]); setSettings(null);
+    setActiveWorkspaceId(workspaceId);
+    setTab(nextTab);
+    window.scrollTo({top:0});
+  }
 
   async function loadScopeDepartments(customerId:string) {
     if (!activeWorkspaceId || !customerId) {
@@ -510,6 +539,7 @@ export default function StudioPage() {
 
   useEffect(() => { void loadWorkspaces(); }, [loadWorkspaces]);
   useEffect(() => { if (activeWorkspaceId) void loadWorkspaceData(activeWorkspaceId); }, [activeWorkspaceId, loadWorkspaceData]);
+  useEffect(() => { if (tab === 'businesses') void loadBusinessesOverview(); }, [tab, loadBusinessesOverview]);
   useEffect(() => { if (tab === 'team' && activeWorkspaceId) void loadTeam(activeWorkspaceId); }, [tab, activeWorkspaceId, loadTeam]);
   useEffect(() => {
     const handler = (event:KeyboardEvent) => {
@@ -546,7 +576,7 @@ export default function StudioPage() {
     };
     document.addEventListener('keydown', handleKey);
     return () => { document.body.style.overflow = overflow; document.removeEventListener('keydown', handleKey); if (previous?.isConnected) previous.focus({preventScroll:true}); };
-  }, [mobileMenuOpen, searchOpen, businessOpen, teamOpen, customerOpen, departmentOpen, projectOpen, invoiceOpen, offerOpen, productOpen, inviteOpen, fileOpen, projectWorkspaceOpen, customerWorkspaceOpen]);
+  }, [mobileMenuOpen, quickCreateOpen, searchOpen, businessOpen, teamOpen, customerOpen, departmentOpen, projectOpen, invoiceOpen, invoiceHistoryOpen, offerOpen, offerHistoryOpen, productOpen, inviteOpen, fileOpen, projectWorkspaceOpen, customerWorkspaceOpen]);
 
   const invoiceTotal = useMemo(
     () => invoiceDraft.lines.reduce((sum, line) => sum + Math.round(line.quantity * line.unitPrice * 100), 0),
@@ -1497,6 +1527,7 @@ export default function StudioPage() {
   }
 
   const nav = [
+    ['businesses', 'Businesses', Building2],
     ['overview', 'Übersicht', LayoutDashboard],
     ['customers', 'Kunden', Users],
     ['projects', 'Projekte', BriefcaseBusiness],
@@ -1516,21 +1547,14 @@ export default function StudioPage() {
   const visibleInvoices = invoices.filter(i => matchesList(i.invoice_number,relatedName(i.customers)) && (listStatus === 'all' || i.status === listStatus));
   const visibleOffers = offers.filter(o => matchesList(o.title,o.offer_number,relatedName(o.customers)) && (listStatus === 'all' || o.status === listStatus));
   const listTabs = ['customers','projects','invoices','offers'].includes(tab);
-  const headingCopy:Partial<Record<Tab,string>> = {overview:'Dein Studio auf einen Blick.',customers:'Kontakte, Beziehungen und die gemeinsame Arbeit.',projects:'Von der ersten Idee bis zur letzten Abgabe.',invoices:'Rechnungen, Fälligkeiten und Zahlungseingänge.',offers:'Aus Anfragen werden konkrete Aufträge.',catalog:'Deine Leistungen und Preise an einem Ort.',portal:'Dokumente und Freigaben für deine Kunden.',activity:'Was sich in deinem Workspace verändert hat.'};
+  const headingCopy:Partial<Record<Tab,string>> = {businesses:'Alle deine Businesses, getrennt geführt und gemeinsam im Blick.',overview:'Dein Studio auf einen Blick.',customers:'Kontakte, Beziehungen und die gemeinsame Arbeit.',projects:'Von der ersten Idee bis zur letzten Abgabe.',invoices:'Rechnungen, Fälligkeiten und Zahlungseingänge.',offers:'Aus Anfragen werden konkrete Aufträge.',catalog:'Deine Leistungen und Preise an einem Ort.',portal:'Dokumente und Freigaben für deine Kunden.',activity:'Was sich in deinem Workspace verändert hat.'};
 
   return <div className="hsv" style={{ '--business-accent': accent } as React.CSSProperties}>
     <header className="hsv-top">
       <div className="hsv-identity">
         <a className="hsv-hive" href="/">hive.</a><span className="hsv-divider"/>
         <span className="hsv-logo">{settings?.logo_url ? <img src={settings.logo_url} alt="Business Logo"/> : businessName.charAt(0)}</span>
-        <select aria-label="Business auswählen" value={activeWorkspaceId} onChange={(event) => {
-          setCustomerOpen(false); setProjectOpen(false); setInvoiceOpen(false); setOfferOpen(false); setQuickCreateOpen(false);
-          setDepartmentOpen(false); setProjectWorkspaceOpen(false); setCustomerWorkspaceOpen(false);
-          setProductOpen(false); setInviteOpen(false); setFileOpen(false); setTeamOpen(false);
-          setSearchOpen(false); setSearchQuery(''); setTeamMembers([]);
-          setScopeDepartments([]); setSettings(null);
-          setActiveWorkspaceId(event.target.value);
-        }}>
+        <select aria-label="Business auswählen" value={activeWorkspaceId} onChange={(event) => switchWorkspace(event.target.value, tab === 'businesses' ? 'businesses' : tab)}>
           {workspaces.map((workspace) => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}
         </select>
         <button className="hsv-outline" aria-label="Neues Business erstellen" type="button" onClick={() => {
@@ -1552,7 +1576,7 @@ export default function StudioPage() {
       </nav>
 
       <main className="hsv-main">
-        <div className="hive-breadcrumb"><span>{businessName.replace(/^Hive Dev · /,'')}</span><span>/</span><strong>{nav.find(([id])=>id===tab)?.[1]}</strong><time>{new Intl.DateTimeFormat('de-CH',{weekday:'short',day:'2-digit',month:'long',year:'numeric'}).format(new Date())}</time></div>
+        <div className="hive-breadcrumb"><span>{tab === 'businesses' ? 'Hive' : businessName.replace(/^Hive Dev · /,'')}</span><span>/</span><strong>{nav.find(([id])=>id===tab)?.[1]}</strong><time>{new Intl.DateTimeFormat('de-CH',{weekday:'short',day:'2-digit',month:'long',year:'numeric'}).format(new Date())}</time></div>
         <div className="hsv-heading">
           <div><h1>{nav.find(([id]) => id === tab)?.[1]}</h1><p>{busy ? 'Daten werden geladen …' : (headingCopy[tab] || 'Alles Wichtige an einem Ort.')}</p></div>
           {tab === 'overview' && <button className="hsv-primary" disabled={!customers.length || busy} onClick={()=>void openProject()}><Plus size={15}/> Neues Projekt</button>}
@@ -1565,6 +1589,14 @@ export default function StudioPage() {
           <div className="hive-loading-cards">{[0,1,2,3].map((item)=><span key={item}/>)}</div>
           <div className="hive-loading-panel"><span/><span/><span/></div>
         </div> : <>
+        {tab === 'businesses' && <BusinessesOverview
+          items={businessesOverview}
+          busy={businessesOverviewBusy}
+          error={businessesOverviewError}
+          onRefresh={()=>void loadBusinessesOverview()}
+          onOpen={(workspaceId)=>switchWorkspace(workspaceId,'overview')}
+        />}
+
         {tab === 'overview' && <WorkspaceOverview invoices={invoices} projects={projects} customerCount={customers.length} offerCount={offers.filter(o=>o.status==='draft'||o.status==='sent').length} activity={activityFeed} onNavigate={setTab} onProject={id=>void loadProjectWorkspace(id)} onCreateProject={()=>void openProject()}/>}
 
         {tab === 'customers' && <>
