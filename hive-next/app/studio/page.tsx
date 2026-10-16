@@ -210,6 +210,24 @@ export default function StudioPage() {
   const [fileDraft, setFileDraft] = useState<{ customerId:string; departmentId:string; projectId:string; title:string; kind:'image'|'video'|'gallery'|'offer'|'document'; file:File|null }>({
     customerId:'', departmentId:'', projectId:'', title:'', kind:'document', file:null,
   });
+  const hasOpenOverlay =
+    mobileMenuOpen || quickCreateOpen || searchOpen || businessOpen || teamOpen ||
+    customerOpen || customerWorkspaceOpen || departmentOpen || projectOpen ||
+    projectWorkspaceOpen || invoiceOpen || offerOpen || productOpen || inviteOpen ||
+    fileOpen;
+
+  useEffect(() => {
+    if (!hasOpenOverlay) return;
+    const previousOverflow=document.body.style.overflow;
+    const previousOverscroll=document.body.style.overscrollBehavior;
+    document.body.style.overflow='hidden';
+    document.body.style.overscrollBehavior='none';
+    return () => {
+      document.body.style.overflow=previousOverflow;
+      document.body.style.overscrollBehavior=previousOverscroll;
+    };
+  }, [hasOpenOverlay]);
+
   const [offerDraft, setOfferDraft] = useState({
     id:'', customerId: '', projectId: '', title: '', issueDate: today(), validUntil: afterDays(30),
     taxRate: 0, notes: '', terms: 'Diese Offerte ist bis zum angegebenen Datum gültig.',
