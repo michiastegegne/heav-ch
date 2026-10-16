@@ -39,6 +39,20 @@ test('login, persist customer through API, reload, isolate businesses, logout',a
  await page.getByRole('button',{name:'Abmelden',exact:true}).click();await expect(page).toHaveURL(/\/login$/);
  expect((await page.request.get('/api/hive/workspaces')).status()).toBe(401);
 });
+test('active business persists only when the stored workspace is still allowed',async({page})=>{
+ await login(page);
+ await page.getByLabel('Business auswählen').selectOption(b);
+ await expect(page.getByLabel('Business auswählen')).toHaveValue(b);
+ await page.reload();
+ await expect(page.getByLabel('Business auswählen')).toHaveValue(b);
+ await expect(page.getByText('Südkunde',{exact:true})).toBeVisible();
+
+ await page.evaluate(() => localStorage.setItem('hive.activeWorkspace.v2','033fe942-b8de-4298-9762-5f23550afbd9'));
+ await page.reload();
+ await expect(page.getByLabel('Business auswählen')).toHaveValue(a);
+ await expect(page.getByText('Nordkunde',{exact:true})).toBeVisible();
+});
+
 test('late workspace responses cannot overwrite the selected business',async({page})=>{
  await login(page);
  await page.getByRole('navigation').getByRole('button',{name:/Kunden/}).click();
