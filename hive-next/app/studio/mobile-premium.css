@@ -92,9 +92,9 @@
     box-shadow:0 1px 0 rgba(0,0,0,.03);
   }
   .hsv-top .hsv-identity>.hsv-outline{
-    width:42px;
-    height:42px;
-    min-height:42px;
+    width:44px;
+    height:44px;
+    min-height:44px;
     border:1px solid var(--mobile-line);
     border-radius:13px;
     background:var(--mobile-surface-raised);
@@ -102,9 +102,9 @@
   }
   .hsv-top>.hsv-outline{
     width:42px;
-    min-width:42px;
-    height:42px;
-    min-height:42px;
+    min-width:44px;
+    height:44px;
+    min-height:44px;
     margin:0;
     padding:0;
     border:1px solid var(--mobile-line);
@@ -117,10 +117,10 @@
   .hsv-top>.hsv-outline kbd{display:none}
   .hsv-top>.hsv-outline svg{width:18px;height:18px}
   .hsv-top .hive-theme-toggle{
-    width:42px!important;
-    min-width:42px!important;
-    height:42px!important;
-    min-height:42px!important;
+    width:44px!important;
+    min-width:44px!important;
+    height:44px!important;
+    min-height:44px!important;
     border:1px solid var(--mobile-line)!important;
     border-radius:13px!important;
     background:var(--mobile-surface-raised)!important;
@@ -603,8 +603,8 @@
   .hsv-close{
     top:18px;
     right:15px;
-    width:42px;
-    height:42px;
+    width:44px;
+    height:44px;
     border:1px solid var(--mobile-line);
     background:var(--mobile-bg);
     color:var(--mobile-ink);
