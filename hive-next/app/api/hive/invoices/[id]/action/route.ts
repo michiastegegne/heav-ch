@@ -3,7 +3,8 @@ import { getHiveAccessToken, assertWorkspaceAllowed, jsonError, requireHiveDataA
 
 const idSchema = z.string().uuid();
 const actionSchema = z.discriminatedUnion('action', [
-  z.object({ action: z.enum(['issue', 'download', 'send', 'mark_paid', 'cancel']) }),
+  z.object({ action: z.enum(['issue', 'download', 'mark_paid', 'cancel']) }),
+  z.object({ action: z.literal('send'), requestKey: z.string().uuid() }),
   z.object({
     action: z.literal('duplicate'),
     issueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -109,7 +110,7 @@ export async function POST(
     }
 
     const payload: Record<string, string> = { invoiceId, action };
-    if (action === 'send') payload.requestKey = crypto.randomUUID();
+    if (action === 'send') payload.requestKey = input.requestKey;
 
     const upstream = await fetch(`${supabaseUrl}/functions/v1/invoice-document`, {
       method: 'POST',
