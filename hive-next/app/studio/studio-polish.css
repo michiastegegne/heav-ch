@@ -1108,3 +1108,188 @@ html[data-theme="dark"] .hive-view-switch button[aria-pressed="true"]{color:#111
   .hive-project-board-card select{min-height:44px;font-size:16px}
   .hive-project-board-actions button{min-height:44px;font-size:10px}
 }
+
+/* Project calendar / deadline view */
+.hive-project-calendar{
+  overflow:hidden;
+  border:1px solid var(--studio-line);
+  border-radius:14px;
+  background:var(--studio-surface);
+}
+.hive-calendar-toolbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  min-height:58px;
+  padding:10px 13px;
+  border-bottom:1px solid var(--studio-line);
+}
+.hive-calendar-toolbar>div{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.hive-calendar-toolbar>div:first-child{color:var(--studio-muted)}
+.hive-calendar-toolbar strong{color:var(--studio-ink);font-size:12px;text-transform:capitalize}
+.hive-calendar-toolbar button{
+  min-width:34px;
+  min-height:34px;
+  display:grid;
+  place-items:center;
+  padding:6px 9px;
+  border:1px solid var(--studio-line);
+  background:var(--studio-soft);
+  color:var(--studio-ink);
+  font-size:9px;
+}
+.hive-calendar-toolbar button:first-child{border-radius:8px 0 0 8px}
+.hive-calendar-toolbar button:last-child{border-radius:0 8px 8px 0}
+.hive-project-calendar-grid{
+  display:grid;
+  grid-template-columns:repeat(7,minmax(0,1fr));
+}
+.hive-calendar-weekday{
+  padding:8px 9px;
+  border-right:1px solid var(--studio-line);
+  border-bottom:1px solid var(--studio-line);
+  color:var(--studio-muted);
+  font-size:8px;
+  font-weight:700;
+  letter-spacing:.8px;
+  text-transform:uppercase;
+}
+.hive-calendar-weekday:nth-child(7){border-right:0}
+.hive-calendar-day{
+  min-width:0;
+  min-height:126px;
+  padding:8px;
+  border-right:1px solid var(--studio-line);
+  border-bottom:1px solid var(--studio-line);
+  background:var(--studio-surface);
+}
+.hive-calendar-day:nth-child(7n){border-right:0}
+.hive-calendar-day>span{
+  width:24px;height:24px;display:grid;place-items:center;
+  color:var(--studio-muted);
+  font-size:9px;
+}
+.hive-calendar-day[data-today="true"]>span{
+  border-radius:8px;
+  background:var(--studio-ink);
+  color:var(--studio-surface);
+  font-weight:700;
+}
+html[data-theme="dark"] .hive-calendar-day[data-today="true"]>span{color:#111}
+.hive-calendar-day>div{display:grid;gap:5px;margin-top:4px}
+.hive-calendar-day button{
+  min-width:0;
+  display:grid;
+  gap:2px;
+  padding:7px;
+  border:1px solid var(--studio-line);
+  border-radius:7px;
+  background:var(--studio-soft);
+  color:var(--studio-ink);
+  text-align:left;
+}
+.hive-calendar-day button strong{
+  overflow:hidden;
+  font-size:8.5px;
+  line-height:1.3;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.hive-calendar-day button small{
+  overflow:hidden;
+  color:var(--studio-muted);
+  font-size:7.5px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.hive-calendar-day-empty{background:color-mix(in srgb,var(--studio-soft) 58%,transparent)}
+.hive-project-agenda{display:none}
+@media(max-width:760px){
+  .hive-project-calendar{
+    overflow:visible;
+    border:0;
+    border-radius:0;
+    background:transparent;
+  }
+  .hive-calendar-toolbar{
+    position:sticky;
+    top:calc(62px + env(safe-area-inset-top));
+    z-index:16;
+    min-height:54px;
+    margin:0 -15px 12px;
+    padding:8px 15px;
+    background:color-mix(in srgb,var(--mobile-bg) 94%,transparent);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+  }
+  .hive-calendar-toolbar button{min-width:44px;min-height:44px}
+  .hive-project-calendar-grid{display:none}
+  .hive-project-agenda{display:grid;gap:9px}
+  .hive-project-agenda>button{
+    display:grid;
+    grid-template-columns:58px minmax(0,1fr) auto;
+    align-items:center;
+    gap:11px;
+    min-height:70px;
+    padding:11px 12px;
+    border:1px solid var(--mobile-line);
+    border-radius:15px;
+    background:var(--mobile-surface);
+    color:var(--mobile-ink);
+    text-align:left;
+  }
+  .hive-project-agenda time{
+    color:var(--mobile-muted);
+    font-size:9px;
+    font-weight:600;
+    text-transform:capitalize;
+  }
+  .hive-project-agenda>button>div{display:grid;gap:4px;min-width:0}
+  .hive-project-agenda strong{
+    overflow:hidden;
+    font-size:12px;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .hive-project-agenda small{color:var(--mobile-muted);font-size:9px}
+  .hive-project-agenda>button>span{
+    padding:5px 7px;
+    border:1px solid var(--mobile-line);
+    border-radius:7px;
+    color:var(--mobile-muted);
+    font-size:8px;
+  }
+  .hive-calendar-no-deadlines{
+    min-height:90px;
+    display:grid;
+    place-items:center;
+    border:1px dashed var(--mobile-line);
+    border-radius:15px;
+    color:var(--mobile-muted);
+    font-size:10px;
+  }
+  .hive-project-agenda details{
+    margin-top:4px;
+    padding:12px;
+    border:1px solid var(--mobile-line);
+    border-radius:15px;
+    background:var(--mobile-surface);
+  }
+  .hive-project-agenda summary{color:var(--mobile-muted);font-size:10px}
+  .hive-project-agenda details button{
+    width:100%;
+    min-height:48px;
+    margin-top:8px;
+    padding:9px;
+    border:1px solid var(--mobile-line);
+    border-radius:10px;
+    background:var(--mobile-bg);
+    color:var(--mobile-ink);
+    text-align:left;
+  }
+}
