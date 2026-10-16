@@ -167,6 +167,27 @@ test('offer history is workspace scoped and visible from the offer list',async({
  await expect(dialog.getByText('Erfolgreich',{exact:true})).toBeVisible();
 });
 
+test('project board persists status changes and keeps the preferred view',async({page})=>{
+ await login(page);
+ await page.getByRole('navigation').getByRole('button',{name:'Projekte',exact:true}).click();
+ await page.getByRole('button',{name:'Board',exact:true}).click();
+ await expect(page.locator('.hive-project-column')).toHaveCount(4);
+
+ const status=page.getByLabel('Status für Portraits für das neue Team');
+ await expect(status).toHaveValue('planning');
+ await status.selectOption('active');
+ await expect(status).toHaveValue('active');
+
+ await page.reload();
+ await page.getByRole('navigation').getByRole('button',{name:'Projekte',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Board',exact:true})).toHaveAttribute('aria-pressed','true');
+ const persisted=page.getByLabel('Status für Portraits für das neue Team');
+ await expect(persisted).toHaveValue('active');
+
+ await persisted.selectOption('planning');
+ await expect(persisted).toHaveValue('planning');
+});
+
 test('customer lists support search and invoice lists support status filtering',async({page})=>{
  await login(page);
  await page.getByRole('navigation').getByRole('button',{name:/Kunden/}).click();
