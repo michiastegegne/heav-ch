@@ -3,7 +3,8 @@ import { getHiveAccessToken, assertWorkspaceAllowed, jsonError, requireHiveDataA
 
 const idSchema = z.string().uuid();
 const actionSchema = z.discriminatedUnion('action', [
-  z.object({ action: z.enum(['share', 'withdraw', 'delete', 'send']) }),
+  z.object({ action: z.enum(['share', 'withdraw', 'delete']) }),
+  z.object({ action: z.literal('send'), requestKey: z.string().uuid() }),
   z.object({
     action: z.literal('convert'),
     issueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -200,7 +201,7 @@ export async function POST(
           apikey:supabaseKey,
           'Content-Type':'application/json',
         },
-        body:JSON.stringify({ offerId, requestKey:crypto.randomUUID() }),
+        body:JSON.stringify({ offerId, requestKey:action.requestKey }),
         cache:'no-store',
       });
       const data = await upstream.json().catch(() => ({ error:'Offertenversand fehlgeschlagen.' }));
