@@ -21,6 +21,7 @@ create table if not exists public.app_users (
     check (length(primary_email) <= 320),
   display_name text not null default ''
     check (length(display_name) <= 200),
+  email_verified boolean not null default false,
   status text not null default 'active'
     check (status in ('active', 'disabled')),
   legacy_auth_user boolean not null default false,
@@ -40,6 +41,7 @@ insert into public.app_users(
   id,
   primary_email,
   display_name,
+  email_verified,
   status,
   legacy_auth_user,
   created_at,
@@ -54,6 +56,7 @@ select
     split_part(coalesce(account.email, ''), '@', 1),
     ''
   ),
+  account.email_confirmed_at is not null,
   'active',
   true,
   coalesce(account.created_at, now()),
@@ -62,6 +65,7 @@ from auth.users account
 on conflict (id) do update set
   primary_email = excluded.primary_email,
   display_name = excluded.display_name,
+  email_verified = excluded.email_verified,
   legacy_auth_user = true,
   updated_at = now();
 
@@ -258,11 +262,12 @@ begin
   begin
     v_existing := v_subject::uuid;
     if exists (select 1 from auth.users where id = v_existing) then
-      insert into public.app_users(id, primary_email, display_name, legacy_auth_user)
+      insert into public.app_users(id, primary_email, display_name, email_verified, legacy_auth_user)
       values (
         v_existing,
         lower(left(trim(coalesce(p_email, '')), 320)),
         left(trim(coalesce(p_display_name, '')), 200),
+        false,
         true
       )
       on conflict (id) do nothing;
@@ -300,11 +305,13 @@ begin
   insert into public.app_users(
     primary_email,
     display_name,
+    email_verified,
     legacy_auth_user
   )
   values (
     lower(left(trim(coalesce(p_email, '')), 320)),
     left(trim(coalesce(p_display_name, '')), 200),
+    false,
     false
   )
   returning id into v_user;
@@ -581,8 +588,10 @@ $hive_list_members_app_users$;
 revoke all on function public.list_workspace_members(uuid) from public, anon;
 grant execute on function public.list_workspace_members(uuid) to authenticated;
 
--- Existing by-email management now resolves against Hive identities rather
--- than auth.users. A future invitation flow can safely target app_users.
+-- Existing by-email management now resolves only VERIFIED Hive profile email
+-- addresses. New third-party users are not considered verified merely because
+-- a caller supplied p_email to the provisioning RPC. A future invitation flow
+-- should authorize using its own one-time invite token, not profile text.
 create or replace function public.add_workspace_member_by_email(
   p_workspace_id uuid,
   p_email text,
@@ -612,6 +621,7 @@ begin
   select id into v_target
   from public.app_users
   where lower(primary_email) = v_email
+    and email_verified
     and status = 'active'
   order by created_at
   limit 1;
