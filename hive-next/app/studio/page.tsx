@@ -1846,7 +1846,7 @@ export default function StudioPage() {
             <button onClick={() => openOfferDocument(offer)}>Drucken/PDF</button>
             {offer.status === 'draft' && <button onClick={() => void openOfferDraft(offer)}>Bearbeiten</button>}
             {offer.status === 'draft' && <button onClick={() => void offerAction(offer, 'share')}>Portal freigeben</button>}
-            {offer.status === 'sent' && <button disabled={offerSendBusyIds.has(offer.id)} aria-busy={offerSendBusyIds.has(offer.id)} onClick={() => void offerAction(offer, 'send')}>{offerSendBusyIds.has(offer.id) ? 'Wird gesendet …' : 'E-Mail'}</button>}
+            {offer.status === 'sent' && <button aria-label="Offerte per E-Mail senden" disabled={offerSendBusyIds.has(offer.id)} aria-busy={offerSendBusyIds.has(offer.id)} onClick={() => void offerAction(offer, 'send')}>{offerSendBusyIds.has(offer.id) ? 'Wird gesendet …' : 'E-Mail'}</button>}
             {offer.status === 'sent' && <button onClick={() => void offerAction(offer, 'withdraw')}>Zurückziehen</button>}
             {offer.status === 'accepted' && !convertedOfferIds.has(offer.id) && <button onClick={() => void convertOfferToInvoice(offer)}>Rechnung erstellen</button>}
             {offer.status === 'accepted' && convertedOfferIds.has(offer.id) && <small>Rechnung erstellt</small>}
