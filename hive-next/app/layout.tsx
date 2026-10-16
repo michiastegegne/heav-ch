@@ -5,7 +5,15 @@ import './globals.css';
 import './theme.css';
 import './mobile-auth.css';
 
-export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover' };
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f4f4f2' },
+    { media: '(prefers-color-scheme: dark)', color: '#101010' },
+  ],
+};
 
 export const metadata: Metadata = {
   title: 'Hive — Creative Business OS',
