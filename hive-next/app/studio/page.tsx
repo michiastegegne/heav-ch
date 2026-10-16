@@ -220,6 +220,26 @@ export default function StudioPage() {
     fileOpen;
 
   useEffect(() => {
+    const closeFullscreenWorkspace=(event:KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      const modalOwnsEscape =
+        mobileMenuOpen || quickCreateOpen || searchOpen || businessOpen || teamOpen ||
+        customerOpen || projectOpen || invoiceOpen || offerOpen || productOpen ||
+        inviteOpen || fileOpen;
+      if (modalOwnsEscape) return;
+      if (departmentOpen) setDepartmentOpen(false);
+      else if (customerWorkspaceOpen) setCustomerWorkspaceOpen(false);
+      else if (projectWorkspaceOpen) setProjectWorkspaceOpen(false);
+    };
+    window.addEventListener('keydown', closeFullscreenWorkspace);
+    return () => window.removeEventListener('keydown', closeFullscreenWorkspace);
+  }, [
+    mobileMenuOpen, quickCreateOpen, searchOpen, businessOpen, teamOpen,
+    customerOpen, projectOpen, invoiceOpen, offerOpen, productOpen, inviteOpen,
+    fileOpen, departmentOpen, customerWorkspaceOpen, projectWorkspaceOpen,
+  ]);
+
+  useEffect(() => {
     if (!hasOpenOverlay) return;
     const previousOverflow=document.body.style.overflow;
     const previousOverscroll=document.body.style.overscrollBehavior;
