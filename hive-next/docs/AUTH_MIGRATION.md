@@ -25,12 +25,13 @@ Until the identity bridge and RLS migration are tested:
 
 Hive does not switch authentication just because Clerk keys exist.
 
-The cutover requires all three conditions:
+The cutover requires all four conditions:
 - `HIVE_AUTH_PROVIDER=clerk`
 - valid Clerk publishable + secret keys
 - `HIVE_CLERK_DB_BRIDGE_ENABLED=true`
+- `HIVE_IDENTITY_MIGRATION_ENABLED=true`
 
-If Clerk is explicitly selected but either the keys or the database bridge are missing, protected routes fail closed instead of silently falling back to Supabase Auth.
+If Clerk is explicitly selected but the keys, database bridge, or identity migration gate are missing, protected routes fail closed instead of silently falling back to Supabase Auth.
 
 ## New-user onboarding
 
