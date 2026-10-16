@@ -166,14 +166,17 @@ export default function StudioPage() {
   const [listQuery, setListQuery] = useState('');
   const [listStatus, setListStatus] = useState('all');
   const [projectView, setProjectView] = useState<'list'|'board'>('list');
+  const [projectViewReady, setProjectViewReady] = useState(false);
   useEffect(() => { setListQuery(''); setListStatus('all'); }, [tab]);
   useEffect(() => {
     const stored=window.localStorage.getItem('hive.projectView.v1');
     if (stored === 'list' || stored === 'board') setProjectView(stored);
+    setProjectViewReady(true);
   }, []);
   useEffect(() => {
+    if (!projectViewReady) return;
     window.localStorage.setItem('hive.projectView.v1', projectView);
-  }, [projectView]);
+  }, [projectView, projectViewReady]);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [businessesOverview, setBusinessesOverview] = useState<BusinessOverviewItem[]>([]);
   const [businessesOverviewBusy, setBusinessesOverviewBusy] = useState(false);
