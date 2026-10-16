@@ -21,6 +21,17 @@ Until the identity bridge and RLS migration are tested:
 - do not change historical owner IDs;
 - do not bypass RLS with a service-role key from the browser or normal app routes.
 
+## Controlled cutover
+
+Hive does not switch authentication just because Clerk keys exist.
+
+The cutover requires all three conditions:
+- `HIVE_AUTH_PROVIDER=clerk`
+- valid Clerk publishable + secret keys
+- `HIVE_CLERK_DB_BRIDGE_ENABLED=true`
+
+If Clerk is explicitly selected but either the keys or the database bridge are missing, protected routes fail closed instead of silently falling back to Supabase Auth.
+
 ## Safe migration plan
 
 1. Configure Clerk in Vercel and enable Apple, email code and passkeys in Clerk.
@@ -30,6 +41,8 @@ Until the identity bridge and RLS migration are tested:
 5. Migrate workspace/member policies and RPCs from direct `auth.uid()` checks to that helper.
 6. Enable RLS on `customer_departments` together with tested workspace policies.
 7. Test cross-workspace reads/writes with two identities.
-8. Only then switch the new CRM from local prototype data to production Supabase data.
+8. Verify at least two identities against cross-workspace negative tests.
+9. Set `HIVE_CLERK_DB_BRIDGE_ENABLED=true`.
+10. Set `HIVE_AUTH_PROVIDER=clerk` as the final reversible cutover step.
 
 The legacy HEAV app can continue using Supabase Auth during the migration window.
