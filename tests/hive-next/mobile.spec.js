@@ -211,6 +211,9 @@ for (const appearance of ["light", "dark"])
       await expect(page.locator(".hive-kpis button")).toHaveCount(4);
       await fits(page);
 
+      const studioNav = page.getByRole("navigation", { name: "Mobile Navigation" });
+      await studioNav.getByRole("button", { name: "Kunden", exact: true }).click();
+      await expect(page.getByText("Nordkunde", { exact: true })).toBeVisible();
       await page
         .getByLabel("Business auswählen")
         .selectOption("0540bbcf-343c-456c-8ac0-d6125fc74b84");
