@@ -54,12 +54,12 @@ In `admin/assets/app.js:836-840` werden fehlende oder ungültige Rechnungswerte 
 - [x] Normalizer verwirft unvollständige Rechnungsentwürfe statt CHF 0.00 einzusetzen.
 - [x] Negative, nicht numerische und unsichere numerische Werte werden im Backend verworfen.
 - [x] Verhalten festgelegt: Ein unvollständiger Rechnungsentwurf wird verworfen; kein automatischer Default auf CHF 0.00.
-- [ ] Das Verhalten von `tax_rate`, `budget_rappen`, `quantity` und `unit_price_rappen` zwischen:
-  - [ ] `supabase/functions/assistant-chat/index.ts`
-  - [ ] `admin/assets/app.js`
-  - [ ] `admin/assets/domain.js`
-  - [ ] den Datenbank-Validatoren
-  angleichen.
+- [x] Das Verhalten von `tax_rate`, `budget_rappen`, `quantity` und `unit_price_rappen` zwischen:
+  - [x] `supabase/functions/assistant-chat/index.ts`
+  - [x] `admin/assets/app.js`
+  - [x] `admin/assets/domain.js`
+  - [x] den Datenbank-Validatoren
+  angeglichen: unbekannt/ungültig bleibt unbekannt, Mengen müssen positiv sein, Rappenwerte sichere Integer sein und MWST bleibt im Bereich 0–100.
 - [x] Deno-Test für fehlende und ungültige numerische Rechnungsfelder ergänzt.
 - [x] Browser-Tests für unbekannte MWST und fehlende Positionspreise getrennt gehalten.
 
@@ -73,7 +73,7 @@ In `admin/assets/app.js:836-840` werden fehlende oder ungültige Rechnungswerte 
 - [x] Nur den aktuell gespeicherten, ownergebundenen Thread laden.
 - [x] Nachrichten chronologisch rendern und gespeicherte Vorschläge erneut normalisieren.
 - [x] Gelöschte oder fremde Thread-IDs lokal bereinigen.
-- [ ] Während des Ladens einen separaten Ladezustand anzeigen, ohne den Chat als leer zu signalisieren.
+- [x] Während des Ladens einen separaten Ladezustand anzeigen, ohne den Chat als leer zu signalisieren; der Studio-Boot wartet nicht auf die Chat-Rehydration und der Composer bleibt bis zum Abschluss gesperrt.
 - [x] Chatdaten bleiben im owner-namespace-lokalem Storage-Key.
 - [x] Browser-Test für Reload, Verlauf und Vorschlag ergänzt.
 - [x] Browser-Test für gelöschten Thread und accountübergreifenden Local-Storage-Wechsel behalten.
@@ -107,16 +107,16 @@ In `admin/assets/app.js:836-840` werden fehlende oder ungültige Rechnungswerte 
 
 - [x] Stabilen Request-Key und serverseitige Versandreservierung eingeführt.
 - [x] Durable Struktur und RPCs in `20260917_offer_send_reliability.sql` ergänzt.
-- [ ] Statusübergänge festlegen: `draft` → `sent` → Versandversuch → `emailed` beziehungsweise kontrollierter Fehlerzustand.
+- [x] Statusübergänge festgelegt: Offer `draft` → `sent`; Versandversuch separat `pending` → `sent`/`failed`; erfolgreicher Versand erzeugt `offer_events.kind = 'emailed'`; verlorene Providerantwort bleibt bewusst `pending` und wird mit demselben Provider-Key wiederholt.
 - [x] Gleiche Offerte und gleicher Request-Key verwenden denselben Versandversuch und Provider-Key wieder.
 - [x] Nach Provider-Versand und Audit-/HTTP-Fehler kann ein Retry keine zweite Provider-Mail erzeugen.
-- [ ] Fehler nach Provider-Annahme als unklare beziehungsweise zu klärende Zustellung behandeln, nicht als sicheren Nichtversand.
-- [ ] `offer_events` weiter mit `kind = 'emailed'` auditieren und sensible Providerantworten begrenzen.
+- [x] Fehler nach möglicher Provider-Annahme werden als unklare Zustellung behandelt; die Reservation bleibt `pending` und der nächste Versuch verwendet denselben Provider-Idempotency-Key.
+- [x] `offer_events` auditiert erfolgreiche Sends weiter mit `kind = 'emailed'`; gespeichert werden nur kontrollierte Felder wie Empfänger und Provider-ID statt kompletter Providerantworten.
 - [x] `admin/assets/app.js` erzeugt und behält den Request-Key bis zum erfolgreichen Abschluss.
-- [ ] Kein neuer Versandbutton darf während eines laufenden Versuchs mehrfach auslösbar sein.
+- [x] Der Versandbutton ist während eines laufenden Versuchs gesperrt und zeigt einen Busy-State; parallele UI-Sends derselben Offerte werden abgefangen.
 - [x] PGlite-Vertragstest für Providerfehler, denselben Request-Key, Retry und genau ein Audit-Event ergänzt.
-- [ ] Direkte Edge-Function-Tests mit gemocktem Provider für alle fünf Provider-/Statusfälle ergänzen.
-- [ ] Browser-Test für einen echten Netzwerkfehler und denselben Versandauftrag ergänzen.
+- [x] Direkte Edge-Function-Tests mit gemocktem Provider decken Erfolg, explizite Providerablehnung, verlorene Providerantwort, bereits gesendete Reservation und Request-/Origin-Validierung ab.
+- [x] Browser-Test simuliert einen verlorenen HTTP-Response, behält denselben Request-Key für den Retry und löscht ihn erst nach bestätigtem Erfolg.
 
 **Betroffene Dateien:**
 
@@ -141,8 +141,8 @@ In `admin/assets/app.js:836-840` werden fehlende oder ungültige Rechnungswerte 
 - [x] Sichtbares Kundenkonto-Auswahlfeld ergänzt.
 - [x] Projekte, Rechnungen, Dateien, Offerten und „Nächster Schritt“ werden für das ausgewählte Konto geladen.
 - [x] Kontowechsel lädt die Daten vollständig neu und aktualisiert den Bewertungs-Kontext.
-- [ ] `offer`-Deep-Links gegen alle erlaubten Memberships auflösen, nicht nur gegen das erste Konto.
-- [ ] Auswahl nach Reload sicher und ohne fremde IDs wiederherstellen.
+- [x] `offer`-Deep-Links gegen alle erlaubten Memberships auflösen, nicht nur gegen das erste Konto.
+- [x] Auswahl nach Reload sicher und ohne fremde IDs wiederherstellen.
 - [ ] Falls nur ein Konto erlaubt sein soll:
   - [ ] die Datenbank mit einer eindeutigen Regel absichern
   - [ ] die Mehrfachauswahl aus dem UI entfernen

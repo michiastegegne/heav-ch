@@ -7,6 +7,10 @@ import {
   buildSwissQrPayload,
   createInvoicePdf,
   escapeHtml,
+  invoiceDocumentBucket,
+  invoiceDocumentPath,
+  invoiceDocumentVersion,
+  sha256Hex,
   formatDiscountPercent,
   formatDocumentReference,
   formatPaymentReference,
@@ -249,6 +253,26 @@ Deno.test("PDF-Dateiname verwendet zuerst den Projekt-Titel und sonst den Kunden
   assertEquals(
     invoiceFilename(base as never),
     "HEAV-Rechnung-Kunde-Partner-AG-00009.pdf",
+  );
+});
+
+Deno.test("invoice document snapshot path is deterministic and workspace scoped", () => {
+  const invoice = {
+    id: "22222222-2222-4222-8222-222222222222",
+    workspace_id: "11111111-1111-4111-8111-111111111111",
+  };
+  assertEquals(invoiceDocumentBucket, "invoice-documents");
+  assertEquals(invoiceDocumentVersion, 1);
+  assertEquals(
+    invoiceDocumentPath(invoice),
+    "11111111-1111-4111-8111-111111111111/invoices/22222222-2222-4222-8222-222222222222/v1.pdf",
+  );
+});
+
+Deno.test("invoice document SHA-256 is stable", async () => {
+  assertEquals(
+    await sha256Hex(new TextEncoder().encode("Hive invoice snapshot")),
+    "9669f5bcf5a76037472c14c03e13a83fe775b1f80620605f7fb79eee38a6fecd",
   );
 });
 

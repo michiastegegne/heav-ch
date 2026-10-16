@@ -2,7 +2,7 @@ name: Verify
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev/hive-workspace-hardening-20261015]
   pull_request:
     branches: [main]
 
@@ -39,6 +39,21 @@ jobs:
 
       - name: Run unit and migration tests
         run: npm test
+
+      - name: Install Hive Next dependencies
+        working-directory: hive-next
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck Hive Next
+        working-directory: hive-next
+        run: npm run typecheck
+
+      - name: Build Hive Next
+        working-directory: hive-next
+        run: npm run build
+
+      - name: Verify Hive login and workspace flows
+        run: npx playwright test --config playwright.hive.config.js
 
       - name: Check Edge Functions
         run: deno check --config supabase/functions/deno.json supabase/functions/*/index.ts

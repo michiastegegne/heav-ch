@@ -108,9 +108,33 @@ test('Kunden-Arbeitsplatz: fehlgeschlagener Kontowechsel behält den vorherigen 
 });
 
 
-test('Kunden-Arbeitsplatz: Offerten-Deep-Link wählt die richtige Abteilung', async ({ page }) => {
+test('Kunden-Arbeitsplatz: Auswahl bleibt nach Reload pro Benutzer erhalten', async ({ page }) => {
+  await fixture(page, { multi: true });
+  await page.goto(`${base}/client/`);
+  const selector = page.locator('#portal-customer-select');
+  await selector.selectOption('membership-2');
+  await expect(selector).toHaveValue('membership-2');
+  expect(await page.evaluate(() => localStorage.getItem('heav-portal-customer:client-1'))).toBe('membership-2');
+  await page.reload();
+  await expect(page.locator('#portal-customer-select')).toHaveValue('membership-2');
+  await expect(page.locator('#portal-projects')).toContainText('Beta Kampagne');
+  await expect(page.locator('#portal-projects')).not.toContainText('Eventfilm – ein gemeinsamer Auftritt');
+});
+
+test('Kunden-Arbeitsplatz: ungültige gespeicherte Membership wird verworfen', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('heav-portal-customer:client-1', 'membership-fremd'));
+  await fixture(page, { multi: true });
+  await page.goto(`${base}/client/`);
+  await expect(page.locator('#portal-customer-select')).toHaveValue('membership-1');
+  await expect(page.locator('#portal-projects')).toContainText('Eventfilm – ein gemeinsamer Auftritt');
+  expect(await page.evaluate(() => localStorage.getItem('heav-portal-customer:client-1'))).toBe('membership-1');
+});
+
+test('Kunden-Arbeitsplatz: Offerten-Deep-Link übersteuert gespeicherte Auswahl sicher', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('heav-portal-customer:client-1', 'membership-1'));
   await fixture(page, { multi: true });
   await page.goto(`${base}/client/?offer=offer-2`);
   await expect(page.locator('#portal-customer-select')).toHaveValue('membership-2');
   await expect(page.locator('#offer-offer-2')).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('heav-portal-customer:client-1'))).toBe('membership-2');
 });

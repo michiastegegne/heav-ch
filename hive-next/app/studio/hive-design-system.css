@@ -1,0 +1,335 @@
+/* HIVE / GLASS — single source for the new visual system.
+   Functional layouts live in their modules. Materials are reserved for chrome. */
+.hsv.hive-glass-app{
+ --hive-font:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;
+ --canvas:#f0f3fa;--surface:#fff;--surface-soft:#f5f7fb;--ink:#17223b;--muted:#65728b;--faint:#69768c;
+ --line:rgba(47,70,114,.10);--accent:#386bfa;--accent-soft:#eaf0ff;--on-accent:#fff;
+ --glass:rgba(255,255,255,.66);--glass-line:rgba(255,255,255,.9);--glass-shadow:0 12px 38px rgba(58,79,128,.09),inset 0 1px 0 #fff;
+ --panel-shadow:0 3px 16px rgba(32,55,99,.025);--focus:#2c64ef;
+ --studio-line:var(--line);--studio-muted:var(--muted);--studio-soft:var(--surface-soft);--studio-ink:var(--ink);--studio-surface:var(--surface);
+ --mobile-line:var(--line);--mobile-muted:var(--muted);--mobile-ink:var(--ink);--mobile-surface:var(--surface);--mobile-bg:var(--canvas);--hive-line:var(--line);
+ color:var(--ink);font-family:var(--hive-font);background:var(--canvas);min-height:100dvh;
+ background-image:radial-gradient(ellipse at 0 0,rgba(181,203,255,.45),transparent 48%),radial-gradient(ellipse at 100% 20%,rgba(222,210,255,.35),transparent 45%);
+ background-attachment:fixed;isolation:isolate;-webkit-font-smoothing:antialiased;
+}
+html[data-theme=dark] .hsv.hive-glass-app{
+ background-color:var(--canvas);
+ --canvas:#0d1424;--surface:#151f32;--surface-soft:#1b2840;--ink:#eff3ff;--muted:#a5b4cf;--faint:#94a3bc;
+ --line:rgba(175,197,238,.12);--accent:#8cafff;--accent-soft:#263b64;--on-accent:#0b1730;
+ --glass:rgba(27,40,65,.75);--glass-line:rgba(192,215,255,.16);--glass-shadow:0 12px 42px #02081438,inset 0 1px 0 #c2d9ff18;
+ --panel-shadow:0 4px 20px #0000000c;--focus:#99bbff;
+ background-image:radial-gradient(ellipse at 0 0,#29497b44,transparent 50%),radial-gradient(ellipse at 100% 35%,#55487c22,transparent 50%);
+}
+.hsv.hive-glass-app :is(button,input,select,textarea){font-family:var(--hive-font)}
+.hsv.hive-glass-app :is(button,a,input,select,textarea):focus-visible{outline:3px solid var(--focus)!important;outline-offset:4px}
+.hsv.hive-glass-app button{transition:background .18s ease,box-shadow .18s ease,transform .18s ease;color:inherit}
+.hsv.hive-glass-app button:disabled{opacity:.45;cursor:not-allowed}
+.hsv.hive-glass-app .hsv-top{
+ position:sticky;top:0;z-index:45;height:80px;padding:12px 32px;gap:16px;
+ background:var(--glass);border:0;border-bottom:1px solid var(--glass-line);box-shadow:0 1px 16px #122c5b04;
+ backdrop-filter:blur(28px) saturate(160%);-webkit-backdrop-filter:blur(28px) saturate(160%);
+}
+.hsv.hive-glass-app .hsv-identity{gap:16px;flex:1;min-width:0}
+.hsv.hive-glass-app .hsv-hive{display:flex;align-items:center;gap:9px;font:700 27px/1 var(--hive-font);letter-spacing:-1.2px;color:var(--ink);text-decoration:none}
+.hive-app-mark{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;color:#fff;background:linear-gradient(145deg,#7da8ff,#3265ef 65%,#4658cf);box-shadow:inset 0 1px 0 #ffffff65,0 4px 9px #3b68e429;font:700 28px/1 var(--hive-font);letter-spacing:-1.7px;padding-right:2px;flex:none}
+.hive-wordmark-dot{color:var(--accent)}
+.hsv.hive-glass-app .hsv-divider{background:var(--line);height:24px}
+.hsv.hive-glass-app .hsv-logo{display:none}
+.hsv.hive-glass-app .hsv-identity select{color:var(--ink);font-size:14px;font-weight:600;min-height:44px;max-width:225px;border:0;background:transparent;padding:10px 4px}
+.hsv.hive-glass-app .hsv-identity option{background:var(--surface);color:var(--ink)}
+.hsv.hive-glass-app .hsv-top>.hsv-outline,.hsv.hive-glass-app .hive-theme-toggle,.hsv.hive-glass-app .hsv-identity>.hsv-outline{
+ display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;border:1px solid var(--glass-line);border-radius:50px;background:var(--glass);color:var(--ink);box-shadow:inset 0 1px 0 #ffffff26;
+}
+.hsv.hive-glass-app .hsv-top>.hsv-outline{font-size:12px;font-weight:500;gap:8px;padding:10px 16px}
+.hsv.hive-glass-app .hsv-top kbd{border:1px solid var(--line);background:var(--surface-soft);color:var(--muted);font-size:10px}
+.hsv.hive-glass-app .hsv-identity>.hsv-outline{font-size:0;width:36px;height:36px;min-width:36px;min-height:36px;padding:0}
+.hsv.hive-glass-app .hsv-identity>.hsv-outline svg{width:17px;height:17px}
+.hsv.hive-glass-app .hsv-mode{display:none}
+.hsv.hive-glass-app .hive-theme-toggle{width:44px;height:44px;padding:0}
+.hsv.hive-glass-app .hsv-back{color:var(--muted);font-size:12px;white-space:nowrap}
+.hive-install-trigger{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:transparent;border:0;padding:10px;min-height:44px;color:var(--muted)!important;font-size:12px;white-space:nowrap}
+.hsv.hive-glass-app .hsv-layout{grid-template-columns:238px minmax(0,1fr);min-height:calc(100dvh - 80px);padding:20px 20px 20px 16px;gap:20px}
+.hsv.hive-glass-app .hsv-nav{
+ position:sticky;top:100px;height:calc(100dvh - 120px);padding:22px 12px;gap:6px;border:1px solid var(--glass-line);border-radius:26px;background:var(--glass);box-shadow:var(--glass-shadow);
+ backdrop-filter:blur(28px) saturate(140%);-webkit-backdrop-filter:blur(28px) saturate(140%);overflow-y:auto;overscroll-behavior:contain;
+}
+.hsv.hive-glass-app .hive-nav-label{color:var(--faint);font:600 9px/1.5 var(--hive-font);letter-spacing:1.4px;padding:14px 14px 8px}
+.hsv.hive-glass-app .hsv-nav>.hive-nav-label{padding-top:0}
+.hsv.hive-glass-app .hsv-nav button{min-height:44px;font-size:13px;font-weight:500;gap:11px;border-radius:13px;padding:11px 13px;color:var(--muted);background:transparent;border:1px solid transparent}
+.hsv.hive-glass-app .hsv-nav button svg{stroke-width:1.7;width:18px;height:18px}
+.hsv.hive-glass-app .hsv-nav button:hover{background:var(--surface-soft);color:var(--ink)}
+.hsv.hive-glass-app .hsv-nav button.on{background:var(--surface);color:var(--accent);border-color:var(--glass-line);box-shadow:0 3px 10px #102a5a0a}
+.hsv.hive-glass-app .hive-nav-count{background:var(--accent-soft);color:var(--accent);font-size:10px;border-radius:7px}
+.hive-sidebar-signature{margin:auto 8px 0;display:flex;gap:9px;align-items:center;padding:24px 0 12px;border-bottom:1px solid var(--line)}
+.hive-sidebar-signature .hive-app-mark{width:28px;height:28px;font-size:24px;border-radius:9px}
+.hive-sidebar-signature div{display:grid;gap:5px}.hive-sidebar-signature strong{font-size:10px;font-weight:600;letter-spacing:-.15px}.hive-sidebar-signature small{font-size:7px;letter-spacing:1px;color:var(--muted)}
+.hsv.hive-glass-app .hive-nav-bottom{margin-top:0;border:0;padding:15px 10px 0;gap:8px;color:var(--muted)}
+.hsv.hive-glass-app .hive-nav-bottom strong{font-size:10px;color:var(--ink)}.hsv.hive-glass-app .hive-nav-bottom span{font-size:9px;color:var(--muted)}
+.hsv.hive-glass-app .hsv-main{max-width:1480px;padding:20px clamp(16px,2.7vw,44px) 52px;min-width:0}
+.hsv.hive-glass-app .hive-breadcrumb{font-size:11px;color:var(--muted);margin-bottom:26px;gap:10px}.hsv.hive-glass-app .hive-breadcrumb strong{font-weight:500;color:var(--ink)}.hsv.hive-glass-app .hive-breadcrumb time{font-size:11px;color:var(--muted)}
+.hsv.hive-glass-app .hsv-heading{margin:0 0 30px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.hive-page-kicker{display:block;font-size:10px;font-weight:600;letter-spacing:1.6px;color:var(--muted);margin-bottom:8px}
+.hsv.hive-glass-app .hsv-heading h1{font:700 clamp(34px,3.4vw,50px)/1.1 var(--hive-font);letter-spacing:-2px;margin:0 0 10px;color:var(--ink)}
+.hive-title-dot{color:var(--accent)}
+.hsv.hive-glass-app .hsv-heading p{font-size:14px;line-height:1.5;color:var(--muted);margin:0}
+.hsv.hive-glass-app .hsv-primary{background:var(--accent);color:var(--on-accent);border:1px solid transparent;border-radius:50px;min-height:44px;padding:12px 20px;font-size:13px;font-weight:600;gap:8px;box-shadow:0 5px 15px #386bfa14}
+.hsv.hive-glass-app .hsv-primary:hover{filter:brightness(1.06);transform:translateY(-1px)}
+.hsv.hive-glass-app .hsv-outline{color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:50px;min-height:44px;padding:11px 17px;font-size:12px;font-weight:500}
+.hsv.hive-glass-app .hsv-outline:hover{background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 25%,transparent)}
+/* Overview: finance hero + compact metrics, no invented chart data. */
+.hsv.hive-glass-app .hive-kpis{display:grid;grid-template-columns:1.8fr 1fr 1fr;gap:16px;margin:0 0 28px;padding:0;border:0;align-items:stretch}
+.hsv.hive-glass-app .hive-kpis>button{display:flex;flex-direction:column;align-items:flex-start;text-align:left;min-height:128px;min-width:0;border-radius:24px;border:1px solid var(--line);padding:20px;background:var(--surface);box-shadow:var(--panel-shadow);color:var(--ink);gap:12px;container-type:inline-size;overflow:hidden}
+.hsv.hive-glass-app .hive-kpis>button:hover{transform:translateY(-3px);box-shadow:0 12px 24px #204b9b0a}
+.hsv.hive-glass-app .hive-kpis>button>span.hive-metric-label{display:flex;align-items:center;gap:9px;width:100%;font-size:12px;font-weight:500;color:var(--muted);letter-spacing:0;justify-content:flex-start}
+.hive-metric-label>svg:last-child{margin-left:auto;width:15px;opacity:.65;flex:none}
+.hive-metric-icon{display:grid;place-items:center;width:30px;height:30px;border-radius:10px;background:var(--accent-soft);color:var(--accent);flex:none}
+.hsv.hive-glass-app .hive-kpis>button>strong{font-size:38px;font-weight:600;line-height:1;letter-spacing:-1.6px;margin:0;white-space:normal}
+.hsv.hive-glass-app .hive-kpis>button>small{font-size:11px;line-height:1.5;color:var(--muted);margin-top:auto}
+.hsv.hive-glass-app .hive-kpis>.hive-metric-hero{grid-row:span 2;min-height:276px;position:relative;background:linear-gradient(130deg,#3867e7 0%,#4561d8 48%,#6253c9 100%);color:#fff;border-color:#ffffff35;box-shadow:0 12px 36px #3765e429,inset 0 1px 0 #ffffff42;padding:26px;gap:22px}
+.hive-metric-hero::before{content:"";position:absolute;inset:-140px -70% 0 12%;border-radius:50%;border:1px solid #ffffff16;pointer-events:none;transform:rotate(-35deg)}
+.hsv.hive-glass-app .hive-kpis>.hive-metric-hero>.hive-metric-label{color:#f0f4ff;font-size:13px;font-weight:500}
+.hive-metric-hero-body{display:flex;align-items:center;justify-content:space-between;width:100%;gap:18px;flex:1;min-width:0}
+.hive-kpi-money{display:flex;align-items:baseline;gap:6px;min-width:0;font-weight:600;font-variant-numeric:tabular-nums}
+.hsv.hive-glass-app .hive-metric-hero .hive-kpi-money{display:flex;flex-direction:column;gap:8px;align-items:flex-start;flex:1}
+.hive-kpi-currency{font-size:11px;font-weight:500;letter-spacing:1px;line-height:1.3;color:var(--muted)}
+.hive-kpi-value{white-space:nowrap;letter-spacing:-1.5px;line-height:1.05;font-size:clamp(22px,10cqi,44px);font-weight:600}
+.hsv.hive-glass-app .hive-metric-hero .hive-kpi-currency{color:#e0e9ff;font-size:13px}
+.hsv.hive-glass-app .hive-metric-hero .hive-kpi-value{font-size:clamp(28px,10cqi,48px);letter-spacing:-2px}
+.hive-finance-orbit{--paid-share:0%;flex:none;width:100px;height:100px;padding:7px;border-radius:50%;background:conic-gradient(from -90deg,#b3e0ff var(--paid-share),#ffffff27 0);box-shadow:0 0 0 8px #ffffff08,inset 0 1px 0 #ffffff25;position:relative}
+.hive-finance-orbit>div{height:100%;width:100%;border-radius:50%;background:#486ce2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px}
+.hive-finance-orbit span{font-size:23px;font-weight:600;letter-spacing:-.8px}.hive-finance-orbit small{font-size:10px;color:#e4edff}
+.hsv.hive-glass-app .hive-kpis>.hive-metric-hero>.hive-metric-foot{display:flex;gap:7px;align-items:center;color:#ecf3ff;font-size:11px;width:100%;padding-top:16px;border-top:1px solid #ffffff26;margin:0}
+.hive-metric-foot>svg{margin-left:auto}.hive-metric-dot{width:5px;height:5px;border-radius:50%;background:#c6e1ff}
+.hsv.hive-glass-app .hive-kpis>.hive-metric-paid{grid-column:span 2;display:grid;grid-template-columns:1fr auto;gap:8px 16px;min-height:126px;padding:22px 24px}
+.hsv.hive-glass-app .hive-metric-paid .hive-metric-label{grid-column:1;align-self:end}
+.hsv.hive-glass-app .hive-metric-paid .hive-kpi-money{grid-row:1/3;grid-column:2;align-self:center;font-size:30px;letter-spacing:-1px;align-items:baseline;display:flex;flex-direction:row;gap:5px}
+.hsv.hive-glass-app .hive-metric-paid .hive-kpi-value{font-size:clamp(23px,7cqi,34px)}
+.hsv.hive-glass-app .hive-metric-paid .hive-kpi-currency{font-size:11px;color:var(--muted);letter-spacing:0}
+.hsv.hive-glass-app .hive-metric-paid>small{grid-column:1;align-self:start;padding-left:39px}
+.hive-metric-projects .hive-metric-icon{background:#eeeaff;color:#7b61c7}.hive-metric-customers .hive-metric-icon{background:#e3f4ed;color:#28845e}
+html[data-theme=dark] .hive-metric-projects .hive-metric-icon{background:#352e56;color:#c1adff}html[data-theme=dark] .hive-metric-customers .hive-metric-icon{background:#203b37;color:#92d7bb}
+.hsv.hive-glass-app .hive-overview-grid{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:22px}
+.hsv.hive-glass-app .hive-overview-primary,.hsv.hive-glass-app .hive-overview-aside{display:flex;flex-direction:column;gap:22px;min-width:0}
+.hsv.hive-glass-app .hive-panel{background:var(--surface);border:1px solid var(--line);border-radius:24px;box-shadow:var(--panel-shadow);overflow:hidden}
+.hsv.hive-glass-app .hive-panel-heading{padding:23px 24px 18px;align-items:center;gap:12px;border-color:var(--line)}
+.hsv.hive-glass-app .hive-eyebrow{font-size:9px;line-height:1.4;letter-spacing:1.35px;font-weight:600;color:var(--faint)}
+.hsv.hive-glass-app .hive-panel-heading h2{font:600 18px/1.3 var(--hive-font);letter-spacing:-.5px;color:var(--ink);margin:7px 0 0}
+.hsv.hive-glass-app .hive-panel-heading h2>span{display:inline-grid;place-items:center;min-width:21px;height:21px;margin-left:4px;background:var(--surface-soft);color:var(--muted);font-size:10px;border:0;border-radius:7px}
+.hsv.hive-glass-app .hive-panel-heading>button{font-size:11px;min-height:44px;min-width:44px;color:var(--muted);gap:8px;background:var(--surface-soft);border-radius:50px;padding:10px 13px}
+.hsv.hive-glass-app .hive-project-focus>button{padding:19px 24px;gap:14px;min-height:90px;border-color:var(--line);color:var(--ink);background:transparent;align-items:center}
+.hsv.hive-glass-app .hive-project-focus>button:hover,.hsv.hive-glass-app .hive-finance-row:hover{background:var(--surface-soft)}
+.hsv.hive-glass-app .hive-project-index{display:grid;place-items:center;width:40px;height:40px;flex:none;border-radius:13px;background:#eef1ff;color:#6b7bd1;font-size:12px}
+html[data-theme=dark] .hsv.hive-glass-app .hive-project-index{background:#283455;color:#b6c6ff}
+.hsv.hive-glass-app .hive-project-tone-1{background:#f4ebfa;color:#a374b9}.hsv.hive-glass-app .hive-project-tone-2{background:#e7f4ee;color:#499878}.hsv.hive-glass-app .hive-project-tone-3{background:#fff0e4;color:#bc8e57}
+.hsv.hive-glass-app .hive-record strong{font-size:13px;line-height:1.45;font-weight:600;color:var(--ink);letter-spacing:-.15px}
+.hsv.hive-glass-app .hive-record small{font-size:11px;line-height:1.5;color:var(--muted)}
+.hsv.hive-glass-app .hive-project-due{font-size:10px;color:var(--muted);min-width:62px}
+.hsv.hive-glass-app .hive-project-focus>button>svg:last-child{color:var(--faint);flex:none}
+.hsv.hive-glass-app .hive-status{background:var(--accent-soft);color:var(--accent);border:0;border-radius:50px;padding:6px 9px;font-size:10px;line-height:1.2;white-space:nowrap}
+.hsv.hive-glass-app .hive-finance-labels{background:var(--surface-soft);border:0;color:var(--faint);font-size:9px;padding:10px 24px;grid-template-columns:minmax(0,1fr) 88px 110px}
+.hsv.hive-glass-app .hive-finance-row{padding:20px 24px;border-color:var(--line);grid-template-columns:minmax(0,1fr) 88px 110px;gap:12px;min-height:86px}
+.hsv.hive-glass-app .hive-due{font-size:11px;color:var(--muted)}.hsv.hive-glass-app .hive-due small{font-size:9px;color:var(--muted);margin-top:6px}.hsv.hive-glass-app .hive-due.is-overdue small{color:#c46d47}
+html[data-theme=dark] .hsv.hive-glass-app .hive-due.is-overdue small{color:#efb394}
+.hsv.hive-glass-app .hive-amount{font-size:13px;color:var(--ink);font-weight:600;letter-spacing:-.3px}
+.hsv.hive-glass-app .hive-panel-foot{padding:16px 24px;background:var(--surface-soft);border-color:var(--line);color:var(--muted);font-size:11px}.hsv.hive-glass-app .hive-panel-foot strong{color:var(--ink);font-size:13px}
+.hsv.hive-glass-app .hive-attention{padding:24px;background:#e8edfd;border:1px solid #dce5ff;border-radius:24px;color:#2d4274;box-shadow:none}
+html[data-theme=dark] .hsv.hive-glass-app .hive-attention{background:#202f4e;border-color:#314369;color:#c1d4ff}
+.hsv.hive-glass-app .hive-attention .hive-eyebrow{color:inherit;opacity:.75}
+.hsv.hive-glass-app .hive-attention-title{display:flex;flex-direction:column;align-items:flex-start;gap:16px;margin:20px 0 12px}
+.hive-attention-icon{display:grid;place-items:center;width:44px;height:44px;background:#ffffff80;border:1px solid #ffffff80;border-radius:15px;color:#5577bd}
+html[data-theme=dark] .hive-attention-icon{background:#314873;border-color:#4a6097;color:#b6ceff}
+.hsv.hive-glass-app .hive-attention h2{font-size:22px;line-height:1.25;font-weight:600;letter-spacing:-.7px;color:inherit;margin:0}
+.hsv.hive-glass-app .hive-attention p{font-size:12px;line-height:1.7;color:inherit;opacity:.85;margin:0 0 22px}
+.hsv.hive-glass-app .hive-attention button{background:#ffffff8c;color:inherit;border:1px solid #ffffff50;border-radius:50px;padding:11px 14px;min-height:44px;font-size:11px;width:100%;justify-content:space-between;gap:8px}
+html[data-theme=dark] .hsv.hive-glass-app .hive-attention button{background:#31466e;border-color:#4a5b7d}
+.hsv.hive-glass-app .hive-activity-panel{margin:0;padding-bottom:10px}
+.hsv.hive-glass-app .hive-activity-panel .hive-panel-heading{border:0}
+.hive-activity-pulse{width:7px;height:7px;border-radius:50%;background:#8bb9a2;flex:none}
+.hsv.hive-glass-app .hive-activity-panel ol{margin:0;padding:4px 24px;list-style:none}
+.hsv.hive-glass-app .hive-activity-panel li{display:flex;gap:12px;padding:0 0 22px;min-height:62px;position:relative}
+.hsv.hive-glass-app .hive-timeline-mark{display:grid;place-items:center;flex:none;width:30px;height:30px;background:var(--surface-soft);border:1px solid var(--line);border-radius:10px;color:var(--muted)}
+.hsv.hive-glass-app .hive-activity-panel li:before{left:15px;background:var(--line)}
+.hsv.hive-glass-app .hive-activity-panel li p{font-size:12px;line-height:1.5;margin:2px 0 6px;color:var(--ink)}.hsv.hive-glass-app .hive-activity-panel time{font-size:10px;color:var(--muted)}
+.hsv.hive-glass-app .hive-text-link{font-size:11px;color:var(--accent);min-height:44px;display:flex;align-items:center;gap:9px;padding:12px 24px}
+.hsv.hive-glass-app .hive-quiet-empty{padding:30px 24px;color:var(--muted)}.hsv.hive-glass-app .hive-quiet-empty strong{color:var(--ink);font-size:14px}.hsv.hive-glass-app .hive-quiet-empty p{font-size:12px;line-height:1.6}.hsv.hive-glass-app .hive-quiet-empty button{color:var(--accent);min-height:44px}
+/* Shared content surfaces: lists, boards, forms, detail sheets. */
+.hsv.hive-glass-app .hive-list-tools{border:0;margin-bottom:20px;padding:0;gap:10px}
+.hsv.hive-glass-app .hive-list-tools>label{border:1px solid var(--line);background:var(--surface);border-radius:50px;min-height:48px;padding:0 16px;color:var(--muted)}
+.hsv.hive-glass-app .hive-list-tools input{background:transparent;color:var(--ink);font-size:13px}
+.hsv.hive-glass-app .hive-list-tools select,.hsv.hive-glass-app .hive-list-tools>span{color:var(--muted);font-size:12px}
+.hsv.hive-glass-app .hive-list-tools select{border:1px solid var(--line);background:var(--surface);border-radius:50px;padding:10px 14px;min-height:44px}
+.hsv.hive-glass-app .hsv-rowtop{border:0;padding:0;margin:0 0 18px}.hsv.hive-glass-app .hsv-rowtop>strong{font-size:13px;color:var(--muted);font-weight:500}
+.hsv.hive-glass-app .hsv-table{border-radius:22px;border:1px solid var(--line);background:var(--surface);box-shadow:var(--panel-shadow)}
+.hsv.hive-glass-app .hsv-table>div{padding:19px 22px;min-height:88px;border-color:var(--line);color:var(--ink);gap:14px}
+.hsv.hive-glass-app .hsv-table>div:hover{background:var(--surface-soft)}
+.hsv.hive-glass-app .hsv-letter{border:0;border-radius:13px;width:40px;height:40px;background:var(--accent-soft);color:var(--accent);font-size:14px;font-weight:600}
+.hsv.hive-glass-app .hsv-grow strong{font-size:13px;color:var(--ink);font-weight:600}.hsv.hive-glass-app .hsv-grow small,.hsv.hive-glass-app .hive-contact-cell,.hsv.hive-glass-app .hive-contact-cell small,.hsv.hive-glass-app .hive-table-date{font-size:11px;color:var(--muted)}
+.hsv.hive-glass-app .hsv-table button{min-width:36px;min-height:36px;border-radius:50px;font-size:11px;color:var(--muted);padding:9px 12px;background:transparent;border:1px solid var(--line)}
+.hsv.hive-glass-app .hsv-table button:hover{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.hsv.hive-glass-app .hive-table-labels{background:transparent;border:0;color:var(--muted);padding:10px 22px;font-size:10px}
+.hsv.hive-glass-app .hive-view-switch,.hsv.hive-glass-app .hive-mobile-subnav{background:var(--surface-soft);border:1px solid var(--line);padding:4px;border-radius:50px;gap:3px}
+.hsv.hive-glass-app .hive-view-switch button,.hsv.hive-glass-app .hive-mobile-subnav button{border:0;border-radius:50px;min-height:36px;padding:8px 14px;color:var(--muted);font-size:12px;background:transparent}
+.hsv.hive-glass-app .hive-view-switch button[aria-pressed=true],.hsv.hive-glass-app .hive-mobile-subnav button[aria-selected=true]{background:var(--surface);color:var(--accent);box-shadow:0 2px 8px #00000008}
+.hsv.hive-glass-app .hive-business-card,.hsv.hive-glass-app .hive-project-board-column,.hsv.hive-glass-app .hive-calendar,.hsv.hive-glass-app .hive-workspace-surface,.hsv.hive-glass-app .hive-workspace-block{background:var(--surface);border-color:var(--line);border-radius:20px;color:var(--ink)}
+.hsv.hive-glass-app .hsv-dialog{background:var(--surface);color:var(--ink);border:1px solid var(--glass-line);box-shadow:0 30px 100px #07142938;border-radius:28px;padding:30px;gap:22px}
+.hsv.hive-glass-app .hsv-dialog h2{font:600 27px/1.2 var(--hive-font);letter-spacing:-1px;color:var(--ink)}
+.hsv.hive-glass-app .hsv-overlay{background:#08152b58;backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);z-index:100}
+.hsv.hive-glass-app .hsv-close{display:grid;place-items:center;width:36px;height:36px;background:var(--surface-soft);border:1px solid var(--line);color:var(--muted);border-radius:50px;padding:0;top:22px;right:20px}
+.hsv.hive-glass-app :is(.hsv-dialog,.hsv-branding) label{font-size:12px;color:var(--muted);font-weight:500;gap:8px}
+.hsv.hive-glass-app :is(.hsv-dialog,.hsv-branding) :is(input:not([type=checkbox]):not([type=color]),select,textarea){background:var(--surface-soft);color:var(--ink);border:1px solid var(--line);border-radius:12px;min-height:46px;font-size:14px;padding:12px 14px}
+.hsv.hive-glass-app .hsv-branding{max-width:900px;background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:28px}
+.hsv.hive-glass-app .hsv-brand-preview{background:var(--surface-soft);color:var(--ink);border-color:var(--line);border-radius:18px;padding:22px}
+.hsv.hive-glass-app .hsv-brand-preview small,.hsv.hive-glass-app .hsv-warning{color:var(--muted)}
+.hsv.hive-glass-app .hsv-empty{background:var(--surface);color:var(--muted);border:1px dashed var(--line);border-radius:22px;padding:40px 24px}
+.hsv.hive-glass-app .hsv-empty strong{color:var(--ink)}
+.hsv.hive-glass-app .hsv-toast{background:var(--glass);color:var(--ink);border:1px solid var(--glass-line);border-radius:20px;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);box-shadow:var(--glass-shadow);font-size:13px}
+.hsv.hive-glass-app .hsv-toast button{color:var(--ink)}
+.hsv.hive-glass-app .hive-mobile-modules{gap:8px}
+.hsv.hive-glass-app .hive-mobile-modules button{background:var(--surface-soft);color:var(--ink);border:1px solid var(--line);border-radius:15px;min-height:54px}
+.hsv.hive-glass-app .hive-mobile-modules button[aria-current=page]{background:var(--accent-soft);color:var(--accent)}
+.hsv.hive-glass-app .hive-mobile-quick-actions button{background:var(--surface-soft);border-color:var(--line);color:var(--ink);border-radius:16px}
+.hsv.hive-glass-app .hive-mobile-quick-actions button>span{background:var(--accent-soft);color:var(--accent)}
+.hsv.hive-glass-app .hive-backup{background:var(--surface);border-color:var(--line);color:var(--ink);border-radius:24px}
+/* The document editor shares the same tokens and remains a focused work surface. */
+.hsv.hive-glass-app .hive-document{--doc-bg:var(--canvas);--doc-surface:var(--surface);--doc-input:var(--surface-soft);--doc-line:var(--line);--doc-text:var(--ink);--doc-muted:var(--muted);--doc-strong:var(--accent);--doc-on-strong:var(--on-accent);font-family:var(--hive-font)}
+.hsv.hive-glass-app .hive-document-header{background:var(--glass);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
+.hsv.hive-glass-app .hive-document-section,.hsv.hive-glass-app .hive-document-summary{border-radius:22px}.hsv.hive-glass-app .hive-document-footer button{border-radius:50px}
+/* Install sheet */
+.hive-install-guide>p{color:var(--muted);font-size:14px;line-height:1.6;margin:16px 0 24px}
+.hive-install-icon{width:68px;height:68px;border-radius:21px;background:linear-gradient(145deg,#81b1ff,#4869e6);color:white;display:grid;place-items:center;box-shadow:inset 0 1px 0 #ffffff55,0 10px 25px #386bfa26}
+.hive-install-guide ol{list-style:none;margin:0;padding:0;display:grid;gap:20px}.hive-install-guide li{display:flex;gap:14px}.hive-install-guide li>span{display:grid;place-items:center;flex:none;width:38px;height:38px;background:var(--accent-soft);color:var(--accent);border-radius:12px}.hive-install-guide li strong{font-size:14px;font-weight:600;color:var(--ink)}.hive-install-guide li p{font-size:12px;line-height:1.6;color:var(--muted);margin:5px 0 0}.hive-install-guide .hive-install-note{font-size:11px;padding-top:18px;margin-top:24px;border-top:1px solid var(--line)}.hive-install-success{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--accent);padding:16px;background:var(--accent-soft);border-radius:14px}
+@media(min-width:1600px){.hsv.hive-glass-app .hsv-main{padding-left:50px;padding-right:50px}.hsv.hive-glass-app .hive-overview-grid{grid-template-columns:minmax(0,1fr) 330px}}
+@media(max-width:1250px){.hsv.hive-glass-app .hsv-layout{grid-template-columns:205px minmax(0,1fr);gap:10px;padding-left:12px;padding-right:10px}.hsv.hive-glass-app .hsv-top{padding-left:24px;padding-right:24px}.hsv.hive-glass-app .hive-overview-grid{grid-template-columns:minmax(0,1fr)}.hsv.hive-glass-app .hive-overview-aside{display:grid;grid-template-columns:1fr 1fr}.hsv.hive-glass-app .hive-kpis{grid-template-columns:1.5fr 1fr 1fr;gap:12px}.hsv.hive-glass-app .hive-finance-orbit{width:82px;height:82px;padding:6px}.hsv.hive-glass-app .hive-kpis>.hive-metric-hero{padding:22px}.hsv.hive-glass-app .hive-kpis>.hive-metric-paid{padding:18px}.hive-install-trigger span{display:none}.hsv.hive-glass-app .hsv-top>.hsv-outline{font-size:0;padding:10px;gap:0;width:44px}.hsv.hive-glass-app .hsv-top kbd{display:none}}
+@media(min-width:761px) and (max-width:1000px){.hsv.hive-glass-app .hive-kpis{grid-template-columns:1fr 1fr}.hsv.hive-glass-app .hive-kpis>.hive-metric-hero{grid-column:span 2;grid-row:span 1;min-height:205px}.hsv.hive-glass-app .hive-kpis>.hive-metric-paid{grid-column:span 2;min-height:94px}.hsv.hive-glass-app .hsv-layout{grid-template-columns:182px minmax(0,1fr)}.hsv.hive-glass-app .hsv-main{padding-left:14px;padding-right:14px}.hsv.hive-glass-app .hsv-nav{padding-left:7px;padding-right:7px}.hive-sidebar-signature{display:none}.hsv.hive-glass-app .hsv-back{display:none}}
+@media screen and (max-width:760px){
+ .hsv.hive-glass-app{background-attachment:scroll}
+ .hsv.hive-glass-app .hsv-top{height:auto;min-height:calc(70px + env(safe-area-inset-top));padding:calc(12px + env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 12px max(16px,env(safe-area-inset-left));display:grid;grid-template-columns:minmax(0,1fr) 44px 44px;gap:8px;border-bottom:1px solid var(--glass-line)}
+ .hsv.hive-glass-app .hsv-identity{display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:6px}
+ .hsv.hive-glass-app .hsv-top .hsv-identity>.hsv-hive,.hsv.hive-glass-app .hsv-divider,.hsv.hive-glass-app .hsv-logo,.hsv.hive-glass-app .hsv-back,.hsv.hive-glass-app .hsv-top>.hive-install-trigger{display:none}
+ .hsv.hive-glass-app .hsv-identity select{width:100%;max-width:none;appearance:auto;-webkit-appearance:menulist;background:transparent;font-size:14px;padding:8px 1px;border:0;border-radius:0;min-width:0;min-height:44px;font-weight:600;box-shadow:none}
+ .hsv.hive-glass-app .hsv-identity>.hsv-outline{min-width:44px!important;width:44px!important;min-height:44px!important;height:44px!important;background:var(--surface);color:var(--accent);border-color:var(--line)}
+ .hsv.hive-glass-app .hsv-top>.hsv-outline,.hsv.hive-glass-app .hive-theme-toggle{width:44px;height:44px;padding:0;font-size:0;gap:0}
+ .hsv.hive-glass-app .hsv-top>.hsv-outline svg{width:19px;height:19px}
+ .hsv.hive-glass-app .hsv-layout{display:block;padding:0;min-height:calc(100dvh - 70px)}
+ .hsv.hive-glass-app .hsv-nav{display:none}
+ .hsv.hive-glass-app .hsv-main{padding:24px max(18px,env(safe-area-inset-right)) calc(132px + env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left))}
+ .hsv.hive-glass-app .hive-breadcrumb{margin-bottom:22px;font-size:10px}.hsv.hive-glass-app .hive-breadcrumb time{display:none}
+ .hsv.hive-glass-app .hive-page-kicker{font-size:9px;letter-spacing:1.6px;margin-bottom:8px}
+ .hsv.hive-glass-app .hsv-heading{margin-bottom:24px;gap:8px}
+ .hsv.hive-glass-app .hsv-heading h1{font-size:38px;line-height:1.1;letter-spacing:-1.7px;margin:0 0 8px}
+ .hsv.hive-glass-app .hsv-heading p{font-size:13px;line-height:1.5}
+ .hsv.hive-glass-app .hsv-heading>.hsv-primary{display:none}
+ .hsv.hive-glass-app .hive-kpis{grid-template-columns:1fr 1fr;gap:12px;margin:0 0 26px}
+ .hsv.hive-glass-app .hive-kpis>button{border-radius:23px;padding:17px;min-height:129px;gap:12px}
+ .hsv.hive-glass-app .hive-kpis>.hive-metric-hero{grid-row:span 1;grid-column:span 2;min-height:220px;padding:23px;gap:18px}
+ .hsv.hive-glass-app .hive-metric-hero-body{gap:18px}
+ .hsv.hive-glass-app .hive-metric-hero .hive-kpi-value{font-size:clamp(30px,10cqi,44px)}
+ .hsv.hive-glass-app .hive-finance-orbit{width:100px;height:100px;padding:7px}
+ .hsv.hive-glass-app .hive-kpis>.hive-metric-paid{grid-column:span 2;min-height:95px;padding:18px 20px;gap:6px 8px}
+ .hsv.hive-glass-app .hive-metric-paid .hive-metric-label{font-size:12px;gap:8px;white-space:nowrap}
+ .hsv.hive-glass-app .hive-metric-paid .hive-metric-label>svg:last-child{display:none}
+ .hsv.hive-glass-app .hive-metric-paid .hive-kpi-money{display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-size:22px;letter-spacing:-.6px;line-height:1.2}
+ .hsv.hive-glass-app .hive-metric-paid .hive-kpi-currency{font-size:10px;letter-spacing:.7px}
+ .hsv.hive-glass-app .hive-metric-paid .hive-kpi-value{font-size:clamp(20px,6.5cqi,26px);letter-spacing:-.8px;white-space:nowrap}
+ .hsv.hive-glass-app .hive-metric-paid>small{padding-left:38px;font-size:10px}
+ .hsv.hive-glass-app .hive-kpis>button>span.hive-metric-label{font-size:10px;gap:7px;align-items:center}
+ .hsv.hive-glass-app .hive-kpis>.hive-metric-hero>.hive-metric-label{font-size:12px}
+ .hsv.hive-glass-app .hive-kpis>button>strong{font-size:35px;letter-spacing:-1.3px}
+ .hsv.hive-glass-app .hive-kpis>button>small{font-size:10px}
+ .hsv.hive-glass-app .hive-kpis>.hive-metric-hero>.hive-metric-foot{font-size:10px}
+ .hsv.hive-glass-app .hive-metric-icon{width:27px;height:27px;border-radius:9px}
+ .hsv.hive-glass-app .hive-metric-projects .hive-metric-label>svg:last-child,.hsv.hive-glass-app .hive-metric-customers .hive-metric-label>svg:last-child{display:none}
+ .hsv.hive-glass-app .hive-overview-grid,.hsv.hive-glass-app .hive-overview-aside{display:flex;flex-direction:column;gap:20px}
+ .hsv.hive-glass-app .hive-overview-primary{gap:20px}
+ .hsv.hive-glass-app .hive-panel{border-radius:23px}
+ .hsv.hive-glass-app .hive-panel-heading{padding:20px 18px 16px;gap:8px}
+ .hsv.hive-glass-app .hive-panel-heading h2{font-size:17px}
+ .hsv.hive-glass-app .hive-panel-heading>button{font-size:0;width:44px;height:44px;min-width:44px;min-height:44px;padding:0;gap:0;display:grid;place-items:center}
+ .hsv.hive-glass-app .hive-project-focus>button{padding:17px 18px;gap:11px;flex-wrap:nowrap;min-height:93px}
+ .hsv.hive-glass-app .hive-project-focus .hive-record{min-width:0;flex:1}
+ .hsv.hive-glass-app .hive-project-index{width:37px;height:37px;border-radius:12px}
+ .hsv.hive-glass-app .hive-project-focus .hive-status,.hsv.hive-glass-app .hive-project-due{display:none}
+ .hsv.hive-glass-app .hive-record strong{font-size:13px}.hsv.hive-glass-app .hive-record small{font-size:11px}
+ .hsv.hive-glass-app .hive-finance-labels{display:none}
+ .hsv.hive-glass-app .hive-finance-row{grid-template-columns:minmax(0,1fr) auto;padding:18px;gap:8px;min-height:100px}
+ .hsv.hive-glass-app .hive-finance-row .hive-record{grid-column:1;grid-row:1}.hsv.hive-glass-app .hive-finance-row .hive-amount{grid-column:2;grid-row:1;font-size:12px}.hsv.hive-glass-app .hive-finance-row .hive-due{grid-column:1/-1;grid-row:2;display:flex;align-items:center;gap:8px;font-size:10px}.hsv.hive-glass-app .hive-due small{margin:0;font-size:10px}
+ .hsv.hive-glass-app .hive-panel-foot{padding:15px 18px;font-size:10px}.hsv.hive-glass-app .hive-panel-foot strong{font-size:12px}
+ .hsv.hive-glass-app .hive-attention{padding:23px;border-radius:23px}.hsv.hive-glass-app .hive-attention-title{flex-direction:row;gap:14px;align-items:center;margin:18px 0 14px}.hsv.hive-glass-app .hive-attention h2{font-size:21px}.hsv.hive-glass-app .hive-attention-icon{width:46px;height:46px;flex:none}.hsv.hive-glass-app .hive-attention p{font-size:13px}
+ .hsv.hive-glass-app .hive-activity-panel ol{padding:8px 18px}.hsv.hive-glass-app .hive-activity-panel li p{font-size:13px}.hsv.hive-glass-app .hive-text-link{padding:12px 18px;font-size:12px}
+ /* Floating tab bar: readable glass, no nested opaque black tabs. */
+ .hsv.hive-glass-app .hive-mobile-nav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));position:fixed;inset:auto 14px calc(12px + env(safe-area-inset-bottom)) 14px;width:auto;max-width:520px;margin:0 auto;z-index:45;border:1px solid var(--glass-line);border-radius:30px;background:var(--glass);box-shadow:var(--glass-shadow);padding:6px;gap:2px;backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%)}
+ .hsv.hive-glass-app .hive-mobile-nav button{min-height:55px;border-radius:24px;gap:4px;padding:7px 2px;background:transparent;color:var(--muted);font-size:9px;border:0;font-weight:500}
+ .hsv.hive-glass-app .hive-mobile-nav button svg{width:21px;height:21px;stroke-width:1.65}
+ .hsv.hive-glass-app .hive-mobile-nav button[aria-current=page]{background:var(--surface);color:var(--accent);box-shadow:0 2px 10px #1c3e7a0a}
+ .hsv.hive-glass-app .hive-mobile-nav button[aria-current=page] svg{stroke-width:2}
+ .hsv.hive-glass-app .hive-mobile-create{display:grid;place-items:center;position:fixed;bottom:calc(96px + env(safe-area-inset-bottom));right:max(22px,env(safe-area-inset-right));z-index:44;width:52px;height:52px;border-radius:50%;border:1px solid #ffffff5c;background:linear-gradient(145deg,#6a96ff,#3d66ed);color:white;box-shadow:0 7px 24px #386bfa45,inset 0 1px 0 #ffffff5c;padding:0;outline:0}
+ .hsv.hive-glass-app .hive-mobile-create svg{width:22px;height:22px}
+ .hsv.hive-glass-app .hive-list-tools{position:sticky;top:calc(69px + env(safe-area-inset-top));margin:0 -4px 18px;padding:7px 4px;background:var(--canvas);backdrop-filter:none;display:flex;flex-wrap:wrap;gap:8px}
+ .hsv.hive-glass-app .hive-list-tools>label{width:100%;min-height:48px;flex-basis:100%;padding:0 14px}
+ .hsv.hive-glass-app .hive-list-tools input{font-size:16px}.hsv.hive-glass-app .hive-list-tools select{font-size:12px;max-width:none}
+ .hsv.hive-glass-app .hsv-rowtop{gap:12px;flex-wrap:wrap}.hsv.hive-glass-app .hsv-rowtop>.hsv-primary{font-size:12px;width:auto;padding:11px 15px}
+ .hsv.hive-glass-app .hsv-table{border:0;background:transparent;overflow:visible;box-shadow:none}
+ .hsv.hive-glass-app .hsv-table>div{background:var(--surface);border:1px solid var(--line);border-radius:22px;margin-bottom:12px;padding:18px;min-height:88px;gap:12px;box-shadow:var(--panel-shadow)}
+ .hsv.hive-glass-app .hive-record-actions{gap:6px;flex-wrap:wrap;max-width:100%;padding-top:12px;border-top:1px solid var(--line)}
+ .hsv.hive-glass-app .hsv-table button{min-width:44px;min-height:44px;font-size:11px;padding:10px 13px;border-radius:50px;background:var(--surface-soft);border-color:transparent}
+ .hsv.hive-glass-app .hsv-grow strong{font-size:14px}.hsv.hive-glass-app .hsv-grow small{font-size:12px}.hsv.hive-glass-app .hive-contact-cell{padding-left:52px;font-size:12px;flex-basis:100%}.hsv.hive-glass-app .hive-contact-cell small{font-size:11px}
+ .hsv.hive-glass-app .hsv-letter{width:40px;height:40px}.hsv.hive-glass-app .hive-invoice-table .hsv-grow{min-width:0}
+ .hsv.hive-glass-app .hive-table-labels{display:none}
+ .hsv.hive-glass-app .hsv-overlay{padding:env(safe-area-inset-top) 0 0;align-items:end}
+ .hsv.hive-glass-app .hsv-dialog{border-radius:30px 30px 0 0;padding:32px 23px calc(30px + env(safe-area-inset-bottom));max-height:calc(100dvh - env(safe-area-inset-top));gap:22px;box-shadow:0 -15px 80px #020c2733}
+ .hsv.hive-glass-app .hsv-dialog:before{content:"";position:absolute;top:10px;left:calc(50% - 17px);width:34px;height:4px;background:var(--line);border-radius:4px}
+ .hsv.hive-glass-app .hsv-dialog h2{font-size:26px;padding-right:26px}.hsv.hive-glass-app .hsv-close{top:20px;right:16px;width:44px;height:44px;min-height:44px;min-width:44px}
+ .hsv.hive-glass-app :is(.hsv-dialog,.hsv-branding) :is(input:not([type=checkbox]):not([type=color]),select,textarea){font-size:16px!important;border-radius:14px;min-height:48px}
+ .hsv.hive-glass-app .hsv-branding{padding:20px;border-radius:23px;gap:18px}.hsv.hive-glass-app .hsv-brand-preview{padding:17px;gap:15px}
+ .hsv.hive-glass-app .hive-mobile-subnav{margin-bottom:20px}.hsv.hive-glass-app .hive-mobile-subnav button{font-size:12px;padding:9px 13px}
+ .hsv.hive-glass-app .hsv-toast{left:18px;right:18px;bottom:calc(94px + env(safe-area-inset-bottom));font-size:12px}
+ .hsv.hive-glass-app .hive-search-dialog{margin:0;align-self:end}
+ .hsv.hive-glass-app .hive-search-dialog .hsv-table{max-height:60dvh!important}
+ .hsv.hive-glass-app .hive-document-section,.hsv.hive-glass-app .hive-document-summary{border-radius:19px}
+}
+@media screen and (max-width:360px){.hsv.hive-glass-app .hsv-main{padding-left:14px;padding-right:14px}.hsv.hive-glass-app .hsv-top{padding-left:12px;padding-right:12px;gap:5px}.hsv.hive-glass-app .hsv-identity{gap:2px}.hsv.hive-glass-app .hsv-identity select{font-size:12px}.hsv.hive-glass-app .hive-kpis>.hive-metric-hero{padding:20px;min-height:200px}.hsv.hive-glass-app .hive-finance-orbit{width:78px;height:78px;padding:5px}.hive-finance-orbit span{font-size:20px}.hive-finance-orbit small{font-size:9px}.hsv.hive-glass-app .hive-metric-hero .hive-kpi-value{font-size:clamp(25px,10cqi,34px)}.hsv.hive-glass-app .hive-kpis>button{padding:14px}.hsv.hive-glass-app .hive-kpis>.hive-metric-paid{padding:17px 14px}.hsv.hive-glass-app .hive-metric-paid .hive-metric-label{font-size:10px}.hsv.hive-glass-app .hive-metric-paid .hive-kpi-value{font-size:20px}.hsv.hive-glass-app .hive-kpis>button>span.hive-metric-label{font-size:9px;gap:5px}.hsv.hive-glass-app .hive-metric-icon{width:24px;height:24px}.hsv.hive-glass-app .hive-mobile-nav{left:9px;right:9px}.hsv.hive-glass-app .hive-mobile-nav button{font-size:8px}.hsv.hive-glass-app .hive-row-actions{flex-wrap:wrap;justify-content:flex-end;width:100%}.hsv.hive-glass-app .hive-row-actions>.hsv-primary{font-size:0;width:44px;min-width:44px;padding:0}.hsv.hive-glass-app .hsv-table>div{padding:16px}.hsv.hive-glass-app .hsv-table button{padding:10px;font-size:10px}}
+@media(display-mode:standalone){.hsv.hive-glass-app .hive-breadcrumb{opacity:.85}.hsv.hive-glass-app .hsv-top{user-select:none;-webkit-user-select:none}}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.hsv.hive-glass-app{--glass:var(--surface)}}
+@media(prefers-reduced-transparency:reduce),(prefers-contrast:more){.hsv.hive-glass-app{--glass:var(--surface);--glass-line:var(--line)}.hsv.hive-glass-app :is(.hsv-top,.hsv-nav,.hive-mobile-nav,.hsv-toast,.hive-document-header){backdrop-filter:none;-webkit-backdrop-filter:none}.hsv.hive-glass-app{--muted:#4c5d7b;--line:#9eabc1}html[data-theme=dark] .hsv.hive-glass-app{--muted:#c4d0e6;--line:#7585a2}}
+@media(prefers-reduced-motion:reduce){.hsv.hive-glass-app *{animation:none!important;transition:none!important;scroll-behavior:auto!important}.hsv.hive-glass-app button:hover,.hsv.hive-glass-app button:active{transform:none!important}}
+@media print{.hsv.hive-glass-app{background:white;color:black}.hive-install-trigger,.hive-sidebar-signature{display:none!important}}
+
+.hsv.hive-glass-app :is(.hsv-main,.hsv-layout,.hive-overview){background:transparent}
+
+.hsv.hive-glass-app .hive-finance-orbit small{color:#e4edff}
+
+@media screen and (max-width:760px){
+ .hsv.hive-glass-app .hive-eyebrow,.hsv.hive-glass-app .hive-page-kicker{font-size:10px}
+ .hsv.hive-glass-app .hive-kpis>button>span.hive-metric-label{font-size:11px;justify-content:flex-start}
+ .hsv.hive-glass-app .hive-kpis>button>small{font-size:11px}
+ .hsv.hive-glass-app .hive-record strong{font-size:14px}
+ .hsv.hive-glass-app .hive-record small{font-size:12px}
+ .hsv.hive-glass-app .hive-metric-paid .hive-metric-label{font-size:12px}
+}
+
+/* Module surfaces share the foundation tokens; keep functional compositions intact. */
+.hsv.hive-glass-app .hive-project-column{background:var(--surface-soft);border-color:var(--line);border-radius:20px}
+.hsv.hive-glass-app .hive-project-board-card{background:var(--surface);border-color:var(--line);border-radius:16px;box-shadow:var(--panel-shadow)}
+.hsv.hive-glass-app .hive-project-board-main strong{font-size:13px;line-height:1.5;color:var(--ink)}
+.hsv.hive-glass-app .hive-project-board-main small,.hsv.hive-glass-app .hive-project-board-meta{font-size:11px;color:var(--muted)}
+.hsv.hive-glass-app .hive-project-board-actions button,.hsv.hive-glass-app .hive-project-board-actions select{min-height:40px;border-color:var(--line);border-radius:12px;color:var(--ink);background:var(--surface-soft)}
+.hsv.hive-glass-app .hive-calendar-toolbar{background:var(--surface);border-color:var(--line);border-radius:20px;color:var(--ink)}
+.hsv.hive-glass-app .hive-calendar-day{background:var(--surface);border-color:var(--line)}
+.hsv.hive-glass-app .hive-calendar-day button{background:var(--accent-soft);color:var(--ink);border-color:var(--line);border-radius:12px}
+.hsv.hive-glass-app .hsv-invoice-editor{background:var(--canvas);color:var(--ink)}
+.hsv.hive-glass-app .hsv-paper{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:24px;box-shadow:var(--panel-shadow);font-family:var(--hive-font)}
+.hsv.hive-glass-app .hsv-editorbar{background:var(--glass);color:var(--ink);border-color:var(--glass-line);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)}
+.hsv.hive-glass-app .hsv-editorbar button{min-height:44px;min-width:44px;border-radius:50px}
+@media screen and (max-width:760px){
+ .hsv.hive-glass-app .hive-row-actions{flex-wrap:wrap;justify-content:flex-end;min-width:0;max-width:100%;gap:8px}
+ .hsv.hive-glass-app .hive-row-actions>.hsv-primary{font-size:0;width:44px;min-width:44px;max-width:44px;min-height:44px;padding:0;flex:none;justify-content:center}
+ .hsv.hive-glass-app .hive-view-switch button{padding:9px 12px;min-height:44px;font-size:12px}
+ .hsv.hive-glass-app .hive-project-agenda>button{background:var(--surface);color:var(--ink);border-color:var(--line);border-radius:18px;padding:18px}
+ .hsv.hive-glass-app .hive-project-agenda strong{font-size:14px;line-height:1.5}
+ .hsv.hive-glass-app .hive-project-agenda small{font-size:12px;color:var(--muted)}
+ .hsv.hive-glass-app .hive-project-board-actions button,.hsv.hive-glass-app .hive-project-board-actions select{min-height:44px}
+ .hsv.hive-glass-app .hsv-paper{border-radius:0;border:0}
+}
+html[data-theme=dark] .hsv.hive-glass-app{--dark-canvas:var(--canvas);--dark-surface:var(--surface);--dark-raised:var(--surface-soft);--dark-text:var(--ink);--dark-muted:var(--muted);--dark-border:var(--line)}
+.hsv.hive-glass-app .hsv-top .hive-theme-toggle{background:var(--glass);color:var(--ink);border-color:var(--glass-line);border-radius:50px;box-shadow:inset 0 1px 0 #ffffff26}
+html[data-theme=dark] .hsv.hive-glass-app .hive-finance-orbit small{color:#e4edff}

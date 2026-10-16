@@ -1,0 +1,147 @@
+@layer legacy, theme, components, utilities;
+@import "open-glass-ui/styles.css" layer(components);
+@import "./globals.css" layer(legacy);
+@import "./theme.css" layer(legacy);
+@import "./mobile-auth.css" layer(legacy);
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "./components/theme-picker.css";
+@source "../components";
+@source "./studio";
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+@theme inline {
+  --color-sidebar: var(--ui-sidebar);
+  --color-sidebar-foreground: var(--ui-foreground);
+  --color-sidebar-accent: var(--ui-muted);
+  --color-sidebar-accent-foreground: var(--ui-foreground);
+  --color-sidebar-primary: var(--ui-primary);
+  --color-sidebar-primary-foreground: var(--ui-primary-foreground);
+  --color-sidebar-border: var(--ui-border);
+  --color-sidebar-ring: var(--color-ring);
+  --color-background: var(--ui-background);
+  --color-foreground: var(--ui-foreground);
+  --color-card: var(--ui-card);
+  --color-card-foreground: var(--ui-foreground);
+  --color-popover: var(--ui-card);
+  --color-popover-foreground: var(--ui-foreground);
+  --color-primary: var(--ui-primary);
+  --color-primary-foreground: var(--ui-primary-foreground);
+  --color-secondary: var(--ui-muted);
+  --color-secondary-foreground: var(--ui-foreground);
+  --color-muted: var(--ui-muted);
+  --color-muted-foreground: var(--ui-muted-foreground);
+  --color-accent: var(--ui-muted);
+  --color-accent-foreground: var(--ui-foreground);
+  --color-destructive: #dc2626;
+  --color-border: var(--ui-border);
+  --color-input: var(--ui-border);
+  --color-ring: #64748b;
+}
+:root {
+  --ui-background: #fafafa;
+  --ui-card: #fff;
+  --ui-foreground: #18181b;
+  --ui-muted: #f4f4f5;
+  --ui-muted-foreground: #71717a;
+  --ui-border: #e4e4e7;
+  --ui-primary: #18181b;
+  --ui-primary-foreground: #fafafa;
+}
+html[data-theme="dark"] {
+  --ui-background: #111113;
+  --ui-card: #18181b;
+  --ui-foreground: #fafafa;
+  --ui-muted: #27272a;
+  --ui-muted-foreground: #a1a1aa;
+  --ui-border: #303034;
+  --ui-primary: #fafafa;
+  --ui-primary-foreground: #18181b;
+}
+/* Tailwind preflight is scoped to the new components, leaving document editors intact. */
+@layer components {
+  .crm-ui :where(ul, ol) {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .crm-ui,
+  .crm-ui *,
+  .crm-menu,
+  .crm-menu * {
+    box-sizing: border-box;
+    border-style: solid;
+    border-width: 0;
+    border-color: var(--ui-border);
+  }
+  .crm-ui {
+    color: var(--ui-foreground);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  .crm-ui button {
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .crm-ui :is(h2, h3, p) {
+    margin: 0;
+  }
+  .crm-ui svg,
+  .crm-menu svg {
+    display: block;
+    flex-shrink: 0;
+  }
+  .crm-menu {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    z-index: 100;
+  }
+  .crm-menu [role="menuitem"] {
+    min-height: 44px;
+    cursor: pointer;
+  }
+  .crm-ui button {
+    background-color: transparent;
+  }
+}
+@media (max-width: 767px) {
+  .crm-customer-table [data-slot="table-container"] {
+    overflow: visible;
+  }
+  .crm-customer-table table,
+  .crm-customer-table tbody {
+    display: block;
+    width: 100%;
+  }
+  .crm-customer-table thead {
+    display: none;
+  }
+  .crm-customer-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding: 20px;
+  }
+  .crm-customer-table tbody td {
+    display: block;
+    padding: 0 !important;
+    max-width: none;
+    white-space: normal;
+  }
+  .crm-customer-table tbody td:first-child {
+    margin-bottom: 4px;
+  }
+  .crm-customer-table .crm-contact-cell {
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+  .crm-customer-table .crm-place-cell {
+    font-size: 12px;
+  }
+  .crm-customer-table .crm-action-cell > div {
+    justify-content: stretch;
+    margin-top: 4px;
+  }
+  .crm-customer-table .crm-action-cell button[data-variant="outline"] {
+    flex: 1;
+    justify-content: space-between;
+  }
+}

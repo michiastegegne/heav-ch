@@ -58,7 +58,7 @@ const viewNames = {
   "portal-requests": "Portal-Anfragen",
 };
 const state = { view: "dashboard", query: "", filter: "all", invoiceSort: "created_desc", projectDocumentSort: "newest", projectSkin: "operator", selectedProjectId: null, activeWorkspaceId: null, workspaces: [], workspaceUserId: null, data: null, supabase: null, sendRequestKeys: new Map() };
-const assistantState = { ownerId: null, threadId: null, image: null, busy: false, proposals: new Map() };
+const assistantState = { ownerId: null, threadId: null, image: null, busy: false, restoring: false, proposals: new Map() };
 const esc = (value = "") => String(value).replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
 const formatDate = (value) => value ? new Intl.DateTimeFormat("de-CH").format(new Date(`${value}T12:00:00`)) : "–";
 const today = () => new Date().toISOString().slice(0, 10);
@@ -1178,6 +1178,17 @@ async function sendOffer(id, button) {
 function assistantText(value, maxLength = 1000) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
 }
+function assistantSafeInteger(value, minimum = 0) {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  const rounded = Math.round(parsed);
+  return Number.isSafeInteger(rounded) && rounded >= minimum ? rounded : null;
+}
+function assistantDecimal(value, minimum = 0, maximum = Number.POSITIVE_INFINITY) {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= minimum && parsed <= maximum ? parsed : null;
+}
 function assistantCustomerId(payload = {}) {
   const direct = state.data.customers.find((customer) => customer.id === payload.customer_id);
   if (direct) return direct.id;
@@ -1208,26 +1219,25 @@ function normalizeAssistantProposal(raw) {
       title: assistantText(payload.title, 200), description: assistantText(payload.description, 6000), status: ["planning", "active", "completed", "on_hold"].includes(payload.status) ? payload.status : "planning",
       start_date: assistantText(payload.start_date, 10), due_date: assistantText(payload.due_date, 10),
     };
-    const budget = Number(payload.budget_rappen);
-    if (payload.budget_rappen != null && payload.budget_rappen !== "" && Number.isFinite(budget)) project.budget_rappen = Math.max(0, Math.round(budget));
+    const budget = assistantSafeInteger(payload.budget_rappen);
+    if (budget !== null) project.budget_rappen = budget;
     if (!project.title) return null;
     return { id, kind: raw.kind, label: assistantText(raw.label, 180) || "Projektentwurf", payload: project };
   }
   if (raw.kind === "invoice") {
     const items = Array.isArray(payload.items) ? payload.items.slice(0, 10).map((item) => ({
-      description: assistantText(item?.description, 1000), quantity: Math.max(.01, Number(item?.quantity) || 1),
-      unit_price_rappen: item?.unit_price_rappen !== null && item?.unit_price_rappen !== undefined && item?.unit_price_rappen !== ""
-        ? Math.round(Number(item.unit_price_rappen))
-        : null,
-    })).filter((item) => item.description && item.unit_price_rappen !== null && Number.isFinite(item.unit_price_rappen) && item.unit_price_rappen >= 0) : [];
+      description: assistantText(item?.description, 1000),
+      quantity: assistantDecimal(item?.quantity, 0.01),
+      unit_price_rappen: assistantSafeInteger(item?.unit_price_rappen),
+    })).filter((item) => item.description && item.quantity !== null && item.unit_price_rappen !== null) : [];
     if (!items.length) return null;
     const invoicePayload = {
       customer_id: assistantCustomerId(payload), customer_email: assistantText(payload.customer_email, 320), customer_company: assistantText(payload.customer_company, 160),
       project_id: assistantText(payload.project_id, 80), issue_date: assistantText(payload.issue_date, 10) || today(), due_date: assistantText(payload.due_date, 10) || plusDays(today(), state.data.settings?.default_due_days || 30),
       notes: assistantText(payload.notes, 6000), items,
     };
-    const taxRate = Number(payload.tax_rate);
-    if (payload.tax_rate != null && payload.tax_rate !== "" && Number.isFinite(taxRate)) invoicePayload.tax_rate = Math.max(0, taxRate);
+    const taxRate = assistantDecimal(payload.tax_rate, 0, 100);
+    if (taxRate !== null) invoicePayload.tax_rate = taxRate;
     return { id, kind: raw.kind, label: assistantText(raw.label, 180) || "Rechnungsentwurf", payload: invoicePayload };
   }
   const invoice = state.data.invoices.find((item) => item.id === payload.invoice_id || item.invoice_number === payload.invoice_number);
@@ -1304,21 +1314,43 @@ function configureAssistantOwner(ownerId) {
   assistantState.threadId = localStorage.getItem(assistantThreadStorageKey());
   assistantDelete.hidden = !assistantState.threadId;
 }
+function setAssistantRestoring(restoring) {
+  assistantState.restoring = restoring;
+  assistantMessages.setAttribute("aria-busy", String(restoring));
+  assistantForm.querySelectorAll("button, textarea, input").forEach((control) => {
+    control.disabled = restoring;
+  });
+  assistantDelete.disabled = restoring;
+  if (restoring) {
+    assistantState.proposals.clear();
+    assistantMessages.innerHTML = '<article class="assistant-message is-assistant assistant-loading" role="status"><span class="assistant-loading-mark" aria-hidden="true"></span><p>Verlauf wird geladen …</p></article>';
+  }
+}
 async function restoreAssistantThread() {
   if (!assistantState.threadId) return;
-  const messages = await adapter.loadAssistantThread(assistantState.threadId);
-  if (!messages) {
-    resetAssistantThread();
-    return;
+  setAssistantRestoring(true);
+  try {
+    const messages = await adapter.loadAssistantThread(assistantState.threadId);
+    if (!messages) {
+      resetAssistantThread();
+      return;
+    }
+    assistantState.proposals.clear();
+    assistantMessages.innerHTML = "";
+    messages.filter((message) => ["user", "assistant"].includes(message.role)).forEach((message) => {
+      appendAssistantMessage(message.role, message.content, Array.isArray(message.proposals) ? message.proposals : []);
+    });
+    if (!messages.length) resetAssistantThread();
+  } catch (error) {
+    assistantMessages.innerHTML = '<article class="assistant-message is-assistant assistant-load-error" role="status"><p>Der gespeicherte Verlauf konnte nicht geladen werden. Dein Chat wurde nicht gelöscht.</p></article>';
+    showToast(error.message || "Chatverlauf konnte nicht geladen werden.", "error");
+  } finally {
+    setAssistantRestoring(false);
   }
-  assistantState.proposals.clear();
-  assistantMessages.innerHTML = "";
-  messages.filter((message) => ["user", "assistant"].includes(message.role)).forEach((message) => {
-    appendAssistantMessage(message.role, message.content, Array.isArray(message.proposals) ? message.proposals : []);
-  });
-  if (!messages.length) resetAssistantThread();
 }
 function resetAssistantThread() {
+  assistantState.restoring = false;
+  assistantMessages.setAttribute("aria-busy", "false");
   assistantState.threadId = null;
   assistantState.image = null;
   assistantState.proposals.clear();
@@ -1421,7 +1453,7 @@ assistantImage.addEventListener("change", async () => {
 });
 assistantForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  if (assistantState.busy) return;
+  if (assistantState.busy || assistantState.restoring) return;
   const message = assistantInput.value.trim();
   if (!message && !assistantState.image) { showToast("Schreibe eine Nachricht oder füge einen Screenshot hinzu.", "error"); return; }
   const image = assistantState.image;
@@ -1616,8 +1648,9 @@ async function boot() {
     if (!state.activeWorkspaceId) throw new Error("Für dieses Konto ist noch kein Hive-Business eingerichtet.");
     void state.supabase.rpc("record_owner_login");
     state.data = await adapter.loadAll(state.activeWorkspaceId);
-    await restoreAssistantThread();
+    const assistantRestore = restoreAssistantThread();
     loading.remove(); shell.hidden = false; render();
+    void assistantRestore;
   } catch (error) {
     loading.innerHTML = `<strong>HEAV</strong><span>${esc(error.message)}</span><a href="/login/" style="color:#e8e4dc">Zum Login</a>`;
   }

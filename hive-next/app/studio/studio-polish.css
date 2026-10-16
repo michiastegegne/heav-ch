@@ -1,0 +1,1374 @@
+/* Quiet hierarchy, consistent controls, and deliberate action groups. */
+.hsv {
+  --studio-radius: 12px;
+  --studio-muted: #727272;
+  --studio-line: #e6e6e4;
+  --studio-soft: #f6f6f4;
+}
+html[data-theme="dark"] .hsv {
+  --studio-muted: #aaa;
+  --studio-line: #333;
+  --studio-soft: #202020;
+}
+.hsv button,
+.hsv a,
+.hsv select {
+  -webkit-tap-highlight-color: transparent;
+}
+.hsv-main {
+  padding-top: 30px;
+}
+.hive-breadcrumb {
+  margin-bottom: 30px;
+  font-size: 11px;
+}
+.hive-breadcrumb time {
+  font-size: 11px;
+}
+.hsv-heading {
+  margin-bottom: 32px;
+}
+.hsv-heading h1 {
+  font-size: 32px;
+  letter-spacing: -1.2px;
+}
+.hsv-heading p {
+  font-size: 13px;
+  line-height: 1.7;
+  max-width: 48ch;
+  color: var(--studio-muted);
+}
+.hsv-primary,
+.hsv-outline {
+  min-height: 40px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-weight: 500;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.hsv-primary {
+  box-shadow: 0 1px 2px #0001;
+}
+.hsv button:disabled {
+  cursor: default;
+}
+.hsv-nav button {
+  min-height: 40px;
+  font-size: 13px;
+  border-radius: 7px;
+}
+.hive-nav-label {
+  font-size: 10px;
+  letter-spacing: 1.2px;
+}
+.hive-nav-count {
+  font-size: 11px;
+}
+.hive-kpis {
+  padding: 25px 0;
+}
+.hive-kpis button {
+  gap: 12px;
+}
+.hive-kpis button > span {
+  font-size: 12px;
+}
+.hive-kpis small {
+  font-size: 11px;
+  line-height: 1.5;
+}
+.hive-kpis strong {
+  letter-spacing: -1px;
+}
+.hive-panel {
+  border-radius: var(--studio-radius);
+}
+.hive-panel-heading {
+  padding: 22px;
+}
+.hive-eyebrow {
+  font-size: 10px;
+  letter-spacing: 1.2px;
+}
+.hive-panel-heading h2 {
+  font-size: 16px;
+  font-weight: 500;
+}
+.hive-panel-heading > button {
+  min-height: 36px;
+  font-size: 11px;
+}
+.hive-record strong {
+  font-size: 13px;
+}
+.hive-record small {
+  font-size: 11px;
+}
+.hive-finance-row {
+  min-height: 84px;
+}
+.hive-amount {
+  font-size: 13px;
+}
+.hive-due {
+  font-size: 12px;
+}
+.hive-panel-foot {
+  font-size: 11px;
+  padding: 16px 22px;
+}
+.hive-panel-foot strong {
+  font-size: 12px;
+}
+.hive-attention {
+  border-radius: 12px;
+  padding: 24px;
+}
+.hive-attention p,
+.hive-activity-panel li p {
+  font-size: 12px;
+  line-height: 1.8;
+}
+.hive-attention > button {
+  min-height: 36px;
+  font-size: 12px;
+}
+.hive-list-tools > label {
+  min-height: 42px;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.hive-list-tools input {
+  font-size: 13px;
+}
+.hive-list-tools select {
+  min-height: 42px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+.hive-list-tools > span {
+  font-size: 11px;
+}
+.hsv-rowtop {
+  align-items: center;
+  min-height: 40px;
+  margin-bottom: 18px;
+}
+.hsv-rowtop > strong {
+  font-size: 13px;
+}
+.hsv-rowtop small {
+  font-size: 11px;
+}
+.hsv-table {
+  border-radius: 10px;
+}
+.hsv-table > div {
+  padding: 19px 18px;
+  gap: 14px;
+}
+.hsv-grow strong {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.hsv-grow small,
+.hive-contact-cell small {
+  font-size: 11px;
+  line-height: 1.5;
+}
+.hive-contact-cell {
+  font-size: 12px;
+}
+.hive-table-date {
+  font-size: 11px;
+}
+.hsv-table > div > strong {
+  font-size: 13px;
+}
+.hsv-letter {
+  border-radius: 9px;
+  width: 34px;
+  height: 34px;
+}
+.hive-status {
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+.hive-record-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.hsv-table .hive-record-actions button {
+  min-height: 34px;
+  padding: 8px;
+  font-size: 11px;
+  border-radius: 6px;
+}
+.hive-record-actions button[aria-label$="löschen"] {
+  color: var(--studio-muted);
+}
+.hive-record-actions button[aria-label$="löschen"]:hover {
+  color: #ba4b42;
+  border-color: #ba4b4233;
+}
+.hsv-dialog {
+  padding: 30px;
+  border-radius: 16px;
+  gap: 20px;
+  max-height: calc(100dvh - 48px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.hsv-dialog > span {
+  font-size: 10px;
+  letter-spacing: 1.4px;
+  color: var(--studio-muted);
+}
+.hsv-dialog h2 {
+  padding-right: 28px;
+  font-size: 26px;
+  line-height: 1.2;
+}
+.hsv-close {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  top: 18px;
+  right: 18px;
+  border: 1px solid var(--studio-line);
+  border-radius: 50%;
+  background: var(--studio-soft);
+}
+.hsv-dialog form {
+  display: grid;
+  gap: 18px;
+}
+.hsv-dialog label {
+  font-size: 12px;
+  font-weight: 500;
+  gap: 8px;
+  min-width: 0;
+}
+.hsv-dialog :is(input, textarea, select) {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  border-radius: 8px;
+  font:
+    400 14px/1.5 "DM Sans",
+    sans-serif;
+  padding: 11px 12px;
+  color: inherit;
+}
+.hsv-dialog textarea {
+  resize: vertical;
+}
+.hsv-dialog input[type="checkbox"] {
+  width: 18px;
+  min-height: 18px;
+}
+.hsv-dialog form > .hsv-primary {
+  min-height: 44px;
+  justify-content: center;
+}
+.hsv-dialog .hsv-warning {
+  font-size: 11px;
+  line-height: 1.7;
+  margin: 0;
+}
+.hsv-toast {
+  border-radius: 12px;
+  line-height: 1.6;
+  box-shadow: 0 10px 40px #0002;
+}
+.hsv-toast button {
+  min-width: 36px;
+  min-height: 36px;
+}
+.hsv-empty {
+  padding: 40px 24px;
+  line-height: 1.7;
+}
+.hive-no-results > span {
+  font-size: 13px;
+}
+.hive-no-results > small {
+  font-size: 12px;
+}
+@media (max-width: 1150px) {
+  .hive-panel-heading > button {
+    font-size: 0;
+  }
+  .hive-record-actions {
+    justify-content: flex-start;
+  }
+  .hsv-table > div {
+    gap: 12px;
+  }
+}
+@media (max-width: 760px) {
+  .hsv-main {
+    padding-top: 24px;
+  }
+  .hive-breadcrumb {
+    font-size: 10px;
+    letter-spacing: 0.1px;
+    margin-bottom: 20px;
+  }
+  .hsv-heading {
+    margin-bottom: 26px;
+  }
+  .hsv-heading h1 {
+    font-size: 30px;
+    line-height: 1.2;
+  }
+  .hsv-heading p {
+    font-size: 13px;
+  }
+  .hsv-primary,
+  .hsv-outline {
+    min-height: 46px;
+    font-size: 13px;
+  }
+  .hsv-heading > .hsv-primary {
+    min-height: 46px;
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+  }
+  .hsv-rowtop {
+    gap: 12px;
+  }
+  .hsv-rowtop > strong {
+    font-size: 12px;
+  }
+  .hive-kpis {
+    padding: 0;
+    gap: 10px;
+  }
+  .hive-kpis button,
+  .hive-kpis button:first-child,
+  .hive-kpis button:last-child,
+  .hive-kpis button:nth-child(3) {
+    padding: 16px 12px;
+    gap: 12px;
+    border-radius: 14px;
+  }
+  .hive-kpis button > span {
+    font-size: 11px;
+    line-height: 1.5;
+    min-height: 0;
+    align-items: flex-start;
+  }
+  .hive-kpis small {
+    font-size: 10px;
+    min-height: 0;
+    line-height: 1.6;
+  }
+  .hive-kpis strong {
+    font-size: clamp(18px, 5.2vw, 26px);
+  }
+  .hive-panel-heading {
+    padding: 18px 16px;
+  }
+  .hive-panel-heading h2 {
+    font-size: 15px;
+  }
+  .hive-panel-heading > button {
+    min-height: 44px;
+  }
+  .hive-record strong {
+    font-size: 14px;
+  }
+  .hive-record small {
+    font-size: 12px;
+  }
+  .hive-finance-row {
+    min-height: 94px;
+    padding: 18px 16px;
+    gap: 10px;
+  }
+  .hive-finance-row .hive-amount {
+    font-size: 13px;
+  }
+  .hive-panel-foot {
+    padding: 16px;
+    font-size: 11px;
+  }
+  .hive-panel-foot strong {
+    font-size: 12px;
+  }
+  .hive-attention {
+    padding: 22px;
+  }
+  .hive-attention p,
+  .hive-activity-panel li p {
+    font-size: 13px;
+  }
+  .hive-attention > button {
+    min-height: 44px;
+  }
+  .hive-overview-primary {
+    gap: 20px;
+  }
+  .hive-list-tools {
+    border: 0;
+    margin-bottom: 20px;
+    padding-bottom: 0;
+  }
+  .hive-list-tools > label {
+    min-height: 48px;
+    border-radius: 10px;
+  }
+  .hive-list-tools input {
+    font-size: 16px;
+  }
+  .hive-list-tools select {
+    font-size: 13px;
+    min-height: 44px;
+    padding: 10px 12px;
+  }
+  .hsv-table > div {
+    padding: 18px 16px;
+    gap: 12px;
+    margin-bottom: 14px;
+    border-radius: 14px;
+  }
+  .hsv-grow strong {
+    font-size: 14px;
+  }
+  .hsv-grow small {
+    font-size: 12px;
+  }
+  .hsv-letter {
+    width: 36px;
+    height: 36px;
+  }
+  .hive-contact-cell {
+    padding-left: 48px;
+    font-size: 12px;
+  }
+  .hive-contact-cell small {
+    font-size: 11px;
+  }
+  .hsv-table > div > strong {
+    font-size: 15px;
+    letter-spacing: -0.2px;
+  }
+  .hive-record-actions {
+    flex-basis: 100%;
+    justify-content: flex-start;
+    gap: 8px;
+    padding-top: 14px;
+    margin-top: 2px;
+    border-top: 1px solid var(--studio-line);
+  }
+  .hsv-table .hive-record-actions button {
+    min-height: 42px;
+    font-size: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--studio-line);
+    border-radius: 8px;
+  }
+  .hsv-table .hive-record-actions button:first-child:not([aria-label]) {
+    font-weight: 500;
+    background: var(--studio-soft);
+    color: inherit;
+  }
+  .hive-record-actions button[aria-label$="löschen"] {
+    margin-left: auto;
+    min-width: 42px;
+  }
+  .hsv-dialog {
+    max-height: calc(100dvh - env(safe-area-inset-top));
+    border-radius: 20px 20px 0 0;
+    padding: 28px 20px calc(24px + env(safe-area-inset-bottom));
+  }
+  .hsv-close {
+    width: 40px;
+    height: 40px;
+    right: 16px;
+    top: 16px;
+  }
+  .hsv-dialog h2 {
+    font-size: 25px;
+    padding-right: 38px;
+  }
+  .hsv-dialog :is(input, textarea, select) {
+    font-size: 16px;
+    min-height: 48px;
+  }
+  .hsv-dialog form > .hsv-primary {
+    min-height: 48px;
+  }
+  .hive-mobile-nav {
+    box-shadow: 0 -6px 24px #00000008;
+  }
+  .hive-mobile-nav button {
+    gap: 6px;
+    font-size: 10px;
+  }
+  .hive-mobile-nav button[aria-current="page"] {
+    border-radius: 12px;
+  }
+  .hive-mobile-modules button {
+    border-radius: 12px;
+    min-height: 54px;
+  }
+  .hive-mobile-modules button[aria-current="page"] {
+    border-color: var(--studio-muted);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hsv * {
+    transition: none !important;
+  }
+}
+
+/* Workspace loading state */
+.hive-loading-state{display:grid;gap:14px;padding:8px 0 32px}
+.hive-loading-line,.hive-loading-cards span,.hive-loading-panel span{
+  display:block;
+  position:relative;
+  overflow:hidden;
+  background:var(--studio-soft);
+  border:1px solid var(--studio-line);
+}
+.hive-loading-line:after,.hive-loading-cards span:after,.hive-loading-panel span:after{
+  content:'';
+  position:absolute;
+  inset:0;
+  transform:translateX(-100%);
+  background:linear-gradient(90deg,transparent,#ffffff88,transparent);
+  animation:hive-loading-sheen 1.35s ease-in-out infinite;
+}
+html[data-theme="dark"] .hive-loading-line:after,
+html[data-theme="dark"] .hive-loading-cards span:after,
+html[data-theme="dark"] .hive-loading-panel span:after{
+  background:linear-gradient(90deg,transparent,#ffffff0d,transparent);
+}
+.hive-loading-title{width:min(280px,68%);height:34px;border-radius:8px}
+.hive-loading-copy{width:min(420px,88%);height:16px;border-radius:6px}
+.hive-loading-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:12px}
+.hive-loading-cards span{height:112px;border-radius:12px}
+.hive-loading-panel{display:grid;gap:8px;margin-top:6px}
+.hive-loading-panel span{height:68px;border-radius:10px}
+@keyframes hive-loading-sheen{to{transform:translateX(100%)}}
+@media(max-width:760px){
+  .hive-loading-state{padding-top:5px}
+  .hive-loading-title{height:32px}
+  .hive-loading-cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .hive-loading-cards span{height:124px;border-radius:16px}
+  .hive-loading-panel span{height:82px;border-radius:16px}
+}
+@media(prefers-reduced-motion:reduce){
+  .hive-loading-line:after,.hive-loading-cards span:after,.hive-loading-panel span:after{animation:none}
+}
+
+/* Mobile-only navigation wrappers must be layout-neutral on desktop. */
+.hive-mobile-subtabs{display:none}
+.hive-portal-section,
+.hive-email-mobile-section,
+.hive-settings-section{display:contents}
+
+/* Invoice lifecycle / audit timeline */
+.hive-invoice-history-summary{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+  margin-bottom:20px;
+}
+.hive-invoice-history-summary>div{
+  display:grid;
+  gap:5px;
+  padding:14px;
+  border:1px solid var(--studio-line);
+  border-radius:10px;
+  background:var(--studio-soft);
+}
+.hive-invoice-history-summary span{
+  color:var(--studio-muted);
+  font-size:10px;
+  letter-spacing:.5px;
+  text-transform:uppercase;
+}
+.hive-invoice-history-summary strong{
+  font-size:13px;
+  font-weight:600;
+}
+.hive-invoice-document-audit{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:5px 12px;
+  margin:0 0 17px;
+  padding:13px 14px;
+  border:1px solid var(--studio-line);
+  border-radius:10px;
+  background:var(--studio-soft);
+}
+.hive-invoice-document-audit>div{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-width:0;
+  color:var(--studio-muted);
+  font-size:10px;
+}
+.hive-invoice-document-audit>strong{
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.35px;
+  text-transform:uppercase;
+}
+.hive-invoice-document-audit>small{
+  grid-column:1/-1;
+  overflow:hidden;
+  color:var(--studio-muted);
+  font-size:9px;
+  line-height:1.45;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.hive-document-pending{
+  margin:0 0 17px;
+  padding:11px 13px;
+  border:1px dashed var(--studio-line);
+  border-radius:9px;
+  color:var(--studio-muted);
+  font-size:10px;
+  line-height:1.5;
+}
+@media(max-width:760px){
+  .hive-invoice-document-audit{grid-template-columns:minmax(0,1fr);border-radius:12px}
+  .hive-invoice-document-audit>strong{grid-column:1}
+  .hive-invoice-document-audit>small{white-space:normal;overflow-wrap:anywhere}
+}
+
+.hive-invoice-history{
+  position:relative;
+  display:grid;
+  gap:0;
+  padding-left:6px;
+}
+.hive-invoice-history:before{
+  content:'';
+  position:absolute;
+  top:17px;
+  bottom:17px;
+  left:12px;
+  width:1px;
+  background:var(--studio-line);
+}
+.hive-history-event{
+  position:relative;
+  display:grid;
+  grid-template-columns:22px minmax(0,1fr);
+  gap:11px;
+  padding:11px 0;
+}
+.hive-history-dot{
+  position:relative;
+  z-index:1;
+  width:13px;
+  height:13px;
+  margin:4px 0 0 0;
+  border:3px solid var(--studio-soft);
+  border-radius:50%;
+  background:#777;
+  box-shadow:0 0 0 1px var(--studio-line);
+}
+.history-issued .hive-history-dot,
+.history-sent .hive-history-dot,
+.history-resent .hive-history-dot{background:#3369d6}
+.history-paid .hive-history-dot{background:#2f8b57}
+.history-cancelled .hive-history-dot,
+.history-send_failed .hive-history-dot{background:#b74f45}
+.hive-history-event>div{
+  display:grid;
+  gap:3px;
+  min-width:0;
+}
+.hive-history-event strong{
+  font-size:12px;
+  font-weight:600;
+}
+.hive-history-event small,
+.hive-history-event p{
+  margin:0;
+  color:var(--studio-muted);
+  font-size:10px;
+  line-height:1.5;
+}
+.hive-history-loading{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  min-height:74px;
+  color:var(--studio-muted);
+  font-size:12px;
+}
+.hive-history-loading svg{animation:hive-history-spin .9s linear infinite}
+@keyframes hive-history-spin{to{transform:rotate(360deg)}}
+.hive-history-tech{
+  margin-top:18px;
+  border-top:1px solid var(--studio-line);
+  padding-top:14px;
+}
+.hive-history-tech summary{
+  cursor:pointer;
+  color:var(--studio-muted);
+  font-size:11px;
+}
+.hive-history-tech>div{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  padding:10px 0;
+  border-bottom:1px solid var(--studio-line);
+}
+.hive-history-tech span{font-size:11px}
+.hive-history-tech small{color:var(--studio-muted);font-size:10px}
+@media(max-width:760px){
+  .hive-invoice-history-summary{grid-template-columns:1fr;gap:7px}
+  .hive-invoice-history-summary>div{
+    grid-template-columns:1fr auto;
+    align-items:center;
+    padding:12px 13px;
+    border-radius:12px;
+  }
+  .hive-history-event{padding:12px 0}
+  .hive-history-event strong{font-size:13px}
+  .hive-history-event small,.hive-history-event p{font-size:11px}
+  .hive-history-tech>div{flex-direction:column;gap:3px}
+}
+@media(prefers-reduced-motion:reduce){
+  .hive-history-loading svg{animation:none}
+}
+
+.hive-history-linked{
+  display:grid;
+  grid-template-columns:28px minmax(0,1fr) auto;
+  align-items:center;
+  gap:10px;
+  margin:-4px 0 18px;
+  padding:12px 13px;
+  border:1px solid var(--studio-line);
+  border-radius:10px;
+  background:var(--studio-soft);
+}
+.hive-history-linked>svg{color:var(--studio-muted)}
+.hive-history-linked>div{display:grid;gap:2px;min-width:0}
+.hive-history-linked strong{font-size:12px}
+.hive-history-linked small{color:var(--studio-muted);font-size:10px}
+.hive-history-linked button{
+  min-height:34px;
+  padding:7px 9px;
+  border:1px solid var(--studio-line);
+  border-radius:7px;
+  background:transparent;
+  color:inherit;
+  font-size:10px;
+}
+.history-shared .hive-history-dot,
+.history-emailed .hive-history-dot{background:#3369d6}
+.history-accepted .hive-history-dot,
+.history-converted .hive-history-dot{background:#2f8b57}
+.history-withdrawn .hive-history-dot{background:#b74f45}
+@media(max-width:760px){
+  .hive-history-linked{grid-template-columns:28px minmax(0,1fr)}
+  .hive-history-linked button{grid-column:1/-1;min-height:44px}
+}
+
+/* Hive-wide business portfolio */
+.hive-businesses{display:grid;gap:22px}
+.hive-businesses-summary{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  border:1px solid var(--studio-line);
+  border-radius:14px;
+  overflow:hidden;
+  background:var(--studio-soft);
+}
+.hive-businesses-summary>div{
+  display:grid;
+  gap:7px;
+  min-height:128px;
+  padding:22px;
+  border-right:1px solid var(--studio-line);
+}
+.hive-businesses-summary>div:last-child{border-right:0}
+.hive-businesses-summary span{
+  color:var(--studio-muted);
+  font-size:9px;
+  font-weight:700;
+  letter-spacing:1.2px;
+}
+.hive-businesses-summary strong{
+  margin-top:auto;
+  font:600 30px/1 Manrope,sans-serif;
+  letter-spacing:-1.5px;
+}
+.hive-businesses-summary small{color:var(--studio-muted);font-size:10px}
+.hive-businesses-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px;
+}
+.hive-business-card{
+  min-width:0;
+  overflow:hidden;
+  border:1px solid var(--studio-line);
+  border-radius:14px;
+  background:var(--hive-surface,#fff);
+}
+.hive-business-card>header{
+  display:grid;
+  grid-template-columns:48px minmax(0,1fr) auto;
+  align-items:center;
+  gap:12px;
+  padding:17px;
+  border-bottom:1px solid var(--studio-line);
+}
+.hive-business-avatar{
+  width:48px;
+  height:48px;
+  overflow:hidden;
+  display:grid;
+  place-items:center;
+  border-radius:13px;
+  color:#fff;
+  font:700 20px Manrope,sans-serif;
+}
+.hive-business-avatar img{width:100%;height:100%;object-fit:contain;background:#fff}
+.hive-business-card>header>div{display:grid;gap:3px;min-width:0}
+.hive-business-card>header strong{
+  overflow:hidden;
+  font-size:14px;
+  font-weight:600;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.hive-business-card>header small{color:var(--studio-muted);font-size:10px}
+.hive-business-state{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:5px 7px;
+  border:1px solid var(--studio-line);
+  border-radius:7px;
+  color:var(--studio-muted);
+  font-size:9px;
+}
+.hive-business-operational{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  border-bottom:1px solid var(--studio-line);
+}
+.hive-business-operational>div{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;
+  gap:7px;
+  min-width:0;
+  padding:13px 12px;
+  border-right:1px solid var(--studio-line);
+}
+.hive-business-operational>div:last-child{border-right:0}
+.hive-business-operational svg{color:var(--studio-muted)}
+.hive-business-operational span{overflow:hidden;color:var(--studio-muted);font-size:9px;text-overflow:ellipsis}
+.hive-business-operational strong{font-size:12px;font-variant-numeric:tabular-nums}
+.hive-business-finance{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  padding:17px;
+  gap:14px;
+}
+.hive-business-finance>div{display:grid;gap:5px;min-width:0}
+.hive-business-finance span{color:var(--studio-muted);font-size:9px;text-transform:uppercase;letter-spacing:.6px}
+.hive-business-finance strong{
+  overflow:hidden;
+  font-size:12px;
+  font-weight:600;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.hive-business-finance>small{
+  grid-column:1/-1;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  color:var(--studio-muted);
+  font-size:9px;
+}
+.hive-business-finance-locked{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-height:94px;
+  padding:17px;
+  color:var(--studio-muted);
+  font-size:10px;
+}
+.hive-business-open{
+  width:100%;
+  min-height:46px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 17px;
+  border:0;
+  border-top:1px solid var(--studio-line);
+  background:transparent;
+  color:inherit;
+  font-size:11px;
+  font-weight:600;
+}
+.hive-business-open:hover{background:var(--studio-soft)}
+.hive-businesses-error{border-radius:14px!important}
+.hive-business-card-loading{display:grid;gap:12px;padding:20px}
+.hive-business-card-loading span{
+  display:block;
+  height:18px;
+  border-radius:6px;
+  background:var(--studio-soft);
+}
+.hive-business-card-loading span:first-child{width:44%;height:42px}
+.hive-business-card-loading span:nth-child(2){width:72%}
+.hive-business-card-loading span:nth-child(3){height:72px}
+.hive-business-card-loading span:nth-child(4){width:36%}
+@media(max-width:900px){
+  .hive-businesses-grid{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:760px){
+  .hive-businesses{gap:14px}
+  .hive-businesses-summary{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    border-radius:16px;
+  }
+  .hive-businesses-summary>div{min-height:104px;padding:13px 11px}
+  .hive-businesses-summary strong{font-size:24px}
+  .hive-businesses-summary small{font-size:9px;line-height:1.35}
+  .hive-business-card{border-radius:17px}
+  .hive-business-card>header{grid-template-columns:46px minmax(0,1fr);padding:15px}
+  .hive-business-state{grid-column:2;justify-self:start}
+  .hive-business-operational>div{
+    grid-template-columns:auto 1fr;
+    gap:5px;
+    padding:11px 8px;
+  }
+  .hive-business-operational>div strong{grid-column:1/-1;font-size:15px}
+  .hive-business-finance{padding:15px;gap:10px}
+  .hive-business-finance strong{font-size:11px}
+  .hive-business-open{min-height:52px;padding:0 15px}
+}
+@media(max-width:360px){
+  .hive-businesses-summary{grid-template-columns:1fr}
+  .hive-businesses-summary>div{
+    grid-template-columns:1fr auto;
+    align-items:center;
+    min-height:70px;
+    border-right:0;
+    border-bottom:1px solid var(--studio-line);
+  }
+  .hive-businesses-summary>div:last-child{border-bottom:0}
+  .hive-businesses-summary strong{grid-row:1/3;grid-column:2}
+  .hive-business-finance{grid-template-columns:1fr}
+  .hive-business-finance>small{grid-column:auto}
+}
+
+/* Project views + board */
+.hive-row-actions{display:flex;align-items:center;gap:9px}
+.hive-view-switch{
+  display:inline-flex;
+  padding:3px;
+  border:1px solid var(--studio-line);
+  border-radius:9px;
+  background:var(--studio-soft);
+}
+.hive-view-switch button{
+  min-height:32px;
+  padding:6px 10px;
+  border:0;
+  border-radius:6px;
+  background:transparent;
+  color:var(--studio-muted);
+  font-size:10px;
+  font-weight:600;
+}
+.hive-view-switch button[aria-pressed="true"]{
+  background:var(--studio-ink);
+  color:var(--studio-surface);
+}
+html[data-theme="dark"] .hive-view-switch button[aria-pressed="true"]{color:#111}
+.hive-project-board{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(230px,1fr));
+  gap:11px;
+  align-items:start;
+}
+.hive-project-column{
+  min-width:0;
+  overflow:hidden;
+  border:1px solid var(--studio-line);
+  border-radius:13px;
+  background:var(--studio-soft);
+}
+.hive-project-column>header{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  min-height:68px;
+  padding:13px;
+  border-bottom:1px solid var(--studio-line);
+}
+.hive-project-column>header>div{display:grid;gap:3px}
+.hive-project-column>header strong{font-size:11px}
+.hive-project-column>header small{color:var(--studio-muted);font-size:9px}
+.hive-project-column>header>span{
+  min-width:25px;
+  height:25px;
+  display:grid;
+  place-items:center;
+  border:1px solid var(--studio-line);
+  border-radius:8px;
+  background:var(--studio-surface);
+  color:var(--studio-muted);
+  font-size:9px;
+  font-weight:600;
+}
+.hive-project-column-body{
+  display:grid;
+  gap:8px;
+  min-height:120px;
+  padding:8px;
+}
+.hive-project-board-card{
+  overflow:hidden;
+  border:1px solid var(--studio-line);
+  border-radius:11px;
+  background:var(--studio-surface);
+  cursor:grab;
+}
+.hive-project-board-card:active{cursor:grabbing}
+.hive-project-board-main{
+  display:grid;
+  grid-template-columns:30px minmax(0,1fr);
+  gap:9px;
+  padding:12px 11px 9px;
+}
+.hive-project-board-main>span{
+  width:30px;height:30px;display:grid;place-items:center;
+  border:1px solid var(--studio-line);
+  border-radius:9px;
+  background:var(--studio-soft);
+  color:var(--studio-muted);
+}
+.hive-project-board-main>div{display:grid;gap:4px;min-width:0}
+.hive-project-board-main strong{
+  overflow:hidden;
+  font-size:11px;
+  line-height:1.35;
+  text-overflow:ellipsis;
+}
+.hive-project-board-main small{color:var(--studio-muted);font-size:9px}
+.hive-project-board-meta{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:0 11px 10px;
+}
+.hive-project-board-meta span{
+  display:flex;align-items:center;gap:5px;
+  color:var(--studio-muted);font-size:9px;
+}
+.hive-project-board-meta strong{font-size:10px;font-weight:600}
+.hive-project-board-card label{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  align-items:center;
+  gap:8px;
+  padding:8px 11px;
+  border-top:1px solid var(--studio-line);
+  color:var(--studio-muted);
+  font-size:9px;
+}
+.hive-project-board-card select{
+  min-width:0;
+  border:1px solid var(--studio-line);
+  border-radius:7px;
+  padding:7px;
+  background:var(--studio-soft);
+  color:var(--studio-ink);
+  font-size:10px;
+}
+.hive-project-board-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  border-top:1px solid var(--studio-line);
+}
+.hive-project-board-actions button{
+  min-height:38px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  border:0;
+  border-right:1px solid var(--studio-line);
+  background:transparent;
+  color:var(--studio-muted);
+  font-size:9px;
+}
+.hive-project-board-actions button:last-child{border-right:0}
+.hive-project-board-actions button:hover{background:var(--studio-soft);color:var(--studio-ink)}
+.hive-project-column-empty{
+  min-height:84px;
+  display:grid;
+  place-items:center;
+  border:1px dashed var(--studio-line);
+  border-radius:9px;
+  color:var(--studio-muted);
+  font-size:9px;
+}
+@media(max-width:1100px){
+  .hive-project-board{grid-template-columns:repeat(2,minmax(230px,1fr))}
+}
+@media(max-width:760px){
+  .hsv-rowtop:has(.hive-view-switch){align-items:flex-start;flex-wrap:wrap}
+  .hive-row-actions{width:100%;justify-content:space-between}
+  .hive-view-switch{flex:1}
+  .hive-view-switch button{flex:1;min-height:40px}
+  .hive-project-board{grid-template-columns:minmax(0,1fr);gap:12px}
+  .hive-project-column{border-radius:16px}
+  .hive-project-column>header{min-height:64px;padding:14px}
+  .hive-project-column-body{padding:9px}
+  .hive-project-board-card{border-radius:13px;cursor:default}
+  .hive-project-board-main{padding:13px}
+  .hive-project-board-card select{min-height:44px;font-size:16px}
+  .hive-project-board-actions button{min-height:44px;font-size:10px}
+}
+
+/* Project calendar / deadline view */
+.hive-project-calendar{
+  overflow:hidden;
+  border:1px solid var(--studio-line);
+  border-radius:14px;
+  background:var(--studio-surface);
+}
+.hive-calendar-toolbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  min-height:58px;
+  padding:10px 13px;
+  border-bottom:1px solid var(--studio-line);
+}
+.hive-calendar-toolbar>div{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.hive-calendar-toolbar>div:first-child{color:var(--studio-muted)}
+.hive-calendar-toolbar strong{color:var(--studio-ink);font-size:12px;text-transform:capitalize}
+.hive-calendar-toolbar button{
+  min-width:34px;
+  min-height:34px;
+  display:grid;
+  place-items:center;
+  padding:6px 9px;
+  border:1px solid var(--studio-line);
+  background:var(--studio-soft);
+  color:var(--studio-ink);
+  font-size:9px;
+}
+.hive-calendar-toolbar button:first-child{border-radius:8px 0 0 8px}
+.hive-calendar-toolbar button:last-child{border-radius:0 8px 8px 0}
+.hive-project-calendar-grid{
+  display:grid;
+  grid-template-columns:repeat(7,minmax(0,1fr));
+}
+.hive-calendar-weekday{
+  padding:8px 9px;
+  border-right:1px solid var(--studio-line);
+  border-bottom:1px solid var(--studio-line);
+  color:var(--studio-muted);
+  font-size:8px;
+  font-weight:700;
+  letter-spacing:.8px;
+  text-transform:uppercase;
+}
+.hive-calendar-weekday:nth-child(7){border-right:0}
+.hive-calendar-day{
+  min-width:0;
+  min-height:126px;
+  padding:8px;
+  border-right:1px solid var(--studio-line);
+  border-bottom:1px solid var(--studio-line);
+  background:var(--studio-surface);
+}
+.hive-calendar-day:nth-child(7n){border-right:0}
+.hive-calendar-day>span{
+  width:24px;height:24px;display:grid;place-items:center;
+  color:var(--studio-muted);
+  font-size:9px;
+}
+.hive-calendar-day[data-today="true"]>span{
+  border-radius:8px;
+  background:var(--studio-ink);
+  color:var(--studio-surface);
+  font-weight:700;
+}
+html[data-theme="dark"] .hive-calendar-day[data-today="true"]>span{color:#111}
+.hive-calendar-day>div{display:grid;gap:5px;margin-top:4px}
+.hive-calendar-day button{
+  min-width:0;
+  display:grid;
+  gap:2px;
+  padding:7px;
+  border:1px solid var(--studio-line);
+  border-radius:7px;
+  background:var(--studio-soft);
+  color:var(--studio-ink);
+  text-align:left;
+}
+.hive-calendar-day button strong{
+  overflow:hidden;
+  font-size:8.5px;
+  line-height:1.3;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.hive-calendar-day button small{
+  overflow:hidden;
+  color:var(--studio-muted);
+  font-size:7.5px;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.hive-calendar-day-empty{background:color-mix(in srgb,var(--studio-soft) 58%,transparent)}
+.hive-project-agenda{display:none}
+@media(max-width:760px){
+  .hive-project-calendar{
+    overflow:visible;
+    border:0;
+    border-radius:0;
+    background:transparent;
+  }
+  .hive-calendar-toolbar{
+    position:sticky;
+    top:calc(62px + env(safe-area-inset-top));
+    z-index:16;
+    min-height:54px;
+    margin:0 -15px 12px;
+    padding:8px 15px;
+    background:color-mix(in srgb,var(--mobile-bg) 94%,transparent);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+  }
+  .hive-calendar-toolbar button{min-width:44px;min-height:44px}
+  .hive-project-calendar-grid{display:none}
+  .hive-project-agenda{display:grid;gap:9px}
+  .hive-project-agenda>button{
+    display:grid;
+    grid-template-columns:58px minmax(0,1fr) auto;
+    align-items:center;
+    gap:11px;
+    min-height:70px;
+    padding:11px 12px;
+    border:1px solid var(--mobile-line);
+    border-radius:15px;
+    background:var(--mobile-surface);
+    color:var(--mobile-ink);
+    text-align:left;
+  }
+  .hive-project-agenda time{
+    color:var(--mobile-muted);
+    font-size:9px;
+    font-weight:600;
+    text-transform:capitalize;
+  }
+  .hive-project-agenda>button>div{display:grid;gap:4px;min-width:0}
+  .hive-project-agenda strong{
+    overflow:hidden;
+    font-size:12px;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .hive-project-agenda small{color:var(--mobile-muted);font-size:9px}
+  .hive-project-agenda>button>span{
+    padding:5px 7px;
+    border:1px solid var(--mobile-line);
+    border-radius:7px;
+    color:var(--mobile-muted);
+    font-size:8px;
+  }
+  .hive-calendar-no-deadlines{
+    min-height:90px;
+    display:grid;
+    place-items:center;
+    border:1px dashed var(--mobile-line);
+    border-radius:15px;
+    color:var(--mobile-muted);
+    font-size:10px;
+  }
+  .hive-project-agenda details{
+    margin-top:4px;
+    padding:12px;
+    border:1px solid var(--mobile-line);
+    border-radius:15px;
+    background:var(--mobile-surface);
+  }
+  .hive-project-agenda summary{color:var(--mobile-muted);font-size:10px}
+  .hive-project-agenda details button{
+    width:100%;
+    min-height:48px;
+    margin-top:8px;
+    padding:9px;
+    border:1px solid var(--mobile-line);
+    border-radius:10px;
+    background:var(--mobile-bg);
+    color:var(--mobile-ink);
+    text-align:left;
+  }
+}
+
+.hive-kpi-locked{
+  min-height:132px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding:18px;
+  border-right:1px solid var(--studio-line);
+  background:var(--studio-soft);
+}
+.hive-kpi-locked span{color:var(--studio-muted);font-size:10px}
+.hive-kpi-locked strong{margin-top:auto;font-size:29px;line-height:1}
+.hive-kpi-locked small{color:var(--studio-muted);font-size:10px}
+.hive-finance-locked-panel{
+  min-height:170px;
+  display:grid;
+  place-items:center;
+  padding:24px;
+}
+.hive-finance-locked-panel>div{max-width:420px;text-align:center}
+.hive-finance-locked-panel h2{margin:8px 0 7px;font-size:17px}
+.hive-finance-locked-panel p{margin:0;color:var(--studio-muted);font-size:11px;line-height:1.6}
+@media(max-width:760px){
+  .hive-kpi-locked{
+    min-height:132px;
+    padding:15px;
+    border:1px solid var(--mobile-line);
+    border-radius:17px;
+    background:var(--mobile-surface);
+  }
+}

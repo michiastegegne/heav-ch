@@ -83,11 +83,16 @@ async function mockStudioSupabase(page, overrides = {}) {
           from(table) {
             const filters = [];
             const rows = () => (store[table] || []).filter((row) => filters.every(([column, value]) => row[column] === value));
+            const assistantDelay = async () => {
+              if ((table === "assistant_threads" || table === "assistant_messages") && Number(store.assistantLoadDelay || 0) > 0) {
+                await new Promise((resolve) => setTimeout(resolve, Number(store.assistantLoadDelay)));
+              }
+            };
             const builder = {
               select() { return builder; },
               eq(column, value) { filters.push([column, value]); return builder; },
-              order: async () => result(rows()),
-              maybeSingle: async () => result(rows()[0] || null),
+              order: async () => { await assistantDelay(); return result(rows()); },
+              maybeSingle: async () => { await assistantDelay(); return result(rows()[0] || null); },
               limit() { return builder; },
               insert(payload) { const row = { id: crypto.randomUUID(), ...payload }; store[table].push(row); if (table === "customers") store.customer_departments.push({ id: crypto.randomUUID(), customer_id: row.id, owner_id: row.owner_id, name: "Allgemein", code: "GENERAL", is_default: true, active: true }); return { select() { return { single: async () => result({ id: row.id }) }; }, then(resolve) { return Promise.resolve(result(null)).then(resolve); } }; },
               update: (payload) => { builder.__update = payload; return builder; },
@@ -1007,6 +1012,36 @@ test("HEAV Assistent: ein Providerfehler lässt den neuen Chat löschbar statt v
   const retained = await page.evaluate(() => ({ request: window.__assistantRequests[0], scoped: localStorage.getItem("heav-assistant-thread:owner-test") }));
   expect(retained.request.newThread).toBe(true);
   expect(retained.scoped).toBe(retained.request.threadId);
+});
+
+test("HEAV Assistent: Verlauf lädt separat ohne den Studio-Boot als leeren Chat darzustellen", async ({ page }) => {
+  const threadId = "90000000-0000-4000-8000-000000000124";
+  await page.addInitScript((id) => localStorage.setItem("heav-assistant-thread:owner-test", id), threadId);
+  await mockStudioSupabase(page, {
+    assistantLoadDelay: 600,
+    assistant_threads: [{ id: threadId }],
+    assistant_messages: [
+      { thread_id: threadId, role: "user", content: "Gespeichertes Briefing", proposals: [], created_at: "2026-09-17T10:00:00Z" },
+      { thread_id: threadId, role: "assistant", content: "Gespeicherte Antwort", proposals: [], created_at: "2026-09-17T10:00:01Z" }
+    ]
+  });
+
+  await page.goto(`${base}/studio/`);
+  await expect(page.locator("#admin-shell")).toBeVisible();
+  await page.getByRole("button", { name: "HEAV Assistent öffnen" }).click();
+
+  const assistant = page.locator("#assistant-dialog");
+  const messages = assistant.locator("#assistant-messages");
+  await expect(messages).toHaveAttribute("aria-busy", "true");
+  await expect(assistant).toContainText("Verlauf wird geladen …");
+  await expect(assistant).not.toContainText("Schick mir Kundendaten als Screenshot");
+  await expect(assistant.getByLabel("Nachricht an HEAV Assistent")).toBeDisabled();
+
+  await expect(messages).toHaveAttribute("aria-busy", "false", { timeout: 2500 });
+  await expect(assistant).toContainText("Gespeichertes Briefing");
+  await expect(assistant).toContainText("Gespeicherte Antwort");
+  await expect(assistant).not.toContainText("Verlauf wird geladen …");
+  await expect(assistant.getByLabel("Nachricht an HEAV Assistent")).toBeEnabled();
 });
 
 test("HEAV Assistent: gespeicherter Verlauf wird beim erneuten Öffnen wiederhergestellt", async ({ page }) => {

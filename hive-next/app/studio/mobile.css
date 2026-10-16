@@ -1,0 +1,573 @@
+/* Mobile chrome and record cards share all desktop actions and data. */
+.hive-mobile-nav {
+  display: none;
+}
+@media screen and (max-width: 760px) {
+  .hsv {
+    --m-surface: #fff;
+    --m-canvas: #f6f6f6;
+    --m-line: #e5e5e5;
+    --m-muted: #686868;
+    min-height: 100dvh;
+    background: var(--m-canvas);
+  }
+  html[data-theme="dark"] .hsv {
+    --m-surface: #202020;
+    --m-canvas: #151515;
+    --m-line: #383838;
+    --m-muted: #b0b0b0;
+  }
+  .hsv * {
+    box-sizing: border-box;
+  }
+  .hsv-top {
+    position: sticky;
+    top: 0;
+    flex-wrap: nowrap;
+    padding: calc(10px + env(safe-area-inset-top))
+      max(12px, env(safe-area-inset-right)) 10px
+      max(12px, env(safe-area-inset-left));
+    gap: 6px;
+    background: var(--m-surface);
+    min-height: 64px;
+  }
+  .hsv-hive {
+    font-size: 25px;
+    flex: none;
+  }
+  .hsv-top .hsv-logo,
+  .hsv-top .hsv-divider,
+  .hsv-top .hsv-back {
+    display: none;
+  }
+  .hsv-top .hsv-identity {
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+  }
+  .hsv-top .hsv-identity select {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    min-height: 44px;
+    font-size: 13px;
+    text-overflow: ellipsis;
+  }
+  .hsv-top .hsv-identity > .hsv-outline {
+    width: 32px;
+    height: 44px;
+    min-height: 44px;
+    flex: none;
+  }
+  .hsv-top > .hsv-outline,
+  .hsv-top .hive-theme-toggle {
+    width: 36px;
+    height: 44px;
+    min-height: 44px;
+    justify-content: center;
+    padding: 8px;
+    flex: none;
+  }
+  .hsv-nav {
+    display: none;
+  }
+  .hsv-main {
+    padding: 22px max(16px, env(safe-area-inset-right))
+      calc(104px + env(safe-area-inset-bottom))
+      max(16px, env(safe-area-inset-left));
+  }
+  .hive-breadcrumb {
+    margin-bottom: 18px;
+    font-size: 11px;
+    overflow-wrap: anywhere;
+  }
+  .hive-breadcrumb time {
+    display: none;
+  }
+  .hsv-heading {
+    align-items: flex-start;
+    margin-bottom: 24px;
+    gap: 12px;
+  }
+  .hsv-heading h1 {
+    font-size: 29px;
+  }
+  .hsv-heading p {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .hsv-heading > .hsv-primary {
+    font-size: 0;
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    flex: none;
+    justify-content: center;
+  }
+  .hsv-heading > .hsv-primary svg {
+    width: 20px;
+    height: 20px;
+  }
+  .hive-mobile-nav {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 40;
+    background: var(--m-surface);
+    border-top: 1px solid var(--m-line);
+    padding: 6px max(8px, env(safe-area-inset-right))
+      calc(6px + env(safe-area-inset-bottom))
+      max(8px, env(safe-area-inset-left));
+    box-shadow: 0 -6px 24px #00000006;
+  }
+  .hive-mobile-nav button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-height: 56px;
+    border: 0;
+    background: none;
+    color: var(--m-muted);
+    font: inherit;
+    font-size: 10px;
+    border-radius: 10px;
+    padding: 6px 1px;
+  }
+  .hive-mobile-nav button[aria-current="page"] {
+    background: var(--m-canvas);
+    color: inherit;
+  }
+  .hive-mobile-nav button[aria-current="page"] svg {
+    stroke-width: 2.3;
+  }
+  .hive-mobile-modules {
+    display: grid;
+    gap: 4px;
+  }
+  .hive-mobile-modules button {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-height: 52px;
+    border: 1px solid var(--m-line);
+    border-radius: 10px;
+    padding: 12px;
+    background: var(--m-surface);
+    color: inherit;
+    text-align: left;
+    font: inherit;
+  }
+  .hive-mobile-modules button span {
+    flex: 1;
+  }
+  .hive-mobile-modules button[aria-current="page"] {
+    background: var(--m-canvas);
+  }
+  .hive-kpis {
+    border: 0;
+    padding: 0;
+    gap: 12px;
+    margin-bottom: 24px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .hive-kpis button,
+  .hive-kpis button:first-child,
+  .hive-kpis button:last-child,
+  .hive-kpis button:nth-child(3) {
+    border: 1px solid var(--m-line);
+    border-radius: 14px;
+    padding: 16px 12px;
+    background: var(--m-surface);
+    gap: 12px;
+  }
+  .hive-kpis button > span {
+    font-size: 11px;
+    gap: 4px;
+  }
+  .hive-kpis strong {
+    font-size: clamp(18px, 5.3vw, 26px);
+    letter-spacing: -0.8px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .hive-kpis small {
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .hive-panel,
+  .hive-attention {
+    border-radius: 14px;
+  }
+  .hive-overview-grid {
+    gap: 24px;
+  }
+  .hive-overview-aside {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .hive-panel-heading {
+    padding: 18px 14px;
+    gap: 8px;
+  }
+  .hive-panel-heading > button {
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+  }
+  .hive-panel-heading h2 {
+    font-size: 15px;
+  }
+  .hive-finance-labels {
+    display: none;
+  }
+  .hive-finance-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 16px 14px;
+  }
+  .hive-finance-row .hive-record {
+    grid-column: 1;
+  }
+  .hive-finance-row .hive-amount {
+    grid-column: 2;
+    grid-row: 1;
+    font-size: 13px;
+  }
+  .hive-finance-row .hive-due {
+    grid-column: 1/-1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+  }
+  .hive-due small {
+    margin: 0;
+    font-size: 11px;
+  }
+  .hive-record strong {
+    font-size: 14px;
+  }
+  .hive-record small {
+    font-size: 12px;
+  }
+  .hive-project-focus > button {
+    padding: 18px 14px;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .hive-project-focus .hive-record {
+    min-width: 100px;
+  }
+  .hive-attention p,
+  .hive-activity-panel li p,
+  .hive-quiet-empty p {
+    font-size: 13px;
+  }
+  .hive-attention > button,
+  .hive-text-link {
+    min-height: 44px;
+    font-size: 12px;
+  }
+  .hive-list-tools {
+    gap: 10px;
+    align-items: stretch;
+  }
+  .hive-list-tools > label {
+    flex-basis: 100%;
+    min-width: 0;
+    min-height: 48px;
+    border-radius: 10px;
+  }
+  .hive-list-tools input {
+    font-size: 16px;
+  }
+  .hive-list-tools select {
+    max-width: none;
+    min-height: 44px;
+    font-size: 14px;
+  }
+  .hsv-primary,
+  .hsv-outline {
+    min-height: 44px;
+    font-size: 13px;
+    padding: 10px 12px;
+  }
+  .hsv-rowtop {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .hsv-rowtop > strong {
+    font-size: 13px;
+  }
+  .hsv-table {
+    border: 0;
+    background: transparent;
+    overflow: visible;
+  }
+  .hsv-table > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 1px solid var(--m-line);
+    border-radius: 14px;
+    background: var(--m-surface);
+  }
+  .hsv-table .hsv-grow,
+  .hive-invoice-table .hsv-grow {
+    min-width: 0;
+    flex: 1 1 calc(100% - 54px);
+  }
+  .hsv-grow strong {
+    font-size: 14px;
+  }
+  .hsv-grow small {
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+  .hsv-letter {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+  .hive-contact-cell {
+    flex-basis: 100%;
+    padding-left: 46px;
+    min-width: 0;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+  .hive-contact-cell small {
+    font-size: 12px;
+  }
+  .hsv-table button {
+    min-height: 44px;
+    min-width: 44px;
+    font-size: 12px;
+    padding: 10px;
+    border-color: var(--m-line);
+    background: var(--m-surface);
+  }
+  .hive-customer-table > div > button:first-of-type,
+  .hive-invoice-table .hive-status {
+    margin-left: 0;
+  }
+  .hive-table-date {
+    font-size: 12px;
+  }
+  .hsv-table > div > strong {
+    font-size: 14px;
+  }
+  .hive-status {
+    font-size: 11px;
+    padding: 5px 8px;
+  }
+  .hsv-overlay {
+    padding: env(safe-area-inset-top) 0 0;
+    align-items: end;
+    overscroll-behavior: contain;
+  }
+  .hsv-dialog {
+    width: 100%;
+    max-width: 100% !important;
+    max-height: calc(100dvh - env(safe-area-inset-top));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 20px 20px 0 0;
+    padding: 26px 20px calc(24px + env(safe-area-inset-bottom));
+    gap: 18px;
+    min-width: 0;
+  }
+  .hsv-dialog h2 {
+    padding-right: 36px;
+    font-size: 25px;
+  }
+  .hsv-close {
+    top: 14px;
+    right: 12px;
+    min-width: 44px;
+    min-height: 44px;
+    display: grid;
+    place-items: center;
+  }
+  .hsv-dialog form,
+  .hsv-branding {
+    min-width: 0;
+  }
+  .hsv-dialog label {
+    font-size: 13px;
+  }
+  .hsv-dialog input,
+  .hsv-dialog select,
+  .hsv-dialog textarea,
+  .hsv-branding input,
+  .hsv-branding textarea,
+  .hsv-branding select {
+    font-size: 16px !important;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 46px;
+  }
+  .hsv-dialog [style*="grid-template-columns"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .hsv-dialog form > .hsv-primary:last-child {
+    position: sticky;
+    bottom: 0;
+    width: 100%;
+    z-index: 2;
+    box-shadow: 0 -8px 20px #0001;
+  }
+  .hive-search-dialog {
+    align-self: start;
+    margin-top: 8px;
+  }
+  .hive-search-dialog input {
+    min-width: 0;
+  }
+  .hive-search-dialog .hsv-table {
+    max-height: 65dvh !important;
+    overflow-y: auto !important;
+  }
+  .hive-search-dialog .hsv-table > button {
+    width: 100%;
+    padding: 16px;
+    gap: 12px;
+    justify-content: flex-start;
+    text-align: left;
+  }
+  .hsv-invoice-overlay {
+    align-items: stretch;
+  }
+  .hsv-invoice-editor {
+    height: 100dvh;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    background: var(--m-canvas);
+  }
+  .hsv-editorbar {
+    padding: 10px 16px;
+    min-height: 64px;
+    background: var(--m-surface);
+  }
+  .hsv-editorbar button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .hsv-paper {
+    min-width: 0;
+    width: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: 22px 16px calc(36px + env(safe-area-inset-bottom));
+    overflow: visible;
+    box-shadow: none;
+  }
+  .hsv-paperhead {
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .hsv-paperhead > * {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .hsv-documentname {
+    text-align: left;
+  }
+  .hsv-documentname h2 {
+    font-size: 28px;
+  }
+  .hsv-paperinfo {
+    grid-template-columns: minmax(0, 1fr);
+    margin-top: 24px;
+    gap: 16px;
+  }
+  .hsv-paper input,
+  .hsv-paper select,
+  .hsv-paper textarea {
+    font-size: 16px;
+    min-height: 44px;
+    max-width: 100%;
+  }
+  .hsv-lineheader {
+    display: none;
+  }
+  .hsv-line {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 44px;
+    gap: 10px;
+    padding: 16px 12px;
+    margin-bottom: 12px;
+    border: 1px solid var(--m-line);
+    border-radius: 12px;
+  }
+  .hsv-line input:first-child {
+    grid-column: 1/-1;
+  }
+  .hsv-line input {
+    font-size: 16px;
+    padding: 10px;
+  }
+  .hsv-line strong {
+    grid-column: 1/3;
+    text-align: left;
+    font-size: 14px;
+  }
+  .hsv-line button {
+    grid-column: 3;
+    grid-row: 2/4;
+    min-height: 44px;
+  }
+  .hsv-addline {
+    min-height: 48px;
+    font-size: 14px;
+  }
+  .hsv-bill-total {
+    width: 100%;
+    max-width: none;
+  }
+  .hsv-toast {
+    bottom: calc(84px + env(safe-area-inset-bottom));
+    left: 16px;
+    right: 16px;
+    max-width: none;
+  }
+  .hsv-toast button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+@media print {
+  .hive-mobile-nav {
+    display: none !important;
+  }
+}
+@media screen and (max-width: 760px) {
+  .hsv-paper [style*="grid-template-columns"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .hsv-paper label {
+    min-width: 0;
+    font-size: 13px;
+  }
+  .hsv-paper :is(input, select, textarea) {
+    min-width: 0;
+    width: 100%;
+  }
+  .hsv-paper form {
+    display: grid;
+    gap: 16px;
+  }
+  .hsv-paper form > .hsv-primary:last-child {
+    min-height: 48px;
+  }
+  .hsv-dialog input[type="checkbox"] {
+    width: 20px;
+    min-height: 20px;
+  }
+}

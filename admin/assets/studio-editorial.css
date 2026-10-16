@@ -1887,3 +1887,24 @@ body.crm-theme.studio-editorial-theme .dashboard-money > strong { font-size: cla
   body.crm-theme.studio-editorial-theme :is(.editor-dialog, .assistant-dialog) { border: 0; border-radius: 0; }
   body.crm-theme.studio-editorial-theme .action-confirm-dialog { border-radius: var(--studio-card-radius); }
 }
+
+body.studio-editorial-theme .assistant-loading{
+  display:flex;align-items:center;gap:12px;min-height:58px;color:#a1a4a5;
+}
+body.studio-editorial-theme .assistant-loading-mark{
+  width:12px;height:12px;flex:none;border-radius:999px;background:currentColor;
+  animation:assistant-history-pulse 1s ease-in-out infinite alternate;
+}
+body.studio-editorial-theme .assistant-load-error{
+  border-style:dashed;color:#b8a99d;
+}
+body.studio-editorial-theme .assistant-messages[aria-busy="true"]{
+  cursor:progress;
+}
+@keyframes assistant-history-pulse{
+  from{opacity:.28;transform:scale(.72)}
+  to{opacity:1;transform:scale(1)}
+}
+@media(prefers-reduced-motion:reduce){
+  body.studio-editorial-theme .assistant-loading-mark{animation:none;opacity:.7}
+}

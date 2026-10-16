@@ -2,7 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 
 const validMailbox = (value: unknown) => typeof value === "string" && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value.trim());
 const escapeHtml = (value: unknown) => String(value ?? "").replace(/[&<>\"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char] || char));
-import { applyEmailTemplate, loadEmailTemplate, logEmail } from "../_shared/email.ts";
+import { assertWorkspaceEmailAllowed, applyEmailTemplate, loadEmailTemplate, logEmail } from "../_shared/email.ts";
 
 const formatCHF = (rappen: number) => `CHF ${(Number(rappen || 0) / 100).toFixed(2).replace(".", ",")}`;
 
@@ -24,6 +24,8 @@ Deno.serve(async (request) => {
   const service = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
   try {
     const runDate = new Date().toISOString().slice(0, 10);
+    const { error: overdueError } = await service.rpc("refresh_overdue_invoices", { p_run_date: runDate });
+    if (overdueError) throw overdueError;
     const { data: reminders, error: claimError } = await service.rpc("claim_invoice_reminders", { p_run_date: runDate });
     if (claimError) throw claimError;
     const claimedReminders = (reminders || []) as Array<Record<string, any>>;
@@ -36,6 +38,13 @@ Deno.serve(async (request) => {
     let sent = 0;
     let failed = 0;
     for (const reminder of claimedReminders) {
+      try {
+        await assertWorkspaceEmailAllowed(service, reminder.workspace_id);
+      } catch {
+        failed += 1;
+        await service.rpc("complete_invoice_reminder", { p_reminder_id: reminder.reminder_id, p_success: false, p_error: "Workspace email delivery disabled" });
+        continue;
+      }
       const recipient = String(reminder.recipient_email || "").trim().toLowerCase();
       if (!validMailbox(recipient)) {
         failed += 1;
@@ -46,7 +55,7 @@ Deno.serve(async (request) => {
       const template = await loadEmailTemplate(service, reminder.owner_id, "invoice_reminder", {
         subject_template: "Zahlungserinnerung · Rechnung {{invoice_number}}",
         text_template: "Hallo {{first_name}}\n\nfreundliche Erinnerung: Die Rechnung {{invoice_number}} über {{amount}} ist am {{due_date}} fällig.\n\nBitte beachte die Zahlungsangaben auf der Rechnung.\n\nFreundliche Grüsse\n{{company_name}}",
-      });
+      }, reminder.workspace_id);
       const values = { first_name: firstName, invoice_number: reminder.invoice_number, amount: formatCHF(reminder.total_rappen), due_date: reminder.due_date, company_name: reminder.company_name || "HEAV" };
       const subject = applyEmailTemplate(template.subject_template, values);
       const text = applyEmailTemplate(template.text_template, values);
@@ -61,10 +70,10 @@ Deno.serve(async (request) => {
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(String(payload.message || "Reminder email failed"));
         await service.rpc("complete_invoice_reminder", { p_reminder_id: reminder.reminder_id, p_success: true, p_provider_id: payload.id || null });
-        await logEmail(service, { owner_id: reminder.owner_id, template_key: "invoice_reminder", status: "sent", recipient_email: recipient, recipient_name: firstName, customer_id: customerByInvoice.get(reminder.invoice_id) || null, invoice_id: reminder.invoice_id, subject, text_body: text, provider_id: payload.id || null, idempotency_key: reminder.idempotency_key });
+        await logEmail(service, { workspace_id: reminder.workspace_id, owner_id: reminder.owner_id, template_key: "invoice_reminder", status: "sent", recipient_email: recipient, recipient_name: firstName, customer_id: customerByInvoice.get(reminder.invoice_id) || null, invoice_id: reminder.invoice_id, subject, text_body: text, provider_id: payload.id || null, idempotency_key: reminder.idempotency_key });
         sent += 1;
       } catch (error) {
-        await logEmail(service, { owner_id: reminder.owner_id, template_key: "invoice_reminder", status: "failed", recipient_email: recipient, recipient_name: firstName, customer_id: customerByInvoice.get(reminder.invoice_id) || null, invoice_id: reminder.invoice_id, subject, text_body: text, error_message: error instanceof Error ? error.message : "Reminder email failed", idempotency_key: reminder.idempotency_key });
+        await logEmail(service, { workspace_id: reminder.workspace_id, owner_id: reminder.owner_id, template_key: "invoice_reminder", status: "failed", recipient_email: recipient, recipient_name: firstName, customer_id: customerByInvoice.get(reminder.invoice_id) || null, invoice_id: reminder.invoice_id, subject, text_body: text, error_message: error instanceof Error ? error.message : "Reminder email failed", idempotency_key: reminder.idempotency_key });
         await service.rpc("complete_invoice_reminder", { p_reminder_id: reminder.reminder_id, p_success: false, p_error: error instanceof Error ? error.message : "Invoice reminder failed" });
         failed += 1;
       }
