@@ -69,6 +69,22 @@ For every existing Hive user that must keep historical data:
 
 Do not delete the legacy account after linking.
 
+## Phase 3b — genuinely new Clerk users
+
+A Clerk identity with no historical Hive data must not be linked by email and
+must not silently create a second account.
+
+The Account screen exposes two explicit paths:
+
+- **Bestehende Daten** — redeem the one-time migration code and preserve the
+  existing internal Hive UUID.
+- **Neu starten** — atomically provision a new `app_users` identity and the
+  first workspace through `provision_current_hive_account()`.
+
+The new-account path is intentionally blocked for legacy Hive identities. It
+uses the verified Clerk profile only as profile metadata; authorization still
+comes exclusively from the trusted issuer + subject mapping.
+
 ## Phase 4 — negative security tests
 
 Before cutover, verify with at least two independent identities:
