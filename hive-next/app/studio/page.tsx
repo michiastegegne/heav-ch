@@ -150,6 +150,10 @@ const customerName = (customer?: Partial<Customer> | null) =>
   customer?.company?.trim() || customer?.contact_name?.trim() || 'Ohne Name';
 const relatedName = (relation?: { company?: string | null; contact_name?: string | null } | null) =>
   relation?.company?.trim() || relation?.contact_name?.trim() || 'Kunde';
+
+const offerSendStorageKey = (offerId:string) => `hive.offerSendRequest.${offerId}`;
+const validRequestKey = (value:string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 const canFinanceRole = (role?:string) => ['owner','admin','accountant'].includes(role || '');
 const canAdminRole = (role?:string) => ['owner','admin'].includes(role || '');
 
@@ -1168,8 +1172,16 @@ export default function StudioPage() {
 
     let requestKey = '';
     if (action === 'send') {
-      requestKey = offerSendKeys.current.get(offer.id) || crypto.randomUUID();
+      const memoryKey = offerSendKeys.current.get(offer.id) || '';
+      let storedKey = '';
+      try { storedKey = sessionStorage.getItem(offerSendStorageKey(offer.id)) || ''; } catch {}
+      requestKey = validRequestKey(memoryKey)
+        ? memoryKey
+        : validRequestKey(storedKey)
+          ? storedKey
+          : crypto.randomUUID();
       offerSendKeys.current.set(offer.id, requestKey);
+      try { sessionStorage.setItem(offerSendStorageKey(offer.id), requestKey); } catch {}
       setOfferSendBusyIds((current) => new Set(current).add(offer.id));
     }
 
@@ -1178,7 +1190,10 @@ export default function StudioPage() {
         method: 'POST',
         body: JSON.stringify(action === 'send' ? { action, requestKey } : { action }),
       });
-      if (action === 'send') offerSendKeys.current.delete(offer.id);
+      if (action === 'send') {
+        offerSendKeys.current.delete(offer.id);
+        try { sessionStorage.removeItem(offerSendStorageKey(offer.id)); } catch {}
+      }
       setNotice(
         action === 'share' ? 'Offerte im Kundenportal freigegeben.'
         : action === 'send' ? 'Offerte per E-Mail versendet.'
