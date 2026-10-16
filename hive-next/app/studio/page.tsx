@@ -158,6 +158,7 @@ export default function StudioPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [emails, setEmails] = useState<EmailLog[]>([]);
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplateRow[]>([]);
+  const [emailMobileView, setEmailMobileView] = useState<'templates'|'history'>('templates');
   const [portal, setPortal] = useState<PortalData>({ memberships:[], invites:[], requests:[], files:[], reviews:[], activity:[] });
   const [portalMobileView, setPortalMobileView] = useState<'access'|'files'|'requests'|'activity'>('access');
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -1525,6 +1526,11 @@ export default function StudioPage() {
         </>}
 
         {tab === 'emails' && <>
+          <div className="hive-mobile-subtabs" role="tablist" aria-label="E-Mail-Bereiche">
+            <button role="tab" aria-selected={emailMobileView==='templates'} onClick={() => setEmailMobileView('templates')}>Vorlagen</button>
+            <button role="tab" aria-selected={emailMobileView==='history'} onClick={() => setEmailMobileView('history')}>Verlauf</button>
+          </div>
+          <section className="hive-email-mobile-section" data-mobile-active={emailMobileView==='templates'}>
           <div className="hsv-rowtop"><strong>E-Mail-Vorlagen</strong><button className="hsv-outline" onClick={() => activeWorkspaceId && void loadWorkspaceData(activeWorkspaceId)}><RefreshCw size={14}/> Aktualisieren</button></div>
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:14,marginBottom:30}}>
             {emailTemplates.map((template,index) => <div className="hsv-branding" key={template.template_key} style={{margin:0}}>
@@ -1535,6 +1541,8 @@ export default function StudioPage() {
               <button className="hsv-primary" type="button" onClick={() => void saveEmailTemplate(template)}>Vorlage speichern <Check size={15}/></button>
             </div>)}
           </div>
+          </section>
+          <section className="hive-email-mobile-section" data-mobile-active={emailMobileView==='history'}>
           <div className="hsv-rowtop"><strong>{emails.length} Versandereignisse</strong></div>
           <div className="hsv-table">{emails.map((email) => <div key={email.id}>
             <span className="hsv-letter"><Mail size={16}/></span>
@@ -1542,6 +1550,7 @@ export default function StudioPage() {
             <small>{email.recipient_email}</small>
           </div>)}</div>
           <p className="hsv-warning">Historische Empfänger in der Dev-Kopie wurden neutralisiert. Echte Dev-Mails bleiben gesperrt.</p>
+          </section>
         </>}
 
         {tab === 'portal' && <>
