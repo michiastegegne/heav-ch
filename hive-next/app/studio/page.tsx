@@ -301,9 +301,12 @@ export default function StudioPage() {
     try {
       const data = await requestJson<{ workspaces: Workspace[] }>('/api/hive/workspaces');
       setWorkspaces(data.workspaces);
-      setActiveWorkspaceId((current) =>
-        data.workspaces.some((workspace) => workspace.id === current) ? current : (data.workspaces[0]?.id || ''),
-      );
+      setActiveWorkspaceId((current) => {
+        if (data.workspaces.some((workspace) => workspace.id === current)) return current;
+        const stored = typeof window !== 'undefined' ? window.localStorage.getItem('hive.activeWorkspace.v2') : '';
+        if (stored && data.workspaces.some((workspace) => workspace.id === stored)) return stored;
+        return data.workspaces[0]?.id || '';
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Backend nicht erreichbar';
       setBackendError(message);
@@ -538,6 +541,10 @@ export default function StudioPage() {
   }, []);
 
   useEffect(() => { void loadWorkspaces(); }, [loadWorkspaces]);
+  useEffect(() => {
+    if (!activeWorkspaceId || !workspaces.some((workspace)=>workspace.id===activeWorkspaceId)) return;
+    window.localStorage.setItem('hive.activeWorkspace.v2', activeWorkspaceId);
+  }, [activeWorkspaceId, workspaces]);
   useEffect(() => { if (activeWorkspaceId) void loadWorkspaceData(activeWorkspaceId); }, [activeWorkspaceId, loadWorkspaceData]);
   useEffect(() => { if (tab === 'businesses') void loadBusinessesOverview(); }, [tab, loadBusinessesOverview]);
   useEffect(() => { if (tab === 'team' && activeWorkspaceId) void loadTeam(activeWorkspaceId); }, [tab, activeWorkspaceId, loadTeam]);
