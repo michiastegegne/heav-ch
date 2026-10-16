@@ -475,6 +475,67 @@
   .hive-invoice-table>div>strong{grid-column:3;grid-row:2}
   .hive-invoice-table .hive-record-actions{grid-column:1/-1}
 
+  /* Detail workspaces mix labels, amounts and actions. Keep those cards flexible
+     instead of forcing the strict three-column pattern used by primary lists. */
+  .hsv-table:not(.hive-customer-table):not(.hive-project-table):not(.hive-invoice-table):not(.hive-offer-table)>div{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:9px 10px;
+  }
+  .hsv-table:not(.hive-customer-table):not(.hive-project-table):not(.hive-invoice-table):not(.hive-offer-table)>div>.hsv-letter{
+    grid-column:auto;
+    grid-row:auto;
+    flex:none;
+  }
+  .hsv-table:not(.hive-customer-table):not(.hive-project-table):not(.hive-invoice-table):not(.hive-offer-table)>div>.hsv-grow{
+    grid-column:auto;
+    grid-row:auto;
+    flex:1 1 calc(100% - 54px);
+  }
+  .hsv-table:not(.hive-customer-table):not(.hive-project-table):not(.hive-invoice-table):not(.hive-offer-table)>div>strong{
+    grid-column:auto;
+    grid-row:auto;
+    margin-left:auto!important;
+  }
+  .hsv-table:not(.hive-customer-table):not(.hive-project-table):not(.hive-invoice-table):not(.hive-offer-table)>div>small{
+    color:var(--mobile-muted);
+    font-size:10px;
+  }
+  .hsv-table:not(.hive-customer-table):not(.hive-project-table):not(.hive-invoice-table):not(.hive-offer-table)>div>button:not(.hsv-letter){
+    flex:none;
+    min-height:38px;
+    padding:8px 10px;
+    border:1px solid var(--mobile-line);
+    border-radius:10px;
+    background:var(--mobile-bg);
+    color:var(--mobile-ink);
+    font-size:11px;
+  }
+  .hsv-invoice-editor .hsv-cards{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:10px;
+    margin:0 0 20px;
+  }
+  .hsv-invoice-editor .hsv-cards button{
+    min-height:106px;
+    padding:14px 12px;
+    border:1px solid var(--mobile-line);
+    border-radius:15px;
+    background:var(--mobile-bg);
+    color:var(--mobile-ink);
+  }
+  .hsv-invoice-editor .hsv-cards button span{font-size:9px;color:var(--mobile-muted)}
+  .hsv-invoice-editor .hsv-cards button strong{
+    font-size:clamp(18px,5vw,24px)!important;
+    line-height:1.05;
+    letter-spacing:-.8px;
+  }
+  .hsv-invoice-editor .hsv-cards button small{font-size:9px;color:var(--mobile-faint)}
+  .hsv-invoice-editor .hsv-rowtop{margin-top:22px!important}
+  .hsv-invoice-editor .hsv-branding{margin-top:12px!important}
+
   /* Supporting / settings tables are intentionally more relaxed. */
   .hsv-table>p.hsv-empty,.hsv-empty,.hive-no-results{
     border:1px dashed var(--mobile-line)!important;
