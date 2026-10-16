@@ -1,8 +1,10 @@
 import { usesClerk } from '@/lib/hive/auth-provider';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { ClerkProvider } from '@clerk/nextjs';
 import './globals.css';
 import './theme.css';
+
+export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover' };
 
 export const metadata: Metadata = {
   title: 'Hive — Creative Business OS',

@@ -3,13 +3,14 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft, ArrowRight, ArrowUpRight, BriefcaseBusiness, Check, CreditCard, FileText,
-  LayoutDashboard, Mail, Package, Plus, RefreshCw, Search, Settings2, ShieldCheck, Trash2, Users, X,
+  LayoutDashboard, Mail, Menu, Package, Plus, RefreshCw, Search, Settings2, ShieldCheck, Trash2, Users, X,
 } from 'lucide-react';
 import { createPublicSupabaseBrowserClient } from '@/lib/supabase/public-browser';
 import ThemeToggle from '@/app/components/theme-toggle';
 import WorkspaceOverview from './workspace-overview';
 import './studio.css';
 import './workspace-design.css';
+import './mobile.css';
 
 type Workspace = { id: string; name: string; slug: string; status: string; role: string };
 type Customer = {
@@ -136,6 +137,7 @@ async function requestJson<T>(input: string, init?: RequestInit): Promise<T> {
 
 export default function StudioPage() {
   const [tab, setTab] = useState<Tab>('overview');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [listQuery, setListQuery] = useState('');
   const [listStatus, setListStatus] = useState('all');
   useEffect(() => { setListQuery(''); setListStatus('all'); }, [tab]);
@@ -407,6 +409,31 @@ export default function StudioPage() {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, []);
+
+  // Keep the topmost sheet in focus and prevent the workspace scrolling behind it.
+  useEffect(() => {
+    const dialogs = document.querySelectorAll<HTMLElement>('[role="dialog"]');
+    const dialog = dialogs[dialogs.length - 1];
+    if (!dialog) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const focusable = () => Array.from(dialog.querySelectorAll<HTMLElement>('button, a[href], input, select, textarea, [tabindex="0"]')).filter(el => !el.hasAttribute('disabled') && el.getClientRects().length > 0);
+    if (!dialog.contains(document.activeElement)) focusable()[0]?.focus({preventScroll:true});
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        dialog.querySelector<HTMLButtonElement>('button[aria-label="Schliessen"], button[aria-label="Suche schliessen"]')?.click();
+      }
+      if (event.key !== 'Tab') return;
+      const items = focusable();
+      const first = items[0], last = items[items.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && (document.activeElement === last || !dialog.contains(document.activeElement))) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => { document.body.style.overflow = overflow; document.removeEventListener('keydown', handleKey); if (previous?.isConnected) previous.focus({preventScroll:true}); };
+  }, [mobileMenuOpen, searchOpen, businessOpen, teamOpen, customerOpen, departmentOpen, projectOpen, invoiceOpen, offerOpen, productOpen, inviteOpen, fileOpen, projectWorkspaceOpen, customerWorkspaceOpen]);
 
   const invoiceTotal = useMemo(
     () => invoiceDraft.lines.reduce((sum, line) => sum + Math.round(line.quantity * line.unitPrice * 100), 0),
@@ -1325,12 +1352,12 @@ export default function StudioPage() {
         }}>
           {workspaces.map((workspace) => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}
         </select>
-        <button className="hsv-outline" type="button" onClick={() => {
+        <button className="hsv-outline" aria-label="Neues Business erstellen" type="button" onClick={() => {
           setBusinessDraft({ name:'', invoicePrefix:'HIVE' });
           setBusinessOpen(true);
         }}><Plus size={14}/> Business</button>
       </div>
-      <button className="hsv-outline" type="button" onClick={() => setSearchOpen(true)}><Search size={14}/> Suchen … <kbd>⌘K</kbd></button>
+      <button className="hsv-outline" aria-label="Workspace durchsuchen" type="button" onClick={() => setSearchOpen(true)}><Search size={14}/> Suchen … <kbd>⌘K</kbd></button>
       <span className="hsv-mode"><span/> Entwicklungsumgebung</span>
       <ThemeToggle/>
       <a className="hsv-back" href="/account">Mein Konto <ArrowRight size={15}/></a>
@@ -1598,12 +1625,21 @@ export default function StudioPage() {
       </main>
     </div>
 
+    <nav className="hive-mobile-nav" aria-label="Mobile Navigation">
+      {nav.filter(([id]) => ['overview','customers','projects','invoices'].includes(id)).map(([id,label,Icon]) => <button key={id} aria-current={tab===id?'page':undefined} onClick={() => { setTab(id); setMobileMenuOpen(false); window.scrollTo({top:0}); }}><Icon size={21}/><span>{label}</span></button>)}
+      <button aria-label="Weitere Module" aria-expanded={mobileMenuOpen} aria-current={!['overview','customers','projects','invoices'].includes(tab)?'page':undefined} onClick={() => setMobileMenuOpen(true)}><Menu size={21}/><span>Mehr</span></button>
+    </nav>
+    {mobileMenuOpen && <Modal title="Dein Workspace" onClose={() => setMobileMenuOpen(false)}>
+      <div className="hive-mobile-modules">{nav.map(([id,label,Icon]) => <button key={id} aria-current={tab===id?'page':undefined} onClick={() => {setTab(id);setMobileMenuOpen(false);window.scrollTo({top:0});}}><Icon size={21}/><span>{label}</span><ArrowRight size={16}/></button>)}</div>
+      <a className="hsv-outline" href="/account">Mein Konto <ArrowRight size={16}/></a>
+    </Modal>}
+
     {searchOpen && <div className="hsv-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) setSearchOpen(false); }}>
-      <div className="hsv-dialog" style={{maxWidth:680,padding:0,overflow:'hidden'}}>
+      <div role="dialog" aria-modal="true" aria-label="Workspace durchsuchen" className="hsv-dialog hive-search-dialog" style={{maxWidth:680,padding:0,overflow:'hidden'}}>
         <div style={{display:'flex',alignItems:'center',gap:12,padding:'16px 18px',borderBottom:'1px solid rgba(0,0,0,.12)'}}>
           <Search size={18}/>
-          <input autoFocus value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Kunden, Projekte, Rechnungen, Offerten…" style={{border:0,outline:'none',fontSize:18,width:'100%',background:'transparent'}}/>
-          <kbd>ESC</kbd>
+          <input aria-label="Workspace durchsuchen" autoFocus value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Kunden, Projekte, Rechnungen, Offerten…" style={{border:0,outline:'none',fontSize:18,width:'100%',background:'transparent'}}/>
+          <button type="button" className="hsv-icon" aria-label="Suche schliessen" onClick={() => setSearchOpen(false)}><X size={20}/></button>
         </div>
         <div className="hsv-table" style={{maxHeight:480,overflow:'auto'}}>
           {!searchQuery.trim() && <p className="hsv-empty">Tippen, um im aktuellen Business zu suchen.</p>}
@@ -1667,7 +1703,7 @@ export default function StudioPage() {
         <label>Beschreibung<textarea rows={3} value={productDraft.description} onChange={(e) => setProductDraft({ ...productDraft, description:e.target.value })}/></label>
         <label>SKU<input value={productDraft.sku} onChange={(e) => setProductDraft({ ...productDraft, sku:e.target.value })} placeholder="VIDEO-EVENT"/></label>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
-          <label>Preis CHF<input required type="number" min="0" step="0.01" value={productDraft.unitPrice} onChange={(e) => setProductDraft({ ...productDraft, unitPrice:Number(e.target.value) })}/></label>
+          <label>Preis CHF<input aria-label="Preis CHF" required type="number" min="0" step="0.01" value={productDraft.unitPrice} onChange={(e) => setProductDraft({ ...productDraft, unitPrice:Number(e.target.value) })}/></label>
           <label>Steuersatz %<input type="number" min="0" max="100" step="0.1" value={productDraft.taxRate} onChange={(e) => setProductDraft({ ...productDraft, taxRate:Number(e.target.value) })}/></label>
         </div>
         <label><input type="checkbox" checked={productDraft.active} onChange={(e) => setProductDraft({ ...productDraft, active:e.target.checked })}/> Aktiv</label>
@@ -1676,7 +1712,7 @@ export default function StudioPage() {
     </Modal>}
 
     {projectWorkspaceOpen && projectWorkspace && <div className="hsv-overlay">
-      <div className="hsv-invoice-editor">
+      <div className="hsv-invoice-editor" role="dialog" aria-modal="true" aria-label="Workspace Details">
         <div className="hsv-editorbar">
           <div><small>PROJECT WORKSPACE</small><strong>{projectWorkspace.project.title}</strong></div>
           <button className="hsv-icon" onClick={() => setProjectWorkspaceOpen(false)} aria-label="Schliessen"><X size={18}/></button>
@@ -1746,7 +1782,7 @@ export default function StudioPage() {
     </Modal>}
 
     {departmentOpen && departmentCustomer && <div className="hsv-overlay">
-      <div className="hsv-invoice-editor">
+      <div className="hsv-invoice-editor" role="dialog" aria-modal="true" aria-label="Workspace Details">
         <div className="hsv-editorbar">
           <div><small>KUNDE / ABTEILUNGEN</small><strong>{customerName(departmentCustomer)}</strong></div>
           <button className="hsv-icon" onClick={() => setDepartmentOpen(false)} aria-label="Schliessen"><X size={18}/></button>
@@ -1786,7 +1822,7 @@ export default function StudioPage() {
     </div>}
 
     {customerWorkspaceOpen && customerWorkspace && <div className="hsv-overlay">
-      <div className="hsv-invoice-editor">
+      <div className="hsv-invoice-editor" role="dialog" aria-modal="true" aria-label="Workspace Details">
         <div className="hsv-editorbar">
           <div><small>CUSTOMER WORKSPACE</small><strong>{customerName(customerWorkspace.customer)}</strong></div>
           <button className="hsv-icon" onClick={() => setCustomerWorkspaceOpen(false)} aria-label="Schliessen"><X size={18}/></button>
@@ -1922,7 +1958,7 @@ export default function StudioPage() {
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return <div className="hsv-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <div className="hsv-dialog">
+    <div className="hsv-dialog" role="dialog" aria-modal="true" aria-label={title}>
       <button type="button" className="hsv-close" aria-label="Schliessen" onClick={onClose}><X size={18}/></button>
       <span>HIVE CRM</span><h2>{title}</h2>{children}
     </div>
@@ -1938,18 +1974,18 @@ function DocumentModal({
 }) {
   const tax = Math.round(total * taxRate / 100);
   return <div className="hsv-overlay hsv-invoice-overlay">
-    <div className="hsv-invoice-editor">
+    <div className="hsv-invoice-editor" role="dialog" aria-modal="true" aria-label={title}>
       <div className="hsv-editorbar"><div><small>HIVE / DEV</small><strong>{title}</strong></div><button className="hsv-icon" onClick={onClose} aria-label="Schliessen"><X size={18}/></button></div>
       <div className="hsv-paper" style={{ maxWidth: 850 }}>
         {children}
         <div className="hsv-lines" style={{ marginTop: 28 }}>
           <div className="hsv-lineheader"><span>Beschreibung</span><span>Menge</span><span>CHF / Einheit</span><span>Betrag</span><span/></div>
           {lines.map((line, index) => <div className="hsv-line" key={index}>
-            <input required value={line.description} placeholder="Leistung" onChange={(e) => onLineChange(index, { ...line, description: e.target.value })}/>
-            <input required type="number" min="0.01" step="0.01" value={line.quantity} onChange={(e) => onLineChange(index, { ...line, quantity: Number(e.target.value) })}/>
-            <input required type="number" min="0" step="0.01" value={line.unitPrice} onChange={(e) => onLineChange(index, { ...line, unitPrice: Number(e.target.value) })}/>
+            <label className="hive-line-field"><span>Leistung</span><input aria-label={`Position ${index + 1}: Beschreibung`} required value={line.description} placeholder="Leistung" onChange={(e) => onLineChange(index, { ...line, description: e.target.value })}/></label>
+            <label className="hive-line-field"><span>Menge</span><input aria-label={`Position ${index + 1}: Menge`} required type="number" min="0.01" step="0.01" value={line.quantity} onChange={(e) => onLineChange(index, { ...line, quantity: Number(e.target.value) })}/></label>
+            <label className="hive-line-field"><span>CHF / Einheit</span><input aria-label={`Position ${index + 1}: Preis pro Einheit in CHF`} required type="number" min="0" step="0.01" value={line.unitPrice} onChange={(e) => onLineChange(index, { ...line, unitPrice: Number(e.target.value) })}/></label>
             <strong>{money(Math.round(line.quantity * line.unitPrice * 100))}</strong>
-            <button type="button" onClick={() => onLineDelete(index)}><Trash2 size={15}/></button>
+            <button aria-label={`Position ${index + 1} löschen`} type="button" onClick={() => onLineDelete(index)}><Trash2 size={15}/></button>
           </div>)}
         </div>
         <button type="button" className="hsv-addline" onClick={onAddLine}><Plus size={15}/> Position hinzufügen</button>
