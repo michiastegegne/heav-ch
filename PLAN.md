@@ -73,7 +73,7 @@ In `admin/assets/app.js:836-840` werden fehlende oder ungültige Rechnungswerte 
 - [x] Nur den aktuell gespeicherten, ownergebundenen Thread laden.
 - [x] Nachrichten chronologisch rendern und gespeicherte Vorschläge erneut normalisieren.
 - [x] Gelöschte oder fremde Thread-IDs lokal bereinigen.
-- [ ] Während des Ladens einen separaten Ladezustand anzeigen, ohne den Chat als leer zu signalisieren.
+- [x] Während des Ladens einen separaten Ladezustand anzeigen, ohne den Chat als leer zu signalisieren; der Studio-Boot wartet nicht auf die Chat-Rehydration und der Composer bleibt bis zum Abschluss gesperrt.
 - [x] Chatdaten bleiben im owner-namespace-lokalem Storage-Key.
 - [x] Browser-Test für Reload, Verlauf und Vorschlag ergänzt.
 - [x] Browser-Test für gelöschten Thread und accountübergreifenden Local-Storage-Wechsel behalten.
