@@ -1697,24 +1697,24 @@ export default function StudioPage() {
             <button type="button" role="tab" aria-selected={settingsMobileView==='billing'} onClick={() => setSettingsMobileView('billing')}>Abrechnung</button>
           </div>
           <section className="hive-settings-section" data-mobile-active={settingsMobileView==='brand'}>
-          <label>Business-Name<input value={settings.business_name} onChange={(e) => setSettings({ ...settings, business_name: e.target.value })}/></label>
-          <label>Rechtlicher Name<input value={settings.legal_name} onChange={(e) => setSettings({ ...settings, legal_name:e.target.value })}/></label>
-          <label>Kontaktperson<input value={settings.contact_name} onChange={(e) => setSettings({ ...settings, contact_name:e.target.value })}/></label>
+          <label>Business-Name<input autoComplete="organization" value={settings.business_name} onChange={(e) => setSettings({ ...settings, business_name: e.target.value })}/></label>
+          <label>Rechtlicher Name<input autoComplete="organization" value={settings.legal_name} onChange={(e) => setSettings({ ...settings, legal_name:e.target.value })}/></label>
+          <label>Kontaktperson<input autoComplete="name" value={settings.contact_name} onChange={(e) => setSettings({ ...settings, contact_name:e.target.value })}/></label>
           <label>Business-Logo<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => void uploadBusinessLogo(e.target.files?.[0] || null)}/><small>PNG, JPG oder WebP · max. 5 MB</small></label>
           <label>Logo-URL<input value={settings.logo_url} onChange={(e) => setSettings({ ...settings, logo_url: e.target.value })} placeholder="https://…"/></label>
           <label>Accent-Farbe<div className="hsv-color"><input type="color" value={settings.accent_color} onChange={(e) => setSettings({ ...settings, accent_color: e.target.value })}/><span>{settings.accent_color}</span></div></label>
           </section>
           <section className="hive-settings-section" data-mobile-active={settingsMobileView==='contact'}>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
-            <label>Kontakt-E-Mail<input type="email" value={settings.email} onChange={(e) => setSettings({ ...settings, email: e.target.value })}/></label>
-            <label>Telefon<input value={settings.phone} onChange={(e) => setSettings({ ...settings, phone:e.target.value })}/></label>
+            <label>Kontakt-E-Mail<input type="email" inputMode="email" autoComplete="email" value={settings.email} onChange={(e) => setSettings({ ...settings, email: e.target.value })}/></label>
+            <label>Telefon<input type="tel" inputMode="tel" autoComplete="tel" value={settings.phone} onChange={(e) => setSettings({ ...settings, phone:e.target.value })}/></label>
           </div>
-          <label>Website<input value={settings.website_url} onChange={(e) => setSettings({ ...settings, website_url:e.target.value })} placeholder="https://…"/></label>
-          <label>Adresse<input value={settings.address_line1} onChange={(e) => setSettings({ ...settings, address_line1: e.target.value })}/></label>
+          <label>Website<input inputMode="url" autoComplete="url" value={settings.website_url} onChange={(e) => setSettings({ ...settings, website_url:e.target.value })} placeholder="https://…"/></label>
+          <label>Adresse<input autoComplete="street-address" value={settings.address_line1} onChange={(e) => setSettings({ ...settings, address_line1: e.target.value })}/></label>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1.3fr', gap: 12 }}>
-            <label>PLZ<input value={settings.postal_code} onChange={(e) => setSettings({ ...settings, postal_code: e.target.value })}/></label>
-            <label>Ort<input value={settings.city} onChange={(e) => setSettings({ ...settings, city: e.target.value })}/></label>
-            <label>Land<input value={settings.country} onChange={(e) => setSettings({ ...settings, country:e.target.value })}/></label>
+            <label>PLZ<input inputMode="numeric" autoComplete="postal-code" value={settings.postal_code} onChange={(e) => setSettings({ ...settings, postal_code: e.target.value })}/></label>
+            <label>Ort<input autoComplete="address-level2" value={settings.city} onChange={(e) => setSettings({ ...settings, city: e.target.value })}/></label>
+            <label>Land<input autoComplete="country-name" value={settings.country} onChange={(e) => setSettings({ ...settings, country:e.target.value })}/></label>
           </div>
           </section>
           <section className="hive-settings-section" data-mobile-active={settingsMobileView==='billing'}>
@@ -1811,7 +1811,7 @@ export default function StudioPage() {
 
     {teamOpen && <Modal title="Teammitglied hinzufügen" onClose={() => setTeamOpen(false)}>
       <form onSubmit={addTeamMember}>
-        <label>E-Mail<input required type="email" value={teamDraft.email} onChange={(e) => setTeamDraft({ ...teamDraft, email:e.target.value })} placeholder="name@example.com"/></label>
+        <label>E-Mail<input required type="email" inputMode="email" autoComplete="email" value={teamDraft.email} onChange={(e) => setTeamDraft({ ...teamDraft, email:e.target.value })} placeholder="name@example.com"/></label>
         <label>Rolle<select value={teamDraft.role} onChange={(e) => setTeamDraft({ ...teamDraft, role:e.target.value as 'admin'|'member'|'accountant' })}>
           <option value="member">Member · Projekte & Kunden</option>
           <option value="accountant">Accountant · Finanzen</option>
@@ -2038,12 +2038,12 @@ export default function StudioPage() {
 
     {customerOpen && <Modal title={customerDraft.id ? 'Kunde bearbeiten' : 'Neuer Kunde'} onClose={() => setCustomerOpen(false)}>
       <form onSubmit={saveCustomer}>
-        <label>Firma<input value={customerDraft.company} onChange={(e) => setCustomerDraft({ ...customerDraft, company: e.target.value })}/></label>
-        <label>Kontaktperson<input value={customerDraft.contactName} onChange={(e) => setCustomerDraft({ ...customerDraft, contactName: e.target.value })}/></label>
-        <label>E-Mail<input type="email" value={customerDraft.email} onChange={(e) => setCustomerDraft({ ...customerDraft, email: e.target.value })}/></label>
-        <label>Telefon<input value={customerDraft.phone} onChange={(e) => setCustomerDraft({ ...customerDraft, phone: e.target.value })}/></label>
-        <label>Adresse<input value={customerDraft.addressLine1} onChange={(e) => setCustomerDraft({ ...customerDraft, addressLine1: e.target.value })}/></label>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12 }}><label>PLZ<input value={customerDraft.postalCode} onChange={(e) => setCustomerDraft({ ...customerDraft, postalCode: e.target.value })}/></label><label>Ort<input value={customerDraft.city} onChange={(e) => setCustomerDraft({ ...customerDraft, city: e.target.value })}/></label></div>
+        <label>Firma<input autoComplete="organization" value={customerDraft.company} onChange={(e) => setCustomerDraft({ ...customerDraft, company: e.target.value })}/></label>
+        <label>Kontaktperson<input autoComplete="name" value={customerDraft.contactName} onChange={(e) => setCustomerDraft({ ...customerDraft, contactName: e.target.value })}/></label>
+        <label>E-Mail<input type="email" inputMode="email" autoComplete="email" value={customerDraft.email} onChange={(e) => setCustomerDraft({ ...customerDraft, email: e.target.value })}/></label>
+        <label>Telefon<input type="tel" inputMode="tel" autoComplete="tel" value={customerDraft.phone} onChange={(e) => setCustomerDraft({ ...customerDraft, phone: e.target.value })}/></label>
+        <label>Adresse<input autoComplete="street-address" value={customerDraft.addressLine1} onChange={(e) => setCustomerDraft({ ...customerDraft, addressLine1: e.target.value })}/></label>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12 }}><label>PLZ<input inputMode="numeric" autoComplete="postal-code" value={customerDraft.postalCode} onChange={(e) => setCustomerDraft({ ...customerDraft, postalCode: e.target.value })}/></label><label>Ort<input autoComplete="address-level2" value={customerDraft.city} onChange={(e) => setCustomerDraft({ ...customerDraft, city: e.target.value })}/></label></div>
         <label>Notiz<textarea rows={3} value={customerDraft.notes} onChange={(e) => setCustomerDraft({ ...customerDraft, notes: e.target.value })}/></label>
         <button className="hsv-primary" type="submit">Speichern <Check size={15}/></button>
       </form>
