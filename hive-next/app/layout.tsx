@@ -37,7 +37,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="de-CH" data-theme="dark" suppressHydrationWarning>
       <body>
-        <script dangerouslySetInnerHTML={{ __html: `try { document.documentElement.dataset.theme = localStorage.getItem('hive-appearance') === 'light' ? 'light' : 'dark'; } catch {}` }}/>
+        <script dangerouslySetInnerHTML={{ __html: `try { document.documentElement.dataset.theme = (() => { const p = localStorage.getItem('hive-appearance'); return p === 'light' || p === 'dark' ? p : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); })(); } catch {}` }}/>
         {clerkConfigured ? (
           <ClerkProvider
             signInUrl="/login"

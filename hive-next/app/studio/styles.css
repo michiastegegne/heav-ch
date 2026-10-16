@@ -4,3 +4,5 @@
 @import "./studio-polish.css" layer(legacy);
 @import "./system-shell.css";
 @import "./notion-workspace.css";
+
+@import "./apple-workspace.css";

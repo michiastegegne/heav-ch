@@ -179,11 +179,11 @@ for (const appearance of ["light", "dark"])
       await nav.getByRole("button", { name: "Weitere Module" }).click();
       await page
         .getByRole("dialog")
-        .getByRole("button", { name: "Business", exact: true })
+        .getByRole("button", { name: "Einstellungen", exact: true })
         .click();
       const settingsTabs = page.getByRole("tablist", { name: "Business-Einstellungen" });
       await expect(settingsTabs).toBeVisible();
-      for (const section of ["Brand", "Kontakt", "Abrechnung"]) {
+      for (const section of ["Erscheinungsbild", "Brand", "Kontakt", "Abrechnung"]) {
         const control = settingsTabs.getByRole("tab", { name: section, exact: true });
         await control.click();
         await expect(control).toHaveAttribute("aria-selected", "true");

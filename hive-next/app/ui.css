@@ -5,6 +5,7 @@
 @import "./mobile-auth.css" layer(legacy);
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);
+@import "./components/theme-picker.css";
 @source "../components";
 @source "./studio";
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));

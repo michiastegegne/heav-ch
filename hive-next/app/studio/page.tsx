@@ -214,7 +214,7 @@ export default function StudioPage() {
   const [emailMobileView, setEmailMobileView] = useState<'templates'|'history'>('templates');
   const [portal, setPortal] = useState<PortalData>({ memberships:[], invites:[], requests:[], files:[], reviews:[], activity:[] });
   const [portalMobileView, setPortalMobileView] = useState<'access'|'files'|'requests'|'activity'>('access');
-  const [settingsMobileView, setSettingsMobileView] = useState<'brand'|'contact'|'billing'>('brand');
+  const [settingsMobileView, setSettingsMobileView] = useState<'appearance'|'brand'|'contact'|'billing'|'data'>('appearance');
   const [settings, setSettings] = useState<Settings | null>(null);
   const [activityFeed, setActivityFeed] = useState<UnifiedActivity[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -1756,7 +1756,7 @@ export default function StudioPage() {
     ...(canAdmin ? [['emails', 'E-Mail', Mail] as const] : []),
     ['portal', 'Portal', ShieldCheck] as const,
     ['activity', 'Aktivität', RefreshCw] as const,
-    ...(canAdmin ? [['team', 'Team', Users] as const, ['branding', 'Business', Settings2] as const] : []),
+    ...(canAdmin ? [['team', 'Team', Users] as const, ['branding', 'Einstellungen', Settings2] as const] : []),
   ];
 
   const matchesList = (...values:unknown[]) => values.filter(Boolean).join(' ').toLocaleLowerCase('de-CH').includes(listQuery.toLocaleLowerCase('de-CH').trim());
@@ -1767,7 +1767,6 @@ export default function StudioPage() {
   const listTabs = ['customers','projects','invoices','offers'].includes(tab);
   const headingCopy:Partial<Record<Tab,string>> = {businesses:'Alle deine Businesses, getrennt geführt und gemeinsam im Blick.',overview:'Dein Studio auf einen Blick.',customers:'Kontakte, Beziehungen und die gemeinsame Arbeit.',projects:'Von der ersten Idee bis zur letzten Abgabe.',invoices:'Rechnungen, Fälligkeiten und Zahlungseingänge.',offers:'Aus Anfragen werden konkrete Aufträge.',catalog:'Deine Leistungen und Preise an einem Ort.',portal:'Dokumente und Freigaben für deine Kunden.',activity:'Was sich in deinem Workspace verändert hat.'};
 
-  const PageIcon=nav.find(([id])=>id===tab)?.[2] || LayoutDashboard;
 
   return <div className="hsv hive-system-app hive-notion-app" style={{ '--business-accent': accent } as React.CSSProperties}>
     <header className="hsv-top">
@@ -1793,8 +1792,8 @@ export default function StudioPage() {
 
       <main className="hsv-main">
         <div className="hive-breadcrumb"><span>{tab === 'businesses' ? 'Hive' : businessName.replace(/^Hive Dev · /,'')}</span><span>/</span><strong>{nav.find(([id])=>id===tab)?.[1]}</strong><time>{new Intl.DateTimeFormat('de-CH',{weekday:'short',day:'2-digit',month:'long',year:'numeric'}).format(new Date())}</time></div>
-        <div className="hsv-heading">
-          <div className="hive-document-heading"><span className="hive-document-icon" aria-hidden="true"><PageIcon/></span><span className="hive-page-kicker">{tab === 'overview' ? 'ALLES AN EINEM ORT' : 'DEIN WORKSPACE'}</span><h1>{nav.find(([id]) => id === tab)?.[1]}<span className="hive-title-dot" aria-hidden="true">.</span></h1><p>{busy ? 'Daten werden geladen …' : (headingCopy[tab] || 'Alles Wichtige an einem Ort.')}</p></div>
+        <div className="hsv-heading" key={tab}>
+          <div className="hive-document-heading"><h1>{nav.find(([id]) => id === tab)?.[1]}</h1><p>{busy ? 'Daten werden geladen …' : (headingCopy[tab] || 'Alles Wichtige an einem Ort.')}</p></div>
           {tab === 'overview' && <button className="hsv-primary" disabled={!customers.length || busy} onClick={()=>void openProject()}><Plus size={15}/> Neues Projekt</button>}
         </div>
         {listTabs && tab !== 'customers' && <div className="hive-list-tools"><label><Search size={15}/><input aria-label="Liste durchsuchen" placeholder="Suchen nach Name, Kunde oder Nummer …" value={listQuery} onChange={e=>setListQuery(e.target.value)}/>{listQuery&&<button aria-label="Suche leeren" onClick={()=>setListQuery('')}><X size={13}/></button>}</label><select aria-label="Status filtern" value={listStatus} onChange={e=>setListStatus(e.target.value)}><option value="all">Alle Status</option>{(tab==='projects'?['planning','active','on_hold','completed']:tab==='invoices'?['draft','sent','overdue','paid','cancelled']:['draft','sent','accepted','withdrawn','expired']).map(value=><option value={value} key={value}>{stateLabel[value]}</option>)}</select><span>{tab === 'projects'?visibleProjects.length:tab === 'invoices'?visibleInvoices.length:visibleOffers.length} Einträge</span></div>}
@@ -2053,12 +2052,15 @@ export default function StudioPage() {
         </>}
 
         {tab === 'branding' && settings && <form className="hsv-branding" onSubmit={saveSettings}>
-          <div className="hsv-brand-preview"><span>{settings.logo_url ? <img src={settings.logo_url} alt="Logo"/> : settings.business_name.charAt(0)}</span><div><strong>{settings.business_name}</strong><small>{activeWorkspace?.role} · Dev-Workspace</small></div></div>
+          {settingsMobileView!=='appearance' && <div className="hsv-brand-preview"><span>{settings.logo_url ? <img src={settings.logo_url} alt="Logo"/> : settings.business_name.charAt(0)}</span><div><strong>{settings.business_name}</strong><small>{activeWorkspace?.role} · Dev-Workspace</small></div></div>}
           <div className="hive-mobile-subtabs hive-settings-subtabs" role="tablist" aria-label="Business-Einstellungen">
+            <button type="button" role="tab" aria-selected={settingsMobileView==='appearance'} onClick={() => setSettingsMobileView('appearance')}>Erscheinungsbild</button>
             <button type="button" role="tab" aria-selected={settingsMobileView==='brand'} onClick={() => setSettingsMobileView('brand')}>Brand</button>
             <button type="button" role="tab" aria-selected={settingsMobileView==='contact'} onClick={() => setSettingsMobileView('contact')}>Kontakt</button>
             <button type="button" role="tab" aria-selected={settingsMobileView==='billing'} onClick={() => setSettingsMobileView('billing')}>Abrechnung</button>
+            <button type="button" role="tab" aria-selected={settingsMobileView==='data'} onClick={() => setSettingsMobileView('data')}>Daten</button>
           </div>
+          <section className="hive-settings-section hive-appearance-settings" data-mobile-active={settingsMobileView==='appearance'}><ThemeToggle expanded/></section>
           <section className="hive-settings-section" data-mobile-active={settingsMobileView==='brand'}>
           <label>Business-Name<input autoComplete="organization" value={settings.business_name} onChange={(e) => setSettings({ ...settings, business_name: e.target.value })}/></label>
           <label>Rechtlicher Name<input autoComplete="organization" value={settings.legal_name} onChange={(e) => setSettings({ ...settings, legal_name:e.target.value })}/></label>
@@ -2100,14 +2102,14 @@ export default function StudioPage() {
           <label><input type="checkbox" checked={settings.invoice_reminders_enabled} onChange={(e) => setSettings({ ...settings, invoice_reminders_enabled:e.target.checked })}/> Automatische Zahlungserinnerungen</label>
           <label>Reminder vor Fälligkeit (Tage)<input type="number" min="1" max="30" value={settings.invoice_reminder_days} onChange={(e) => setSettings({ ...settings, invoice_reminder_days:Number(e.target.value) })}/></label>
           </section>
-          <button className="hsv-primary hive-settings-save" type="submit">Speichern <Check size={15}/></button>
-          {activeWorkspace?.role === 'owner' && activeWorkspace.slug.startsWith('hive-dev-') && <div style={{marginTop:28,paddingTop:22,borderTop:'1px solid rgba(0,0,0,.15)'}}>
-            <span className="auth-kicker">DANGER ZONE</span>
+          {!['appearance','data'].includes(settingsMobileView) && <button className="hsv-primary hive-settings-save" type="submit">Speichern <Check size={15}/></button>}
+          {settingsMobileView==='data' && activeWorkspace?.role === 'owner' && activeWorkspace.slug.startsWith('hive-dev-') && <div style={{marginTop:28,paddingTop:22,borderTop:'1px solid rgba(0,0,0,.15)'}}>
+            <span className="auth-kicker">Business verwalten</span>
             <p style={{margin:'8px 0 14px'}}>Archivieren entfernt das Business aus dem aktiven Switcher. Die Daten werden nicht gelöscht.</p>
             <button className="hsv-outline" type="button" onClick={() => void archiveBusiness()}><Trash2 size={15}/> Business archivieren</button>
           </div>}
         </form>}
-        {tab === 'branding' && activeWorkspace?.role === 'owner' && <BackupCard key={activeWorkspaceId} workspaceId={activeWorkspaceId} name={workspaceLabel(activeWorkspace)}/>}
+        {tab === 'branding' && settingsMobileView==='data' && activeWorkspace?.role === 'owner' && <BackupCard key={activeWorkspaceId} workspaceId={activeWorkspaceId} name={workspaceLabel(activeWorkspace)}/>}
         </>}
       </main>
     </div>

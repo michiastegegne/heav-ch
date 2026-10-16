@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 for (const theme of ["light", "dark"])
   for (const width of [390, 1440])
-    test(`Notion workspace and installed glass controls work at ${width}px ${theme}`, async ({
+    test(`Rounded workspace and installed glass controls work at ${width}px ${theme}`, async ({
       page,
     }) => {
       const errors = [];
@@ -28,7 +28,8 @@ for (const theme of ["light", "dark"])
         await expect(nav).toHaveAttribute("data-ogui-glass", "");
       }
       await page.screenshot({
-        path: `../../outputs/hive-notion-overview-${width}-${theme}.png`,
+        animations: "disabled",
+        path: `../../outputs/hive-apple-overview-${width}-${theme}.png`,
       });
       await nav.getByRole("button", { name: "Projekte", exact: true }).click();
       const views = page.getByRole("group", { name: "Projektansicht" });
@@ -46,21 +47,41 @@ for (const theme of ["light", "dark"])
         ),
       ).toBeTruthy();
       await page.screenshot({
-        path: `../../outputs/hive-notion-board-${width}-${theme}.png`,
+        animations: "disabled",
+        path: `../../outputs/hive-apple-board-${width}-${theme}.png`,
       });
-      await page
-        .getByRole("button", {
-          name:
-            theme === "light"
-              ? "Dunklen Modus aktivieren"
-              : "Hellen Modus aktivieren",
-        })
-        .click();
+      await expect(page.locator('.hive-document-icon')).toHaveCount(0);
+      await page.getByRole('button', {name:'Erscheinungsbild einstellen'}).click();
+      await page.getByRole('radio', {name:theme === 'light' ? 'Dunkel' : 'Hell', exact:true}).check();
       await expect(
         page.locator(".hive-material-scope").first(),
       ).toHaveAttribute(
         "data-ogui-appearance",
         theme === "light" ? "dark" : "light",
       );
+      await page.getByRole('button',{name:'Erscheinungsbild schließen'}).click();
+      if (width <= 760) {
+        await nav.getByRole('button',{name:'Weitere Module'}).click();
+        await page.getByRole('dialog').getByRole('button',{name:'Einstellungen',exact:true}).click();
+      } else await nav.getByRole('button',{name:'Einstellungen',exact:true}).click();
+      await expect(page.getByRole('radio',{name:theme === 'light' ? 'Dunkel' : 'Hell',exact:true})).toBeChecked();
+      await page.screenshot({path:`../../outputs/hive-appearance-${width}-${theme}.png`,animations:'disabled'});
       expect(errors).toEqual([]);
     });
+
+test('automatic appearance follows device changes and persists after reload', async ({page}) => {
+  await page.emulateMedia({colorScheme:'light'});
+  await page.goto('/login');
+  await expect(page.locator('html')).toHaveAttribute('data-theme','light');
+  await page.getByRole('button',{name:'Erscheinungsbild einstellen'}).click();
+  await expect(page.getByRole('radio',{name:'Automatisch',exact:true})).toBeChecked();
+  await page.emulateMedia({colorScheme:'dark'});
+  await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
+  await page.getByRole('radio',{name:'Hell',exact:true}).check();
+  await page.emulateMedia({colorScheme:'light'});
+  await page.emulateMedia({colorScheme:'dark'});
+  await expect(page.locator('html')).toHaveAttribute('data-theme','light');
+  await page.getByRole('radio',{name:'Automatisch',exact:true}).check();
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
+});
