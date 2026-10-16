@@ -133,6 +133,21 @@ for (const appearance of ["light", "dark"])
       ).toBeVisible();
       await fits(page);
       await page.getByRole("button", { name: "Suche schliessen" }).click();
+
+      await nav.getByRole("button", { name: "Weitere Module" }).click();
+      await page
+        .getByRole("dialog")
+        .getByRole("button", { name: "Portal", exact: true })
+        .click();
+      const portalTabs = page.getByRole("tablist", { name: "Portal-Bereiche" });
+      await expect(portalTabs).toBeVisible();
+      for (const section of ["Zugänge", "Dateien", "Anfragen", "Verlauf"]) {
+        const control = portalTabs.getByRole("tab", { name: section, exact: true });
+        await control.click();
+        await expect(control).toHaveAttribute("aria-selected", "true");
+        await fits(page);
+      }
+
       await nav.getByRole("button", { name: "Kunden", exact: true }).click();
       await page.getByRole("button", { name: /Kundenakte/ }).first().click();
       const customerWorkspace = page.getByRole("dialog", { name: "Workspace Details" });
