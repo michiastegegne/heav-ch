@@ -459,12 +459,7 @@
   .hsv.hive-system-app .hive-mobile-nav {
     inset: auto 12px max(12px, env(safe-area-inset-bottom));
     padding: 6px;
-    border: 1px solid var(--ui-border);
     border-radius: 20px;
-    background: color-mix(in srgb, var(--ui-card) 88%, transparent);
-    box-shadow: 0 8px 32px #0002;
-    -webkit-backdrop-filter: blur(20px);
-    backdrop-filter: blur(20px);
   }
   .hsv.hive-system-app .hive-mobile-nav button {
     min-height: 52px;

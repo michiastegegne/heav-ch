@@ -167,7 +167,14 @@ export default function WorkspaceOverview({
                   <metric.icon className="size-4" />
                 </CardDescription>
                 <CardTitle className="hive-kpi-value whitespace-nowrap text-[clamp(1.5rem,2.2vw,2rem)] font-semibold tracking-tight tabular-nums">
-                  {metric.value}
+                  {metric.tab === "invoices" ? (
+                    <>
+                      <span className="hive-metric-currency">CHF</span>
+                      <span>{metric.value.replace(/^CHF\s*/, "")}</span>
+                    </>
+                  ) : (
+                    metric.value
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex items-center justify-between gap-2 px-5 text-xs text-muted-foreground">

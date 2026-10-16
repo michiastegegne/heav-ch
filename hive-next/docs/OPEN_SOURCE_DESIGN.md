@@ -26,7 +26,8 @@ Hive-spezifisch. Kein unveränderter Import des vollständigen Dashboards.
 4. Mobile Aktionen mindestens 44px hoch. Tabellen erhalten mobile Karten.
 5. Kundennamen öffnen die Akte; sekundäre Aktionen stehen im Tastatur- und
    Touch-bedienbaren Radix-Menü. Löschen behält die Bestätigung.
-6. Glas nur für mobile Navigation; hoher Kontrast deaktiviert den Effekt.
+6. Glas für mobile Navigation und Projektansichtswechsel über OpenGlass UI;
+   hoher Kontrast deaktiviert den Effekt.
 7. Keine erfundenen Trends, Beispielkunden oder Dummy-Diagramme im echten CRM.
 8. `system-shell.css` ersetzt die experimentellen Studio-Stile.
    `mobile-premium.css` und `hive-design-system.css` werden nicht mehr
@@ -78,3 +79,6 @@ muss auf dem Zielserver noch geprüft werden; lokal ist Docker nicht verfügbar.
 - Das Projektformular ist auf Desktop zweispaltig und maximal 860px breit.
   Titel und Beschreibung nutzen die ganze Breite; unter 761px wird es
   einspaltig. Bestehende Escape-/Fokus-/Scroll-Sperren bleiben erhalten.
+
+Die aktuelle Notion-/OpenGlass-Variante und deren Originalquellen sind in
+[NOTION_AND_OPENGLASS.md](NOTION_AND_OPENGLASS.md) dokumentiert.

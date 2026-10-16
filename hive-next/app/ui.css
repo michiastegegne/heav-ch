@@ -1,4 +1,5 @@
 @layer legacy, theme, components, utilities;
+@import "open-glass-ui/styles.css" layer(components);
 @import "./globals.css" layer(legacy);
 @import "./theme.css" layer(legacy);
 @import "./mobile-auth.css" layer(legacy);
@@ -9,6 +10,14 @@
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
 @theme inline {
+  --color-sidebar: var(--ui-sidebar);
+  --color-sidebar-foreground: var(--ui-foreground);
+  --color-sidebar-accent: var(--ui-muted);
+  --color-sidebar-accent-foreground: var(--ui-foreground);
+  --color-sidebar-primary: var(--ui-primary);
+  --color-sidebar-primary-foreground: var(--ui-primary-foreground);
+  --color-sidebar-border: var(--ui-border);
+  --color-sidebar-ring: var(--color-ring);
   --color-background: var(--ui-background);
   --color-foreground: var(--ui-foreground);
   --color-card: var(--ui-card);
@@ -50,6 +59,11 @@ html[data-theme="dark"] {
 }
 /* Tailwind preflight is scoped to the new components, leaving document editors intact. */
 @layer components {
+  .crm-ui :where(ul, ol) {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
   .crm-ui,
   .crm-ui *,
   .crm-menu,
