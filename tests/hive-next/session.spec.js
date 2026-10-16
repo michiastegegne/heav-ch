@@ -64,6 +64,19 @@ for(const width of [390,1440])test(`monochrome workspace fits ${width}px`,async(
  await page.screenshot({path:`../../outputs/hive-customers-refined-${width}.png`,fullPage:true,animations:'disabled'});
 });
 
+test('mobile-only subnavigation stays hidden on desktop',async({page})=>{
+ await page.setViewportSize({width:1440,height:950});
+ await login(page);
+ const nav=page.getByRole('navigation',{name:'Business-Module'});
+ await nav.getByRole('button',{name:'Portal',exact:true}).click();
+ await expect(page.getByRole('tablist',{name:'Portal-Bereiche'})).toBeHidden();
+ await nav.getByRole('button',{name:'E-Mail',exact:true}).click();
+ await expect(page.getByRole('tablist',{name:'E-Mail-Bereiche'})).toBeHidden();
+ await nav.getByRole('button',{name:'Business',exact:true}).click();
+ await expect(page.getByRole('tablist',{name:'Business-Einstellungen'})).toBeHidden();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+});
+
 test('customer lists support search and invoice lists support status filtering',async({page})=>{
  await login(page);
  await page.getByRole('navigation').getByRole('button',{name:/Kunden/}).click();
