@@ -21,6 +21,10 @@ http.createServer(async(req,res)=>{
   if(name==='current_app_user_id')return reply(userId);
   if(name==='is_hive_preview_workspace')return reply([a,b].includes(body.p_workspace_id));
   if(name==='is_workspace_member')return reply([a,b].includes(body.p_workspace_id));
+  if(name==='create_workspace_invoice_draft')return reply([{
+    invoice_id:'30000000-0000-4000-8000-000000000099',
+    invoice_number:'ENTWURF-30000000'
+  }]);
   return reply([]);
  }
  const table=url.pathname.split('/').pop();
@@ -47,6 +51,8 @@ http.createServer(async(req,res)=>{
   {id:'51000000-0000-4000-8000-000000000003',workspace_id:a,offer_id:'50000000-0000-4000-8000-000000000001',kind:'created',actor_id:null,details:{},created_at:'2026-10-01T08:00:00.000Z'}];
  if(table==='offer_send_attempts'&&scope===a)rows=[
   {id:'52000000-0000-4000-8000-000000000001',workspace_id:a,offer_id:'50000000-0000-4000-8000-000000000001',state:'sent',provider_id:'test-provider',created_at:'2026-10-01T08:59:00.000Z',completed_at:'2026-10-01T09:00:00.000Z'}];
+ if(table==='invoice_items'&&scope===a)rows=[
+  {id:'33000000-0000-4000-8000-000000000001',workspace_id:a,invoice_id:'30000000-0000-4000-8000-000000000001',position:1,description:'Brand Film',quantity:1,unit_price_rappen:260000}];
  if(table==='invoice_events'&&scope===a)rows=[
   {id:'31000000-0000-4000-8000-000000000001',workspace_id:a,invoice_id:'30000000-0000-4000-8000-000000000001',kind:'updated',recipient:null,details:{status:'overdue'},created_at:'2026-10-11T08:30:00.000Z'},
   {id:'31000000-0000-4000-8000-000000000002',workspace_id:a,invoice_id:'30000000-0000-4000-8000-000000000001',kind:'sent',recipient:'neutralized@example.test',details:{},created_at:'2026-10-01T09:15:00.000Z'},
