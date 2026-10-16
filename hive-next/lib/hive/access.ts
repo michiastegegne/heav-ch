@@ -1,4 +1,4 @@
-import { usesClerk } from '@/lib/hive/auth-provider';
+import { getHiveAuthState } from '@/lib/hive/auth-provider';
 import { createSessionSupabaseClient } from '@/lib/supabase/session-server';
 import { ZodError } from 'zod';
 import { auth } from '@clerk/nextjs/server';
@@ -11,7 +11,12 @@ export class HiveAccessError extends Error {
 }
 
 export async function requireHiveDataAccess() {
-  if (!usesClerk()) {
+  const authState = getHiveAuthState();
+  if (!authState.ready) {
+    throw new HiveAccessError(503, 'Die Anmeldung ist noch nicht vollständig eingerichtet.');
+  }
+
+  if (authState.requested !== 'clerk') {
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
       throw new HiveAccessError(503, 'Die Anmeldung ist noch nicht eingerichtet.');
     }
@@ -20,10 +25,6 @@ export async function requireHiveDataAccess() {
     if (error || !user) throw new HiveAccessError(401, 'Bitte melde dich erneut an.');
     return supabase;
   }
-  if (process.env.HIVE_CLERK_DB_BRIDGE_ENABLED !== 'true') {
-    throw new HiveAccessError(503, 'Clerk database bridge is not enabled yet');
-  }
-
   const { userId } = await auth();
   if (!userId) throw new HiveAccessError(401, 'Authentication required');
 
@@ -69,7 +70,9 @@ export async function assertWorkspaceAllowed(
 }
 
 export async function getHiveAccessToken() {
-  if (usesClerk()) {
+  const authState = getHiveAuthState();
+  if (!authState.ready) return null;
+  if (authState.requested === 'clerk') {
     const { getToken } = await auth();
     return getToken();
   }
