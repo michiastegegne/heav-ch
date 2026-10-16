@@ -109,6 +109,10 @@ type TeamMember = {
   membership_id:string; user_id:string; role:'owner'|'admin'|'member'|'accountant';
   email:string; display_name:string; created_at:string;
 };
+type TeamInvite = {
+  invite_id:string; email:string; role:'admin'|'member'|'accountant';
+  expires_at:string; accepted_at:string|null; revoked_at:string|null; created_at:string;
+};
 type UnifiedActivity = {
   id:string; source:'activity'|'invoice'|'offer'|'email'; kind:string;
   entityType:string; entityId:string|null; summary:string; meta:string; createdAt:string;
@@ -203,6 +207,9 @@ export default function StudioPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [activityFeed, setActivityFeed] = useState<UnifiedActivity[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [teamInvites, setTeamInvites] = useState<TeamInvite[]>([]);
+  const [teamInviteToken, setTeamInviteToken] = useState('');
+  const [teamInviteExpiresAt, setTeamInviteExpiresAt] = useState('');
   const [busy, setBusy] = useState(true);
   const [identityReady, setIdentityReady] = useState(false);
   const [backendError, setBackendError] = useState('');
@@ -463,31 +470,54 @@ export default function StudioPage() {
     const workspace = workspaces.find((item) => item.id === workspaceId);
     if (!workspace || !['owner','admin'].includes(workspace.role)) {
       setTeamMembers([]);
+      setTeamInvites([]);
       return;
     }
     try {
-      const data = await requestJson<{members:TeamMember[]}>(`/api/hive/team?workspace=${encodeURIComponent(workspaceId)}`);
+      const data = await requestJson<{members:TeamMember[];invites:TeamInvite[]}>(`/api/hive/team?workspace=${encodeURIComponent(workspaceId)}`);
       setTeamMembers(data.members);
+      setTeamInvites(data.invites || []);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Team konnte nicht geladen werden.');
     }
   }, [workspaces]);
 
-  async function addTeamMember(event:FormEvent) {
+  async function inviteTeamMember(event:FormEvent) {
     event.preventDefault();
+    if (!activeWorkspaceId) return;
+    try {
+      const data=await requestJson<{inviteId:string;token:string;expiresAt:string}>('/api/hive/team', {
+        method:'POST',
+        body:JSON.stringify({ action:'invite', workspaceId:activeWorkspaceId, email:teamDraft.email, role:teamDraft.role }),
+      });
+      setTeamInviteToken(data.token);
+      setTeamInviteExpiresAt(data.expiresAt);
+      setNotice('Team-Einladung erstellt.');
+      await loadTeam(activeWorkspaceId);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Team-Einladung konnte nicht erstellt werden.');
+    }
+  }
+
+  async function revokeTeamInvite(invite:TeamInvite) {
     if (!activeWorkspaceId) return;
     try {
       await requestJson('/api/hive/team', {
         method:'POST',
-        body:JSON.stringify({ action:'add', workspaceId:activeWorkspaceId, email:teamDraft.email, role:teamDraft.role }),
+        body:JSON.stringify({ action:'revoke_invite', workspaceId:activeWorkspaceId, inviteId:invite.invite_id }),
       });
-      setTeamOpen(false);
-      setTeamDraft({email:'',role:'member'});
-      setNotice('Teammitglied hinzugefügt.');
+      setNotice('Team-Einladung widerrufen.');
       await loadTeam(activeWorkspaceId);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Teammitglied konnte nicht hinzugefügt werden.');
+      setNotice(error instanceof Error ? error.message : 'Einladung konnte nicht widerrufen werden.');
     }
+  }
+
+  async function copyTeamInvite() {
+    if (!teamInviteToken || !navigator.clipboard) return;
+    const url=`${window.location.origin}/account?team_invite=${encodeURIComponent(teamInviteToken)}`;
+    await navigator.clipboard.writeText(url);
+    setNotice('Einladungslink kopiert.');
   }
 
   async function updateTeamRole(member:TeamMember, role:'admin'|'member'|'accountant') {
@@ -1910,7 +1940,7 @@ export default function StudioPage() {
         {tab === 'team' && <>
           <div className="hsv-rowtop">
             <strong>{teamMembers.length} Teammitglieder</strong>
-            {activeWorkspace?.role === 'owner' && <button className="hsv-primary" onClick={() => { setTeamDraft({email:'',role:'member'}); setTeamOpen(true); }}><Plus size={15}/> Mitglied hinzufügen</button>}
+            {activeWorkspace?.role === 'owner' && <button className="hsv-primary" onClick={() => { setTeamDraft({email:'',role:'member'}); setTeamInviteToken(''); setTeamInviteExpiresAt(''); setTeamOpen(true); }}><Plus size={15}/> Mitglied einladen</button>}
           </div>
           <div className="hsv-intro" style={{marginBottom:18}}>
             <span className="hsv-big-logo"><Users size={26}/></span>
@@ -1930,7 +1960,18 @@ export default function StudioPage() {
               </> : <strong>{member.role}</strong>}
             </div>)}
           </div>
-          {activeWorkspace?.role === 'owner' && <p className="hsv-warning">Neue Personen müssen sich aktuell einmal bei Hive anmelden, bevor sie per E-Mail einem Team hinzugefügt werden können. Sobald Clerk vollständig aktiviert ist, kann daraus direkt ein echter Invite werden.</p>}
+          {activeWorkspace?.role === 'owner' && <>
+            <div className="hsv-rowtop" style={{marginTop:24}}><strong>Offene Einladungen</strong></div>
+            <div className="hsv-table">
+              {teamInvites.filter((invite) => !invite.accepted_at && !invite.revoked_at && new Date(invite.expires_at).getTime() > Date.now()).map((invite) => <div key={invite.invite_id}>
+                <span className="hsv-letter"><Mail size={15}/></span>
+                <span className="hsv-grow"><strong>{invite.email}</strong><small>{invite.role} · gültig bis {new Date(invite.expires_at).toLocaleDateString('de-CH')}</small></span>
+                <button onClick={() => void revokeTeamInvite(invite)}>Widerrufen</button>
+              </div>)}
+              {!teamInvites.some((invite) => !invite.accepted_at && !invite.revoked_at && new Date(invite.expires_at).getTime() > Date.now()) && <p className="hsv-empty">Keine offenen Team-Einladungen.</p>}
+            </div>
+            <p className="hsv-warning">Im Dev-Modus wird der Invite-Link noch nicht per E-Mail versendet. Nach dem Erstellen kannst du ihn einmalig kopieren.</p>
+          </>}
         </>}
 
         {tab === 'branding' && settings && <form className="hsv-branding" onSubmit={saveSettings}>
@@ -2053,15 +2094,22 @@ export default function StudioPage() {
       </form>
     </Modal>}
 
-    {teamOpen && <Modal title="Teammitglied hinzufügen" onClose={() => setTeamOpen(false)}>
-      <form onSubmit={addTeamMember}>
+    {teamOpen && <Modal title="Teammitglied einladen" onClose={() => setTeamOpen(false)}>
+      <form onSubmit={inviteTeamMember}>
         <label>E-Mail<input required type="email" inputMode="email" autoComplete="email" value={teamDraft.email} onChange={(e) => setTeamDraft({ ...teamDraft, email:e.target.value })} placeholder="name@example.com"/></label>
         <label>Rolle<select value={teamDraft.role} onChange={(e) => setTeamDraft({ ...teamDraft, role:e.target.value as 'admin'|'member'|'accountant' })}>
           <option value="member">Member · Projekte & Kunden</option>
           <option value="accountant">Accountant · Finanzen</option>
           <option value="admin">Admin · Business verwalten</option>
         </select></label>
-        <button className="hsv-primary" type="submit">Hinzufügen <Check size={15}/></button>
+        {!teamInviteToken && <button className="hsv-primary" type="submit">Einladung erstellen <Check size={15}/></button>}
+        {teamInviteToken && <div className="hive-team-invite-token">
+          <span>INVITE LINK</span>
+          <code>{teamInviteToken}</code>
+          <button className="hsv-primary" type="button" onClick={() => void copyTeamInvite()}>Link kopieren</button>
+          {teamInviteExpiresAt && <small>Gültig bis {new Date(teamInviteExpiresAt).toLocaleString('de-CH')}</small>}
+          <small>Der rohe Code wird nicht in der Datenbank gespeichert und nach dem Schliessen nicht erneut angezeigt.</small>
+        </div>}
       </form>
     </Modal>}
 
