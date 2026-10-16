@@ -162,6 +162,20 @@ for (const appearance of ["light", "dark"])
         await fits(page);
       }
 
+      await nav.getByRole("button", { name: "Weitere Module" }).click();
+      await page
+        .getByRole("dialog")
+        .getByRole("button", { name: "Business", exact: true })
+        .click();
+      const settingsTabs = page.getByRole("tablist", { name: "Business-Einstellungen" });
+      await expect(settingsTabs).toBeVisible();
+      for (const section of ["Brand", "Kontakt", "Abrechnung"]) {
+        const control = settingsTabs.getByRole("tab", { name: section, exact: true });
+        await control.click();
+        await expect(control).toHaveAttribute("aria-selected", "true");
+        await fits(page);
+      }
+
       await nav.getByRole("button", { name: "Kunden", exact: true }).click();
       await page.getByRole("button", { name: /Kundenakte/ }).first().click();
       const customerWorkspace = page.getByRole("dialog", { name: "Workspace Details" });
