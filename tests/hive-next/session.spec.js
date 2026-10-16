@@ -96,6 +96,26 @@ test('invoice history is workspace scoped and visible from the invoice list',asy
  await expect(dialog.getByText('Erfolgreich',{exact:true})).toBeVisible();
 });
 
+test('offer history is workspace scoped and visible from the offer list',async({page})=>{
+ await login(page);
+ const foreign=await page.request.get('/api/hive/offers/50000000-0000-4000-8000-000000000001/history?workspace=033fe942-b8de-4298-9762-5f23550afbd9');
+ expect(foreign.status()).toBe(403);
+
+ const nav=page.getByRole('navigation',{name:'Business-Module'});
+ await nav.getByRole('button',{name:'Offerten',exact:true}).click();
+ const offerRow=page.locator('.hive-offer-table>div').filter({hasText:'OFF-2026-001'}).first();
+ await expect(offerRow).toBeVisible();
+ await offerRow.getByRole('button',{name:/Verlauf/}).click();
+
+ const dialog=page.getByRole('dialog',{name:'OFF-2026-001'});
+ await expect(dialog).toBeVisible();
+ await expect(dialog.getByText('Offerte erstellt',{exact:true})).toBeVisible();
+ await expect(dialog.getByText('Im Kundenportal freigegeben',{exact:true})).toBeVisible();
+ await expect(dialog.getByText('Offerte versendet',{exact:true})).toBeVisible();
+ await dialog.getByText(/Versandtechnik/).click();
+ await expect(dialog.getByText('Erfolgreich',{exact:true})).toBeVisible();
+});
+
 test('customer lists support search and invoice lists support status filtering',async({page})=>{
  await login(page);
  await page.getByRole('navigation').getByRole('button',{name:/Kunden/}).click();
