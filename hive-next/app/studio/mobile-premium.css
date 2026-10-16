@@ -318,6 +318,43 @@
   }
   .hive-list-tools>span{display:none}
 
+  /* Mobile-only secondary navigation for dense modules like Portal. */
+  .hive-mobile-subtabs{
+    position:sticky;
+    top:calc(62px + env(safe-area-inset-top));
+    z-index:19;
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:4px;
+    margin:0 -4px 18px;
+    padding:4px;
+    border:1px solid var(--mobile-line);
+    border-radius:14px;
+    background:color-mix(in srgb,var(--mobile-surface) 94%,transparent);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+  }
+  .hive-mobile-subtabs button{
+    min-width:0;
+    min-height:40px;
+    padding:7px 5px;
+    border:0;
+    border-radius:10px;
+    background:transparent;
+    color:var(--mobile-muted);
+    font-size:10px;
+    font-weight:600;
+    white-space:nowrap;
+  }
+  .hive-mobile-subtabs button[aria-selected="true"]{
+    background:var(--mobile-strong);
+    color:var(--mobile-surface);
+  }
+  html[data-theme="dark"] .hive-mobile-subtabs button[aria-selected="true"]{color:#111}
+  .hive-portal-section{display:none}
+  .hive-portal-section[data-mobile-active="true"]{display:block}
+  .hive-portal-section>.hsv-rowtop:first-child{margin-top:0!important}
+
   /* Section header / primary action */
   .hsv-rowtop{
     align-items:center;
