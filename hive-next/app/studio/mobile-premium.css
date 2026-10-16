@@ -33,6 +33,10 @@
   }
 
   .hsv button,.hsv a,.hsv select{touch-action:manipulation}
+  .hsv{scroll-padding-bottom:calc(118px + env(safe-area-inset-bottom))}
+  .hsv :is(button,a,input,select,textarea):focus-visible{
+    scroll-margin-block:96px calc(118px + env(safe-area-inset-bottom));
+  }
   .hsv button:active{transform:scale(.985)}
   .hsv button,.hsv a{transition:transform .12s ease,background .14s ease,border-color .14s ease,opacity .14s ease}
 
@@ -436,8 +440,8 @@
   .hsv-table .hive-record-actions button{
     flex:none;
     min-width:44px;
-    min-height:38px;
-    padding:8px 11px;
+    min-height:44px;
+    padding:9px 11px;
     border:1px solid var(--mobile-line);
     border-radius:10px;
     background:var(--mobile-bg);
@@ -504,8 +508,8 @@
   }
   .hsv-table:not(.hive-customer-table):not(.hive-project-table):not(.hive-invoice-table):not(.hive-offer-table)>div>button:not(.hsv-letter){
     flex:none;
-    min-height:38px;
-    padding:8px 10px;
+    min-height:44px;
+    padding:9px 10px;
     border:1px solid var(--mobile-line);
     border-radius:10px;
     background:var(--mobile-bg);
