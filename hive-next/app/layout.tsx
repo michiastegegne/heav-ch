@@ -9,6 +9,18 @@ export const viewport: Viewport = { width: 'device-width', initialScale: 1, view
 export const metadata: Metadata = {
   title: 'Hive — Creative Business OS',
   description: 'Workspace for creative businesses',
+  applicationName: 'Hive',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    title: 'Hive',
+    statusBarStyle: 'black-translucent',
+  },
+  formatDetection: {
+    telephone: false,
+    email: false,
+    address: false,
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
