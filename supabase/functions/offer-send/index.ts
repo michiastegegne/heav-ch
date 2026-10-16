@@ -26,7 +26,7 @@ function reply(
   return Response.json(payload, { status, headers });
 }
 
-Deno.serve(async (request) => {
+export async function handler(request: Request) {
   const origin = request.headers.get("origin") || "";
   const headers = {
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -267,4 +267,8 @@ Deno.serve(async (request) => {
       error: error instanceof Error ? error.message : "Offerte konnte nicht per E-Mail gesendet werden.",
     }, 400, headers);
   }
-});
+}
+
+if (import.meta.main) {
+  Deno.serve(handler);
+}
