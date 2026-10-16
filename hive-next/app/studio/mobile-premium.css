@@ -1,0 +1,792 @@
+/* Hive Mobile — app-grade responsive layer.
+   Loaded last so mobile ergonomics win without changing the desktop workspace. */
+
+.hive-mobile-create{display:none}
+
+@media screen and (max-width:760px){
+  .hsv{
+    --mobile-bg:#f4f4f2;
+    --mobile-surface:#fff;
+    --mobile-surface-raised:#fff;
+    --mobile-ink:#111;
+    --mobile-muted:#747474;
+    --mobile-faint:#999;
+    --mobile-line:#e7e7e4;
+    --mobile-strong:#171717;
+    --mobile-shadow:0 18px 45px rgba(0,0,0,.10);
+    background:var(--mobile-bg);
+    color:var(--mobile-ink);
+    min-height:100dvh;
+    padding-bottom:env(safe-area-inset-bottom);
+    -webkit-tap-highlight-color:transparent;
+  }
+  html[data-theme="dark"] .hsv{
+    --mobile-bg:#101010;
+    --mobile-surface:#181818;
+    --mobile-surface-raised:#1d1d1d;
+    --mobile-ink:#f4f4f2;
+    --mobile-muted:#aaa;
+    --mobile-faint:#767676;
+    --mobile-line:#2b2b2b;
+    --mobile-strong:#f3f3f0;
+    --mobile-shadow:0 22px 54px rgba(0,0,0,.42);
+  }
+
+  .hsv button,.hsv a,.hsv select{touch-action:manipulation}
+  .hsv button:active{transform:scale(.985)}
+  .hsv button,.hsv a{transition:transform .12s ease,background .14s ease,border-color .14s ease,opacity .14s ease}
+
+  /* Compact native-feeling top chrome */
+  .hsv-top{
+    position:sticky;
+    top:0;
+    z-index:45;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto auto;
+    align-items:center;
+    min-height:calc(62px + env(safe-area-inset-top));
+    height:auto;
+    padding:calc(9px + env(safe-area-inset-top)) 13px 9px;
+    gap:8px;
+    border-bottom:1px solid color-mix(in srgb,var(--mobile-line) 80%,transparent);
+    background:color-mix(in srgb,var(--mobile-surface) 94%,transparent);
+    backdrop-filter:saturate(150%) blur(18px);
+    -webkit-backdrop-filter:saturate(150%) blur(18px);
+  }
+  .hsv-top .hsv-identity{
+    min-width:0;
+    width:100%;
+    gap:8px;
+    display:grid;
+    grid-template-columns:auto minmax(0,1fr) 42px;
+    align-items:center;
+  }
+  .hsv-top .hsv-hive{
+    font-size:23px;
+    letter-spacing:-1.5px;
+    line-height:1;
+  }
+  .hsv-top .hsv-divider,.hsv-top .hsv-logo,.hsv-top .hsv-mode,.hsv-top .hsv-back{display:none}
+  .hsv-top .hsv-identity select{
+    appearance:none;
+    -webkit-appearance:none;
+    width:100%;
+    max-width:none;
+    min-width:0;
+    min-height:42px;
+    border:1px solid var(--mobile-line);
+    border-radius:13px;
+    padding:0 34px 0 12px;
+    background:
+      linear-gradient(45deg,transparent 50%,var(--mobile-muted) 50%) calc(100% - 16px) calc(50% - 2px)/5px 5px no-repeat,
+      linear-gradient(135deg,var(--mobile-muted) 50%,transparent 50%) calc(100% - 12px) calc(50% - 2px)/5px 5px no-repeat,
+      var(--mobile-surface-raised);
+    color:var(--mobile-ink);
+    font-size:13px;
+    font-weight:600;
+    text-overflow:ellipsis;
+    box-shadow:0 1px 0 rgba(0,0,0,.03);
+  }
+  .hsv-top .hsv-identity>.hsv-outline{
+    width:42px;
+    height:42px;
+    min-height:42px;
+    border:1px solid var(--mobile-line);
+    border-radius:13px;
+    background:var(--mobile-surface-raised);
+    color:var(--mobile-ink);
+  }
+  .hsv-top>.hsv-outline{
+    width:42px;
+    min-width:42px;
+    height:42px;
+    min-height:42px;
+    margin:0;
+    padding:0;
+    border:1px solid var(--mobile-line);
+    border-radius:13px;
+    justify-content:center;
+    background:var(--mobile-surface-raised);
+    color:var(--mobile-ink);
+    font-size:0;
+  }
+  .hsv-top>.hsv-outline kbd{display:none}
+  .hsv-top>.hsv-outline svg{width:18px;height:18px}
+  .hsv-top .hive-theme-toggle{
+    width:42px!important;
+    min-width:42px!important;
+    height:42px!important;
+    min-height:42px!important;
+    border:1px solid var(--mobile-line)!important;
+    border-radius:13px!important;
+    background:var(--mobile-surface-raised)!important;
+    color:var(--mobile-ink)!important;
+  }
+
+  /* Desktop rail disappears; bottom chrome owns navigation. */
+  .hsv-layout{display:block;min-height:0}
+  .hsv-nav{display:none!important}
+  .hsv-main{
+    width:100%;
+    max-width:none;
+    padding:20px 15px calc(132px + env(safe-area-inset-bottom));
+    overflow-x:hidden;
+  }
+  .hive-breadcrumb{
+    min-height:0;
+    margin:0 0 17px;
+    gap:7px;
+    font-size:10px;
+    color:var(--mobile-faint);
+  }
+  .hive-breadcrumb time{display:none}
+  .hsv-heading{
+    align-items:flex-start;
+    margin:0 0 23px;
+    gap:14px;
+  }
+  .hsv-heading h1{
+    margin:0 0 6px;
+    font-size:30px;
+    line-height:1.08;
+    letter-spacing:-1.35px;
+  }
+  .hsv-heading p{
+    max-width:32ch;
+    color:var(--mobile-muted);
+    font-size:12px;
+    line-height:1.55;
+  }
+  /* Quick-create covers the dashboard CTA on mobile. */
+  .hsv-heading>.hsv-primary{display:none}
+
+  /* Floating bottom navigation */
+  .hive-mobile-nav{
+    display:grid;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    position:fixed;
+    z-index:60;
+    left:10px;
+    right:10px;
+    bottom:max(9px,env(safe-area-inset-bottom));
+    width:auto;
+    padding:6px;
+    border:1px solid color-mix(in srgb,var(--mobile-line) 90%,transparent);
+    border-radius:21px;
+    background:color-mix(in srgb,var(--mobile-surface) 92%,transparent);
+    backdrop-filter:saturate(160%) blur(22px);
+    -webkit-backdrop-filter:saturate(160%) blur(22px);
+    box-shadow:0 16px 46px rgba(0,0,0,.14);
+  }
+  html[data-theme="dark"] .hive-mobile-nav{box-shadow:0 18px 52px rgba(0,0,0,.5)}
+  .hive-mobile-nav button{
+    position:relative;
+    min-width:0;
+    min-height:54px;
+    padding:6px 2px;
+    gap:4px;
+    border:0;
+    border-radius:15px;
+    background:transparent;
+    color:var(--mobile-muted);
+    font-size:9.5px;
+    font-weight:600;
+    letter-spacing:-.1px;
+  }
+  .hive-mobile-nav button svg{width:20px;height:20px;stroke-width:1.8}
+  .hive-mobile-nav button[aria-current="page"]{
+    background:var(--mobile-strong);
+    color:var(--mobile-surface);
+  }
+  html[data-theme="dark"] .hive-mobile-nav button[aria-current="page"]{color:#111}
+  .hive-mobile-nav button[aria-current="page"] svg{stroke-width:2.15}
+
+  /* Dedicated global create button, intentionally above nav. */
+  .hive-mobile-create{
+    display:grid;
+    place-items:center;
+    position:fixed;
+    z-index:61;
+    right:18px;
+    bottom:calc(82px + env(safe-area-inset-bottom));
+    width:52px;
+    height:52px;
+    border:1px solid color-mix(in srgb,var(--mobile-strong) 90%,transparent);
+    border-radius:18px;
+    background:var(--mobile-strong);
+    color:var(--mobile-surface);
+    box-shadow:0 12px 28px rgba(0,0,0,.22);
+  }
+  html[data-theme="dark"] .hive-mobile-create{color:#111}
+  .hive-mobile-create svg{width:22px;height:22px;stroke-width:2}
+
+  /* Overview: cards look like purposeful mobile widgets. */
+  .hive-kpis{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+    margin:0 0 20px;
+    padding:0;
+    border:0;
+  }
+  .hive-kpis button,
+  .hive-kpis button:first-child,
+  .hive-kpis button:nth-child(2),
+  .hive-kpis button:nth-child(3),
+  .hive-kpis button:last-child{
+    min-height:132px;
+    padding:15px;
+    gap:10px;
+    border:1px solid var(--mobile-line);
+    border-radius:17px;
+    background:var(--mobile-surface);
+    box-shadow:0 1px 0 rgba(0,0,0,.025);
+  }
+  .hive-kpis button>span{font-size:10px;color:var(--mobile-muted)}
+  .hive-kpis strong{
+    margin-top:auto;
+    font-size:clamp(20px,6.5vw,29px);
+    line-height:1;
+    letter-spacing:-1.3px;
+  }
+  .hive-kpis small{font-size:10px;line-height:1.35;color:var(--mobile-faint)}
+  .hive-overview-grid{display:flex;flex-direction:column;gap:18px}
+  .hive-overview-primary,.hive-overview-aside{display:flex;flex-direction:column;gap:18px}
+  .hive-panel,.hive-attention{
+    overflow:hidden;
+    border:1px solid var(--mobile-line);
+    border-radius:17px;
+    background:var(--mobile-surface);
+  }
+  .hive-panel-heading{padding:17px 15px}
+  .hive-panel-heading h2{font-size:15px}
+  .hive-panel-heading>button{min-width:44px;min-height:44px}
+  .hive-finance-row{
+    grid-template-columns:minmax(0,1fr) auto;
+    min-height:86px;
+    padding:15px;
+    gap:7px 10px;
+  }
+  .hive-finance-row .hive-record{grid-column:1}
+  .hive-finance-row .hive-amount{grid-column:2;grid-row:1;font-size:13px}
+  .hive-finance-row .hive-due{grid-column:1/-1;font-size:11px}
+  .hive-project-focus>button{padding:17px 15px}
+  .hive-attention{padding:19px}
+  .hive-activity-panel{margin-top:0}
+
+  /* Search / filter bar */
+  .hive-list-tools{
+    position:sticky;
+    top:calc(61px + env(safe-area-inset-top));
+    z-index:20;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:8px;
+    margin:0 -15px 16px;
+    padding:10px 15px;
+    border:0;
+    border-bottom:1px solid color-mix(in srgb,var(--mobile-line) 75%,transparent);
+    background:color-mix(in srgb,var(--mobile-bg) 93%,transparent);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+  }
+  .hive-list-tools>label{
+    width:100%;
+    min-width:0;
+    min-height:44px;
+    border:1px solid var(--mobile-line);
+    border-radius:13px;
+    background:var(--mobile-surface);
+  }
+  .hive-list-tools input{font-size:16px;color:var(--mobile-ink)}
+  .hive-list-tools select{
+    width:auto;
+    max-width:126px;
+    min-height:44px;
+    border:1px solid var(--mobile-line);
+    border-radius:13px;
+    background:var(--mobile-surface);
+    color:var(--mobile-ink);
+    font-size:12px;
+  }
+  .hive-list-tools>span{display:none}
+
+  /* Section header / primary action */
+  .hsv-rowtop{
+    align-items:center;
+    flex-wrap:nowrap;
+    min-height:44px;
+    margin:0 0 12px;
+    gap:10px;
+  }
+  .hsv-rowtop>strong{font-size:12px;font-weight:600}
+  .hsv-rowtop>.hsv-primary{
+    margin-left:auto;
+    min-width:44px;
+    min-height:44px;
+    max-width:55%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  /* Record lists become crisp touch cards. */
+  .hive-table-labels{display:none!important}
+  .hsv-table{
+    overflow:visible;
+    border:0;
+    border-radius:0;
+    background:transparent;
+  }
+  .hsv-table>div{
+    position:relative;
+    display:grid;
+    grid-template-columns:38px minmax(0,1fr) auto;
+    align-items:center;
+    gap:4px 11px;
+    min-height:0;
+    margin:0 0 10px;
+    padding:14px;
+    overflow:hidden;
+    border:1px solid var(--mobile-line);
+    border-radius:16px;
+    background:var(--mobile-surface);
+    box-shadow:0 1px 0 rgba(0,0,0,.02);
+  }
+  .hsv-table>div:hover{background:var(--mobile-surface)}
+  .hsv-letter{
+    grid-column:1;
+    grid-row:1/3;
+    width:38px;
+    height:38px;
+    border:1px solid var(--mobile-line);
+    border-radius:12px;
+    background:var(--mobile-bg);
+    color:var(--mobile-muted);
+  }
+  .hsv-grow{
+    grid-column:2;
+    grid-row:1/3;
+    min-width:0!important;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .hsv-grow strong{
+    overflow:hidden;
+    color:var(--mobile-ink);
+    font-size:14px;
+    font-weight:600;
+    line-height:1.25;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .hsv-grow small{
+    overflow:hidden;
+    color:var(--mobile-muted);
+    font-size:11px;
+    line-height:1.35;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .hive-contact-cell{
+    grid-column:1/-1;
+    padding:10px 0 0 49px;
+    min-width:0;
+    border-top:1px solid color-mix(in srgb,var(--mobile-line) 75%,transparent);
+    color:var(--mobile-muted);
+    font-size:11px;
+  }
+  .hive-status{
+    grid-column:3;
+    align-self:start;
+    padding:5px 7px;
+    border:1px solid var(--mobile-line);
+    border-radius:8px;
+    background:var(--mobile-bg);
+    color:var(--mobile-muted);
+    font-size:9px;
+  }
+  .hive-table-date{
+    grid-column:2;
+    width:auto;
+    color:var(--mobile-faint);
+    font-size:10px;
+  }
+  .hsv-table>div>strong,.hive-table-amount{
+    grid-column:3;
+    grid-row:2;
+    margin:0!important;
+    color:var(--mobile-ink);
+    font-size:13px!important;
+    font-weight:600!important;
+    font-variant-numeric:tabular-nums;
+  }
+  .hive-record-actions{
+    grid-column:1/-1;
+    display:flex;
+    align-items:center;
+    gap:7px;
+    margin:10px -3px -3px;
+    padding:10px 3px 3px;
+    overflow-x:auto;
+    border-top:1px solid var(--mobile-line);
+    scrollbar-width:none;
+    overscroll-behavior-x:contain;
+  }
+  .hive-record-actions::-webkit-scrollbar{display:none}
+  .hsv-table .hive-record-actions button{
+    flex:none;
+    min-width:44px;
+    min-height:38px;
+    padding:8px 11px;
+    border:1px solid var(--mobile-line);
+    border-radius:10px;
+    background:var(--mobile-bg);
+    color:var(--mobile-ink);
+    font-size:11px;
+  }
+  .hsv-table .hive-record-actions button:first-child:not([aria-label]){
+    background:var(--mobile-strong);
+    border-color:var(--mobile-strong);
+    color:var(--mobile-surface);
+  }
+  html[data-theme="dark"] .hsv-table .hive-record-actions button:first-child:not([aria-label]){color:#111}
+  .hive-record-actions button[aria-label$="löschen"]{
+    margin-left:auto;
+    color:#b5463e;
+    border-color:color-mix(in srgb,#b5463e 25%,var(--mobile-line));
+    background:transparent;
+  }
+
+  /* Customer rows have extra contact block. */
+  .hive-customer-table>div{
+    grid-template-columns:38px minmax(0,1fr);
+  }
+  .hive-customer-table .hsv-grow{grid-column:2}
+  .hive-customer-table .hive-record-actions{grid-column:1/-1}
+
+  /* Invoice cards: status top-right, amount visually anchored. */
+  .hive-invoice-table>div{
+    grid-template-columns:38px minmax(0,1fr) auto;
+  }
+  .hive-invoice-table .hsv-grow{grid-column:2;grid-row:1}
+  .hive-invoice-table .hsv-letter{grid-row:1/3}
+  .hive-invoice-table .hive-status{grid-column:3;grid-row:1;margin:0}
+  .hive-invoice-table .hive-table-date{grid-column:2;grid-row:2}
+  .hive-invoice-table>div>strong{grid-column:3;grid-row:2}
+  .hive-invoice-table .hive-record-actions{grid-column:1/-1}
+
+  /* Supporting / settings tables are intentionally more relaxed. */
+  .hsv-table>p.hsv-empty,.hsv-empty,.hive-no-results{
+    border:1px dashed var(--mobile-line)!important;
+    border-radius:16px!important;
+    background:var(--mobile-surface)!important;
+    color:var(--mobile-muted)!important;
+  }
+
+  /* Bottom sheets */
+  .hsv-overlay{
+    z-index:100;
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    padding:env(safe-area-inset-top) 0 0;
+    background:rgba(0,0,0,.48);
+    backdrop-filter:blur(3px);
+    -webkit-backdrop-filter:blur(3px);
+    overscroll-behavior:contain;
+  }
+  .hsv-dialog{
+    position:relative;
+    width:100%;
+    max-width:100%!important;
+    max-height:calc(94dvh - env(safe-area-inset-top));
+    min-width:0;
+    margin:0;
+    padding:30px 18px calc(22px + env(safe-area-inset-bottom));
+    overflow:auto;
+    border:1px solid var(--mobile-line);
+    border-bottom:0;
+    border-radius:24px 24px 0 0;
+    background:var(--mobile-surface);
+    color:var(--mobile-ink);
+    box-shadow:var(--mobile-shadow);
+    overscroll-behavior:contain;
+  }
+  .hsv-dialog:before{
+    content:'';
+    position:absolute;
+    top:9px;
+    left:50%;
+    width:38px;
+    height:4px;
+    border-radius:99px;
+    background:var(--mobile-line);
+    transform:translateX(-50%);
+  }
+  .hsv-dialog>span{
+    color:var(--mobile-faint);
+    font-size:9px;
+    letter-spacing:1.4px;
+  }
+  .hsv-dialog h2{
+    margin:5px 0 18px;
+    padding-right:46px;
+    font-size:25px;
+    line-height:1.14;
+    letter-spacing:-.8px;
+  }
+  .hsv-close{
+    top:18px;
+    right:15px;
+    width:42px;
+    height:42px;
+    border:1px solid var(--mobile-line);
+    background:var(--mobile-bg);
+    color:var(--mobile-ink);
+  }
+  .hsv-dialog form{gap:16px}
+  .hsv-dialog label,.hsv-branding label{color:var(--mobile-muted);font-size:11px}
+  .hsv-dialog :is(input,textarea,select),
+  .hsv-branding :is(input,textarea,select){
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    min-height:48px;
+    border:1px solid var(--mobile-line);
+    border-radius:12px;
+    background:var(--mobile-bg);
+    color:var(--mobile-ink);
+    font-size:16px!important;
+  }
+  .hsv-dialog textarea,.hsv-branding textarea{min-height:96px}
+  .hsv-dialog [style*="grid-template-columns"],
+  .hsv-branding [style*="grid-template-columns"]{grid-template-columns:minmax(0,1fr)!important}
+  .hsv-dialog form>.hsv-primary:last-child{
+    position:sticky;
+    bottom:calc(-22px - env(safe-area-inset-bottom));
+    z-index:5;
+    width:calc(100% + 36px);
+    min-height:54px;
+    margin:7px -18px calc(-22px - env(safe-area-inset-bottom));
+    padding-bottom:calc(10px + env(safe-area-inset-bottom));
+    border:0;
+    border-radius:0;
+    background:var(--mobile-strong);
+    color:var(--mobile-surface);
+  }
+  html[data-theme="dark"] .hsv-dialog form>.hsv-primary:last-child{color:#111}
+
+  /* Search opens from the top like a command launcher, not a generic sheet. */
+  .hive-search-dialog{
+    align-self:flex-start;
+    max-height:min(76dvh,620px)!important;
+    margin:8px 10px 0;
+    width:calc(100% - 20px);
+    border:1px solid var(--mobile-line);
+    border-radius:20px!important;
+    padding:0!important;
+  }
+  .hive-search-dialog:before{display:none}
+  .hive-search-dialog>.hsv-table{padding:8px}
+  .hive-search-dialog .hsv-table>button{
+    display:grid;
+    grid-template-columns:38px minmax(0,1fr) auto;
+    width:100%;
+    min-height:62px;
+    margin:0 0 5px;
+    padding:10px;
+    border:0;
+    border-radius:12px;
+    background:transparent;
+    color:var(--mobile-ink);
+  }
+  .hive-search-dialog .hsv-table>button:active{background:var(--mobile-bg)}
+  .hive-search-dialog .hsv-grow{grid-column:2;grid-row:auto}
+  .hive-search-dialog .hsv-letter{grid-row:auto}
+  .hive-search-dialog .hsv-table>button>small{font-size:9px;color:var(--mobile-faint)}
+
+  /* More / quick-create sheets */
+  .hive-mobile-modules{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:9px;
+  }
+  .hive-mobile-modules button{
+    min-height:72px;
+    display:grid;
+    grid-template-columns:28px minmax(0,1fr) auto;
+    gap:9px;
+    align-items:center;
+    padding:13px;
+    border:1px solid var(--mobile-line);
+    border-radius:15px;
+    background:var(--mobile-bg);
+    color:var(--mobile-ink);
+    text-align:left;
+  }
+  .hive-mobile-modules button[aria-current="page"]{
+    border-color:var(--mobile-strong);
+    background:var(--mobile-strong);
+    color:var(--mobile-surface);
+  }
+  html[data-theme="dark"] .hive-mobile-modules button[aria-current="page"]{color:#111}
+  .hive-mobile-quick-actions{
+    display:grid;
+    gap:9px;
+  }
+  .hive-mobile-quick-actions button{
+    display:grid;
+    grid-template-columns:42px minmax(0,1fr) auto;
+    align-items:center;
+    gap:12px;
+    min-height:64px;
+    padding:10px 12px;
+    border:1px solid var(--mobile-line);
+    border-radius:15px;
+    background:var(--mobile-bg);
+    color:var(--mobile-ink);
+    text-align:left;
+  }
+  .hive-mobile-quick-actions button>span:first-of-type{
+    display:grid;
+    place-items:center;
+    width:42px;
+    height:42px;
+    border-radius:12px;
+    background:var(--mobile-surface);
+    border:1px solid var(--mobile-line);
+  }
+  .hive-mobile-quick-actions button>div{min-width:0}
+  .hive-mobile-quick-actions strong{display:block;font-size:13px}
+  .hive-mobile-quick-actions small{display:block;margin-top:3px;color:var(--mobile-muted);font-size:10px}
+  .hive-mobile-quick-actions button:disabled{opacity:.42}
+
+  /* Full-screen document editor */
+  .hsv-invoice-overlay{padding:0;align-items:stretch}
+  .hsv-invoice-editor{
+    width:100%;
+    height:100dvh;
+    overflow-x:hidden;
+    background:var(--mobile-bg);
+  }
+  .hsv-editorbar{
+    position:sticky;
+    top:0;
+    z-index:20;
+    min-height:calc(60px + env(safe-area-inset-top));
+    padding:calc(8px + env(safe-area-inset-top)) 14px 8px;
+    border-bottom:1px solid var(--mobile-line);
+    background:color-mix(in srgb,var(--mobile-surface) 94%,transparent);
+    color:var(--mobile-ink);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+  }
+  .hsv-editorbar button{min-width:44px;min-height:44px}
+  .hsv-paper{
+    width:100%;
+    min-width:0!important;
+    min-height:0;
+    margin:0;
+    padding:22px 15px calc(38px + env(safe-area-inset-bottom));
+    overflow:visible;
+    background:var(--mobile-surface);
+    color:var(--mobile-ink);
+    box-shadow:none;
+  }
+  .hsv-paperhead{gap:14px;flex-wrap:wrap}
+  .hsv-documentname{text-align:left}
+  .hsv-documentname h2{font-size:27px}
+  .hsv-paperinfo{grid-template-columns:minmax(0,1fr)!important;gap:14px;margin-top:22px}
+  .hsv-paper form{display:grid;gap:14px}
+  .hsv-paper :is(input,select,textarea){
+    width:100%;
+    min-width:0;
+    min-height:46px;
+    border-radius:11px;
+    font-size:16px;
+  }
+  .hsv-lineheader{display:none!important}
+  .hsv-line{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px!important;
+    gap:9px!important;
+    margin:0 0 10px;
+    padding:12px;
+    border:1px solid var(--mobile-line);
+    border-radius:14px;
+    background:var(--mobile-bg);
+  }
+  .hsv-line input:first-child{grid-column:1/-1}
+  .hsv-line strong{grid-column:1/3;text-align:left;font-size:13px}
+  .hsv-line button{grid-column:3;grid-row:2/4;min-height:44px}
+  .hsv-addline{width:100%;min-height:48px;border-radius:12px}
+  .hsv-bill-total{width:100%;max-width:none}
+  .hsv-bill-total .hsv-grand{font-size:17px}
+
+  /* Settings / email templates should not look like desktop forms squeezed in. */
+  .hsv-branding{
+    padding:16px;
+    border:1px solid var(--mobile-line);
+    border-radius:17px;
+    background:var(--mobile-surface);
+  }
+  .hsv-brand-preview{gap:12px}
+  .hsv-intro{
+    display:grid;
+    grid-template-columns:54px minmax(0,1fr);
+    gap:14px;
+    padding:17px;
+    border:1px solid var(--mobile-line);
+    border-radius:17px;
+    background:var(--mobile-surface);
+  }
+  .hsv-big-logo{width:54px;height:54px;border-radius:15px}
+  .hsv-intro h2{font-size:18px}
+  .hsv-intro p{font-size:11px;line-height:1.55}
+
+  /* Toast stays above floating controls. */
+  .hsv-toast{
+    z-index:120;
+    left:12px;
+    right:12px;
+    bottom:calc(91px + env(safe-area-inset-bottom));
+    max-width:none;
+    min-height:52px;
+    border:1px solid color-mix(in srgb,var(--mobile-line) 70%,transparent);
+    border-radius:15px;
+    background:var(--mobile-strong);
+    color:var(--mobile-surface);
+    box-shadow:0 16px 44px rgba(0,0,0,.22);
+  }
+  html[data-theme="dark"] .hsv-toast{color:#111}
+
+  .hsv-warning{font-size:10px;line-height:1.55;color:var(--mobile-muted)}
+
+  /* iPhone SE / 320px remains intentionally usable. */
+  @media(max-width:360px){
+    .hsv-main{padding-left:12px;padding-right:12px}
+    .hsv-top{padding-left:10px;padding-right:10px}
+    .hsv-top .hsv-hive{font-size:21px}
+    .hsv-top .hsv-identity{grid-template-columns:auto minmax(0,1fr) 40px}
+    .hsv-top>.hsv-outline,.hsv-top .hive-theme-toggle,.hsv-top .hsv-identity>.hsv-outline{width:40px!important;min-width:40px!important;height:40px!important;min-height:40px!important}
+    .hive-kpis{grid-template-columns:minmax(0,1fr)}
+    .hive-kpis button,
+    .hive-kpis button:first-child,
+    .hive-kpis button:nth-child(2),
+    .hive-kpis button:nth-child(3),
+    .hive-kpis button:last-child{min-height:108px}
+    .hive-mobile-nav{left:6px;right:6px}
+    .hive-mobile-nav button{font-size:8.5px}
+    .hive-mobile-modules{grid-template-columns:minmax(0,1fr)}
+    .hsv-rowtop>.hsv-primary{font-size:0;width:44px;padding:0}
+    .hsv-rowtop>.hsv-primary svg{width:18px;height:18px}
+  }
+}
+
+@media (prefers-reduced-motion:reduce){
+  .hsv button,.hsv a{transition:none!important}
+}
+
+@media print{
+  .hive-mobile-nav,.hive-mobile-create{display:none!important}
+}
