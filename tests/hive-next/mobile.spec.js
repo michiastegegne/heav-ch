@@ -44,6 +44,20 @@ for (const appearance of ["light", "dark"])
       await fits(page);
       const nav = page.getByRole("navigation", { name: "Mobile Navigation" });
       await expect(nav).toBeVisible();
+      const quickCreate = page.getByRole("button", { name: "Neu erstellen", exact: true });
+      await expect(quickCreate).toBeVisible();
+      await quickCreate.click();
+      const quickDialog = page.getByRole("dialog", { name: "Neu erstellen" });
+      await expect(quickDialog).toBeVisible();
+      await expect(quickDialog.getByRole("button", { name: /Kunde/ })).toBeVisible();
+      await expect(quickDialog.getByRole("button", { name: /Projekt/ })).toBeVisible();
+      await expect(quickDialog.getByRole("button", { name: /Rechnung/ })).toBeVisible();
+      await expect(quickDialog.getByRole("button", { name: /Offerte/ })).toBeVisible();
+      await expect(quickDialog.getByRole("button", { name: /Datei/ })).toBeVisible();
+      expect(await page.evaluate(() => document.body.style.overflow)).toBe("hidden");
+      await page.keyboard.press("Escape");
+      await expect(quickDialog).toHaveCount(0);
+      expect(await page.evaluate(() => document.body.style.overflow)).not.toBe("hidden");
       await page.screenshot({
         path: `../../outputs/hive-mobile-${width}-${appearance}.png`,
         fullPage: true,
