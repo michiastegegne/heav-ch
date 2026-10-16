@@ -10,6 +10,9 @@ export const dynamic = 'force-dynamic';
 export default async function AccountPage() {
   const authState = getHiveAuthState();
   const configured = authState.requested === 'clerk' && authState.ready;
+  const showIdentityMigration =
+    authState.requested === 'clerk' ||
+    process.env.HIVE_IDENTITY_MIGRATION_ENABLED === 'true';
 
   const user = !configured && authState.ready ? (await (await createSessionSupabaseClient()).auth.getUser()).data.user : null;
 
@@ -43,7 +46,7 @@ export default async function AccountPage() {
             <SignoutButton/>
           </div>
         )}
-        {authState.ready && <IdentityLinkCard provider={authState.requested}/>}
+        {authState.ready && showIdentityMigration && <IdentityLinkCard provider={authState.requested}/>} 
       </section>
     </main>
   );
