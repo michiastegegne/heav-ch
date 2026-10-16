@@ -32,6 +32,26 @@ async function fits(page) {
     );
   expect(outside).toEqual([]);
 }
+async function touchTargets(page, selector) {
+  const tooSmall = await page.locator(selector).evaluateAll((nodes) =>
+    nodes
+      .filter((node) => {
+        const style = getComputedStyle(node);
+        if (style.display === "none" || style.visibility === "hidden") return false;
+        const r = node.getBoundingClientRect();
+        return r.width > 0 && r.height > 0 && (r.width < 43 || r.height < 43);
+      })
+      .map((node) => {
+        const r = node.getBoundingClientRect();
+        return {
+          label: node.getAttribute("aria-label") || node.textContent?.trim().slice(0, 80),
+          width: Math.round(r.width),
+          height: Math.round(r.height),
+        };
+      }),
+  );
+  expect(tooSmall).toEqual([]);
+}
 for (const appearance of ["light", "dark"])
   for (const width of [320, 375, 390, 430])
     test(`mobile navigation, sheets, search and editor fit ${width}px ${appearance}`, async ({
@@ -46,11 +66,13 @@ for (const appearance of ["light", "dark"])
       await fits(page);
       const nav = page.getByRole("navigation", { name: "Mobile Navigation" });
       await expect(nav).toBeVisible();
+      await touchTargets(page, ".hive-mobile-nav button, .hive-mobile-create");
       const quickCreate = page.getByRole("button", { name: "Neu erstellen", exact: true });
       await expect(quickCreate).toBeVisible();
       await quickCreate.click();
       const quickDialog = page.getByRole("dialog", { name: "Neu erstellen" });
       await expect(quickDialog).toBeVisible();
+      await touchTargets(page, ".hsv-dialog .hive-mobile-quick-actions button, .hsv-dialog .hsv-close");
       await expect(quickDialog.getByRole("button", { name: /^Kunde\b/ })).toBeVisible();
       await expect(quickDialog.getByRole("button", { name: /^Projekt\b/ })).toBeVisible();
       await expect(quickDialog.getByRole("button", { name: /^Rechnung\b/ })).toBeVisible();
