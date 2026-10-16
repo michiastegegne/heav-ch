@@ -42,7 +42,7 @@ function installFixture(options: FixtureOptions = {}) {
   Deno.env.set("SUPABASE_ANON_KEY", "test-anon");
   Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", "test-service");
   Deno.env.set("RESEND_API_KEY", "test-resend");
-  Deno.env.set("RESEND_FROM_EMAIL", "Hive <hello@example.com>");
+  Deno.env.set("RESEND_FROM_EMAIL", "hello@example.com");
   Deno.env.set("PORTAL_BASE_URL", "https://heav.ch/client/");
 
   globalThis.fetch = (async (input: Request | URL | string, init?: RequestInit) => {
