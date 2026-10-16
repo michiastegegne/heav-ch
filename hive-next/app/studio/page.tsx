@@ -159,6 +159,7 @@ export default function StudioPage() {
   const [emails, setEmails] = useState<EmailLog[]>([]);
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplateRow[]>([]);
   const [portal, setPortal] = useState<PortalData>({ memberships:[], invites:[], requests:[], files:[], reviews:[], activity:[] });
+  const [portalMobileView, setPortalMobileView] = useState<'access'|'files'|'requests'|'activity'>('access');
   const [settings, setSettings] = useState<Settings | null>(null);
   const [activityFeed, setActivityFeed] = useState<UnifiedActivity[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -1553,7 +1554,14 @@ export default function StudioPage() {
             <span className="hsv-big-logo"><ShieldCheck size={26}/></span>
             <div><span>KUNDENPORTAL</span><h2>Zugänge & Freigaben</h2><p>Einladungen, Portal-Mitglieder, Dateien, Reviews und Kundenanfragen laufen pro Business und Department. Im Dev-Modus wird keine Einladung per E-Mail versendet.</p></div>
           </div>
+          <div className="hive-mobile-subtabs" role="tablist" aria-label="Portal-Bereiche">
+            <button role="tab" aria-selected={portalMobileView==='access'} onClick={() => setPortalMobileView('access')}>Zugänge</button>
+            <button role="tab" aria-selected={portalMobileView==='files'} onClick={() => setPortalMobileView('files')}>Dateien</button>
+            <button role="tab" aria-selected={portalMobileView==='requests'} onClick={() => setPortalMobileView('requests')}>Anfragen</button>
+            <button role="tab" aria-selected={portalMobileView==='activity'} onClick={() => setPortalMobileView('activity')}>Verlauf</button>
+          </div>
 
+          <section className="hive-portal-section" data-mobile-active={portalMobileView==='access'}>
           <div className="hsv-rowtop"><strong>Mitglieder</strong></div>
           <div className="hsv-table">{portal.memberships.length ? portal.memberships.map((member) => <div key={member.id}>
             <span className="hsv-letter"><Users size={16}/></span>
@@ -1567,7 +1575,9 @@ export default function StudioPage() {
             <span className="hsv-grow"><strong>{invite.email}</strong><small>{customerName(customers.find((customer) => customer.id === invite.customer_id))} · gültig bis {new Date(invite.expires_at).toLocaleDateString('de-CH')}</small></span>
             {!invite.accepted_at && !invite.revoked_at && <button onClick={() => void portalAction({ action:'revoke_invite', inviteId:invite.id }, 'Einladung widerrufen.')}>Widerrufen</button>}
           </div>) : <p className="hsv-empty">Keine offenen Einladungen.</p>}</div>
+          </section>
 
+          <section className="hive-portal-section" data-mobile-active={portalMobileView==='requests'}>
           <div className="hsv-rowtop" style={{ marginTop: 24 }}><strong>Kundenanfragen</strong></div>
           <div className="hsv-table">{portal.requests.length ? portal.requests.map((item) => <div key={item.id}>
             <span className="hsv-letter"><Mail size={16}/></span>
@@ -1581,7 +1591,9 @@ export default function StudioPage() {
             <span className="hsv-grow"><strong>{review.reviewer_name}</strong><small>{customerName(customers.find((customer) => customer.id === review.customer_id))} · {review.status} · {review.body}</small></span>
             {review.status === 'pending' && <><button onClick={() => void portalAction({ action:'review_update', reviewId:review.id, status:'approved' }, 'Review freigegeben.')}>Freigeben</button><button onClick={() => void portalAction({ action:'review_update', reviewId:review.id, status:'rejected' }, 'Review abgelehnt.')}>Ablehnen</button></>}
           </div>) : <p className="hsv-empty">Keine Reviews.</p>}</div>
+          </section>
 
+          <section className="hive-portal-section" data-mobile-active={portalMobileView==='files'}>
           <div className="hsv-rowtop" style={{ marginTop: 24 }}>
             <strong>Dateien</strong>
             <button className="hsv-primary" disabled={!customers.length} onClick={() => void openPortalFile()}><Plus size={15}/> Datei hochladen</button>
@@ -1593,12 +1605,15 @@ export default function StudioPage() {
             <button onClick={() => void togglePortalFile(file)}>{file.published_at ? 'Unpublish' : 'Publish'}</button>
             <button aria-label="Datei löschen" onClick={() => void deletePortalFile(file)}><Trash2 size={16}/></button>
           </div>) : <p className="hsv-empty">Keine Portal-Dateien.</p>}</div>
+          </section>
 
+          <section className="hive-portal-section" data-mobile-active={portalMobileView==='activity'}>
           <div className="hsv-rowtop" style={{ marginTop: 24 }}><strong>Letzte Aktivität</strong></div>
           <div className="hsv-table">{portal.activity.slice(0, 20).map((item) => <div key={item.id}>
             <span className="hsv-letter"><RefreshCw size={15}/></span>
             <span className="hsv-grow"><strong>{item.summary}</strong><small>{item.event_type} · {new Date(item.created_at).toLocaleString('de-CH')}</small></span>
           </div>)}</div>
+          </section>
         </>}
 
         {tab === 'activity' && <>
