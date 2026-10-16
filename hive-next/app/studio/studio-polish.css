@@ -578,3 +578,129 @@ html[data-theme="dark"] .hive-loading-panel span:after{
 .hive-portal-section,
 .hive-email-mobile-section,
 .hive-settings-section{display:contents}
+
+/* Invoice lifecycle / audit timeline */
+.hive-invoice-history-summary{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+  margin-bottom:20px;
+}
+.hive-invoice-history-summary>div{
+  display:grid;
+  gap:5px;
+  padding:14px;
+  border:1px solid var(--studio-line);
+  border-radius:10px;
+  background:var(--studio-soft);
+}
+.hive-invoice-history-summary span{
+  color:var(--studio-muted);
+  font-size:10px;
+  letter-spacing:.5px;
+  text-transform:uppercase;
+}
+.hive-invoice-history-summary strong{
+  font-size:13px;
+  font-weight:600;
+}
+.hive-invoice-history{
+  position:relative;
+  display:grid;
+  gap:0;
+  padding-left:6px;
+}
+.hive-invoice-history:before{
+  content:'';
+  position:absolute;
+  top:17px;
+  bottom:17px;
+  left:12px;
+  width:1px;
+  background:var(--studio-line);
+}
+.hive-history-event{
+  position:relative;
+  display:grid;
+  grid-template-columns:22px minmax(0,1fr);
+  gap:11px;
+  padding:11px 0;
+}
+.hive-history-dot{
+  position:relative;
+  z-index:1;
+  width:13px;
+  height:13px;
+  margin:4px 0 0 0;
+  border:3px solid var(--studio-soft);
+  border-radius:50%;
+  background:#777;
+  box-shadow:0 0 0 1px var(--studio-line);
+}
+.history-issued .hive-history-dot,
+.history-sent .hive-history-dot,
+.history-resent .hive-history-dot{background:#3369d6}
+.history-paid .hive-history-dot{background:#2f8b57}
+.history-cancelled .hive-history-dot,
+.history-send_failed .hive-history-dot{background:#b74f45}
+.hive-history-event>div{
+  display:grid;
+  gap:3px;
+  min-width:0;
+}
+.hive-history-event strong{
+  font-size:12px;
+  font-weight:600;
+}
+.hive-history-event small,
+.hive-history-event p{
+  margin:0;
+  color:var(--studio-muted);
+  font-size:10px;
+  line-height:1.5;
+}
+.hive-history-loading{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  min-height:74px;
+  color:var(--studio-muted);
+  font-size:12px;
+}
+.hive-history-loading svg{animation:hive-history-spin .9s linear infinite}
+@keyframes hive-history-spin{to{transform:rotate(360deg)}}
+.hive-history-tech{
+  margin-top:18px;
+  border-top:1px solid var(--studio-line);
+  padding-top:14px;
+}
+.hive-history-tech summary{
+  cursor:pointer;
+  color:var(--studio-muted);
+  font-size:11px;
+}
+.hive-history-tech>div{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  padding:10px 0;
+  border-bottom:1px solid var(--studio-line);
+}
+.hive-history-tech span{font-size:11px}
+.hive-history-tech small{color:var(--studio-muted);font-size:10px}
+@media(max-width:760px){
+  .hive-invoice-history-summary{grid-template-columns:1fr;gap:7px}
+  .hive-invoice-history-summary>div{
+    grid-template-columns:1fr auto;
+    align-items:center;
+    padding:12px 13px;
+    border-radius:12px;
+  }
+  .hive-history-event{padding:12px 0}
+  .hive-history-event strong{font-size:13px}
+  .hive-history-event small,.hive-history-event p{font-size:11px}
+  .hive-history-tech>div{flex-direction:column;gap:3px}
+}
+@media(prefers-reduced-motion:reduce){
+  .hive-history-loading svg{animation:none}
+}
