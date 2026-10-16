@@ -149,6 +149,18 @@ test('invoice history is workspace scoped and visible from the invoice list',asy
  await expect(dialog.getByText('Erfolgreich',{exact:true})).toBeVisible();
 });
 
+test('offer duplication creates a fresh numbered offer',async({page})=>{
+ await login(page);
+ const response=await page.request.post('/api/hive/offers/50000000-0000-4000-8000-000000000001',{
+   data:{action:'duplicate',issueDate:'2026-10-16',validUntil:'2026-11-15'}
+ });
+ expect(response.status()).toBe(201);
+ const payload=await response.json();
+ expect(payload.ok).toBe(true);
+ expect(payload.offer.offer_id).toBe('50000000-0000-4000-8000-000000000099');
+ expect(payload.offer.offer_number).toBe('TEST-O-2026-099');
+});
+
 test('offer history is workspace scoped and visible from the offer list',async({page})=>{
  await login(page);
  const foreign=await page.request.get('/api/hive/offers/50000000-0000-4000-8000-000000000001/history?workspace=033fe942-b8de-4298-9762-5f23550afbd9');
