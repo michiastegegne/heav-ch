@@ -1705,7 +1705,7 @@ export default function StudioPage() {
           <label><input type="checkbox" checked={settings.invoice_reminders_enabled} onChange={(e) => setSettings({ ...settings, invoice_reminders_enabled:e.target.checked })}/> Automatische Zahlungserinnerungen</label>
           <label>Reminder vor Fälligkeit (Tage)<input type="number" min="1" max="30" value={settings.invoice_reminder_days} onChange={(e) => setSettings({ ...settings, invoice_reminder_days:Number(e.target.value) })}/></label>
           <label>Accent-Farbe<div className="hsv-color"><input type="color" value={settings.accent_color} onChange={(e) => setSettings({ ...settings, accent_color: e.target.value })}/><span>{settings.accent_color}</span></div></label>
-          <button className="hsv-primary" type="submit">Speichern <Check size={15}/></button>
+          <button className="hsv-primary hive-settings-save" type="submit">Speichern <Check size={15}/></button>
           {activeWorkspace?.role === 'owner' && activeWorkspace.slug.startsWith('hive-dev-') && <div style={{marginTop:28,paddingTop:22,borderTop:'1px solid rgba(0,0,0,.15)'}}>
             <span className="auth-kicker">DANGER ZONE</span>
             <p style={{margin:'8px 0 14px'}}>Archivieren entfernt das Business aus dem aktiven Switcher. Die Daten werden nicht gelöscht.</p>
