@@ -1438,7 +1438,12 @@ export default function StudioPage() {
         </div>
         {listTabs && <div className="hive-list-tools"><label><Search size={15}/><input aria-label="Liste durchsuchen" placeholder="Suchen nach Name, Kunde oder Nummer …" value={listQuery} onChange={e=>setListQuery(e.target.value)}/>{listQuery&&<button aria-label="Suche leeren" onClick={()=>setListQuery('')}><X size={13}/></button>}</label>{tab !== 'customers'&&<select aria-label="Status filtern" value={listStatus} onChange={e=>setListStatus(e.target.value)}><option value="all">Alle Status</option>{(tab==='projects'?['planning','active','on_hold','completed']:tab==='invoices'?['draft','sent','overdue','paid','cancelled']:['draft','sent','accepted','withdrawn','expired']).map(value=><option value={value} key={value}>{stateLabel[value]}</option>)}</select>}<span>{tab === 'customers'?visibleCustomers.length:tab === 'projects'?visibleProjects.length:tab === 'invoices'?visibleInvoices.length:visibleOffers.length} Einträge</span></div>}
 
-        {backendError ? <div className="hsv-empty" role="alert"><strong>Workspace konnte nicht geladen werden.</strong><p>{backendError}</p><button className="hsv-outline" onClick={() => void loadWorkspaceData(activeWorkspaceId)}>Erneut versuchen</button></div> : loadedWorkspaceId !== activeWorkspaceId ? <div className="hsv-empty" role="status">Business wird geladen …</div> : <>
+        {backendError ? <div className="hsv-empty" role="alert"><strong>Workspace konnte nicht geladen werden.</strong><p>{backendError}</p><button className="hsv-outline" onClick={() => void loadWorkspaceData(activeWorkspaceId)}>Erneut versuchen</button></div> : loadedWorkspaceId !== activeWorkspaceId ? <div className="hive-loading-state" role="status" aria-label="Business wird geladen">
+          <div className="hive-loading-line hive-loading-title"/>
+          <div className="hive-loading-line hive-loading-copy"/>
+          <div className="hive-loading-cards">{[0,1,2,3].map((item)=><span key={item}/>)}</div>
+          <div className="hive-loading-panel"><span/><span/><span/></div>
+        </div> : <>
         {tab === 'overview' && <WorkspaceOverview invoices={invoices} projects={projects} customerCount={customers.length} offerCount={offers.filter(o=>o.status==='draft'||o.status==='sent').length} activity={activityFeed} onNavigate={setTab} onProject={id=>void loadProjectWorkspace(id)} onCreateProject={()=>void openProject()}/>}
 
         {tab === 'customers' && <>
