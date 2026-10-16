@@ -578,8 +578,6 @@ export default function StudioPage() {
     const dialog = dialogs[dialogs.length - 1];
     if (!dialog) return;
     const previous = document.activeElement as HTMLElement | null;
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     const focusable = () => Array.from(dialog.querySelectorAll<HTMLElement>('button, a[href], input, select, textarea, [tabindex="0"]')).filter(el => !el.hasAttribute('disabled') && el.getClientRects().length > 0);
     if (!dialog.contains(document.activeElement)) focusable()[0]?.focus({preventScroll:true});
     const handleKey = (event: KeyboardEvent) => {
@@ -594,7 +592,7 @@ export default function StudioPage() {
       else if (!event.shiftKey && (document.activeElement === last || !dialog.contains(document.activeElement))) { event.preventDefault(); first?.focus(); }
     };
     document.addEventListener('keydown', handleKey);
-    return () => { document.body.style.overflow = overflow; document.removeEventListener('keydown', handleKey); if (previous?.isConnected) previous.focus({preventScroll:true}); };
+    return () => { document.removeEventListener('keydown', handleKey); if (previous?.isConnected) previous.focus({preventScroll:true}); };
   }, [mobileMenuOpen, quickCreateOpen, searchOpen, businessOpen, teamOpen, customerOpen, departmentOpen, projectOpen, invoiceOpen, invoiceHistoryOpen, offerOpen, offerHistoryOpen, productOpen, inviteOpen, fileOpen, projectWorkspaceOpen, customerWorkspaceOpen]);
 
   const invoiceTotal = useMemo(
