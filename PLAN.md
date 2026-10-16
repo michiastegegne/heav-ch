@@ -107,16 +107,16 @@ In `admin/assets/app.js:836-840` werden fehlende oder ungültige Rechnungswerte 
 
 - [x] Stabilen Request-Key und serverseitige Versandreservierung eingeführt.
 - [x] Durable Struktur und RPCs in `20260917_offer_send_reliability.sql` ergänzt.
-- [ ] Statusübergänge festlegen: `draft` → `sent` → Versandversuch → `emailed` beziehungsweise kontrollierter Fehlerzustand.
+- [x] Statusübergänge festgelegt: Offer `draft` → `sent`; Versandversuch separat `pending` → `sent`/`failed`; erfolgreicher Versand erzeugt `offer_events.kind = 'emailed'`; verlorene Providerantwort bleibt bewusst `pending` und wird mit demselben Provider-Key wiederholt.
 - [x] Gleiche Offerte und gleicher Request-Key verwenden denselben Versandversuch und Provider-Key wieder.
 - [x] Nach Provider-Versand und Audit-/HTTP-Fehler kann ein Retry keine zweite Provider-Mail erzeugen.
-- [ ] Fehler nach Provider-Annahme als unklare beziehungsweise zu klärende Zustellung behandeln, nicht als sicheren Nichtversand.
-- [ ] `offer_events` weiter mit `kind = 'emailed'` auditieren und sensible Providerantworten begrenzen.
+- [x] Fehler nach möglicher Provider-Annahme werden als unklare Zustellung behandelt; die Reservation bleibt `pending` und der nächste Versuch verwendet denselben Provider-Idempotency-Key.
+- [x] `offer_events` auditiert erfolgreiche Sends weiter mit `kind = 'emailed'`; gespeichert werden nur kontrollierte Felder wie Empfänger und Provider-ID statt kompletter Providerantworten.
 - [x] `admin/assets/app.js` erzeugt und behält den Request-Key bis zum erfolgreichen Abschluss.
-- [ ] Kein neuer Versandbutton darf während eines laufenden Versuchs mehrfach auslösbar sein.
+- [x] Der Versandbutton ist während eines laufenden Versuchs gesperrt und zeigt einen Busy-State; parallele UI-Sends derselben Offerte werden abgefangen.
 - [x] PGlite-Vertragstest für Providerfehler, denselben Request-Key, Retry und genau ein Audit-Event ergänzt.
-- [ ] Direkte Edge-Function-Tests mit gemocktem Provider für alle fünf Provider-/Statusfälle ergänzen.
-- [ ] Browser-Test für einen echten Netzwerkfehler und denselben Versandauftrag ergänzen.
+- [x] Direkte Edge-Function-Tests mit gemocktem Provider decken Erfolg, explizite Providerablehnung, verlorene Providerantwort, bereits gesendete Reservation und Request-/Origin-Validierung ab.
+- [x] Browser-Test simuliert einen verlorenen HTTP-Response, behält denselben Request-Key für den Retry und löscht ihn erst nach bestätigtem Erfolg.
 
 **Betroffene Dateien:**
 
