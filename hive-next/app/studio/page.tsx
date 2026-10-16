@@ -2450,8 +2450,8 @@ export default function StudioPage() {
       {!!offerSendAttempts.length && <details className="hive-history-tech">
         <summary>Versandtechnik · {offerSendAttempts.length} Versuch{offerSendAttempts.length === 1 ? '' : 'e'}</summary>
         {offerSendAttempts.map((attempt) => <div key={attempt.id}>
-          <span>{attempt.state === 'sent' ? 'Erfolgreich' : attempt.state === 'failed' ? 'Fehlgeschlagen' : 'Läuft'}</span>
-          <small>{new Date(attempt.created_at).toLocaleString('de-CH')}{attempt.completed_at ? ` → ${new Date(attempt.completed_at).toLocaleString('de-CH')}` : ''}</small>
+          <span>{attempt.state === 'sent' ? 'Erfolgreich' : attempt.state === 'failed' ? 'Fehlgeschlagen' : 'Status wird geprüft'}</span>
+          <small>{new Date(attempt.created_at).toLocaleString('de-CH')}{attempt.completed_at ? ` → ${new Date(attempt.completed_at).toLocaleString('de-CH')}` : ' · sicher erneut versuchbar'}</small>
         </div>)}
       </details>}
     </Modal>}
