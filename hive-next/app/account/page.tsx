@@ -8,7 +8,16 @@ import TeamInviteCard from './team-invite-card';
 
 export const dynamic = 'force-dynamic';
 
-export default async function AccountPage() {
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = searchParams ? await searchParams : {};
+  const teamInviteParam = Array.isArray(params.team_invite)
+    ? params.team_invite[0]
+    : params.team_invite;
+  const hasTeamInvite = typeof teamInviteParam === 'string' && teamInviteParam.startsWith('hive_team_');
   const authState = getHiveAuthState();
   const configured = authState.requested === 'clerk' && authState.ready;
   const showIdentityMigration =
@@ -48,7 +57,7 @@ export default async function AccountPage() {
           </div>
         )}
         {authState.ready && <TeamInviteCard/>}
-        {authState.ready && showIdentityMigration && <IdentityLinkCard provider={authState.requested}/>} 
+        {authState.ready && showIdentityMigration && !hasTeamInvite && <IdentityLinkCard provider={authState.requested}/>} 
       </section>
     </main>
   );
