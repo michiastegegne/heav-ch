@@ -39,7 +39,7 @@ http.createServer(async(req,res)=>{
   if(req.method==='POST'){const c={id:crypto.randomUUID(),...body};customers.push(c);return reply(c,201);}
   rows=customers.filter(c=>c.workspace_id===scope);
  }
- if(table==='invoices'&&scope===a)rows=[
+ if(table==='invoices'&&(scope===a||(!scope&&url.searchParams.get('id'))))rows=[
   {id:'30000000-0000-4000-8000-000000000001',workspace_id:a,customer_id:customers[0].id,invoice_number:'TEST-2026-001',status:'overdue',due_date:'2026-10-10',total_rappen:260000,currency:'CHF',number_finalized:true,is_legacy:true,customers:{company:'Nordkunde'}},
   {id:'30000000-0000-4000-8000-000000000002',workspace_id:a,customer_id:customers[0].id,invoice_number:'TEST-2026-002',status:'sent',due_date:'2026-10-30',total_rappen:420000,currency:'CHF',number_finalized:true,is_legacy:true,customers:{company:'Atelier Seefeld'}},
   {id:'30000000-0000-4000-8000-000000000003',workspace_id:a,customer_id:customers[0].id,invoice_number:'TEST-2026-003',status:'paid',due_date:'2026-09-30',total_rappen:1280000,currency:'CHF',number_finalized:true,is_legacy:true,customers:{company:'Atelier Seefeld'}}];
