@@ -221,6 +221,7 @@ export default function WorkspaceOverview({
                         </span>
                       </span>
                       <Badge
+                        data-status-tone={project.status}
                         variant="outline"
                         className="hidden sm:inline-flex"
                       >

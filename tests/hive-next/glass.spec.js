@@ -31,6 +31,6 @@ test('glass desktop sidebar and project workspaces preserve real navigation',asy
  await page.setViewportSize({width:1440,height:1000});await login(page);
  await page.screenshot({path:'../../outputs/hive-glass-1440-dark.png',fullPage:false});
  const nav=page.getByRole('navigation',{name:'Business-Module'});await nav.getByRole('button',{name:'Projekte',exact:true}).click();
- await page.getByRole('button',{name:'Workspace',exact:true}).first().click();await expect(page.getByRole('dialog',{name:'Workspace Details'})).toBeVisible();await page.keyboard.press('Escape');
+ await page.getByRole('button',{name:'Projekt öffnen',exact:true}).first().click();await expect(page.getByRole('dialog',{name:'Workspace Details'})).toBeVisible();await page.keyboard.press('Escape');
  await page.getByRole('button',{name:'Als App installieren',exact:true}).click();await expect(page.getByRole('dialog',{name:'Hive auf deinem iPhone'})).toBeVisible();
 });

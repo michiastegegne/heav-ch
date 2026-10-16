@@ -785,3 +785,316 @@
     grid-template-columns: minmax(0, 1fr) !important;
   }
 }
+
+/* Shape hierarchy: pill actions, quiet rounded cards, colour only for meaning. */
+.hsv.hive-system-app
+  :is(
+    .hsv-primary,
+    .hsv-outline,
+    .hive-record-actions button,
+    .hive-install-trigger
+  ) {
+  border-radius: 999px;
+}
+.hsv.hive-system-app .hive-record-actions button {
+  min-height: 40px;
+  padding: 8px 14px;
+}
+.hsv.hive-system-app .hive-status,
+.crm-ui [data-status-tone] {
+  --status-bg: #f4f4f5;
+  --status-ink: #52525b;
+  --status-edge: #e4e4e7;
+}
+.hsv.hive-system-app .hive-status[data-state],
+.crm-ui :is(select, [data-slot="badge"])[data-status-tone] {
+  color: var(--status-ink);
+  background: var(--status-bg);
+  border: 1px solid var(--status-edge);
+  border-radius: 999px;
+  font-weight: 500;
+}
+.hsv.hive-system-app [data-state="planning"],
+.crm-ui [data-status-tone="planning"] {
+  --status-bg: #fff7d6;
+  --status-ink: #854d0e;
+  --status-edge: #f3dea0;
+}
+.hsv.hive-system-app [data-state="active"],
+.hsv.hive-system-app [data-state="sent"],
+.crm-ui [data-status-tone="active"] {
+  --status-bg: #eaf2ff;
+  --status-ink: #1d4ed8;
+  --status-edge: #c9dcff;
+}
+.hsv.hive-system-app [data-state="completed"],
+.hsv.hive-system-app [data-state="paid"],
+.hsv.hive-system-app [data-state="accepted"],
+.crm-ui [data-status-tone="completed"] {
+  --status-bg: #eaf7ef;
+  --status-ink: #166534;
+  --status-edge: #bfe4cc;
+}
+.hsv.hive-system-app [data-state="overdue"],
+.hsv.hive-system-app [data-state="expired"] {
+  --status-bg: #fff0ef;
+  --status-ink: #b42318;
+  --status-edge: #fecaca;
+}
+.hsv.hive-system-app [data-state="on_hold"],
+.crm-ui [data-status-tone="on_hold"] {
+  --status-bg: #f3edff;
+  --status-ink: #6d28d9;
+  --status-edge: #ddd0fa;
+}
+html[data-theme="dark"] .hsv.hive-system-app .hive-status,
+html[data-theme="dark"] .crm-ui [data-status-tone] {
+  --status-bg: #27272a;
+  --status-ink: #c4c4cc;
+  --status-edge: #414145;
+}
+html[data-theme="dark"] .hsv.hive-system-app [data-state="planning"],
+html[data-theme="dark"] .crm-ui [data-status-tone="planning"] {
+  --status-bg: #332b18;
+  --status-ink: #f3d078;
+  --status-edge: #665128;
+}
+html[data-theme="dark"] .hsv.hive-system-app [data-state="active"],
+html[data-theme="dark"] .hsv.hive-system-app [data-state="sent"],
+html[data-theme="dark"] .crm-ui [data-status-tone="active"] {
+  --status-bg: #1d2b42;
+  --status-ink: #a6c5ff;
+  --status-edge: #324d76;
+}
+html[data-theme="dark"] .hsv.hive-system-app [data-state="completed"],
+html[data-theme="dark"] .hsv.hive-system-app [data-state="paid"],
+html[data-theme="dark"] .hsv.hive-system-app [data-state="accepted"],
+html[data-theme="dark"] .crm-ui [data-status-tone="completed"] {
+  --status-bg: #1b3025;
+  --status-ink: #94d9ad;
+  --status-edge: #335d43;
+}
+html[data-theme="dark"] .hsv.hive-system-app [data-state="overdue"],
+html[data-theme="dark"] .hsv.hive-system-app [data-state="expired"] {
+  --status-bg: #3c2223;
+  --status-ink: #ffb1ac;
+  --status-edge: #70403f;
+}
+html[data-theme="dark"] .hsv.hive-system-app [data-state="on_hold"],
+html[data-theme="dark"] .crm-ui [data-status-tone="on_hold"] {
+  --status-bg: #302440;
+  --status-ink: #d1b5fa;
+  --status-edge: #584172;
+}
+.hsv.hive-system-app .hive-status {
+  padding: 6px 10px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.hsv.hive-system-app .hive-clean-board {
+  gap: 16px;
+}
+.hsv.hive-system-app .hive-clean-board .hive-project-column {
+  padding: 0;
+  border: 1px solid var(--ui-border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--ui-muted) 50%, var(--ui-background));
+  min-width: 0;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.hsv.hive-system-app
+  .hive-clean-board
+  .hive-project-column[data-drag-over="true"] {
+  background: var(--ui-muted);
+  border-color: var(--ui-muted-foreground);
+}
+.hsv.hive-system-app .hive-clean-board .hive-project-column > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 18px 16px;
+  border-bottom: 1px solid var(--ui-border);
+  color: var(--ui-muted-foreground);
+}
+.hsv.hive-system-app .hive-clean-board .hive-project-column > header > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.hsv.hive-system-app .hive-clean-board .hive-project-column > header strong {
+  color: var(--ui-foreground);
+  font-size: 12px;
+  font-weight: 600;
+}
+.hive-board-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--status-ink);
+  flex: none;
+}
+.hive-board-count {
+  color: var(--ui-muted-foreground);
+  font-size: 11px;
+  margin-left: 2px;
+}
+.hsv.hive-system-app .hive-clean-board .hive-project-column-body {
+  padding: 12px;
+  gap: 12px;
+  min-height: 180px;
+}
+.hive-clean-project-card {
+  cursor: grab;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    opacity 0.15s;
+}
+.hive-clean-project-card:hover {
+  border-color: var(--ui-muted-foreground);
+  box-shadow: 0 3px 12px #00000006;
+}
+.hive-clean-project-card[data-dragging="true"] {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+.hsv.hive-system-app .hive-board-status-select {
+  min-width: 0;
+  max-width: calc(100% - 52px);
+  width: auto;
+  min-height: 36px;
+  padding: 6px 26px 6px 12px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.hsv.hive-system-app .hive-board-status-select option {
+  background: var(--ui-card);
+  color: var(--ui-foreground);
+}
+.hsv.hive-system-app .hive-clean-board .hive-project-column-empty {
+  padding: 28px 12px;
+  min-height: 100px;
+  border: 1px dashed var(--ui-border);
+  border-radius: 10px;
+  color: var(--ui-muted-foreground);
+  font-size: 12px;
+}
+.hsv.hive-system-app .hive-project-dialog {
+  width: min(860px, 100%);
+  max-width: 860px;
+  padding: 32px;
+}
+.hive-project-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 24px;
+}
+.hive-project-form label {
+  margin: 0;
+  min-width: 0;
+}
+.hive-project-form-wide {
+  grid-column: 1/-1;
+}
+.hive-project-dates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+.hive-project-form > button[type="submit"] {
+  grid-column: 1/-1;
+  justify-self: end;
+  min-width: 140px;
+  margin-top: 4px;
+}
+@media (max-width: 760px) {
+  .hsv.hive-system-app .hive-project-dialog {
+    padding: 24px;
+  }
+  .hive-project-form {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+  .hive-project-dates {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+  .hive-project-form > button[type="submit"] {
+    justify-self: stretch;
+  }
+  .hsv.hive-system-app .hive-board-status-select {
+    min-height: 44px;
+  }
+}
+.hsv.hive-system-app .hive-project-table > div:not(.hive-no-results) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  gap: 16px;
+  align-items: center;
+  padding: 20px;
+}
+.hive-project-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.hive-project-identity .hsv-letter {
+  flex: none;
+}
+.hsv.hive-system-app .hive-project-identity .hsv-grow {
+  min-width: 0;
+  gap: 6px;
+}
+.hsv.hive-system-app .hive-project-identity strong {
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.hsv.hive-system-app .hive-project-table .hive-record-actions {
+  display: flex;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+.hsv.hive-system-app .hive-project-table .hive-record-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 40px;
+  color: var(--ui-muted-foreground);
+}
+.hsv.hive-system-app
+  .hive-project-table
+  .hive-record-actions
+  button:first-child {
+  border: 1px solid var(--ui-border);
+  background: var(--ui-card);
+  color: var(--ui-foreground);
+}
+.hsv.hive-system-app .hive-project-table .hive-record-actions button:hover {
+  background: var(--ui-muted);
+}
+@media (max-width: 760px) {
+  .hsv.hive-system-app .hive-project-table > div:not(.hive-no-results) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 16px;
+  }
+  .hive-project-identity {
+    grid-column: 1/-1;
+  }
+  .hsv.hive-system-app .hive-project-table .hive-status {
+    justify-self: start;
+  }
+  .hsv.hive-system-app .hive-project-table .hive-record-actions {
+    grid-column: 1/-1;
+    justify-content: flex-end;
+  }
+  .hsv.hive-system-app .hive-project-table .hive-record-actions button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

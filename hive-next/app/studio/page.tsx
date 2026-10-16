@@ -3,7 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft, ArrowRight, ArrowUpRight, BriefcaseBusiness, Building2, Check, Clock3, CreditCard, FileText,
-  LayoutDashboard, Mail, Menu, Package, Plus, RefreshCw, Search, Settings2, ShieldCheck, Smartphone, Trash2, Users, X,
+  LayoutDashboard, Mail, Menu, Package, Pencil, Plus, RefreshCw, Search, Settings2, ShieldCheck, Smartphone, Trash2, Users, X,
 } from 'lucide-react';
 import { createPublicSupabaseBrowserClient } from '@/lib/supabase/public-browser';
 import ThemeToggle from '@/app/components/theme-toggle';
@@ -1838,12 +1838,12 @@ export default function StudioPage() {
             projects={visibleProjects}
             onOpen={(projectId)=>void loadProjectWorkspace(projectId)}
           /> : <div className="hsv-table hive-project-table">{visibleProjects.map((project) => <div key={project.id}>
-            <span className="hsv-letter"><BriefcaseBusiness size={16}/></span>
-            <span className="hsv-grow"><strong>{project.title}</strong><small>{relatedName(project.customers)}</small></span>
-            <span className="hive-status">{stateLabel[project.status] || project.status}</span><strong className="hive-table-amount">{money(project.budget_rappen)}</strong>
+            <div className="hive-project-identity"><span className="hsv-letter"><BriefcaseBusiness size={16}/></span>
+            <span className="hsv-grow"><strong>{project.title}</strong><small>{relatedName(project.customers)}</small></span></div>
+            <span className="hive-status" data-state={project.status}>{stateLabel[project.status] || project.status}</span><strong className="hive-table-amount">{money(project.budget_rappen)}</strong>
             <div className="hive-record-actions">
-            <button onClick={() => void loadProjectWorkspace(project.id)}>Workspace</button>
-            <button onClick={() => void openProject(project)}>Bearbeiten</button>
+            <button onClick={() => void loadProjectWorkspace(project.id)}>Projekt öffnen <ArrowUpRight size={14}/></button>
+            <button aria-label={`Projekt ${project.title} bearbeiten`} onClick={() => void openProject(project)}><Pencil size={15}/></button>
             <button aria-label="Projekt löschen" onClick={() => void deleteProject(project)}><Trash2 size={16}/></button>
             </div>
           </div>)}{!visibleProjects.length && <div className="hive-no-results"><Search size={17}/><span>Keine passenden Einträge.</span><small>{listQuery || listStatus !== 'all' ? 'Passe die Suche oder den Statusfilter an.' : 'Neue Einträge erscheinen hier.'}</small></div>}</div>}
@@ -1853,7 +1853,7 @@ export default function StudioPage() {
           <div className="hsv-rowtop"><strong>{invoices.length} Rechnungen</strong><button className="hsv-primary" disabled={!customers.length} onClick={openNewInvoice}><Plus size={15}/> Rechnung erstellen</button></div>
           <div className="hive-table-labels hive-invoice-labels"><span>Rechnung / Kunde</span><span>Status</span><span>Fälligkeit</span><span>Betrag / Aktionen</span></div><div className="hsv-table hive-invoice-table">{visibleInvoices.map((invoice) => <div key={invoice.id}>
             <span className="hsv-letter"><CreditCard size={16}/></span>
-            <span className="hsv-grow"><strong>{invoice.number_finalized ? invoice.invoice_number : 'Entwurf'}</strong><small>{relatedName(invoice.customers)}</small></span><span className={`hive-status status-${invoice.status}`}>{stateLabel[invoice.status] || invoice.status}</span><span className="hive-table-date">{shortDate(invoice.due_date)}</span>
+            <span className="hsv-grow"><strong>{invoice.number_finalized ? invoice.invoice_number : 'Entwurf'}</strong><small>{relatedName(invoice.customers)}</small></span><span className={`hive-status status-${invoice.status}`} data-state={invoice.status}>{stateLabel[invoice.status] || invoice.status}</span><span className="hive-table-date">{shortDate(invoice.due_date)}</span>
             <strong>{money(invoice.total_rappen, invoice.currency)}</strong>
             <div className="hive-record-actions">
             <button onClick={() => void openInvoiceHistory(invoice)}><Clock3 size={14}/> Verlauf</button>
@@ -1875,7 +1875,7 @@ export default function StudioPage() {
           <div className="hsv-table hive-offer-table">{visibleOffers.map((offer) => <div key={offer.id}>
             <span className="hsv-letter"><FileText size={16}/></span>
             <span className="hsv-grow"><strong>{offer.offer_number} · {offer.title}</strong><small>{relatedName(offer.customers)} · gültig bis {shortDate(offer.valid_until)}</small></span>
-            <span className="hive-status">{stateLabel[offer.status] || offer.status}</span><strong className="hive-table-amount">{money(offer.total_rappen)}</strong>
+            <span className="hive-status" data-state={offer.status}>{stateLabel[offer.status] || offer.status}</span><strong className="hive-table-amount">{money(offer.total_rappen)}</strong>
             <div className="hive-record-actions">
             <button onClick={() => void openOfferHistory(offer)}><Clock3 size={14}/> Verlauf</button>
             <button onClick={() => void duplicateOffer(offer)}>Duplizieren</button>
@@ -2427,8 +2427,8 @@ export default function StudioPage() {
       </form>
     </Modal>}
 
-    {projectOpen && <Modal title={projectDraft.id ? 'Projekt bearbeiten' : 'Neues Projekt'} onClose={() => setProjectOpen(false)}>
-      <form onSubmit={saveProject}>
+    {projectOpen && <Modal className="hive-project-dialog" title={projectDraft.id ? 'Projekt bearbeiten' : 'Neues Projekt'} onClose={() => setProjectOpen(false)}>
+      <form className="hive-project-form" onSubmit={saveProject}>
         {!projectDraft.id && <>
           <label>Kunde<select required value={projectDraft.customerId} onChange={async (e) => {
             const customerId=e.target.value;
@@ -2437,11 +2437,11 @@ export default function StudioPage() {
           }}>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customerName(customer)}</option>)}</select></label>
           <label>Abteilung<select required value={projectDraft.departmentId} onChange={(e) => setProjectDraft({ ...projectDraft, departmentId:e.target.value })}>{scopeDepartments.map((department) => <option key={department.id} value={department.id}>{department.name}{department.is_default ? ' · Standard' : ''}</option>)}</select></label>
         </>}
-        <label>Projektname<input required value={projectDraft.title} onChange={(e) => setProjectDraft({ ...projectDraft, title: e.target.value })}/></label>
-        <label>Status<select value={projectDraft.status} onChange={(e) => setProjectDraft({ ...projectDraft, status: e.target.value as Project['status'] })}><option value="planning">Planung</option><option value="active">Aktiv</option><option value="on_hold">Pausiert</option><option value="completed">Abgeschlossen</option></select></label>
+        <label className="hive-project-form-wide">Projektname<input required value={projectDraft.title} onChange={(e) => setProjectDraft({ ...projectDraft, title: e.target.value })}/></label>
+        <label>Status<select value={projectDraft.status} onChange={(e) => setProjectDraft({ ...projectDraft, status: e.target.value as Project['status'] })}><option value="planning">Geplant</option><option value="active">In Arbeit</option><option value="on_hold">Pausiert</option><option value="completed">Abgeschlossen</option></select></label>
         <label>Budget CHF<input type="number" min="0" step="0.01" value={projectDraft.budget} onChange={(e) => setProjectDraft({ ...projectDraft, budget: Number(e.target.value) })}/></label>
-        <label>Beschreibung<textarea rows={3} value={projectDraft.description} onChange={(e) => setProjectDraft({ ...projectDraft, description: e.target.value })}/></label>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><label>Start<input type="date" value={projectDraft.startDate} onChange={(e) => setProjectDraft({ ...projectDraft, startDate: e.target.value })}/></label><label>Fällig<input type="date" value={projectDraft.dueDate} onChange={(e) => setProjectDraft({ ...projectDraft, dueDate: e.target.value })}/></label></div>
+        <label className="hive-project-form-wide">Beschreibung<textarea rows={3} value={projectDraft.description} onChange={(e) => setProjectDraft({ ...projectDraft, description: e.target.value })}/></label>
+        <div className="hive-project-dates hive-project-form-wide"><label>Start<input type="date" value={projectDraft.startDate} onChange={(e) => setProjectDraft({ ...projectDraft, startDate: e.target.value })}/></label><label>Fällig<input type="date" value={projectDraft.dueDate} onChange={(e) => setProjectDraft({ ...projectDraft, dueDate: e.target.value })}/></label></div>
         <button className="hsv-primary" type="submit">Speichern <Check size={15}/></button>
       </form>
     </Modal>}
@@ -2584,7 +2584,7 @@ export default function StudioPage() {
   </div>;
 }
 
-function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+function Modal({ title, onClose, children, className = '' }: { title: string; onClose: () => void; children: React.ReactNode; className?: string }) {
   useEffect(() => {
     const closeOnEscape=(event:KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
@@ -2594,7 +2594,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   }, [onClose]);
 
   return <div className="hsv-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <div className="hsv-dialog" role="dialog" aria-modal="true" aria-label={title}>
+    <div className={`hsv-dialog ${className}`} role="dialog" aria-modal="true" aria-label={title}>
       <button type="button" className="hsv-close" aria-label="Schliessen" onClick={onClose}><X size={18}/></button>
       <span>HIVE CRM</span><h2>{title}</h2>{children}
     </div>

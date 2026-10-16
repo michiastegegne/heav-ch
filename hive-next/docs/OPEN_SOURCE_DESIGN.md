@@ -63,3 +63,18 @@ Key gehören auch in die Laufzeitkonfiguration. Clerk ist in diesem Dockerfile
 nicht als Build-Option vorgesehen; `HIVE_AUTH_PROVIDER=supabase` verwenden.
 Dieser Container stellt weder Datenbank noch Storage bereit. Der Docker-Build
 muss auf dem Zielserver noch geprüft werden; lokal ist Docker nicht verfügbar.
+
+## Verfeinerung: Formen, Projektkarten und Statusfarben
+
+- Aktionsbuttons sind pillenförmig; Karten behalten 12–14px Radien, Inputs
+  ruhige 7–8px Radien. Keine Rundung sämtlicher Elemente auf denselben Radius.
+- Statusfarben sind semantisch und in beiden Darstellungen abgestimmt:
+  geplant gelb, in Arbeit/offen blau, pausiert violett, abgeschlossen/bezahlt/
+  akzeptiert grün, überfällig/abgelaufen rot, Entwürfe und Stornos neutral.
+  Die Beschriftung bleibt immer sichtbar; Farbe ist ein zusätzliches Signal.
+- Boardkarten: Kunde, klickbarer Titel, Termin/Budget, Status und eine
+  Bearbeiten-Aktion. Kein doppelter Workspace-Button. Verschieben und
+  Statusauswahl nutzen weiterhin dieselbe gespeicherte Statusänderung.
+- Das Projektformular ist auf Desktop zweispaltig und maximal 860px breit.
+  Titel und Beschreibung nutzen die ganze Breite; unter 761px wird es
+  einspaltig. Bestehende Escape-/Fokus-/Scroll-Sperren bleiben erhalten.
