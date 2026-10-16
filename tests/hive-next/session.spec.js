@@ -45,11 +45,13 @@ test('active business persists only when the stored workspace is still allowed',
  await expect(page.getByLabel('Business auswählen')).toHaveValue(b);
  await page.reload();
  await expect(page.getByLabel('Business auswählen')).toHaveValue(b);
+ await page.getByRole('navigation').getByRole('button',{name:'Kunden',exact:true}).click();
  await expect(page.getByText('Südkunde',{exact:true})).toBeVisible();
 
  await page.evaluate(() => localStorage.setItem('hive.activeWorkspace.v2','033fe942-b8de-4298-9762-5f23550afbd9'));
  await page.reload();
  await expect(page.getByLabel('Business auswählen')).toHaveValue(a);
+ await page.getByRole('navigation').getByRole('button',{name:'Kunden',exact:true}).click();
  await expect(page.getByText('Nordkunde',{exact:true})).toBeVisible();
 });
 
