@@ -148,6 +148,20 @@ for (const appearance of ["light", "dark"])
         await fits(page);
       }
 
+      await nav.getByRole("button", { name: "Weitere Module" }).click();
+      await page
+        .getByRole("dialog")
+        .getByRole("button", { name: "E-Mail", exact: true })
+        .click();
+      const emailTabs = page.getByRole("tablist", { name: "E-Mail-Bereiche" });
+      await expect(emailTabs).toBeVisible();
+      for (const section of ["Vorlagen", "Verlauf"]) {
+        const control = emailTabs.getByRole("tab", { name: section, exact: true });
+        await control.click();
+        await expect(control).toHaveAttribute("aria-selected", "true");
+        await fits(page);
+      }
+
       await nav.getByRole("button", { name: "Kunden", exact: true }).click();
       await page.getByRole("button", { name: /Kundenakte/ }).first().click();
       const customerWorkspace = page.getByRole("dialog", { name: "Workspace Details" });
