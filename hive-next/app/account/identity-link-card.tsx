@@ -13,6 +13,9 @@ export default function IdentityLinkCard({ provider }: Props) {
   const [claimToken, setClaimToken] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
   const [message, setMessage] = useState('');
+  const [clerkMode, setClerkMode] = useState<'link'|'new'>('link');
+  const [businessName, setBusinessName] = useState('');
+  const [invoicePrefix, setInvoicePrefix] = useState('HIVE');
 
   async function refresh() {
     try {
@@ -70,6 +73,29 @@ export default function IdentityLinkCard({ provider }: Props) {
     }
   }
 
+  async function startNewAccount() {
+    if (busy || businessName.trim().length < 2) return;
+    setBusy(true);
+    setMessage('');
+    try {
+      const response = await fetch('/api/auth/onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessName: businessName.trim(),
+          invoicePrefix: invoicePrefix.trim().toUpperCase() || 'HIVE',
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Hive-Account konnte nicht erstellt werden.');
+      setMessage('Hive-Account erstellt. Studio wird geöffnet …');
+      window.location.assign('/studio');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Hive-Account konnte nicht erstellt werden.');
+      setBusy(false);
+    }
+  }
+
   async function copyToken() {
     if (!token || !navigator.clipboard) return;
     await navigator.clipboard.writeText(token);
@@ -89,20 +115,56 @@ export default function IdentityLinkCard({ provider }: Props) {
       {provider === 'clerk' && status?.linked ? (
         <div className="account-link-success"><Check size={16}/> Bestehende Hive-Daten sind verbunden.</div>
       ) : provider === 'clerk' ? (
-        <div className="account-link-form">
-          <label>
-            Migrationscode
-            <input
-              value={claimToken}
-              onChange={(event) => setClaimToken(event.target.value)}
-              autoComplete="off"
-              spellCheck={false}
-              placeholder="hive_…"
-            />
-          </label>
-          <button type="button" onClick={() => void claim()} disabled={busy || !claimToken.trim()}>
-            <Link2 size={15}/> {busy ? 'Verbinden …' : 'Bestehenden Account verbinden'}
-          </button>
+        <div className="account-link-clerk">
+          <div className="account-link-choice" role="tablist" aria-label="Hive-Account einrichten">
+            <button type="button" role="tab" aria-selected={clerkMode === 'link'} onClick={() => setClerkMode('link')}>Bestehende Daten</button>
+            <button type="button" role="tab" aria-selected={clerkMode === 'new'} onClick={() => setClerkMode('new')}>Neu starten</button>
+          </div>
+
+          {clerkMode === 'link' ? (
+            <div className="account-link-form">
+              <p>Nutze diesen Weg, wenn du bereits Hive-Daten aus deinem bisherigen Login behalten willst.</p>
+              <label>
+                Migrationscode
+                <input
+                  value={claimToken}
+                  onChange={(event) => setClaimToken(event.target.value)}
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder="hive_…"
+                />
+              </label>
+              <button type="button" onClick={() => void claim()} disabled={busy || !claimToken.trim()}>
+                <Link2 size={15}/> {busy ? 'Verbinden …' : 'Bestehenden Account verbinden'}
+              </button>
+            </div>
+          ) : (
+            <div className="account-link-form">
+              <p>Nur wählen, wenn du noch keine bestehenden Hive-Daten hast. Dadurch entsteht ein neuer, separater Hive-Account.</p>
+              <label>
+                Erstes Business
+                <input
+                  value={businessName}
+                  onChange={(event) => setBusinessName(event.target.value)}
+                  autoComplete="organization"
+                  placeholder="z.B. Wedding Vocals"
+                />
+              </label>
+              <label>
+                Rechnungspräfix
+                <input
+                  value={invoicePrefix}
+                  onChange={(event) => setInvoicePrefix(event.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 12))}
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder="HIVE"
+                />
+              </label>
+              <button type="button" onClick={() => void startNewAccount()} disabled={busy || businessName.trim().length < 2}>
+                <Link2 size={15}/> {busy ? 'Wird erstellt …' : 'Neuen Hive-Account starten'}
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="account-link-form">
