@@ -1178,6 +1178,17 @@ async function sendOffer(id, button) {
 function assistantText(value, maxLength = 1000) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
 }
+function assistantSafeInteger(value, minimum = 0) {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  const rounded = Math.round(parsed);
+  return Number.isSafeInteger(rounded) && rounded >= minimum ? rounded : null;
+}
+function assistantDecimal(value, minimum = 0, maximum = Number.POSITIVE_INFINITY) {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= minimum && parsed <= maximum ? parsed : null;
+}
 function assistantCustomerId(payload = {}) {
   const direct = state.data.customers.find((customer) => customer.id === payload.customer_id);
   if (direct) return direct.id;
@@ -1208,26 +1219,25 @@ function normalizeAssistantProposal(raw) {
       title: assistantText(payload.title, 200), description: assistantText(payload.description, 6000), status: ["planning", "active", "completed", "on_hold"].includes(payload.status) ? payload.status : "planning",
       start_date: assistantText(payload.start_date, 10), due_date: assistantText(payload.due_date, 10),
     };
-    const budget = Number(payload.budget_rappen);
-    if (payload.budget_rappen != null && payload.budget_rappen !== "" && Number.isFinite(budget)) project.budget_rappen = Math.max(0, Math.round(budget));
+    const budget = assistantSafeInteger(payload.budget_rappen);
+    if (budget !== null) project.budget_rappen = budget;
     if (!project.title) return null;
     return { id, kind: raw.kind, label: assistantText(raw.label, 180) || "Projektentwurf", payload: project };
   }
   if (raw.kind === "invoice") {
     const items = Array.isArray(payload.items) ? payload.items.slice(0, 10).map((item) => ({
-      description: assistantText(item?.description, 1000), quantity: Math.max(.01, Number(item?.quantity) || 1),
-      unit_price_rappen: item?.unit_price_rappen !== null && item?.unit_price_rappen !== undefined && item?.unit_price_rappen !== ""
-        ? Math.round(Number(item.unit_price_rappen))
-        : null,
-    })).filter((item) => item.description && item.unit_price_rappen !== null && Number.isFinite(item.unit_price_rappen) && item.unit_price_rappen >= 0) : [];
+      description: assistantText(item?.description, 1000),
+      quantity: assistantDecimal(item?.quantity, 0.01),
+      unit_price_rappen: assistantSafeInteger(item?.unit_price_rappen),
+    })).filter((item) => item.description && item.quantity !== null && item.unit_price_rappen !== null) : [];
     if (!items.length) return null;
     const invoicePayload = {
       customer_id: assistantCustomerId(payload), customer_email: assistantText(payload.customer_email, 320), customer_company: assistantText(payload.customer_company, 160),
       project_id: assistantText(payload.project_id, 80), issue_date: assistantText(payload.issue_date, 10) || today(), due_date: assistantText(payload.due_date, 10) || plusDays(today(), state.data.settings?.default_due_days || 30),
       notes: assistantText(payload.notes, 6000), items,
     };
-    const taxRate = Number(payload.tax_rate);
-    if (payload.tax_rate != null && payload.tax_rate !== "" && Number.isFinite(taxRate)) invoicePayload.tax_rate = Math.max(0, taxRate);
+    const taxRate = assistantDecimal(payload.tax_rate, 0, 100);
+    if (taxRate !== null) invoicePayload.tax_rate = taxRate;
     return { id, kind: raw.kind, label: assistantText(raw.label, 180) || "Rechnungsentwurf", payload: invoicePayload };
   }
   const invoice = state.data.invoices.find((item) => item.id === payload.invoice_id || item.invoice_number === payload.invoice_number);
