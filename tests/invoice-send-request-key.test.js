@@ -28,3 +28,20 @@ test("invoice send UI retains the same key through failures and clears it only a
   assert.match(source, /sessionStorage\.removeItem\(invoiceSendStorageKey/);
   assert.match(source, /denselben sicheren Versandauftrag/);
 });
+
+test("invoice provider response loss is explicitly retryable and does not complete the pending send", async () => {
+  const source = await readFile(
+    new URL("../supabase/functions/invoice-document/index.ts", import.meta.url),
+    "utf8",
+  );
+
+  const catchBlock = source.match(
+    /catch \(sendError\) \{[\s\S]*?deliveryUncertain:[\s\S]*?retryable:[\s\S]*?\n      \}/,
+  )?.[0] ?? "";
+
+  assert.match(catchBlock, /deliveryUncertain:\s*true/);
+  assert.match(catchBlock, /retryable:\s*true/);
+  assert.match(catchBlock, /status:\s*502/);
+  assert.match(catchBlock, /derselbe sichere Versandauftrag/);
+  assert.doesNotMatch(catchBlock, /complete_invoice_send/);
+});
