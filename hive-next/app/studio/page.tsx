@@ -143,6 +143,8 @@ const customerName = (customer?: Partial<Customer> | null) =>
   customer?.company?.trim() || customer?.contact_name?.trim() || 'Ohne Name';
 const relatedName = (relation?: { company?: string | null; contact_name?: string | null } | null) =>
   relation?.company?.trim() || relation?.contact_name?.trim() || 'Kunde';
+const canFinanceRole = (role?:string) => ['owner','admin','accountant'].includes(role || '');
+const canAdminRole = (role?:string) => ['owner','admin'].includes(role || '');
 
 async function requestJson<T>(input: string, init?: RequestInit): Promise<T> {
   const response = await fetch(input, {
@@ -305,6 +307,8 @@ export default function StudioPage() {
   });
 
   const activeWorkspace = workspaces.find((workspace) => workspace.id === activeWorkspaceId) || null;
+  const canViewFinance = canFinanceRole(activeWorkspace?.role);
+  const canAdmin = canAdminRole(activeWorkspace?.role);
   const businessName = (loadedWorkspaceId === activeWorkspaceId ? settings?.business_name : null) || activeWorkspace?.name || 'Hive';
   const accent = '#171717';
 
@@ -516,6 +520,9 @@ export default function StudioPage() {
   const loadWorkspaceData = useCallback(async (workspaceId: string) => {
     if (!workspaceId) return;
     const requestId = ++workspaceRequest.current;
+    const workspace=workspaces.find((item)=>item.id===workspaceId);
+    const finance=canFinanceRole(workspace?.role);
+    const admin=canAdminRole(workspace?.role);
     setBusy(true);
     setBackendError('');
     try {
@@ -523,11 +530,11 @@ export default function StudioPage() {
       const [customerData, projectData, invoiceData, offerData, productData, emailData, templateData, portalData, activityData, settingsData] = await Promise.all([
         requestJson<{ customers: Customer[] }>(`/api/hive/customers?workspace=${q}`),
         requestJson<{ projects: Project[] }>(`/api/hive/projects?workspace=${q}`),
-        requestJson<{ invoices: Invoice[] }>(`/api/hive/invoices?workspace=${q}`),
-        requestJson<{ offers: Offer[] }>(`/api/hive/offers?workspace=${q}`),
-        requestJson<{ products: Product[] }>(`/api/hive/products?workspace=${q}`),
-        requestJson<{ emails: EmailLog[] }>(`/api/hive/emails?workspace=${q}`),
-        requestJson<{ templates: EmailTemplateRow[] }>(`/api/hive/email-templates?workspace=${q}`),
+        finance ? requestJson<{ invoices: Invoice[] }>(`/api/hive/invoices?workspace=${q}`) : Promise.resolve({invoices:[] as Invoice[]}),
+        finance ? requestJson<{ offers: Offer[] }>(`/api/hive/offers?workspace=${q}`) : Promise.resolve({offers:[] as Offer[]}),
+        finance ? requestJson<{ products: Product[] }>(`/api/hive/products?workspace=${q}`) : Promise.resolve({products:[] as Product[]}),
+        admin ? requestJson<{ emails: EmailLog[] }>(`/api/hive/emails?workspace=${q}`) : Promise.resolve({emails:[] as EmailLog[]}),
+        admin ? requestJson<{ templates: EmailTemplateRow[] }>(`/api/hive/email-templates?workspace=${q}`) : Promise.resolve({templates:[] as EmailTemplateRow[]}),
         requestJson<PortalData>(`/api/hive/portal?workspace=${q}`),
         requestJson<{ activity: UnifiedActivity[] }>(`/api/hive/activity?workspace=${q}`),
         requestJson<{ settings: Settings }>(`/api/hive/settings?workspace=${q}`),
@@ -551,7 +558,7 @@ export default function StudioPage() {
     } finally {
       if (requestId === workspaceRequest.current && currentWorkspace.current === workspaceId) setBusy(false);
     }
-  }, []);
+  }, [workspaces]);
 
   useEffect(() => { void loadWorkspaces(); }, [loadWorkspaces]);
   useEffect(() => {
@@ -561,6 +568,14 @@ export default function StudioPage() {
   useEffect(() => { if (activeWorkspaceId) void loadWorkspaceData(activeWorkspaceId); }, [activeWorkspaceId, loadWorkspaceData]);
   useEffect(() => { if (tab === 'businesses') void loadBusinessesOverview(); }, [tab, loadBusinessesOverview]);
   useEffect(() => { if (tab === 'team' && activeWorkspaceId) void loadTeam(activeWorkspaceId); }, [tab, activeWorkspaceId, loadTeam]);
+  useEffect(() => {
+    if (!canAdmin && (portalMobileView === 'access' || portalMobileView === 'requests')) setPortalMobileView('files');
+  }, [canAdmin, portalMobileView]);
+  useEffect(() => {
+    const financeTabs:Tab[]=['invoices','offers','catalog'];
+    const adminTabs:Tab[]=['emails','team','branding'];
+    if ((!canViewFinance && financeTabs.includes(tab)) || (!canAdmin && adminTabs.includes(tab))) setTab('overview');
+  }, [tab, canViewFinance, canAdmin]);
   useEffect(() => {
     const handler = (event:KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
@@ -1579,19 +1594,20 @@ export default function StudioPage() {
   }
 
   const nav = [
-    ['businesses', 'Businesses', Building2],
-    ['overview', 'Übersicht', LayoutDashboard],
-    ['customers', 'Kunden', Users],
-    ['projects', 'Projekte', BriefcaseBusiness],
-    ['invoices', 'Rechnungen', CreditCard],
-    ['offers', 'Offerten', FileText],
-    ['catalog', 'Leistungen', Package],
-    ['emails', 'E-Mail', Mail],
-    ['portal', 'Portal', ShieldCheck],
-    ['activity', 'Aktivität', RefreshCw],
-    ...(['owner','admin'].includes(activeWorkspace?.role || '') ? [['team', 'Team', Users] as const] : []),
-    ['branding', 'Business', Settings2],
-  ] as const;
+    ['businesses', 'Businesses', Building2] as const,
+    ['overview', 'Übersicht', LayoutDashboard] as const,
+    ['customers', 'Kunden', Users] as const,
+    ['projects', 'Projekte', BriefcaseBusiness] as const,
+    ...(canViewFinance ? [
+      ['invoices', 'Rechnungen', CreditCard] as const,
+      ['offers', 'Offerten', FileText] as const,
+      ['catalog', 'Leistungen', Package] as const,
+    ] : []),
+    ...(canAdmin ? [['emails', 'E-Mail', Mail] as const] : []),
+    ['portal', 'Portal', ShieldCheck] as const,
+    ['activity', 'Aktivität', RefreshCw] as const,
+    ...(canAdmin ? [['team', 'Team', Users] as const, ['branding', 'Business', Settings2] as const] : []),
+  ];
 
   const matchesList = (...values:unknown[]) => values.filter(Boolean).join(' ').toLocaleLowerCase('de-CH').includes(listQuery.toLocaleLowerCase('de-CH').trim());
   const visibleCustomers = customers.filter(c => matchesList(customerName(c), c.email, c.city));
@@ -1649,7 +1665,7 @@ export default function StudioPage() {
           onOpen={(workspaceId)=>switchWorkspace(workspaceId,'overview')}
         />}
 
-        {tab === 'overview' && <WorkspaceOverview invoices={invoices} projects={projects} customerCount={customers.length} offerCount={offers.filter(o=>o.status==='draft'||o.status==='sent').length} activity={activityFeed} onNavigate={setTab} onProject={id=>void loadProjectWorkspace(id)} onCreateProject={()=>void openProject()}/>}
+        {tab === 'overview' && <WorkspaceOverview invoices={invoices} projects={projects} customerCount={customers.length} offerCount={offers.filter(o=>o.status==='draft'||o.status==='sent').length} activity={activityFeed} canViewFinance={canViewFinance} onNavigate={setTab} onProject={id=>void loadProjectWorkspace(id)} onCreateProject={()=>void openProject()}/>}
 
         {tab === 'customers' && <>
           <div className="hsv-rowtop"><strong>{customers.length} Kunden</strong><button className="hsv-primary" onClick={() => openCustomer()}><Plus size={15}/> Kunde hinzufügen</button></div>
@@ -1780,8 +1796,8 @@ export default function StudioPage() {
 
         {tab === 'portal' && <>
           <div className="hsv-rowtop">
-            <strong>{portal.memberships.length} Mitglieder · {portal.invites.length} Einladungen</strong>
-            <button className="hsv-primary" disabled={!customers.length} onClick={() => void openPortalInvite()}><Plus size={15}/> Portal-Einladung</button>
+            <strong>{canAdmin ? `${portal.memberships.length} Mitglieder · ${portal.invites.length} Einladungen` : 'Kundenportal & Dateien'}</strong>
+            {canAdmin && <button className="hsv-primary" disabled={!customers.length} onClick={() => void openPortalInvite()}><Plus size={15}/> Portal-Einladung</button>}
           </div>
 
           <div className="hsv-intro" style={{ marginBottom: 18 }}>
@@ -1789,13 +1805,13 @@ export default function StudioPage() {
             <div><span>KUNDENPORTAL</span><h2>Zugänge & Freigaben</h2><p>Einladungen, Portal-Mitglieder, Dateien, Reviews und Kundenanfragen laufen pro Business und Department. Im Dev-Modus wird keine Einladung per E-Mail versendet.</p></div>
           </div>
           <div className="hive-mobile-subtabs" role="tablist" aria-label="Portal-Bereiche">
-            <button role="tab" aria-selected={portalMobileView==='access'} onClick={() => setPortalMobileView('access')}>Zugänge</button>
+            {canAdmin && <button role="tab" aria-selected={portalMobileView==='access'} onClick={() => setPortalMobileView('access')}>Zugänge</button>}
             <button role="tab" aria-selected={portalMobileView==='files'} onClick={() => setPortalMobileView('files')}>Dateien</button>
-            <button role="tab" aria-selected={portalMobileView==='requests'} onClick={() => setPortalMobileView('requests')}>Anfragen</button>
+            {canAdmin && <button role="tab" aria-selected={portalMobileView==='requests'} onClick={() => setPortalMobileView('requests')}>Anfragen</button>}
             <button role="tab" aria-selected={portalMobileView==='activity'} onClick={() => setPortalMobileView('activity')}>Verlauf</button>
           </div>
 
-          <section className="hive-portal-section" data-mobile-active={portalMobileView==='access'}>
+          {canAdmin && <section className="hive-portal-section" data-mobile-active={portalMobileView==='access'}>
           <div className="hsv-rowtop"><strong>Mitglieder</strong></div>
           <div className="hsv-table">{portal.memberships.length ? portal.memberships.map((member) => <div key={member.id}>
             <span className="hsv-letter"><Users size={16}/></span>
@@ -1809,9 +1825,9 @@ export default function StudioPage() {
             <span className="hsv-grow"><strong>{invite.email}</strong><small>{customerName(customers.find((customer) => customer.id === invite.customer_id))} · gültig bis {new Date(invite.expires_at).toLocaleDateString('de-CH')}</small></span>
             {!invite.accepted_at && !invite.revoked_at && <button onClick={() => void portalAction({ action:'revoke_invite', inviteId:invite.id }, 'Einladung widerrufen.')}>Widerrufen</button>}
           </div>) : <p className="hsv-empty">Keine offenen Einladungen.</p>}</div>
-          </section>
+          </section>}
 
-          <section className="hive-portal-section" data-mobile-active={portalMobileView==='requests'}>
+          {canAdmin && <section className="hive-portal-section" data-mobile-active={portalMobileView==='requests'}>
           <div className="hsv-rowtop" style={{ marginTop: 24 }}><strong>Kundenanfragen</strong></div>
           <div className="hsv-table">{portal.requests.length ? portal.requests.map((item) => <div key={item.id}>
             <span className="hsv-letter"><Mail size={16}/></span>
@@ -1825,7 +1841,7 @@ export default function StudioPage() {
             <span className="hsv-grow"><strong>{review.reviewer_name}</strong><small>{customerName(customers.find((customer) => customer.id === review.customer_id))} · {review.status} · {review.body}</small></span>
             {review.status === 'pending' && <><button onClick={() => void portalAction({ action:'review_update', reviewId:review.id, status:'approved' }, 'Review freigegeben.')}>Freigeben</button><button onClick={() => void portalAction({ action:'review_update', reviewId:review.id, status:'rejected' }, 'Review abgelehnt.')}>Ablehnen</button></>}
           </div>) : <p className="hsv-empty">Keine Reviews.</p>}</div>
-          </section>
+          </section>}
 
           <section className="hive-portal-section" data-mobile-active={portalMobileView==='files'}>
           <div className="hsv-rowtop" style={{ marginTop: 24 }}>
@@ -1953,7 +1969,7 @@ export default function StudioPage() {
     </div>
 
     <nav className="hive-mobile-nav" aria-label="Mobile Navigation">
-      {nav.filter(([id]) => ['overview','customers','projects','invoices'].includes(id)).map(([id,label,Icon]) => <button key={id} aria-current={tab===id?'page':undefined} onClick={() => { setTab(id); setMobileMenuOpen(false); setQuickCreateOpen(false); window.scrollTo({top:0}); }}><Icon size={21}/><span>{label}</span></button>)}
+      {nav.filter(([id]) => (canViewFinance ? ['overview','customers','projects','invoices'] : ['overview','customers','projects','businesses']).includes(id)).map(([id,label,Icon]) => <button key={id} aria-current={tab===id?'page':undefined} onClick={() => { setTab(id); setMobileMenuOpen(false); setQuickCreateOpen(false); window.scrollTo({top:0}); }}><Icon size={21}/><span>{label}</span></button>)}
       <button aria-label="Weitere Module" aria-expanded={mobileMenuOpen} aria-current={!['overview','customers','projects','invoices'].includes(tab)?'page':undefined} onClick={() => { setQuickCreateOpen(false); setMobileMenuOpen(true); }}><Menu size={21}/><span>Mehr</span></button>
     </nav>
     <button className="hive-mobile-create" type="button" aria-label="Neu erstellen" aria-expanded={quickCreateOpen} onClick={() => { setMobileMenuOpen(false); setQuickCreateOpen(true); }}><Plus size={22}/></button>
@@ -1965,12 +1981,12 @@ export default function StudioPage() {
         <button type="button" disabled={!customers.length} onClick={() => { setQuickCreateOpen(false); void openProject(); }}>
           <span><BriefcaseBusiness size={19}/></span><div><strong>Projekt</strong><small>Neues Kundenprojekt starten</small></div><ArrowRight size={15}/>
         </button>
-        <button type="button" disabled={!customers.length} onClick={() => { setQuickCreateOpen(false); openNewInvoice(); }}>
+        {canViewFinance && <button type="button" disabled={!customers.length} onClick={() => { setQuickCreateOpen(false); openNewInvoice(); }}>
           <span><CreditCard size={19}/></span><div><strong>Rechnung</strong><small>Entwurf direkt erfassen</small></div><ArrowRight size={15}/>
-        </button>
-        <button type="button" disabled={!customers.length} onClick={() => { setQuickCreateOpen(false); openNewOffer(); }}>
+        </button>}
+        {canViewFinance && <button type="button" disabled={!customers.length} onClick={() => { setQuickCreateOpen(false); openNewOffer(); }}>
           <span><FileText size={19}/></span><div><strong>Offerte</strong><small>Angebot für einen Kunden</small></div><ArrowRight size={15}/>
-        </button>
+        </button>}
         <button type="button" disabled={!customers.length} onClick={() => { setQuickCreateOpen(false); void openPortalFile(); }}>
           <span><Package size={19}/></span><div><strong>Datei</strong><small>Zum Kundenportal hochladen</small></div><ArrowRight size={15}/>
         </button>
