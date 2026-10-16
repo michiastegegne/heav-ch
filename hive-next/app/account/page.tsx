@@ -1,5 +1,5 @@
 import ThemeToggle from '@/app/components/theme-toggle';
-import { usesClerk } from '@/lib/hive/auth-provider';
+import { getHiveAuthState } from '@/lib/hive/auth-provider';
 import { createSessionSupabaseClient } from '@/lib/supabase/session-server';
 import SignoutButton from './signout-button';
 import { UserProfile } from '@clerk/nextjs';
@@ -7,9 +7,10 @@ import { UserProfile } from '@clerk/nextjs';
 export const dynamic = 'force-dynamic';
 
 export default async function AccountPage() {
-  const configured = usesClerk();
+  const authState = getHiveAuthState();
+  const configured = authState.requested === 'clerk' && authState.ready;
 
-  const user = !configured ? (await (await createSessionSupabaseClient()).auth.getUser()).data.user : null;
+  const user = !configured && authState.ready ? (await (await createSessionSupabaseClient()).auth.getUser()).data.user : null;
 
   return (
     <main className="account-shell">
