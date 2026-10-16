@@ -1,4 +1,4 @@
-import { usesClerk } from '@/lib/hive/auth-provider';
+import { getHiveAuthState } from '@/lib/hive/auth-provider';
 import type { Metadata, Viewport } from 'next';
 import { ClerkProvider } from '@clerk/nextjs';
 import './globals.css';
@@ -33,7 +33,8 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const clerkConfigured = usesClerk();
+  const authState = getHiveAuthState();
+  const clerkConfigured = authState.requested === 'clerk' && authState.ready;
   return (
     <html lang="de-CH" data-theme="dark" suppressHydrationWarning>
       <body>
