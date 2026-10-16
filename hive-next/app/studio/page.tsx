@@ -910,6 +910,9 @@ export default function StudioPage() {
   }
 
   async function invoiceAction(invoice: Invoice, action: 'issue' | 'download' | 'send' | 'mark_paid' | 'cancel') {
+    if (action === 'issue' && !confirm('Rechnung jetzt ausstellen? Die definitive Rechnungsnummer wird vergeben und der Inhalt danach gesperrt.')) return;
+    if (action === 'mark_paid' && !confirm(`${invoice.invoice_number} wirklich als bezahlt markieren?`)) return;
+    if (action === 'cancel' && !confirm(`${invoice.invoice_number} wirklich stornieren? Dieser Status kann nicht einfach zurückgesetzt werden.`)) return;
     try {
       if (action === 'download') {
         const response = await fetch(`/api/hive/invoices/${invoice.id}/action`, {
@@ -940,6 +943,23 @@ export default function StudioPage() {
       if (activeWorkspaceId) await loadWorkspaceData(activeWorkspaceId);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Rechnungsaktion fehlgeschlagen.');
+    }
+  }
+
+  async function duplicateInvoice(invoice: Invoice) {
+    try {
+      await requestJson(`/api/hive/invoices/${invoice.id}/action`, {
+        method:'POST',
+        body:JSON.stringify({
+          action:'duplicate',
+          issueDate:today(),
+          dueDate:afterDays(settings?.default_due_days || 30),
+        }),
+      });
+      setNotice(`Kopie von ${invoice.invoice_number} als neuer Entwurf erstellt.`);
+      if (activeWorkspaceId) await loadWorkspaceData(activeWorkspaceId);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Rechnung konnte nicht dupliziert werden.');
     }
   }
 
@@ -1000,6 +1020,7 @@ export default function StudioPage() {
 
   async function offerAction(offer: Offer, action: 'share' | 'withdraw' | 'delete' | 'send') {
     if (action === 'delete' && !confirm(`${offer.offer_number} wirklich löschen?`)) return;
+    if (action === 'withdraw' && !confirm(`${offer.offer_number} wirklich zurückziehen?`)) return;
     try {
       await requestJson(`/api/hive/offers/${offer.id}`, {
         method: 'POST',
@@ -1582,6 +1603,7 @@ export default function StudioPage() {
             <strong>{money(invoice.total_rappen, invoice.currency)}</strong>
             <div className="hive-record-actions">
             <button onClick={() => void openInvoiceHistory(invoice)}><Clock3 size={14}/> Verlauf</button>
+            <button onClick={() => void duplicateInvoice(invoice)}>Duplizieren</button>
             {invoice.number_finalized && <button onClick={() => void invoiceAction(invoice, 'download')}>PDF</button>}
             {!invoice.is_legacy && invoice.number_finalized && ['draft','sent','overdue'].includes(invoice.status) && <button onClick={() => void invoiceAction(invoice, 'send')}>E-Mail</button>}
             {invoice.status === 'draft' && !invoice.is_legacy && !invoice.number_finalized && <button onClick={() => void openInvoiceDraft(invoice)}>Bearbeiten</button>}
