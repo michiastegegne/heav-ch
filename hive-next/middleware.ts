@@ -1,5 +1,5 @@
 import { createServerClient } from '@supabase/ssr';
-import { usesClerk } from '@/lib/hive/auth-provider';
+import { getHiveAuthState } from '@/lib/hive/auth-provider';
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextFetchEvent, NextRequest, NextResponse } from 'next/server';
 
@@ -14,11 +14,26 @@ const clerk = clerkMiddleware(async (auth, request) => {
 });
 
 export default async function middleware(request: NextRequest, event: NextFetchEvent) {
-  if (usesClerk()) return clerk(request, event);
+  const authState = getHiveAuthState();
+  const api = request.nextUrl.pathname.startsWith('/api/');
+
+  if (!authState.ready) {
+    if (!isProtectedRoute(request)) return NextResponse.next();
+    if (api) {
+      return NextResponse.json(
+        { error: 'Die Anmeldung ist noch nicht vollständig eingerichtet.' },
+        { status: 503, headers: { 'Cache-Control': 'private, no-store' } },
+      );
+    }
+    const target = new URL('/login', request.url);
+    target.searchParams.set('setup', authState.issue || 'auth');
+    return NextResponse.redirect(target);
+  }
+
+  if (authState.requested === 'clerk') return clerk(request, event);
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!isProtectedRoute(request)) return NextResponse.next();
-  const api = request.nextUrl.pathname.startsWith('/api/');
   if (!url || !key) {
     return api
       ? NextResponse.json({ error: 'Die Anmeldung ist noch nicht eingerichtet.' }, { status: 503 })
