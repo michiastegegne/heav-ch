@@ -86,7 +86,7 @@ test('mobile-only subnavigation stays hidden on desktop',async({page})=>{
  const nav=page.getByRole('navigation',{name:'Business-Module'});
  await nav.getByRole('button',{name:'Portal',exact:true}).click();
  await expect(page.getByRole('tablist',{name:'Portal-Bereiche'})).toBeHidden();
- await nav.getByRole('button',{name:'Offerte per E-Mail senden',exact:true}).click();
+ await nav.getByRole('button',{name:'E-Mail',exact:true}).click();
  await expect(page.getByRole('tablist',{name:'E-Mail-Bereiche'})).toBeHidden();
  await nav.getByRole('button',{name:'Business',exact:true}).click();
  await expect(page.getByRole('tablist',{name:'Business-Einstellungen'})).toBeHidden();
@@ -185,7 +185,7 @@ test('offer email retries reuse the same durable request key across reloads',asy
  await sendButton.click();
  await expect(sendButton).toBeDisabled();
  await expect(sendButton).toHaveText('Wird gesendet …');
- await expect(page.getByRole('status')).toContainText('derselben sicheren Versandauftrag');
+ await expect(page.getByRole('status')).toContainText('denselben sicheren Versandauftrag');
  await expect(sendButton).toBeEnabled();
  expect(sendBodies).toHaveLength(1);
  expect(sendBodies[0].requestKey).toMatch(/^[0-9a-f-]{36}$/i);
@@ -198,7 +198,7 @@ test('offer email retries reuse the same durable request key across reloads',asy
  offerRow=page.locator('.hive-offer-table>div').filter({hasText:'OFF-2026-001'}).first();
  sendButton=offerRow.getByRole('button',{name:'Offerte per E-Mail senden',exact:true});
  await sendButton.click();
- await expect(page.getByRole('status')).toContainText('derselben sicheren Versandauftrag');
+ await expect(page.getByRole('status')).toContainText('denselben sicheren Versandauftrag');
  expect(sendBodies).toHaveLength(2);
  expect(sendBodies[1].requestKey).toBe(firstKey);
 });
