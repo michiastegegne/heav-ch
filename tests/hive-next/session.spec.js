@@ -203,6 +203,49 @@ test('offer email retries reuse the same durable request key across reloads',asy
  expect(sendBodies[1].requestKey).toBe(firstKey);
 });
 
+test('offer email retry survives a lost browser response and clears the key only after success',async({page})=>{
+ await login(page);
+ const sendBodies=[];
+ let attempt=0;
+ await page.route('**/api/hive/offers/50000000-0000-4000-8000-000000000001',async route=>{
+   const request=route.request();
+   if(request.method()!=='POST')return route.continue();
+   const body=request.postDataJSON();
+   if(body.action!=='send')return route.continue();
+   sendBodies.push(body);
+   attempt+=1;
+   if(attempt===1){
+     await new Promise(resolve=>setTimeout(resolve,120));
+     return route.abort('failed');
+   }
+   return route.fulfill({
+     status:200,
+     contentType:'application/json',
+     body:JSON.stringify({ok:true,recipient:'anna@example.test'}),
+   });
+ });
+
+ const nav=page.getByRole('navigation',{name:'Business-Module'});
+ await nav.getByRole('button',{name:'Offerten',exact:true}).click();
+ const offerRow=page.locator('.hive-offer-table>div').filter({hasText:'OFF-2026-001'}).first();
+ const sendButton=offerRow.getByRole('button',{name:'Offerte per E-Mail senden',exact:true});
+
+ await sendButton.click();
+ await expect(sendButton).toBeDisabled();
+ await expect(page.getByRole('status')).toContainText('denselben sicheren Versandauftrag');
+ await expect(sendButton).toBeEnabled();
+ expect(sendBodies).toHaveLength(1);
+ const firstKey=sendBodies[0].requestKey;
+ expect(firstKey).toMatch(/^[0-9a-f-]{36}$/i);
+ expect(await page.evaluate((offerId)=>sessionStorage.getItem(`hive.offerSendRequest.${offerId}`),'50000000-0000-4000-8000-000000000001')).toBe(firstKey);
+
+ await sendButton.click();
+ await expect(page.getByRole('status')).toContainText('Offerte per E-Mail versendet.');
+ expect(sendBodies).toHaveLength(2);
+ expect(sendBodies[1].requestKey).toBe(firstKey);
+ expect(await page.evaluate((offerId)=>sessionStorage.getItem(`hive.offerSendRequest.${offerId}`),'50000000-0000-4000-8000-000000000001')).toBeNull();
+});
+
 test('offer history is workspace scoped and visible from the offer list',async({page})=>{
  await login(page);
  const foreign=await page.request.get('/api/hive/offers/50000000-0000-4000-8000-000000000001/history?workspace=033fe942-b8de-4298-9762-5f23550afbd9');
