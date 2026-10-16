@@ -30,6 +30,23 @@ let activeMembership = null;
 let activeCustomerId = null;
 let portalData = { projects: [], invoices: [], files: [], offers: [] };
 let activeOfferId = null;
+let portalUserId = null;
+
+function customerPreferenceKey(userId) {
+  return `heav-portal-customer:${userId}`;
+}
+function rememberedMembershipId(userId) {
+  try { return localStorage.getItem(customerPreferenceKey(userId)) || ""; }
+  catch { return ""; }
+}
+function rememberMembership(userId, membershipId) {
+  if (!userId || !membershipId) return;
+  try { localStorage.setItem(customerPreferenceKey(userId), membershipId); } catch {}
+}
+function forgetRememberedMembership(userId) {
+  if (!userId) return;
+  try { localStorage.removeItem(customerPreferenceKey(userId)); } catch {}
+}
 
 const esc = (value = "") => String(value).replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
 const date = (value) => value ? new Intl.DateTimeFormat("de-CH", { dateStyle: "medium" }).format(new Date(`${value}T12:00:00`)) : "–";
@@ -123,6 +140,7 @@ async function setActiveMembership(membershipId) {
     const data = await loadCustomerData(membership);
     activeMembership = membership;
     activeCustomerId = membership.customer_id;
+    if (portalUserId) rememberMembership(portalUserId, membership.id);
     renderCustomerData(data);
   } finally {
     if (customerLoading) customerLoading.hidden = true;
@@ -189,6 +207,7 @@ async function loadPortal() {
   const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
   if (sessionError || !sessionData.session) { window.location.replace(`/login/?next=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`); return; }
   const userId = sessionData.session.user.id;
+  portalUserId = userId;
   const { data: access, error: accessError } = await supabase.from("customer_portal_memberships").select("id,customer_id,department_id,role").eq("user_id", userId).eq("status", "active");
   if (accessError) throw accessError;
   const departmentIds = (access || []).map((membership) => membership.department_id).filter(Boolean);
@@ -199,11 +218,18 @@ async function loadPortal() {
   if (!memberships.length) throw new Error("Für dieses Konto ist noch kein Kundenportal freigeschaltet.");
   renderCustomerSwitcher();
   const targetOffer = new URLSearchParams(window.location.search).get("offer");
-  let initialMembership = memberships[0];
+  const rememberedId = rememberedMembershipId(userId);
+  const rememberedMembership = memberships.find((membership) => membership.id === rememberedId);
+  if (rememberedId && !rememberedMembership) forgetRememberedMembership(userId);
+
+  let initialMembership = rememberedMembership || memberships[0];
   if (targetOffer) {
     for (const membership of memberships) {
       const candidate = await loadCustomerData(membership);
-      if (candidate.offers.some((offer) => offer.id === targetOffer)) { initialMembership = membership; break; }
+      if (candidate.offers.some((offer) => offer.id === targetOffer)) {
+        initialMembership = membership;
+        break;
+      }
     }
   }
   await setActiveMembership(initialMembership.id);
@@ -276,7 +302,10 @@ reviewForm.addEventListener("submit", async (event) => {
   reviewForm.elements.body.value = ""; reviewMessage.classList.add("success"); reviewMessage.textContent = "Danke. Deine Rezension wurde zur Prüfung übermittelt.";
 });
 
-document.querySelector("#logout-button").addEventListener("click", async () => { await supabase?.auth.signOut(); window.location.replace("/login/"); });
+document.querySelector("#logout-button").addEventListener("click", async () => {
+  await supabase?.auth.signOut();
+  window.location.replace("/login/");
+});
 
 (async () => {
   try {
