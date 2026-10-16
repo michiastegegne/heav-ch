@@ -11,6 +11,13 @@ const actionSchema = z.discriminatedUnion('action', [
   }).refine((value) => value.dueDate >= value.issueDate, {
     message: 'Fälligkeitsdatum liegt vor dem Rechnungsdatum',
   }),
+  z.object({
+    action: z.literal('duplicate'),
+    issueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    validUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  }).refine((value) => value.validUntil >= value.issueDate, {
+    message: 'Gültigkeitsdatum liegt vor dem Offertdatum',
+  }),
 ]);
 const draftSchema = z.object({
   workspaceId: z.string().uuid(),
@@ -132,6 +139,44 @@ export async function POST(
     const action = actionSchema.parse(await request.json());
     const supabase = await requireHiveDataAccess();
     const offer = await resolveOffer(supabase, offerId);
+
+    if (action.action === 'duplicate') {
+      const { data:items, error:itemsError } = await supabase
+        .from('offer_items')
+        .select('description, quantity, unit_price_rappen')
+        .eq('workspace_id', offer.workspace_id)
+        .eq('offer_id', offerId)
+        .order('position');
+      if (itemsError) throw itemsError;
+      if (!items?.length) {
+        return Response.json({ error:'Offerte enthält keine Positionen und kann nicht dupliziert werden.' }, { status:409 });
+      }
+
+      const taxRate = offer.subtotal_rappen > 0
+        ? Math.round((Number(offer.tax_rappen) / Number(offer.subtotal_rappen)) * 10000) / 100
+        : 0;
+      const { data, error } = await supabase.rpc('create_workspace_offer', {
+        p_workspace_id:offer.workspace_id,
+        p_customer_id:offer.customer_id,
+        p_project_id:offer.project_id || null,
+        p_title:`Kopie von ${offer.title}`,
+        p_issue_date:action.issueDate,
+        p_valid_until:action.validUntil,
+        p_tax_rate:taxRate,
+        p_notes:offer.notes || '',
+        p_terms:offer.terms,
+        p_items:items.map((item)=>({
+          description:item.description,
+          quantity:Number(item.quantity),
+          unit_price_rappen:Number(item.unit_price_rappen),
+        })),
+      });
+      if (error) throw error;
+      return Response.json(
+        { ok:true, offer:Array.isArray(data) ? data[0] : data },
+        { status:201, headers:{ 'Cache-Control':'private, no-store' } },
+      );
+    }
 
     if (action.action === 'send') {
       if (process.env.HIVE_ENABLE_EMAIL_SEND !== 'true') {
