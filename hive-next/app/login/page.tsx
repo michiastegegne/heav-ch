@@ -1,12 +1,13 @@
 import ThemeToggle from '@/app/components/theme-toggle';
 import PasswordForm from './password-form';
-import { usesClerk } from '@/lib/hive/auth-provider';
+import { authSetupMessage, getHiveAuthState } from '@/lib/hive/auth-provider';
 import { SignIn } from '@clerk/nextjs';
 
 export const dynamic = 'force-dynamic';
 
 export default function LoginPage() {
-  const configured = usesClerk();
+  const authState = getHiveAuthState();
+  const configured = authState.requested === 'clerk' && authState.ready;
   return (
     <main className="auth-shell">
       <section className="auth-brand">
@@ -19,7 +20,13 @@ export default function LoginPage() {
         <small>Dein Business. Deine Brand. Dein Workspace.</small>
       </section>
       <section className="auth-panel">
-        {configured ? (
+        {!authState.ready ? (
+          <div className="auth-setup" role="alert">
+            <span>AUTH SETUP</span>
+            <h2>Anmeldung wird vorbereitet.</h2>
+            <p>{authSetupMessage(authState.issue)}</p>
+          </div>
+        ) : configured ? (
           <SignIn
             routing="hash"
             fallbackRedirectUrl="/studio"
