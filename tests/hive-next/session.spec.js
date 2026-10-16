@@ -161,6 +161,48 @@ test('offer duplication creates a fresh numbered offer',async({page})=>{
  expect(payload.offer.offer_number).toBe('TEST-O-2026-099');
 });
 
+test('offer email retries reuse the same durable request key across reloads',async({page})=>{
+ await login(page);
+ const sendBodies=[];
+ await page.route('**/api/hive/offers/50000000-0000-4000-8000-000000000001',async route=>{
+   const request=route.request();
+   if(request.method()!=='POST')return route.continue();
+   const body=request.postDataJSON();
+   if(body.action!=='send')return route.continue();
+   sendBodies.push(body);
+   await new Promise(resolve=>setTimeout(resolve,180));
+   await route.fulfill({
+     status:503,
+     contentType:'application/json',
+     body:JSON.stringify({error:'Fixture mail transport unavailable'}),
+   });
+ });
+
+ const nav=page.getByRole('navigation',{name:'Business-Module'});
+ await nav.getByRole('button',{name:'Offerten',exact:true}).click();
+ let offerRow=page.locator('.hive-offer-table>div').filter({hasText:'OFF-2026-001'}).first();
+ let sendButton=offerRow.getByRole('button',{name:'E-Mail',exact:true});
+ await sendButton.click();
+ await expect(sendButton).toBeDisabled();
+ await expect(sendButton).toHaveText('Wird gesendet …');
+ await expect(page.getByRole('status')).toContainText('derselben sicheren Versandauftrag');
+ await expect(sendButton).toBeEnabled();
+ expect(sendBodies).toHaveLength(1);
+ expect(sendBodies[0].requestKey).toMatch(/^[0-9a-f-]{36}$/i);
+
+ const firstKey=sendBodies[0].requestKey;
+ expect(await page.evaluate((offerId)=>sessionStorage.getItem(`hive.offerSendRequest.${offerId}`),'50000000-0000-4000-8000-000000000001')).toBe(firstKey);
+
+ await page.reload();
+ await page.getByRole('navigation',{name:'Business-Module'}).getByRole('button',{name:'Offerten',exact:true}).click();
+ offerRow=page.locator('.hive-offer-table>div').filter({hasText:'OFF-2026-001'}).first();
+ sendButton=offerRow.getByRole('button',{name:'E-Mail',exact:true});
+ await sendButton.click();
+ await expect(page.getByRole('status')).toContainText('derselben sicheren Versandauftrag');
+ expect(sendBodies).toHaveLength(2);
+ expect(sendBodies[1].requestKey).toBe(firstKey);
+});
+
 test('offer history is workspace scoped and visible from the offer list',async({page})=>{
  await login(page);
  const foreign=await page.request.get('/api/hive/offers/50000000-0000-4000-8000-000000000001/history?workspace=033fe942-b8de-4298-9762-5f23550afbd9');
