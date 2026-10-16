@@ -41,7 +41,10 @@ test("caller-supplied profile email is not treated as verified authorization dat
   const source = await readFile(migrationUrl, "utf8");
 
   assert.match(source, /email_verified boolean not null default false/);
-  assert.match(source, /account\.email_confirmed_at is not null/);
+  assert.match(
+    source,
+    /(?:account\.email_confirmed_at is not null|nullif\(to_jsonb\(account\)->>'email_confirmed_at', ''\) is not null)/,
+  );
   assert.match(source, /where lower\(primary_email\) = v_email\s*\n\s*and email_verified/s);
   assert.doesNotMatch(
     source,
