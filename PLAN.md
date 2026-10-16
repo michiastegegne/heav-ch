@@ -141,8 +141,8 @@ In `admin/assets/app.js:836-840` werden fehlende oder ungültige Rechnungswerte 
 - [x] Sichtbares Kundenkonto-Auswahlfeld ergänzt.
 - [x] Projekte, Rechnungen, Dateien, Offerten und „Nächster Schritt“ werden für das ausgewählte Konto geladen.
 - [x] Kontowechsel lädt die Daten vollständig neu und aktualisiert den Bewertungs-Kontext.
-- [ ] `offer`-Deep-Links gegen alle erlaubten Memberships auflösen, nicht nur gegen das erste Konto.
-- [ ] Auswahl nach Reload sicher und ohne fremde IDs wiederherstellen.
+- [x] `offer`-Deep-Links gegen alle erlaubten Memberships auflösen, nicht nur gegen das erste Konto.
+- [x] Auswahl nach Reload sicher und ohne fremde IDs wiederherstellen.
 - [ ] Falls nur ein Konto erlaubt sein soll:
   - [ ] die Datenbank mit einer eindeutigen Regel absichern
   - [ ] die Mehrfachauswahl aus dem UI entfernen
