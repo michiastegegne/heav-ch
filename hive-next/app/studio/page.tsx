@@ -2038,6 +2038,14 @@ export default function StudioPage() {
 }
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  useEffect(() => {
+    const closeOnEscape=(event:KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [onClose]);
+
   return <div className="hsv-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <div className="hsv-dialog" role="dialog" aria-modal="true" aria-label={title}>
       <button type="button" className="hsv-close" aria-label="Schliessen" onClick={onClose}><X size={18}/></button>
