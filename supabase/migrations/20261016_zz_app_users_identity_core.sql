@@ -51,15 +51,18 @@ select
   account.id,
   lower(coalesce(account.email, '')),
   coalesce(
-    nullif(trim(account.raw_user_meta_data->>'full_name'), ''),
-    nullif(trim(account.raw_user_meta_data->>'name'), ''),
+    nullif(trim((to_jsonb(account)->'raw_user_meta_data')->>'full_name'), ''),
+    nullif(trim((to_jsonb(account)->'raw_user_meta_data')->>'name'), ''),
     split_part(coalesce(account.email, ''), '@', 1),
     ''
   ),
-  account.email_confirmed_at is not null,
+  nullif(to_jsonb(account)->>'email_confirmed_at', '') is not null,
   'active',
   true,
-  coalesce(account.created_at, now()),
+  coalesce(
+    nullif(to_jsonb(account)->>'created_at', '')::timestamptz,
+    now()
+  ),
   now()
 from auth.users account
 on conflict (id) do update set
