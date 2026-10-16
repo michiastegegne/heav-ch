@@ -40,7 +40,10 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.offer-send]
-verify_jwt = true
+# Clerk third-party session tokens are validated by the handler through the
+# Supabase Data API (current_app_user_id + workspace role checks). The legacy
+# Edge gateway JWT precheck only understands Supabase-issued signing keys.
+verify_jwt = false
 
 [functions.invoice-reminders]
 verify_jwt = false
