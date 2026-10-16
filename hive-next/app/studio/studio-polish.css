@@ -572,3 +572,9 @@ html[data-theme="dark"] .hive-loading-panel span:after{
 @media(prefers-reduced-motion:reduce){
   .hive-loading-line:after,.hive-loading-cards span:after,.hive-loading-panel span:after{animation:none}
 }
+
+/* Mobile-only navigation wrappers must be layout-neutral on desktop. */
+.hive-mobile-subtabs{display:none}
+.hive-portal-section,
+.hive-email-mobile-section,
+.hive-settings-section{display:contents}
