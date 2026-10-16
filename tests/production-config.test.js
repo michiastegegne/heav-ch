@@ -154,7 +154,7 @@ test("Login loads the cache-safe owner-authority client", async () => {
 });
 
 test("Portal lädt die atomare Kontowechsel-Logik cache-sicher", () => {
-  assert.match(clientHtml, /src="\/portal\/assets\/portal\.js\?v=crm-multi-membership-3"/);
+  assert.match(clientHtml, /src="\/portal\/assets\/portal\.js\?v=crm-multi-membership-4"/);
 });
 
 test("Assistant Edge Function requires gateway JWT verification", async () => {
