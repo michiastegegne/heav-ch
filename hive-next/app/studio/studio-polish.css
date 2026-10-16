@@ -604,6 +604,54 @@ html[data-theme="dark"] .hive-loading-panel span:after{
   font-size:13px;
   font-weight:600;
 }
+.hive-invoice-document-audit{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:5px 12px;
+  margin:0 0 17px;
+  padding:13px 14px;
+  border:1px solid var(--studio-line);
+  border-radius:10px;
+  background:var(--studio-soft);
+}
+.hive-invoice-document-audit>div{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-width:0;
+  color:var(--studio-muted);
+  font-size:10px;
+}
+.hive-invoice-document-audit>strong{
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.35px;
+  text-transform:uppercase;
+}
+.hive-invoice-document-audit>small{
+  grid-column:1/-1;
+  overflow:hidden;
+  color:var(--studio-muted);
+  font-size:9px;
+  line-height:1.45;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.hive-document-pending{
+  margin:0 0 17px;
+  padding:11px 13px;
+  border:1px dashed var(--studio-line);
+  border-radius:9px;
+  color:var(--studio-muted);
+  font-size:10px;
+  line-height:1.5;
+}
+@media(max-width:760px){
+  .hive-invoice-document-audit{grid-template-columns:minmax(0,1fr);border-radius:12px}
+  .hive-invoice-document-audit>strong{grid-column:1}
+  .hive-invoice-document-audit>small{white-space:normal;overflow-wrap:anywhere}
+}
+
 .hive-invoice-history{
   position:relative;
   display:grid;
