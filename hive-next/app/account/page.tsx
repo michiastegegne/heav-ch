@@ -3,6 +3,7 @@ import { getHiveAuthState } from '@/lib/hive/auth-provider';
 import { createSessionSupabaseClient } from '@/lib/supabase/session-server';
 import SignoutButton from './signout-button';
 import { UserProfile } from '@clerk/nextjs';
+import IdentityLinkCard from './identity-link-card';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,6 +43,7 @@ export default async function AccountPage() {
             <SignoutButton/>
           </div>
         )}
+        {authState.ready && <IdentityLinkCard provider={authState.requested}/>}
       </section>
     </main>
   );
