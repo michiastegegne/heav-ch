@@ -1,0 +1,534 @@
+/* Quiet hierarchy, consistent controls, and deliberate action groups. */
+.hsv {
+  --studio-radius: 12px;
+  --studio-muted: #727272;
+  --studio-line: #e6e6e4;
+  --studio-soft: #f6f6f4;
+}
+html[data-theme="dark"] .hsv {
+  --studio-muted: #aaa;
+  --studio-line: #333;
+  --studio-soft: #202020;
+}
+.hsv button,
+.hsv a,
+.hsv select {
+  -webkit-tap-highlight-color: transparent;
+}
+.hsv-main {
+  padding-top: 30px;
+}
+.hive-breadcrumb {
+  margin-bottom: 30px;
+  font-size: 11px;
+}
+.hive-breadcrumb time {
+  font-size: 11px;
+}
+.hsv-heading {
+  margin-bottom: 32px;
+}
+.hsv-heading h1 {
+  font-size: 32px;
+  letter-spacing: -1.2px;
+}
+.hsv-heading p {
+  font-size: 13px;
+  line-height: 1.7;
+  max-width: 48ch;
+  color: var(--studio-muted);
+}
+.hsv-primary,
+.hsv-outline {
+  min-height: 40px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-weight: 500;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.hsv-primary {
+  box-shadow: 0 1px 2px #0001;
+}
+.hsv button:disabled {
+  cursor: default;
+}
+.hsv-nav button {
+  min-height: 40px;
+  font-size: 13px;
+  border-radius: 7px;
+}
+.hive-nav-label {
+  font-size: 10px;
+  letter-spacing: 1.2px;
+}
+.hive-nav-count {
+  font-size: 11px;
+}
+.hive-kpis {
+  padding: 25px 0;
+}
+.hive-kpis button {
+  gap: 12px;
+}
+.hive-kpis button > span {
+  font-size: 12px;
+}
+.hive-kpis small {
+  font-size: 11px;
+  line-height: 1.5;
+}
+.hive-kpis strong {
+  letter-spacing: -1px;
+}
+.hive-panel {
+  border-radius: var(--studio-radius);
+}
+.hive-panel-heading {
+  padding: 22px;
+}
+.hive-eyebrow {
+  font-size: 10px;
+  letter-spacing: 1.2px;
+}
+.hive-panel-heading h2 {
+  font-size: 16px;
+  font-weight: 500;
+}
+.hive-panel-heading > button {
+  min-height: 36px;
+  font-size: 11px;
+}
+.hive-record strong {
+  font-size: 13px;
+}
+.hive-record small {
+  font-size: 11px;
+}
+.hive-finance-row {
+  min-height: 84px;
+}
+.hive-amount {
+  font-size: 13px;
+}
+.hive-due {
+  font-size: 12px;
+}
+.hive-panel-foot {
+  font-size: 11px;
+  padding: 16px 22px;
+}
+.hive-panel-foot strong {
+  font-size: 12px;
+}
+.hive-attention {
+  border-radius: 12px;
+  padding: 24px;
+}
+.hive-attention p,
+.hive-activity-panel li p {
+  font-size: 12px;
+  line-height: 1.8;
+}
+.hive-attention > button {
+  min-height: 36px;
+  font-size: 12px;
+}
+.hive-list-tools > label {
+  min-height: 42px;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.hive-list-tools input {
+  font-size: 13px;
+}
+.hive-list-tools select {
+  min-height: 42px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+.hive-list-tools > span {
+  font-size: 11px;
+}
+.hsv-rowtop {
+  align-items: center;
+  min-height: 40px;
+  margin-bottom: 18px;
+}
+.hsv-rowtop > strong {
+  font-size: 13px;
+}
+.hsv-rowtop small {
+  font-size: 11px;
+}
+.hsv-table {
+  border-radius: 10px;
+}
+.hsv-table > div {
+  padding: 19px 18px;
+  gap: 14px;
+}
+.hsv-grow strong {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.hsv-grow small,
+.hive-contact-cell small {
+  font-size: 11px;
+  line-height: 1.5;
+}
+.hive-contact-cell {
+  font-size: 12px;
+}
+.hive-table-date {
+  font-size: 11px;
+}
+.hsv-table > div > strong {
+  font-size: 13px;
+}
+.hsv-letter {
+  border-radius: 9px;
+  width: 34px;
+  height: 34px;
+}
+.hive-status {
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+.hive-record-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.hsv-table .hive-record-actions button {
+  min-height: 34px;
+  padding: 8px;
+  font-size: 11px;
+  border-radius: 6px;
+}
+.hive-record-actions button[aria-label$="löschen"] {
+  color: var(--studio-muted);
+}
+.hive-record-actions button[aria-label$="löschen"]:hover {
+  color: #ba4b42;
+  border-color: #ba4b4233;
+}
+.hsv-dialog {
+  padding: 30px;
+  border-radius: 16px;
+  gap: 20px;
+  max-height: calc(100dvh - 48px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.hsv-dialog > span {
+  font-size: 10px;
+  letter-spacing: 1.4px;
+  color: var(--studio-muted);
+}
+.hsv-dialog h2 {
+  padding-right: 28px;
+  font-size: 26px;
+  line-height: 1.2;
+}
+.hsv-close {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  top: 18px;
+  right: 18px;
+  border: 1px solid var(--studio-line);
+  border-radius: 50%;
+  background: var(--studio-soft);
+}
+.hsv-dialog form {
+  display: grid;
+  gap: 18px;
+}
+.hsv-dialog label {
+  font-size: 12px;
+  font-weight: 500;
+  gap: 8px;
+  min-width: 0;
+}
+.hsv-dialog :is(input, textarea, select) {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  border-radius: 8px;
+  font:
+    400 14px/1.5 "DM Sans",
+    sans-serif;
+  padding: 11px 12px;
+  color: inherit;
+}
+.hsv-dialog textarea {
+  resize: vertical;
+}
+.hsv-dialog input[type="checkbox"] {
+  width: 18px;
+  min-height: 18px;
+}
+.hsv-dialog form > .hsv-primary {
+  min-height: 44px;
+  justify-content: center;
+}
+.hsv-dialog .hsv-warning {
+  font-size: 11px;
+  line-height: 1.7;
+  margin: 0;
+}
+.hsv-toast {
+  border-radius: 12px;
+  line-height: 1.6;
+  box-shadow: 0 10px 40px #0002;
+}
+.hsv-toast button {
+  min-width: 36px;
+  min-height: 36px;
+}
+.hsv-empty {
+  padding: 40px 24px;
+  line-height: 1.7;
+}
+.hive-no-results > span {
+  font-size: 13px;
+}
+.hive-no-results > small {
+  font-size: 12px;
+}
+@media (max-width: 1150px) {
+  .hive-panel-heading > button {
+    font-size: 0;
+  }
+  .hive-record-actions {
+    justify-content: flex-start;
+  }
+  .hsv-table > div {
+    gap: 12px;
+  }
+}
+@media (max-width: 760px) {
+  .hsv-main {
+    padding-top: 24px;
+  }
+  .hive-breadcrumb {
+    font-size: 10px;
+    letter-spacing: 0.1px;
+    margin-bottom: 20px;
+  }
+  .hsv-heading {
+    margin-bottom: 26px;
+  }
+  .hsv-heading h1 {
+    font-size: 30px;
+    line-height: 1.2;
+  }
+  .hsv-heading p {
+    font-size: 13px;
+  }
+  .hsv-primary,
+  .hsv-outline {
+    min-height: 46px;
+    font-size: 13px;
+  }
+  .hsv-heading > .hsv-primary {
+    min-height: 46px;
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+  }
+  .hsv-rowtop {
+    gap: 12px;
+  }
+  .hsv-rowtop > strong {
+    font-size: 12px;
+  }
+  .hive-kpis {
+    padding: 0;
+    gap: 10px;
+  }
+  .hive-kpis button,
+  .hive-kpis button:first-child,
+  .hive-kpis button:last-child,
+  .hive-kpis button:nth-child(3) {
+    padding: 16px 12px;
+    gap: 12px;
+    border-radius: 14px;
+  }
+  .hive-kpis button > span {
+    font-size: 11px;
+    line-height: 1.5;
+    min-height: 0;
+    align-items: flex-start;
+  }
+  .hive-kpis small {
+    font-size: 10px;
+    min-height: 0;
+    line-height: 1.6;
+  }
+  .hive-kpis strong {
+    font-size: clamp(18px, 5.2vw, 26px);
+  }
+  .hive-panel-heading {
+    padding: 18px 16px;
+  }
+  .hive-panel-heading h2 {
+    font-size: 15px;
+  }
+  .hive-panel-heading > button {
+    min-height: 44px;
+  }
+  .hive-record strong {
+    font-size: 14px;
+  }
+  .hive-record small {
+    font-size: 12px;
+  }
+  .hive-finance-row {
+    min-height: 94px;
+    padding: 18px 16px;
+    gap: 10px;
+  }
+  .hive-finance-row .hive-amount {
+    font-size: 13px;
+  }
+  .hive-panel-foot {
+    padding: 16px;
+    font-size: 11px;
+  }
+  .hive-panel-foot strong {
+    font-size: 12px;
+  }
+  .hive-attention {
+    padding: 22px;
+  }
+  .hive-attention p,
+  .hive-activity-panel li p {
+    font-size: 13px;
+  }
+  .hive-attention > button {
+    min-height: 44px;
+  }
+  .hive-overview-primary {
+    gap: 20px;
+  }
+  .hive-list-tools {
+    border: 0;
+    margin-bottom: 20px;
+    padding-bottom: 0;
+  }
+  .hive-list-tools > label {
+    min-height: 48px;
+    border-radius: 10px;
+  }
+  .hive-list-tools input {
+    font-size: 16px;
+  }
+  .hive-list-tools select {
+    font-size: 13px;
+    min-height: 44px;
+    padding: 10px 12px;
+  }
+  .hsv-table > div {
+    padding: 18px 16px;
+    gap: 12px;
+    margin-bottom: 14px;
+    border-radius: 14px;
+  }
+  .hsv-grow strong {
+    font-size: 14px;
+  }
+  .hsv-grow small {
+    font-size: 12px;
+  }
+  .hsv-letter {
+    width: 36px;
+    height: 36px;
+  }
+  .hive-contact-cell {
+    padding-left: 48px;
+    font-size: 12px;
+  }
+  .hive-contact-cell small {
+    font-size: 11px;
+  }
+  .hsv-table > div > strong {
+    font-size: 15px;
+    letter-spacing: -0.2px;
+  }
+  .hive-record-actions {
+    flex-basis: 100%;
+    justify-content: flex-start;
+    gap: 8px;
+    padding-top: 14px;
+    margin-top: 2px;
+    border-top: 1px solid var(--studio-line);
+  }
+  .hsv-table .hive-record-actions button {
+    min-height: 42px;
+    font-size: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--studio-line);
+    border-radius: 8px;
+  }
+  .hsv-table .hive-record-actions button:first-child:not([aria-label]) {
+    font-weight: 500;
+    background: var(--studio-soft);
+    color: inherit;
+  }
+  .hive-record-actions button[aria-label$="löschen"] {
+    margin-left: auto;
+    min-width: 42px;
+  }
+  .hsv-dialog {
+    max-height: calc(100dvh - env(safe-area-inset-top));
+    border-radius: 20px 20px 0 0;
+    padding: 28px 20px calc(24px + env(safe-area-inset-bottom));
+  }
+  .hsv-close {
+    width: 40px;
+    height: 40px;
+    right: 16px;
+    top: 16px;
+  }
+  .hsv-dialog h2 {
+    font-size: 25px;
+    padding-right: 38px;
+  }
+  .hsv-dialog :is(input, textarea, select) {
+    font-size: 16px;
+    min-height: 48px;
+  }
+  .hsv-dialog form > .hsv-primary {
+    min-height: 48px;
+  }
+  .hive-mobile-nav {
+    box-shadow: 0 -6px 24px #00000008;
+  }
+  .hive-mobile-nav button {
+    gap: 6px;
+    font-size: 10px;
+  }
+  .hive-mobile-nav button[aria-current="page"] {
+    border-radius: 12px;
+  }
+  .hive-mobile-modules button {
+    border-radius: 12px;
+    min-height: 54px;
+  }
+  .hive-mobile-modules button[aria-current="page"] {
+    border-color: var(--studio-muted);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hsv * {
+    transition: none !important;
+  }
+}

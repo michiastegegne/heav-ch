@@ -8,9 +8,11 @@ import {
 import { createPublicSupabaseBrowserClient } from '@/lib/supabase/public-browser';
 import ThemeToggle from '@/app/components/theme-toggle';
 import WorkspaceOverview from './workspace-overview';
+import DocumentEditor from './document-editor';
 import './studio.css';
 import './workspace-design.css';
 import './mobile.css';
+import './studio-polish.css';
 
 type Workspace = { id: string; name: string; slug: string; status: string; role: string };
 type Customer = {
@@ -1386,22 +1388,26 @@ export default function StudioPage() {
           <div className="hive-table-labels hive-customer-labels"><span>Kunde</span><span>Kontakt / Standort</span><span>Aktionen</span></div><div className="hsv-table hive-customer-table">{visibleCustomers.map((customer) => <div key={customer.id}>
             <span className="hsv-letter">{customerName(customer).charAt(0).toUpperCase()}</span>
             <span className="hsv-grow"><strong>{customerName(customer)}</strong><small>{customer.contact_name && customer.contact_name !== customerName(customer) ? customer.contact_name : 'Kundenkontakt'}</small></span><span className="hive-contact-cell"><span>{customer.email || 'E-Mail nicht hinterlegt'}</span><small>{[customer.postal_code, customer.city].filter(Boolean).join(' ') || 'Standort nicht hinterlegt'}</small></span>
+            <div className="hive-record-actions">
             <button onClick={() => void openCustomerWorkspace(customer)}>Kundenakte <ArrowUpRight size={13}/></button>
             <button onClick={() => void openDepartments(customer)}>Abteilungen</button>
             <button onClick={() => openCustomer(customer)}>Bearbeiten</button>
             <button aria-label="Kunde löschen" onClick={() => void deleteCustomer(customer)}><Trash2 size={16}/></button>
+            </div>
           </div>)}{!visibleCustomers.length && <div className="hive-no-results"><Search size={17}/><span>Keine passenden Einträge.</span><small>{listQuery || listStatus !== 'all' ? 'Passe die Suche oder den Statusfilter an.' : 'Neue Einträge erscheinen hier.'}</small></div>}</div>
         </>}
 
         {tab === 'projects' && <>
           <div className="hsv-rowtop"><strong>{projects.length} Projekte</strong><button className="hsv-primary" disabled={!customers.length} onClick={() => void openProject()}><Plus size={15}/> Projekt erstellen</button></div>
-          <div className="hsv-table">{visibleProjects.map((project) => <div key={project.id}>
+          <div className="hsv-table hive-project-table">{visibleProjects.map((project) => <div key={project.id}>
             <span className="hsv-letter"><BriefcaseBusiness size={16}/></span>
             <span className="hsv-grow"><strong>{project.title}</strong><small>{relatedName(project.customers)}</small></span>
             <span className="hive-status">{stateLabel[project.status] || project.status}</span><strong className="hive-table-amount">{money(project.budget_rappen)}</strong>
+            <div className="hive-record-actions">
             <button onClick={() => void loadProjectWorkspace(project.id)}>Workspace</button>
             <button onClick={() => void openProject(project)}>Bearbeiten</button>
             <button aria-label="Projekt löschen" onClick={() => void deleteProject(project)}><Trash2 size={16}/></button>
+            </div>
           </div>)}{!visibleProjects.length && <div className="hive-no-results"><Search size={17}/><span>Keine passenden Einträge.</span><small>{listQuery || listStatus !== 'all' ? 'Passe die Suche oder den Statusfilter an.' : 'Neue Einträge erscheinen hier.'}</small></div>}</div>
         </>}
 
@@ -1414,13 +1420,15 @@ export default function StudioPage() {
             <span className="hsv-letter"><CreditCard size={16}/></span>
             <span className="hsv-grow"><strong>{invoice.number_finalized ? invoice.invoice_number : 'Entwurf'}</strong><small>{relatedName(invoice.customers)}</small></span><span className={`hive-status status-${invoice.status}`}>{stateLabel[invoice.status] || invoice.status}</span><span className="hive-table-date">{shortDate(invoice.due_date)}</span>
             <strong>{money(invoice.total_rappen, invoice.currency)}</strong>
+            <div className="hive-record-actions">
             {invoice.number_finalized && <button onClick={() => void invoiceAction(invoice, 'download')}>PDF</button>}
             {!invoice.is_legacy && invoice.number_finalized && ['draft','sent','overdue'].includes(invoice.status) && <button onClick={() => void invoiceAction(invoice, 'send')}>E-Mail</button>}
             {invoice.status === 'draft' && !invoice.is_legacy && !invoice.number_finalized && <button onClick={() => void openInvoiceDraft(invoice)}>Bearbeiten</button>}
             {invoice.status === 'draft' && !invoice.is_legacy && !invoice.number_finalized && <button onClick={() => void invoiceAction(invoice, 'issue')}>Ausstellen</button>}
-            {invoice.status === 'draft' && !invoice.is_legacy && !invoice.number_finalized && <button onClick={() => void deleteInvoice(invoice)}><Trash2 size={16}/></button>}
+            {invoice.status === 'draft' && !invoice.is_legacy && !invoice.number_finalized && <button aria-label="Rechnung löschen" onClick={() => void deleteInvoice(invoice)}><Trash2 size={16}/></button>}
             {!invoice.is_legacy && (invoice.status === 'sent' || invoice.status === 'overdue') && <button onClick={() => void invoiceAction(invoice, 'mark_paid')}>Bezahlt</button>}
             {!invoice.is_legacy && invoice.number_finalized && invoice.status !== 'paid' && invoice.status !== 'cancelled' && <button onClick={() => void invoiceAction(invoice, 'cancel')}>Stornieren</button>}
+            </div>
           </div>)}{!visibleInvoices.length && <div className="hive-no-results"><Search size={17}/><span>Keine passenden Einträge.</span><small>{listQuery || listStatus !== 'all' ? 'Passe die Suche oder den Statusfilter an.' : 'Neue Einträge erscheinen hier.'}</small></div>}</div>
           <p className="hsv-warning">Der E-Mail-Versand ist in dieser Dev-Preview absichtlich serverseitig gesperrt.</p>
         </>}
@@ -1430,10 +1438,11 @@ export default function StudioPage() {
             setOfferDraft({ id:'', customerId: customers[0]?.id || '', projectId: '', title: '', issueDate: today(), validUntil: afterDays(30), taxRate: Number(settings?.default_tax_rate || 0), notes: '', terms: 'Diese Offerte ist bis zum angegebenen Datum gültig.', lines: [{ description: '', quantity: 1, unitPrice: 0 }] });
             setOfferOpen(true);
           }}><Plus size={15}/> Offerte erstellen</button></div>
-          <div className="hsv-table">{visibleOffers.map((offer) => <div key={offer.id}>
+          <div className="hsv-table hive-offer-table">{visibleOffers.map((offer) => <div key={offer.id}>
             <span className="hsv-letter"><FileText size={16}/></span>
             <span className="hsv-grow"><strong>{offer.offer_number} · {offer.title}</strong><small>{relatedName(offer.customers)} · gültig bis {shortDate(offer.valid_until)}</small></span>
             <span className="hive-status">{stateLabel[offer.status] || offer.status}</span><strong className="hive-table-amount">{money(offer.total_rappen)}</strong>
+            <div className="hive-record-actions">
             <button onClick={() => openOfferDocument(offer)}>Drucken/PDF</button>
             {offer.status === 'draft' && <button onClick={() => void openOfferDraft(offer)}>Bearbeiten</button>}
             {offer.status === 'draft' && <button onClick={() => void offerAction(offer, 'share')}>Portal freigeben</button>}
@@ -1442,6 +1451,7 @@ export default function StudioPage() {
             {offer.status === 'accepted' && !convertedOfferIds.has(offer.id) && <button onClick={() => void convertOfferToInvoice(offer)}>Rechnung erstellen</button>}
             {offer.status === 'accepted' && convertedOfferIds.has(offer.id) && <small>Rechnung erstellt</small>}
             {offer.status === 'draft' && <button aria-label="Offerte löschen" onClick={() => void offerAction(offer, 'delete')}><Trash2 size={16}/></button>}
+            </div>
           </div>)}{!visibleOffers.length && <div className="hive-no-results"><Search size={17}/><span>Keine passenden Einträge.</span><small>{listQuery || listStatus !== 'all' ? 'Passe die Suche oder den Statusfilter an.' : 'Neue Einträge erscheinen hier.'}</small></div>}</div>
         </>}
 
@@ -1923,36 +1933,34 @@ export default function StudioPage() {
       </form>
     </Modal>}
 
-    {invoiceOpen && <DocumentModal title={invoiceDraft.id ? 'Rechnung bearbeiten' : 'Rechnung erstellen'} lines={invoiceDraft.lines} total={invoiceTotal} taxRate={invoiceDraft.taxRate} onClose={() => setInvoiceOpen(false)}
+    {invoiceOpen && <DocumentEditor onSubmit={createInvoice} saveLabel={invoiceDraft.id ? 'Änderungen speichern' : 'Rechnungsentwurf erstellen'} title={invoiceDraft.id ? 'Rechnung bearbeiten' : 'Rechnung erstellen'} lines={invoiceDraft.lines} total={invoiceTotal} taxRate={invoiceDraft.taxRate} onClose={() => setInvoiceOpen(false)}
+      summaryFields={<label>Steuersatz %<input type="number" min="0" max="100" step="0.1" value={invoiceDraft.taxRate} onChange={(e) => setInvoiceDraft({ ...invoiceDraft, taxRate: Number(e.target.value) })}/></label>}
+      notes={<label className="hive-document-wide">Notiz<textarea rows={2} value={invoiceDraft.notes} onChange={(e) => setInvoiceDraft({ ...invoiceDraft, notes: e.target.value })}/></label>}
+      catalog={products.some((product) => product.active) && <label className="hive-document-wide">Leistung hinzufügen<select defaultValue="" onChange={(e) => { if (e.target.value) addProductToInvoice(e.target.value); e.currentTarget.value=''; }}><option value="">Aus Katalog wählen…</option>{products.filter((product) => product.active).map((product) => <option key={product.id} value={product.id}>{product.name} · {money(product.unit_price_rappen)}</option>)}</select></label>}
       onAddLine={() => setInvoiceDraft({ ...invoiceDraft, lines: [...invoiceDraft.lines, { description: '', quantity: 1, unitPrice: 0 }] })}
       onLineChange={(index, line) => setInvoiceDraft({ ...invoiceDraft, lines: invoiceDraft.lines.map((current, i) => i === index ? line : current) })}
       onLineDelete={(index) => setInvoiceDraft({ ...invoiceDraft, lines: invoiceDraft.lines.filter((_, i) => i !== index) })}>
-      <form onSubmit={createInvoice}>
+      <>
         <label>Kunde<select required value={invoiceDraft.customerId} onChange={(e) => setInvoiceDraft({ ...invoiceDraft, customerId: e.target.value, projectId: '' })}>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customerName(customer)}</option>)}</select></label>
         <label>Projekt<select value={invoiceDraft.projectId} onChange={(e) => setInvoiceDraft({ ...invoiceDraft, projectId: e.target.value })}><option value="">Kein Projekt</option>{projects.filter((project) => project.customer_id === invoiceDraft.customerId).map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}</select></label>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><label>Datum<input required type="date" value={invoiceDraft.issueDate} onChange={(e) => setInvoiceDraft({ ...invoiceDraft, issueDate: e.target.value })}/></label><label>Fällig<input required type="date" value={invoiceDraft.dueDate} onChange={(e) => setInvoiceDraft({ ...invoiceDraft, dueDate: e.target.value })}/></label></div>
-        <label>Steuersatz %<input type="number" min="0" max="100" step="0.1" value={invoiceDraft.taxRate} onChange={(e) => setInvoiceDraft({ ...invoiceDraft, taxRate: Number(e.target.value) })}/></label>
-        {products.some((product) => product.active) && <label>Leistung hinzufügen<select defaultValue="" onChange={(e) => { if (e.target.value) addProductToInvoice(e.target.value); e.currentTarget.value=''; }}><option value="">Aus Katalog wählen…</option>{products.filter((product) => product.active).map((product) => <option key={product.id} value={product.id}>{product.name} · {money(product.unit_price_rappen)}</option>)}</select></label>}
-        <label>Notiz<textarea rows={2} value={invoiceDraft.notes} onChange={(e) => setInvoiceDraft({ ...invoiceDraft, notes: e.target.value })}/></label>
-        <button className="hsv-primary" type="submit">{invoiceDraft.id ? 'Änderungen speichern' : 'Rechnungsentwurf erstellen'} <Check size={15}/></button>
-      </form>
-    </DocumentModal>}
+        <div className="hive-document-field-pair"><label>Datum<input required type="date" value={invoiceDraft.issueDate} onChange={(e) => setInvoiceDraft({ ...invoiceDraft, issueDate: e.target.value })}/></label><label>Fällig<input required type="date" value={invoiceDraft.dueDate} onChange={(e) => setInvoiceDraft({ ...invoiceDraft, dueDate: e.target.value })}/></label></div>
+      </>
+    </DocumentEditor>}
 
-    {offerOpen && <DocumentModal title={offerDraft.id ? 'Offerte bearbeiten' : 'Offerte erstellen'} lines={offerDraft.lines} total={offerTotal} taxRate={offerDraft.taxRate} onClose={() => setOfferOpen(false)}
+    {offerOpen && <DocumentEditor onSubmit={createOffer} saveLabel={offerDraft.id ? 'Änderungen speichern' : 'Offertenentwurf erstellen'} title={offerDraft.id ? 'Offerte bearbeiten' : 'Offerte erstellen'} lines={offerDraft.lines} total={offerTotal} taxRate={offerDraft.taxRate} onClose={() => setOfferOpen(false)}
+      summaryFields={<label>Steuersatz %<input type="number" min="0" max="100" step="0.1" value={offerDraft.taxRate} onChange={(e) => setOfferDraft({ ...offerDraft, taxRate: Number(e.target.value) })}/></label>}
+      notes={<label className="hive-document-wide">Bedingungen<textarea required rows={3} value={offerDraft.terms} onChange={(e) => setOfferDraft({ ...offerDraft, terms: e.target.value })}/></label>}
+      catalog={products.some((product) => product.active) && <label className="hive-document-wide">Leistung hinzufügen<select defaultValue="" onChange={(e) => { if (e.target.value) addProductToOffer(e.target.value); e.currentTarget.value=''; }}><option value="">Aus Katalog wählen…</option>{products.filter((product) => product.active).map((product) => <option key={product.id} value={product.id}>{product.name} · {money(product.unit_price_rappen)}</option>)}</select></label>}
       onAddLine={() => setOfferDraft({ ...offerDraft, lines: [...offerDraft.lines, { description: '', quantity: 1, unitPrice: 0 }] })}
       onLineChange={(index, line) => setOfferDraft({ ...offerDraft, lines: offerDraft.lines.map((current, i) => i === index ? line : current) })}
       onLineDelete={(index) => setOfferDraft({ ...offerDraft, lines: offerDraft.lines.filter((_, i) => i !== index) })}>
-      <form onSubmit={createOffer}>
+      <>
         <label>Kunde<select required value={offerDraft.customerId} onChange={(e) => setOfferDraft({ ...offerDraft, customerId: e.target.value, projectId: '' })}>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customerName(customer)}</option>)}</select></label>
         <label>Projekt<select value={offerDraft.projectId} onChange={(e) => setOfferDraft({ ...offerDraft, projectId: e.target.value })}><option value="">Kein Projekt</option>{projects.filter((project) => project.customer_id === offerDraft.customerId).map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}</select></label>
         <label>Titel<input required value={offerDraft.title} onChange={(e) => setOfferDraft({ ...offerDraft, title: e.target.value })}/></label>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><label>Datum<input type="date" value={offerDraft.issueDate} onChange={(e) => setOfferDraft({ ...offerDraft, issueDate: e.target.value })}/></label><label>Gültig bis<input type="date" value={offerDraft.validUntil} onChange={(e) => setOfferDraft({ ...offerDraft, validUntil: e.target.value })}/></label></div>
-        <label>Steuersatz %<input type="number" min="0" max="100" step="0.1" value={offerDraft.taxRate} onChange={(e) => setOfferDraft({ ...offerDraft, taxRate: Number(e.target.value) })}/></label>
-        {products.some((product) => product.active) && <label>Leistung hinzufügen<select defaultValue="" onChange={(e) => { if (e.target.value) addProductToOffer(e.target.value); e.currentTarget.value=''; }}><option value="">Aus Katalog wählen…</option>{products.filter((product) => product.active).map((product) => <option key={product.id} value={product.id}>{product.name} · {money(product.unit_price_rappen)}</option>)}</select></label>}
-        <label>Bedingungen<textarea required rows={3} value={offerDraft.terms} onChange={(e) => setOfferDraft({ ...offerDraft, terms: e.target.value })}/></label>
-        <button className="hsv-primary" type="submit">{offerDraft.id ? 'Änderungen speichern' : 'Offertenentwurf erstellen'} <Check size={15}/></button>
-      </form>
-    </DocumentModal>}
+        <div className="hive-document-field-pair"><label>Datum<input type="date" value={offerDraft.issueDate} onChange={(e) => setOfferDraft({ ...offerDraft, issueDate: e.target.value })}/></label><label>Gültig bis<input type="date" value={offerDraft.validUntil} onChange={(e) => setOfferDraft({ ...offerDraft, validUntil: e.target.value })}/></label></div>
+      </>
+    </DocumentEditor>}
   </div>;
 }
 
@@ -1961,36 +1969,6 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
     <div className="hsv-dialog" role="dialog" aria-modal="true" aria-label={title}>
       <button type="button" className="hsv-close" aria-label="Schliessen" onClick={onClose}><X size={18}/></button>
       <span>HIVE CRM</span><h2>{title}</h2>{children}
-    </div>
-  </div>;
-}
-
-function DocumentModal({
-  title, lines, total, taxRate, onClose, onAddLine, onLineChange, onLineDelete, children,
-}: {
-  title: string; lines: LineDraft[]; total: number; taxRate: number; onClose: () => void;
-  onAddLine: () => void; onLineChange: (index: number, line: LineDraft) => void;
-  onLineDelete: (index: number) => void; children: React.ReactNode;
-}) {
-  const tax = Math.round(total * taxRate / 100);
-  return <div className="hsv-overlay hsv-invoice-overlay">
-    <div className="hsv-invoice-editor" role="dialog" aria-modal="true" aria-label={title}>
-      <div className="hsv-editorbar"><div><small>HIVE / DEV</small><strong>{title}</strong></div><button className="hsv-icon" onClick={onClose} aria-label="Schliessen"><X size={18}/></button></div>
-      <div className="hsv-paper" style={{ maxWidth: 850 }}>
-        {children}
-        <div className="hsv-lines" style={{ marginTop: 28 }}>
-          <div className="hsv-lineheader"><span>Beschreibung</span><span>Menge</span><span>CHF / Einheit</span><span>Betrag</span><span/></div>
-          {lines.map((line, index) => <div className="hsv-line" key={index}>
-            <label className="hive-line-field"><span>Leistung</span><input aria-label={`Position ${index + 1}: Beschreibung`} required value={line.description} placeholder="Leistung" onChange={(e) => onLineChange(index, { ...line, description: e.target.value })}/></label>
-            <label className="hive-line-field"><span>Menge</span><input aria-label={`Position ${index + 1}: Menge`} required type="number" min="0.01" step="0.01" value={line.quantity} onChange={(e) => onLineChange(index, { ...line, quantity: Number(e.target.value) })}/></label>
-            <label className="hive-line-field"><span>CHF / Einheit</span><input aria-label={`Position ${index + 1}: Preis pro Einheit in CHF`} required type="number" min="0" step="0.01" value={line.unitPrice} onChange={(e) => onLineChange(index, { ...line, unitPrice: Number(e.target.value) })}/></label>
-            <strong>{money(Math.round(line.quantity * line.unitPrice * 100))}</strong>
-            <button aria-label={`Position ${index + 1} löschen`} type="button" onClick={() => onLineDelete(index)}><Trash2 size={15}/></button>
-          </div>)}
-        </div>
-        <button type="button" className="hsv-addline" onClick={onAddLine}><Plus size={15}/> Position hinzufügen</button>
-        <div className="hsv-bill-total"><div><span>Zwischensumme</span><strong>{money(total)}</strong></div><div><span>Steuern</span><strong>{money(tax)}</strong></div><div className="hsv-grand"><span>Gesamt</span><strong>{money(total + tax)}</strong></div></div>
-      </div>
     </div>
   </div>;
 }

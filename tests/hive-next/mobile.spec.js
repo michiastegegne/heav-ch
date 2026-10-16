@@ -77,7 +77,7 @@ for (const appearance of ["light", "dark"])
         .fill("Konzeption und Umsetzung");
       await page.getByLabel("Position 2: Menge").fill("2");
       await page.getByLabel("Position 2: Preis pro Einheit in CHF").fill("150");
-      await expect(page.locator(".hsv-grand")).toContainText("300");
+      await expect(page.locator(".hive-document-grand")).toContainText("300");
       await page.screenshot({
         path: `../../outputs/hive-editor-${width}-${appearance}.png`,
       });
