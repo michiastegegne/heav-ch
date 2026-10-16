@@ -137,6 +137,16 @@ for (const appearance of ["light", "dark"])
       await nav.getByRole("button", { name: "Weitere Module" }).click();
       await page
         .getByRole("dialog")
+        .getByRole("button", { name: "Businesses", exact: true })
+        .click();
+      await expect(page.getByRole("heading", { name: "Businesses", exact: true })).toBeVisible();
+      await expect(page.locator(".hive-business-card")).toHaveCount(2);
+      await fits(page);
+      await nav.getByRole("button", { name: "Übersicht", exact: true }).click();
+
+      await nav.getByRole("button", { name: "Weitere Module" }).click();
+      await page
+        .getByRole("dialog")
         .getByRole("button", { name: "Portal", exact: true })
         .click();
       const portalTabs = page.getByRole("tablist", { name: "Portal-Bereiche" });
