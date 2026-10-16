@@ -151,6 +151,7 @@ const customerName = (customer?: Partial<Customer> | null) =>
 const relatedName = (relation?: { company?: string | null; contact_name?: string | null } | null) =>
   relation?.company?.trim() || relation?.contact_name?.trim() || 'Kunde';
 
+const invoiceSendStorageKey = (invoiceId:string) => `hive.invoiceSendRequest.${invoiceId}`;
 const offerSendStorageKey = (offerId:string) => `hive.offerSendRequest.${offerId}`;
 const validRequestKey = (value:string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -259,6 +260,8 @@ export default function StudioPage() {
   const [invoiceSendAttempts, setInvoiceSendAttempts] = useState<InvoiceSendAttempt[]>([]);
   const [invoiceDocumentAudit, setInvoiceDocumentAudit] = useState<InvoiceDocumentAudit | null>(null);
   const [invoiceHistoryBusy, setInvoiceHistoryBusy] = useState(false);
+  const invoiceSendKeys = useRef(new Map<string,string>());
+  const [invoiceSendBusyIds, setInvoiceSendBusyIds] = useState<Set<string>>(() => new Set());
   const [invoiceDraft, setInvoiceDraft] = useState({
     id: '', customerId: '', projectId: '', issueDate: today(), dueDate: afterDays(30),
     taxRate: 0, notes: '', lines: [{ description: '', quantity: 1, unitPrice: 0 }] as LineDraft[],
@@ -1043,6 +1046,23 @@ export default function StudioPage() {
     if (action === 'issue' && !confirm('Rechnung jetzt ausstellen? Die definitive Rechnungsnummer wird vergeben und der Inhalt danach gesperrt.')) return;
     if (action === 'mark_paid' && !confirm(`${invoice.invoice_number} wirklich als bezahlt markieren?`)) return;
     if (action === 'cancel' && !confirm(`${invoice.invoice_number} wirklich stornieren? Dieser Status kann nicht einfach zurückgesetzt werden.`)) return;
+    if (action === 'send' && invoiceSendBusyIds.has(invoice.id)) return;
+
+    let requestKey = '';
+    if (action === 'send') {
+      const memoryKey = invoiceSendKeys.current.get(invoice.id) || '';
+      let storedKey = '';
+      try { storedKey = sessionStorage.getItem(invoiceSendStorageKey(invoice.id)) || ''; } catch {}
+      requestKey = validRequestKey(memoryKey)
+        ? memoryKey
+        : validRequestKey(storedKey)
+          ? storedKey
+          : crypto.randomUUID();
+      invoiceSendKeys.current.set(invoice.id, requestKey);
+      try { sessionStorage.setItem(invoiceSendStorageKey(invoice.id), requestKey); } catch {}
+      setInvoiceSendBusyIds((current) => new Set(current).add(invoice.id));
+    }
+
     try {
       if (action === 'download') {
         const response = await fetch(`/api/hive/invoices/${invoice.id}/action`, {
@@ -1062,8 +1082,13 @@ export default function StudioPage() {
         return;
       }
       await requestJson(`/api/hive/invoices/${invoice.id}/action`, {
-        method: 'POST', body: JSON.stringify({ action }),
+        method: 'POST',
+        body: JSON.stringify(action === 'send' ? { action, requestKey } : { action }),
       });
+      if (action === 'send') {
+        invoiceSendKeys.current.delete(invoice.id);
+        try { sessionStorage.removeItem(invoiceSendStorageKey(invoice.id)); } catch {}
+      }
       setNotice(
         action === 'issue' ? 'Rechnung ausgestellt und final nummeriert.'
         : action === 'send' ? 'Rechnung per E-Mail versendet.'
@@ -1072,7 +1097,19 @@ export default function StudioPage() {
       );
       if (activeWorkspaceId) await loadWorkspaceData(activeWorkspaceId);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Rechnungsaktion fehlgeschlagen.');
+      setNotice(
+        action === 'send'
+          ? `${error instanceof Error ? error.message : 'Rechnungsversand fehlgeschlagen.'} Ein erneuter Versuch verwendet denselben sicheren Versandauftrag.`
+          : error instanceof Error ? error.message : 'Rechnungsaktion fehlgeschlagen.',
+      );
+    } finally {
+      if (action === 'send') {
+        setInvoiceSendBusyIds((current) => {
+          const next = new Set(current);
+          next.delete(invoice.id);
+          return next;
+        });
+      }
     }
   }
 
@@ -1823,7 +1860,7 @@ export default function StudioPage() {
             <button onClick={() => void openInvoiceHistory(invoice)}><Clock3 size={14}/> Verlauf</button>
             <button onClick={() => void duplicateInvoice(invoice)}>Duplizieren</button>
             {invoice.number_finalized && <button onClick={() => void invoiceAction(invoice, 'download')}>PDF</button>}
-            {!invoice.is_legacy && invoice.number_finalized && ['draft','sent','overdue'].includes(invoice.status) && <button onClick={() => void invoiceAction(invoice, 'send')}>E-Mail</button>}
+            {!invoice.is_legacy && invoice.number_finalized && ['draft','sent','overdue'].includes(invoice.status) && <button aria-label="Rechnung per E-Mail senden" disabled={invoiceSendBusyIds.has(invoice.id)} aria-busy={invoiceSendBusyIds.has(invoice.id)} onClick={() => void invoiceAction(invoice, 'send')}>{invoiceSendBusyIds.has(invoice.id) ? 'Wird gesendet …' : 'E-Mail'}</button>}
             {invoice.status === 'draft' && !invoice.is_legacy && !invoice.number_finalized && <button onClick={() => void openInvoiceDraft(invoice)}>Bearbeiten</button>}
             {invoice.status === 'draft' && !invoice.is_legacy && !invoice.number_finalized && <button onClick={() => void invoiceAction(invoice, 'issue')}>Ausstellen</button>}
             {invoice.status === 'draft' && !invoice.is_legacy && !invoice.number_finalized && <button aria-label="Rechnung löschen" onClick={() => void deleteInvoice(invoice)}><Trash2 size={16}/></button>}
