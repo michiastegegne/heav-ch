@@ -9,6 +9,7 @@ import { createPublicSupabaseBrowserClient } from '@/lib/supabase/public-browser
 import ThemeToggle from '@/app/components/theme-toggle';
 import WorkspaceOverview from './workspace-overview';
 import BusinessesOverview, { type BusinessOverviewItem } from './businesses-overview';
+import ProjectBoard from './project-board';
 import DocumentEditor from './document-editor';
 import './studio.css';
 import './workspace-design.css';
@@ -164,7 +165,15 @@ export default function StudioPage() {
   const [quickCreateOpen, setQuickCreateOpen] = useState(false);
   const [listQuery, setListQuery] = useState('');
   const [listStatus, setListStatus] = useState('all');
+  const [projectView, setProjectView] = useState<'list'|'board'>('list');
   useEffect(() => { setListQuery(''); setListStatus('all'); }, [tab]);
+  useEffect(() => {
+    const stored=window.localStorage.getItem('hive.projectView.v1');
+    if (stored === 'list' || stored === 'board') setProjectView(stored);
+  }, []);
+  useEffect(() => {
+    window.localStorage.setItem('hive.projectView.v1', projectView);
+  }, [projectView]);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [businessesOverview, setBusinessesOverview] = useState<BusinessOverviewItem[]>([]);
   const [businessesOverviewBusy, setBusinessesOverviewBusy] = useState(false);
@@ -1497,6 +1506,23 @@ export default function StudioPage() {
     setCustomerOpen(true);
   };
 
+  async function updateProjectStatus(project:Project,status:Project['status']) {
+    if (!activeWorkspaceId || project.status===status) return;
+    const previous=project.status;
+    setProjects((current)=>current.map((item)=>item.id===project.id?{...item,status}:item));
+    try {
+      const data=await requestJson<{project:Project}>(`/api/hive/projects/${project.id}`,{
+        method:'PATCH',
+        body:JSON.stringify({workspaceId:activeWorkspaceId,status}),
+      });
+      setProjects((current)=>current.map((item)=>item.id===project.id?{...item,status:data.project.status}:item));
+      setNotice(`${project.title}: ${stateLabel[status] || status}.`);
+    } catch (error) {
+      setProjects((current)=>current.map((item)=>item.id===project.id?{...item,status:previous}:item));
+      setNotice(error instanceof Error ? error.message : 'Projektstatus konnte nicht geändert werden.');
+    }
+  }
+
   const openProject = async (project?: Project) => {
     if (project) {
       setProjectDraft({
@@ -1621,8 +1647,22 @@ export default function StudioPage() {
         </>}
 
         {tab === 'projects' && <>
-          <div className="hsv-rowtop"><strong>{projects.length} Projekte</strong><button className="hsv-primary" disabled={!customers.length} onClick={() => void openProject()}><Plus size={15}/> Projekt erstellen</button></div>
-          <div className="hsv-table hive-project-table">{visibleProjects.map((project) => <div key={project.id}>
+          <div className="hsv-rowtop">
+            <strong>{projects.length} Projekte</strong>
+            <div className="hive-row-actions">
+              <div className="hive-view-switch" role="group" aria-label="Projektansicht">
+                <button type="button" aria-pressed={projectView==='list'} onClick={()=>setProjectView('list')}>Liste</button>
+                <button type="button" aria-pressed={projectView==='board'} onClick={()=>setProjectView('board')}>Board</button>
+              </div>
+              <button className="hsv-primary" disabled={!customers.length} onClick={() => void openProject()}><Plus size={15}/> Projekt erstellen</button>
+            </div>
+          </div>
+          {projectView === 'board' ? <ProjectBoard
+            projects={visibleProjects}
+            onStatus={(project,status)=>void updateProjectStatus(project as Project,status)}
+            onOpen={(projectId)=>void loadProjectWorkspace(projectId)}
+            onEdit={(project)=>void openProject(project as Project)}
+          /> : <div className="hsv-table hive-project-table">{visibleProjects.map((project) => <div key={project.id}>
             <span className="hsv-letter"><BriefcaseBusiness size={16}/></span>
             <span className="hsv-grow"><strong>{project.title}</strong><small>{relatedName(project.customers)}</small></span>
             <span className="hive-status">{stateLabel[project.status] || project.status}</span><strong className="hive-table-amount">{money(project.budget_rappen)}</strong>
@@ -1631,7 +1671,7 @@ export default function StudioPage() {
             <button onClick={() => void openProject(project)}>Bearbeiten</button>
             <button aria-label="Projekt löschen" onClick={() => void deleteProject(project)}><Trash2 size={16}/></button>
             </div>
-          </div>)}{!visibleProjects.length && <div className="hive-no-results"><Search size={17}/><span>Keine passenden Einträge.</span><small>{listQuery || listStatus !== 'all' ? 'Passe die Suche oder den Statusfilter an.' : 'Neue Einträge erscheinen hier.'}</small></div>}</div>
+          </div>)}{!visibleProjects.length && <div className="hive-no-results"><Search size={17}/><span>Keine passenden Einträge.</span><small>{listQuery || listStatus !== 'all' ? 'Passe die Suche oder den Statusfilter an.' : 'Neue Einträge erscheinen hier.'}</small></div>}</div>}
         </>}
 
         {tab === 'invoices' && <>
