@@ -10,8 +10,17 @@ export default function TeamInviteCard() {
   const [joined, setJoined] = useState(false);
 
   useEffect(() => {
-    const value = new URLSearchParams(window.location.search).get('team_invite') || '';
-    if (value.startsWith('hive_team_')) setToken(value);
+    const params = new URLSearchParams(window.location.search);
+    const value = params.get('team_invite') || '';
+    if (!value.startsWith('hive_team_')) return;
+    setToken(value);
+    params.delete('team_invite');
+    const clean = params.toString();
+    window.history.replaceState(
+      window.history.state,
+      '',
+      clean ? `${window.location.pathname}?${clean}${window.location.hash}` : `${window.location.pathname}${window.location.hash}`,
+    );
   }, []);
 
   async function claim() {
