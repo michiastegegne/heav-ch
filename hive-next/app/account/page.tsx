@@ -4,6 +4,7 @@ import { createSessionSupabaseClient } from '@/lib/supabase/session-server';
 import SignoutButton from './signout-button';
 import { UserProfile } from '@clerk/nextjs';
 import IdentityLinkCard from './identity-link-card';
+import TeamInviteCard from './team-invite-card';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,6 +47,7 @@ export default async function AccountPage() {
             <SignoutButton/>
           </div>
         )}
+        {authState.ready && <TeamInviteCard/>}
         {authState.ready && showIdentityMigration && <IdentityLinkCard provider={authState.requested}/>} 
       </section>
     </main>
