@@ -54,6 +54,17 @@ type InvoiceSendAttempt = {
   created_at:string; completed_at:string|null;
 };
 
+type OfferHistoryEvent = {
+  id:string; kind:string; details:Record<string,unknown>; created_at:string;
+};
+type OfferSendAttempt = {
+  id:string; state:'pending'|'sent'|'failed'; provider_id:string|null;
+  created_at:string; completed_at:string|null;
+};
+type OfferHistoryInvoice = {
+  id:string; invoice_number:string; status:string; number_finalized:boolean;
+};
+
 type EmailLog = {
   id: string; template_key: string; status: string; recipient_email: string;
   recipient_name: string; subject: string; error_message: string | null; created_at: string;
@@ -218,6 +229,12 @@ export default function StudioPage() {
     taxRate: 0, notes: '', lines: [{ description: '', quantity: 1, unitPrice: 0 }] as LineDraft[],
   });
   const [offerOpen, setOfferOpen] = useState(false);
+  const [offerHistoryOpen, setOfferHistoryOpen] = useState(false);
+  const [offerHistoryOffer, setOfferHistoryOffer] = useState<Offer | null>(null);
+  const [offerHistoryEvents, setOfferHistoryEvents] = useState<OfferHistoryEvent[]>([]);
+  const [offerSendAttempts, setOfferSendAttempts] = useState<OfferSendAttempt[]>([]);
+  const [offerHistoryInvoice, setOfferHistoryInvoice] = useState<OfferHistoryInvoice | null>(null);
+  const [offerHistoryBusy, setOfferHistoryBusy] = useState(false);
   const [productOpen, setProductOpen] = useState(false);
   const [productDraft, setProductDraft] = useState({ id:'', name:'', description:'', sku:'', unitPrice:0, taxRate:0, active:true });
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -229,7 +246,7 @@ export default function StudioPage() {
   const hasOpenOverlay =
     mobileMenuOpen || quickCreateOpen || searchOpen || businessOpen || teamOpen ||
     customerOpen || customerWorkspaceOpen || departmentOpen || projectOpen ||
-    projectWorkspaceOpen || invoiceOpen || invoiceHistoryOpen || offerOpen || productOpen || inviteOpen ||
+    projectWorkspaceOpen || invoiceOpen || invoiceHistoryOpen || offerOpen || offerHistoryOpen || productOpen || inviteOpen ||
     fileOpen;
 
   useEffect(() => {
@@ -237,7 +254,7 @@ export default function StudioPage() {
       if (event.key !== 'Escape') return;
       const modalOwnsEscape =
         mobileMenuOpen || quickCreateOpen || searchOpen || businessOpen || teamOpen ||
-        customerOpen || projectOpen || invoiceOpen || invoiceHistoryOpen || offerOpen || productOpen ||
+        customerOpen || projectOpen || invoiceOpen || invoiceHistoryOpen || offerOpen || offerHistoryOpen || productOpen ||
         inviteOpen || fileOpen;
       if (modalOwnsEscape) return;
       if (departmentOpen) setDepartmentOpen(false);
@@ -248,7 +265,7 @@ export default function StudioPage() {
     return () => window.removeEventListener('keydown', closeFullscreenWorkspace);
   }, [
     mobileMenuOpen, quickCreateOpen, searchOpen, businessOpen, teamOpen,
-    customerOpen, projectOpen, invoiceOpen, invoiceHistoryOpen, offerOpen, productOpen, inviteOpen,
+    customerOpen, projectOpen, invoiceOpen, invoiceHistoryOpen, offerOpen, offerHistoryOpen, productOpen, inviteOpen,
     fileOpen, departmentOpen, customerWorkspaceOpen, projectWorkspaceOpen,
   ]);
 
@@ -956,6 +973,31 @@ export default function StudioPage() {
     }
   }
 
+  async function openOfferHistory(offer: Offer) {
+    if (!activeWorkspaceId) return;
+    setOfferHistoryOffer(offer);
+    setOfferHistoryEvents([]);
+    setOfferSendAttempts([]);
+    setOfferHistoryInvoice(null);
+    setOfferHistoryBusy(true);
+    setOfferHistoryOpen(true);
+    try {
+      const data = await requestJson<{
+        events:OfferHistoryEvent[];
+        attempts:OfferSendAttempt[];
+        invoice:OfferHistoryInvoice|null;
+      }>(`/api/hive/offers/${offer.id}/history?workspace=${encodeURIComponent(activeWorkspaceId)}`);
+      setOfferHistoryEvents(data.events);
+      setOfferSendAttempts(data.attempts);
+      setOfferHistoryInvoice(data.invoice);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Offertenverlauf konnte nicht geladen werden.');
+      setOfferHistoryOpen(false);
+    } finally {
+      setOfferHistoryBusy(false);
+    }
+  }
+
   async function offerAction(offer: Offer, action: 'share' | 'withdraw' | 'delete' | 'send') {
     if (action === 'delete' && !confirm(`${offer.offer_number} wirklich löschen?`)) return;
     try {
@@ -1559,6 +1601,7 @@ export default function StudioPage() {
             <span className="hsv-grow"><strong>{offer.offer_number} · {offer.title}</strong><small>{relatedName(offer.customers)} · gültig bis {shortDate(offer.valid_until)}</small></span>
             <span className="hive-status">{stateLabel[offer.status] || offer.status}</span><strong className="hive-table-amount">{money(offer.total_rappen)}</strong>
             <div className="hive-record-actions">
+            <button onClick={() => void openOfferHistory(offer)}><Clock3 size={14}/> Verlauf</button>
             <button onClick={() => openOfferDocument(offer)}>Drucken/PDF</button>
             {offer.status === 'draft' && <button onClick={() => void openOfferDraft(offer)}>Bearbeiten</button>}
             {offer.status === 'draft' && <button onClick={() => void offerAction(offer, 'share')}>Portal freigeben</button>}
@@ -2102,6 +2145,56 @@ export default function StudioPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><label>Start<input type="date" value={projectDraft.startDate} onChange={(e) => setProjectDraft({ ...projectDraft, startDate: e.target.value })}/></label><label>Fällig<input type="date" value={projectDraft.dueDate} onChange={(e) => setProjectDraft({ ...projectDraft, dueDate: e.target.value })}/></label></div>
         <button className="hsv-primary" type="submit">Speichern <Check size={15}/></button>
       </form>
+    </Modal>}
+
+    {offerHistoryOpen && offerHistoryOffer && <Modal
+      title={offerHistoryOffer.offer_number}
+      onClose={() => setOfferHistoryOpen(false)}
+    >
+      <div className="hive-invoice-history-summary">
+        <div><span>Status</span><strong>{stateLabel[offerHistoryOffer.status] || offerHistoryOffer.status}</strong></div>
+        <div><span>Betrag</span><strong>{money(offerHistoryOffer.total_rappen)}</strong></div>
+        <div><span>Gültig bis</span><strong>{shortDate(offerHistoryOffer.valid_until)}</strong></div>
+      </div>
+      {offerHistoryInvoice && <div className="hive-history-linked">
+        <FileText size={16}/>
+        <div>
+          <strong>In Rechnung umgewandelt</strong>
+          <small>{offerHistoryInvoice.number_finalized ? offerHistoryInvoice.invoice_number : 'Rechnungsentwurf'} · {stateLabel[offerHistoryInvoice.status] || offerHistoryInvoice.status}</small>
+        </div>
+        <button type="button" onClick={() => { setOfferHistoryOpen(false); setTab('invoices'); }}>Rechnung öffnen</button>
+      </div>}
+      <div className="hive-invoice-history" aria-busy={offerHistoryBusy}>
+        {offerHistoryBusy && <div className="hive-history-loading"><RefreshCw size={16}/><span>Verlauf wird geladen …</span></div>}
+        {!offerHistoryBusy && !offerHistoryEvents.length && <p className="hsv-empty">Noch keine Audit-Ereignisse.</p>}
+        {!offerHistoryBusy && offerHistoryEvents.map((event) => {
+          const label:Record<string,string> = {
+            created:'Offerte erstellt',
+            updated:'Offerte geändert',
+            shared:'Im Kundenportal freigegeben',
+            emailed:'Offerte versendet',
+            accepted:'Offerte angenommen',
+            withdrawn:'Offerte zurückgezogen',
+            converted:'In Rechnung umgewandelt',
+          };
+          const invoiceId = typeof event.details?.invoice_id === 'string' ? event.details.invoice_id : '';
+          return <div className={`hive-history-event history-${event.kind}`} key={event.id}>
+            <span className="hive-history-dot"/>
+            <div>
+              <strong>{label[event.kind] || event.kind.replaceAll('_',' ')}</strong>
+              <small>{new Date(event.created_at).toLocaleString('de-CH')}</small>
+              {invoiceId && <p>Rechnungs-ID: {invoiceId.slice(0,8)}…</p>}
+            </div>
+          </div>;
+        })}
+      </div>
+      {!!offerSendAttempts.length && <details className="hive-history-tech">
+        <summary>Versandtechnik · {offerSendAttempts.length} Versuch{offerSendAttempts.length === 1 ? '' : 'e'}</summary>
+        {offerSendAttempts.map((attempt) => <div key={attempt.id}>
+          <span>{attempt.state === 'sent' ? 'Erfolgreich' : attempt.state === 'failed' ? 'Fehlgeschlagen' : 'Läuft'}</span>
+          <small>{new Date(attempt.created_at).toLocaleString('de-CH')}{attempt.completed_at ? ` → ${new Date(attempt.completed_at).toLocaleString('de-CH')}` : ''}</small>
+        </div>)}
+      </details>}
     </Modal>}
 
     {invoiceHistoryOpen && invoiceHistoryInvoice && <Modal
