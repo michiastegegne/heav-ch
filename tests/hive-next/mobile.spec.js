@@ -109,6 +109,20 @@ for (const appearance of ["light", "dark"])
       ).toBeVisible();
       await fits(page);
       await page.getByRole("button", { name: "Suche schliessen" }).click();
+      await nav.getByRole("button", { name: "Kunden", exact: true }).click();
+      await page.getByRole("button", { name: /Kundenakte/ }).first().click();
+      const customerWorkspace = page.getByRole("dialog", { name: "Workspace Details" });
+      await expect(customerWorkspace).toBeVisible();
+      await fits(page);
+      await customerWorkspace.getByRole("button", { name: "Schliessen" }).click();
+
+      await nav.getByRole("button", { name: "Projekte", exact: true }).click();
+      await page.getByRole("button", { name: "Workspace", exact: true }).first().click();
+      const projectWorkspace = page.getByRole("dialog", { name: "Workspace Details" });
+      await expect(projectWorkspace).toBeVisible();
+      await fits(page);
+      await projectWorkspace.getByRole("button", { name: "Schliessen" }).click();
+
       await nav
         .getByRole("button", { name: "Rechnungen", exact: true })
         .click();
