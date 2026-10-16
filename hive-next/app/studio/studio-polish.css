@@ -704,3 +704,37 @@ html[data-theme="dark"] .hive-loading-panel span:after{
 @media(prefers-reduced-motion:reduce){
   .hive-history-loading svg{animation:none}
 }
+
+.hive-history-linked{
+  display:grid;
+  grid-template-columns:28px minmax(0,1fr) auto;
+  align-items:center;
+  gap:10px;
+  margin:-4px 0 18px;
+  padding:12px 13px;
+  border:1px solid var(--studio-line);
+  border-radius:10px;
+  background:var(--studio-soft);
+}
+.hive-history-linked>svg{color:var(--studio-muted)}
+.hive-history-linked>div{display:grid;gap:2px;min-width:0}
+.hive-history-linked strong{font-size:12px}
+.hive-history-linked small{color:var(--studio-muted);font-size:10px}
+.hive-history-linked button{
+  min-height:34px;
+  padding:7px 9px;
+  border:1px solid var(--studio-line);
+  border-radius:7px;
+  background:transparent;
+  color:inherit;
+  font-size:10px;
+}
+.history-shared .hive-history-dot,
+.history-emailed .hive-history-dot{background:#3369d6}
+.history-accepted .hive-history-dot,
+.history-converted .hive-history-dot{background:#2f8b57}
+.history-withdrawn .hive-history-dot{background:#b74f45}
+@media(max-width:760px){
+  .hive-history-linked{grid-template-columns:28px minmax(0,1fr)}
+  .hive-history-linked button{grid-column:1/-1;min-height:44px}
+}
