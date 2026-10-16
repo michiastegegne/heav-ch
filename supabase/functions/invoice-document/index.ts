@@ -1509,10 +1509,14 @@ if (import.meta.main) {
         });
         emailData = await responsePayload(emailResponse);
       } catch (sendError) {
-        // The provider may have accepted the request even when the response was lost.
-        // Keep the durable reservation pending: a retry reuses the same idempotency key
-        // and cancellation/deletion remain blocked until the outcome is resolved.
-        throw sendError;
+        // The provider may already have accepted the request. Keep the durable
+        // reservation pending so a retry reuses the exact same idempotency key.
+        console.error("invoice provider response lost", sendError);
+        return Response.json({
+          error: "Zustellstatus unklar. Bitte erneut versuchen; derselbe sichere Versandauftrag wird wiederverwendet.",
+          deliveryUncertain: true,
+          retryable: true,
+        }, { status: 502, headers: responseCors });
       }
       if (!emailResponse.ok) {
         await logEmail(service, { workspace_id: invoice.workspace_id, owner_id: invoice.owner_id, template_key: "invoice_send", status: "failed", recipient_email: customer.email, recipient_name: firstName, customer_id: invoice.customer_id, invoice_id: invoice.id, subject, text_body: text, error_message: String(emailData.message || "provider error"), idempotency_key: idempotencyKey });
