@@ -1161,8 +1161,15 @@ export async function sha256Hex(bytes: Uint8Array) {
     .join("");
 }
 
+type InvoiceDocumentService = {
+  from: (relation: string) => any;
+  storage: {
+    from: (bucket: string) => any;
+  };
+};
+
 async function storageBytes(
-  service: ReturnType<typeof createClient>,
+  service: InvoiceDocumentService,
   bucket: string,
   path: string,
 ) {
@@ -1172,7 +1179,7 @@ async function storageBytes(
 }
 
 async function verifiedPersistedInvoicePdf(
-  service: ReturnType<typeof createClient>,
+  service: InvoiceDocumentService,
   document: PersistedInvoiceDocument,
 ) {
   const bytes = await storageBytes(
@@ -1193,7 +1200,7 @@ async function verifiedPersistedInvoicePdf(
 }
 
 export async function persistOrLoadInvoicePdf(
-  service: ReturnType<typeof createClient>,
+  service: InvoiceDocumentService,
   invoice: Invoice,
   settings: Settings,
 ) {
@@ -1400,7 +1407,7 @@ if (import.meta.main) {
         );
       }
       const persistedDocument = await persistOrLoadInvoicePdf(
-        service,
+        service as unknown as InvoiceDocumentService,
         invoice,
         settings,
       );
