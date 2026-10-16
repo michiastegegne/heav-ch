@@ -197,22 +197,34 @@ export async function handler(request: Request) {
     const html =
       `<div style="margin:0;padding:32px 20px;background:#eeeae0;color:#090a08;font-family:Arial,sans-serif"><div style="max-width:620px;margin:0 auto;background:#fffdf8"><div style="padding:24px 28px;background:#090a08;color:#eeeae0;font-size:25px;font-weight:700;letter-spacing:-1px">${esc(settings.business_name)}</div><div style="padding:34px 28px">${htmlText}<p style="margin:28px 0"><a href="${esc(portalLink)}" style="display:inline-block;padding:14px 20px;background:#e8e4dc;color:#090a08;text-decoration:none;font-weight:700">Offerte ansehen</a></p></div></div></div>`;
 
-    const emailResponse = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendKey}`,
-        "Content-Type": "application/json",
-        "Idempotency-Key": reservation.idempotency_key,
-      },
-      body: JSON.stringify({
-        from: fromEmail,
-        to: [recipientEmail],
-        reply_to: settings.email,
-        subject,
-        text,
-        html,
-      }),
-    });
+    let emailResponse: Response;
+    try {
+      emailResponse = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${resendKey}`,
+          "Content-Type": "application/json",
+          "Idempotency-Key": reservation.idempotency_key,
+        },
+        body: JSON.stringify({
+          from: fromEmail,
+          to: [recipientEmail],
+          reply_to: settings.email,
+          subject,
+          text,
+          html,
+        }),
+      });
+    } catch (sendError) {
+      // The provider may already have accepted the request. Keep the reservation
+      // pending so a retry reuses the exact same provider idempotency key.
+      console.error("offer provider response lost", sendError);
+      return reply({
+        error: "Zustellstatus unklar. Bitte erneut versuchen; derselbe sichere Versandauftrag wird wiederverwendet.",
+        deliveryUncertain: true,
+        retryable: true,
+      }, 502, headers);
+    }
     const emailData = await emailResponse.json().catch(() => ({}));
 
     const logBase = {
