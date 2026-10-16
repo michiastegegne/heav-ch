@@ -77,6 +77,31 @@ test('mobile-only subnavigation stays hidden on desktop',async({page})=>{
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
 });
 
+test('businesses overview only exposes memberships and opens the selected business',async({page})=>{
+ await page.setViewportSize({width:1440,height:950});
+ await login(page);
+
+ const response=await page.request.get('/api/hive/businesses/overview');
+ expect(response.status()).toBe(200);
+ const payload=await response.json();
+ expect(payload.businesses.map((item)=>item.id).sort()).toEqual([a,b].sort());
+ const north=payload.businesses.find((item)=>item.id===a);
+ expect(north.customerCount).toBeGreaterThanOrEqual(1);
+ expect(north.projectCount).toBe(2);
+ expect(north.openRappen).toBe(680000);
+ expect(north.paidRappen).toBe(1280000);
+ expect(north.pipelineRappen).toBe(240000);
+
+ const nav=page.getByRole('navigation',{name:'Business-Module'});
+ await nav.getByRole('button',{name:'Businesses',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Businesses',exact:true})).toBeVisible();
+ const southCard=page.locator('.hive-business-card').filter({hasText:'Studio Süd'}).first();
+ await expect(southCard).toBeVisible();
+ await southCard.getByRole('button',{name:'Business öffnen',exact:true}).click();
+ await expect(page.getByLabel('Business auswählen')).toHaveValue(b);
+ await expect(page.getByRole('heading',{name:'Übersicht',exact:true})).toBeVisible();
+});
+
 test('invoice duplication creates a new draft without reusing the issued number',async({page})=>{
  await login(page);
  const response=await page.request.post('/api/hive/invoices/30000000-0000-4000-8000-000000000001/action',{
