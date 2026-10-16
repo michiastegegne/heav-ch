@@ -1718,6 +1718,7 @@ export default function StudioPage() {
     </Modal>}
 
     {mobileMenuOpen && <Modal title="Dein Workspace" onClose={() => setMobileMenuOpen(false)}>
+      <div className="hive-mobile-security"><ShieldCheck size={18}/><div><strong>Geschützter Dev-Workspace</strong><small>Live-Daten isoliert · Mailversand gesperrt</small></div></div>
       <div className="hive-mobile-modules">{nav.map(([id,label,Icon]) => <button key={id} aria-current={tab===id?'page':undefined} onClick={() => {setTab(id);setMobileMenuOpen(false);window.scrollTo({top:0});}}><Icon size={21}/><span>{label}</span><ArrowRight size={16}/></button>)}</div>
       <a className="hsv-outline" href="/account">Mein Konto <ArrowRight size={16}/></a>
     </Modal>}
