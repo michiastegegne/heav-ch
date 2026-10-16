@@ -54,12 +54,12 @@ In `admin/assets/app.js:836-840` werden fehlende oder ungültige Rechnungswerte 
 - [x] Normalizer verwirft unvollständige Rechnungsentwürfe statt CHF 0.00 einzusetzen.
 - [x] Negative, nicht numerische und unsichere numerische Werte werden im Backend verworfen.
 - [x] Verhalten festgelegt: Ein unvollständiger Rechnungsentwurf wird verworfen; kein automatischer Default auf CHF 0.00.
-- [ ] Das Verhalten von `tax_rate`, `budget_rappen`, `quantity` und `unit_price_rappen` zwischen:
-  - [ ] `supabase/functions/assistant-chat/index.ts`
-  - [ ] `admin/assets/app.js`
-  - [ ] `admin/assets/domain.js`
-  - [ ] den Datenbank-Validatoren
-  angleichen.
+- [x] Das Verhalten von `tax_rate`, `budget_rappen`, `quantity` und `unit_price_rappen` zwischen:
+  - [x] `supabase/functions/assistant-chat/index.ts`
+  - [x] `admin/assets/app.js`
+  - [x] `admin/assets/domain.js`
+  - [x] den Datenbank-Validatoren
+  angeglichen: unbekannt/ungültig bleibt unbekannt, Mengen müssen positiv sein, Rappenwerte sichere Integer sein und MWST bleibt im Bereich 0–100.
 - [x] Deno-Test für fehlende und ungültige numerische Rechnungsfelder ergänzt.
 - [x] Browser-Tests für unbekannte MWST und fehlende Positionspreise getrennt gehalten.
 
