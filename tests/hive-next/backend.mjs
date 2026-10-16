@@ -29,6 +29,10 @@ http.createServer(async(req,res)=>{
     invoice_id:'30000000-0000-4000-8000-000000000099',
     invoice_number:'ENTWURF-30000000'
   }]);
+  if(name==='create_workspace_offer')return reply([{
+    offer_id:'50000000-0000-4000-8000-000000000099',
+    offer_number:'TEST-O-2026-099'
+  }]);
   return reply([]);
  }
  const table=url.pathname.split('/').pop();
@@ -47,8 +51,10 @@ http.createServer(async(req,res)=>{
   {id:'30000000-0000-4000-8000-000000000001',workspace_id:a,customer_id:customers[0].id,invoice_number:'TEST-2026-001',status:'overdue',due_date:'2026-10-10',total_rappen:260000,currency:'CHF',number_finalized:true,is_legacy:true,customers:{company:'Nordkunde'}},
   {id:'30000000-0000-4000-8000-000000000002',workspace_id:a,customer_id:customers[0].id,invoice_number:'TEST-2026-002',status:'sent',due_date:'2026-10-30',total_rappen:420000,currency:'CHF',number_finalized:true,is_legacy:true,customers:{company:'Atelier Seefeld'}},
   {id:'30000000-0000-4000-8000-000000000003',workspace_id:a,customer_id:customers[0].id,invoice_number:'TEST-2026-003',status:'paid',due_date:'2026-09-30',total_rappen:1280000,currency:'CHF',number_finalized:true,is_legacy:true,customers:{company:'Atelier Seefeld'}}];
- if(table==='offers'&&scope===a)rows=[
+ if(table==='offers'&&(scope===a||(!scope&&url.searchParams.get('id'))))rows=[
   {id:'50000000-0000-4000-8000-000000000001',workspace_id:a,customer_id:customers[0].id,project_id:null,offer_number:'OFF-2026-001',title:'Brand Film',issue_date:'2026-10-01',valid_until:'2026-10-31',status:'sent',notes:'',terms:'Diese Testofferte ist für den Browserflow ausreichend.',subtotal_rappen:240000,tax_rappen:0,total_rappen:240000,accepted_at:null,created_at:'2026-10-01T08:00:00.000Z',updated_at:'2026-10-01T09:00:00.000Z',customers:{company:'Nordkunde'}}];
+ if(table==='offer_items'&&scope===a)rows=[
+  {id:'53000000-0000-4000-8000-000000000001',workspace_id:a,offer_id:'50000000-0000-4000-8000-000000000001',position:1,description:'Brand Film',quantity:1,unit_price_rappen:240000}];
  if(table==='offer_events'&&scope===a)rows=[
   {id:'51000000-0000-4000-8000-000000000001',workspace_id:a,offer_id:'50000000-0000-4000-8000-000000000001',kind:'emailed',actor_id:null,details:{},created_at:'2026-10-01T09:00:00.000Z'},
   {id:'51000000-0000-4000-8000-000000000002',workspace_id:a,offer_id:'50000000-0000-4000-8000-000000000001',kind:'shared',actor_id:null,details:{},created_at:'2026-10-01T08:30:00.000Z'},
