@@ -111,6 +111,7 @@ async function makeDb() {
   `);
 
   await db.exec(await readFile(migrationUrl, "utf8"));
+  await db.exec(await readFile(new URL("../supabase/migrations/20261016135329_department_wrapper_result_ids.sql", import.meta.url), "utf8"));
   return db;
 }
 

@@ -15,3 +15,9 @@ supabase/.temp/
 .DS_Store
 .hermes/vendor/bklit-ui/
 .hermes/vendor/watermellon-registry/
+
+# Private exports and encrypted database archives stay outside source control.
+*.hivebackup
+*.dump
+*.dump.age
+/backups/

@@ -6,6 +6,8 @@ const workspaces = [{id:a,name:'Studio Nord',slug:'hive-dev-nord',status:'active
 const user = {id:userId,aud:'authenticated',role:'authenticated',email:'owner@example.test',created_at:new Date().toISOString(),app_metadata:{},user_metadata:{},identities:[]};
 const encode = (v) => Buffer.from(JSON.stringify(v)).toString('base64url');
 const token = `${encode({alg:'HS256',typ:'JWT'})}.${encode({sub:userId,role:'authenticated',aud:'authenticated',exp:Math.floor(Date.now()/1000)+3600})}.test-signature`;
+const reader={...user,id:'10000000-0000-4000-8000-000000000002',email:'accountant@example.test'};
+const readerToken=`${encode({alg:'HS256',typ:'JWT'})}.${encode({sub:reader.id,role:'authenticated',aud:'authenticated',exp:Math.floor(Date.now()/1000)+3600})}.test-signature`;
 let customers = [{id:'20000000-0000-4000-8000-000000000001',workspace_id:a,company:'Nordkunde',contact_name:'Anna',email:'anna@example.test'},{id:'20000000-0000-4000-8000-000000000002',workspace_id:b,company:'Südkunde',contact_name:'Ben',email:'ben@example.test'}];
 let projects = [
  {id:'40000000-0000-4000-8000-000000000001',workspace_id:a,customer_id:customers[0].id,department_id:'60000000-0000-4000-8000-000000000001',title:'Herbstkampagne — Brand Film',description:'',status:'active',start_date:'2026-10-01',due_date:'2026-10-28',budget_rappen:420000,customers:{company:'Atelier Seefeld'}},
@@ -15,14 +17,16 @@ http.createServer(async(req,res)=>{
  const url=new URL(req.url,'http://localhost:4499');
  let raw='';for await(const chunk of req)raw+=chunk;
  const body=raw?JSON.parse(raw):{};
+ const actor=req.headers.authorization===`Bearer ${readerToken}`?reader:user;
  const reply=(data,status=200)=>{res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(data));};
  if(url.pathname==='/health')return reply({ok:true});
+ if(url.pathname==='/auth/v1/token' && body.email===reader.email && body.password==='test-password')return reply({access_token:readerToken,refresh_token:'reader-refresh',token_type:'bearer',expires_in:3600,user:reader});
  if(url.pathname==='/auth/v1/token')return body.email===user.email&&body.password==='test-password' ? reply({access_token:token,refresh_token:'test-refresh',token_type:'bearer',expires_in:3600,user}) : reply({msg:'Invalid login credentials',code:'invalid_credentials'},400);
- if(url.pathname==='/auth/v1/user')return req.headers.authorization===`Bearer ${token}`?reply(user):reply({msg:'Invalid token'},401);
+ if(url.pathname==='/auth/v1/user')return [token,readerToken].some(t=>req.headers.authorization===`Bearer ${t}`)?reply(actor):reply({msg:'Invalid token'},401);
  if(url.pathname==='/auth/v1/logout')return reply({});
  if(url.pathname.startsWith('/rest/v1/rpc/')){
   const name=url.pathname.split('/').pop();
-  if(name==='current_app_user_id')return reply(userId);
+  if(name==='current_app_user_id')return reply(actor.id);
   if(name==='is_hive_preview_workspace')return reply([a,b].includes(body.p_workspace_id));
   if(name==='is_workspace_member')return reply([a,b].includes(body.p_workspace_id));
   if(name==='create_workspace_invoice_draft')return reply([{
@@ -39,8 +43,8 @@ http.createServer(async(req,res)=>{
  const scope=url.searchParams.get('workspace_id')?.replace('eq.','');
  let rows=[];
  if(table==='workspace_memberships'){
-  if(url.searchParams.get('user_id')!==`eq.${userId}`)return reply({message:'Membership query must filter current user'},400);
-  rows=workspaces.map(w=>({workspace_id:w.id,role:'owner',workspaces:w}));
+  if(!scope && url.searchParams.get('user_id')!==`eq.${actor.id}`)return reply({message:'Membership query must filter current user'},400);
+  rows=workspaces.filter(w=>!scope||w.id===scope).map(w=>({workspace_id:w.id,user_id:actor.id,role:actor.id===userId?'owner':'accountant',workspaces:w}));
  }
  if(table==='workspaces')rows=workspaces;
  if(table==='customers'){
@@ -81,6 +85,10 @@ http.createServer(async(req,res)=>{
   rows=projects.filter(project=>project.workspace_id===scope);
  }
  if(table==='workspace_settings')rows=[{workspace_id:scope,business_name:workspaces.find(w=>w.id===scope)?.name,email:'owner@example.test',currency:'CHF',accent_color:'#ff0000',default_tax_rate:0,default_due_days:30}];
+ // Expanded export-only fixture exercises the second pagination page.
+ if(table==='products'&&scope===a&&url.searchParams.has('limit'))rows=Array.from({length:501},(_,index)=>({id:`export-product-${String(index).padStart(4,'0')}`,workspace_id:a,name:`Product ${index}`}));
+ const limit=Number(url.searchParams.get('limit')); const offset=Number(url.searchParams.get('offset')||0);
+ if(limit)rows=rows.slice(offset,offset+limit);
  const id=url.searchParams.get('id')?.replace('eq.','');if(id)rows=rows.filter(x=>x.id===id);
  const invoiceId=url.searchParams.get('invoice_id')?.replace('eq.','');if(invoiceId)rows=rows.filter(x=>x.invoice_id===invoiceId);
  const offerId=url.searchParams.get('offer_id')?.replace('eq.','');if(offerId)rows=rows.filter(x=>x.offer_id===offerId);

@@ -64,6 +64,10 @@ for (const appearance of ["light", "dark"])
       await page.setViewportSize({ width, height: 844 });
       await login(page);
       await fits(page);
+      for (const value of await page.locator('.hive-kpi-value').all()) {
+        await expect(value).toHaveCSS('white-space', 'nowrap');
+        expect(await value.evaluate(node=>node.scrollWidth<=node.clientWidth)).toBeTruthy();
+      }
       const nav = page.getByRole("navigation", { name: "Mobile Navigation" });
       await expect(nav).toBeVisible();
       await touchTargets(page, ".hive-mobile-nav button, .hive-mobile-create");

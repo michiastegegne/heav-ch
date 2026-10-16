@@ -1003,3 +1003,19 @@
 @media print{
   .hive-mobile-nav,.hive-mobile-create{display:none!important}
 }
+
+/* Give the business name priority on compact screens. */
+@media screen and (max-width:760px){
+  .hsv-top .hsv-identity{grid-template-columns:minmax(0,1fr) 44px}
+  .hsv-top .hsv-identity>.hsv-hive{display:none}
+  .hsv-top .hsv-identity select{font-size:14px}
+}
+@media(prefers-reduced-motion:reduce){.hsv button:active{transform:none!important}}
+
+/* Keep currency and decimals intact even in compact financial widgets. */
+@media screen and (max-width:760px){
+ .hive-kpis button{container-type:inline-size}
+ .hive-kpis .hive-kpi-money{display:flex;flex-direction:column;gap:6px;letter-spacing:-.7px;overflow-wrap:normal;word-break:normal}
+ .hive-kpi-money .hive-kpi-currency{font-size:10px;font-weight:500;line-height:1.3;letter-spacing:.8px;color:var(--mobile-muted)}
+ .hive-kpi-money .hive-kpi-value{font-variant-numeric:tabular-nums;font-size:clamp(16px,14cqi,28px);line-height:1.15;white-space:nowrap}
+}

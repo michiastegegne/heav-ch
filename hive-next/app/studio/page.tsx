@@ -12,6 +12,8 @@ import BusinessesOverview, { type BusinessOverviewItem } from './businesses-over
 import ProjectBoard from './project-board';
 import ProjectCalendar from './project-calendar';
 import DocumentEditor from './document-editor';
+import BackupCard from './backup-card';
+import { orderWorkspaces, preferredWorkspace, workspaceLabel } from '@/lib/hive/workspace-selection';
 import './studio.css';
 import './workspace-design.css';
 import './mobile.css';
@@ -338,12 +340,12 @@ export default function StudioPage() {
     setBackendError('');
     try {
       const data = await requestJson<{ workspaces: Workspace[] }>('/api/hive/workspaces');
-      setWorkspaces(data.workspaces);
+      setWorkspaces(orderWorkspaces(data.workspaces));
       setActiveWorkspaceId((current) => {
         if (data.workspaces.some((workspace) => workspace.id === current)) return current;
-        const stored = typeof window !== 'undefined' ? window.localStorage.getItem('hive.activeWorkspace.v2') : '';
-        if (stored && data.workspaces.some((workspace) => workspace.id === stored)) return stored;
-        return data.workspaces[0]?.id || '';
+        let stored = '';
+        try { stored = window.localStorage.getItem('hive.activeWorkspace.v2') || ''; } catch { /* Browser storage may be disabled. */ }
+        return preferredWorkspace(data.workspaces, current, stored);
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Backend nicht erreichbar';
@@ -368,6 +370,14 @@ export default function StudioPage() {
 
   function switchWorkspace(workspaceId:string, nextTab:Tab='overview') {
     if (!workspaces.some((workspace)=>workspace.id===workspaceId)) return;
+    if (workspaceId === currentWorkspace.current) { setTab(nextTab); return; }
+    currentWorkspace.current = workspaceId;
+    workspaceRequest.current += 1;
+    setNotice(''); setListQuery(''); setListStatus('all');
+    setBusy(true); setLoadedWorkspaceId('');
+    setCustomers([]); setProjects([]); setInvoices([]); setOffers([]); setProducts([]);
+    setEmails([]); setEmailTemplates([]); setActivityFeed([]); setTeamInvites([]);
+    setPortal({memberships:[], invites:[], requests:[], files:[], reviews:[], activity:[]});
     setCustomerOpen(false); setProjectOpen(false); setInvoiceOpen(false); setInvoiceHistoryOpen(false);
     setOfferOpen(false); setOfferHistoryOpen(false); setQuickCreateOpen(false); setDepartmentOpen(false);
     setProjectWorkspaceOpen(false); setCustomerWorkspaceOpen(false); setProductOpen(false); setInviteOpen(false);
@@ -488,9 +498,11 @@ export default function StudioPage() {
     }
     try {
       const data = await requestJson<{members:TeamMember[];invites:TeamInvite[]}>(`/api/hive/team?workspace=${encodeURIComponent(workspaceId)}`);
+      if (currentWorkspace.current !== workspaceId) return;
       setTeamMembers(data.members);
       setTeamInvites(data.invites || []);
     } catch (error) {
+      if (currentWorkspace.current !== workspaceId) return;
       setNotice(error instanceof Error ? error.message : 'Team konnte nicht geladen werden.');
     }
   }, [workspaces]);
@@ -630,7 +642,7 @@ export default function StudioPage() {
   }, [identityReady, loadWorkspaces]);
   useEffect(() => {
     if (!activeWorkspaceId || !workspaces.some((workspace)=>workspace.id===activeWorkspaceId)) return;
-    window.localStorage.setItem('hive.activeWorkspace.v2', activeWorkspaceId);
+    try { window.localStorage.setItem('hive.activeWorkspace.v2', activeWorkspaceId); } catch { /* Switching still works without persistence. */ }
   }, [activeWorkspaceId, workspaces]);
   useEffect(() => { if (activeWorkspaceId) void loadWorkspaceData(activeWorkspaceId); }, [activeWorkspaceId, loadWorkspaceData]);
   useEffect(() => { if (tab === 'businesses') void loadBusinessesOverview(); }, [tab, loadBusinessesOverview]);
@@ -1760,7 +1772,7 @@ export default function StudioPage() {
         <a className="hsv-hive" href="/">hive.</a><span className="hsv-divider"/>
         <span className="hsv-logo">{settings?.logo_url ? <img src={settings.logo_url} alt="Business Logo"/> : businessName.charAt(0)}</span>
         <select aria-label="Business auswählen" value={activeWorkspaceId} onChange={(event) => switchWorkspace(event.target.value, tab === 'businesses' ? 'businesses' : tab)}>
-          {workspaces.map((workspace) => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}
+          {workspaces.map((workspace) => <option key={workspace.id} value={workspace.id}>{workspaceLabel(workspace)}</option>)}
         </select>
         <button className="hsv-outline" aria-label="Neues Business erstellen" type="button" onClick={() => {
           setBusinessDraft({ name:'', invoicePrefix:'HIVE' });
@@ -1788,7 +1800,7 @@ export default function StudioPage() {
         </div>
         {listTabs && <div className="hive-list-tools"><label><Search size={15}/><input aria-label="Liste durchsuchen" placeholder="Suchen nach Name, Kunde oder Nummer …" value={listQuery} onChange={e=>setListQuery(e.target.value)}/>{listQuery&&<button aria-label="Suche leeren" onClick={()=>setListQuery('')}><X size={13}/></button>}</label>{tab !== 'customers'&&<select aria-label="Status filtern" value={listStatus} onChange={e=>setListStatus(e.target.value)}><option value="all">Alle Status</option>{(tab==='projects'?['planning','active','on_hold','completed']:tab==='invoices'?['draft','sent','overdue','paid','cancelled']:['draft','sent','accepted','withdrawn','expired']).map(value=><option value={value} key={value}>{stateLabel[value]}</option>)}</select>}<span>{tab === 'customers'?visibleCustomers.length:tab === 'projects'?visibleProjects.length:tab === 'invoices'?visibleInvoices.length:visibleOffers.length} Einträge</span></div>}
 
-        {backendError ? <div className="hsv-empty" role="alert"><strong>Workspace konnte nicht geladen werden.</strong><p>{backendError}</p><button className="hsv-outline" onClick={() => void loadWorkspaceData(activeWorkspaceId)}>Erneut versuchen</button></div> : loadedWorkspaceId !== activeWorkspaceId ? <div className="hive-loading-state" role="status" aria-label="Business wird geladen">
+        {!busy && !workspaces.length ? <div className="hsv-empty"><Building2 size={24}/><strong>Noch kein Business verfügbar.</strong><p>Erstelle dein erstes Business oder nimm eine Einladung in deinem Konto an.</p><button className="hsv-outline" onClick={()=>setBusinessOpen(true)}>Business erstellen</button></div> : backendError ? <div className="hsv-empty" role="alert"><strong>Workspace konnte nicht geladen werden.</strong><p>{backendError}</p><button className="hsv-outline" onClick={() => void loadWorkspaceData(activeWorkspaceId)}>Erneut versuchen</button></div> : !activeWorkspaceId || loadedWorkspaceId !== activeWorkspaceId ? <div className="hive-loading-state" role="status" aria-label="Business wird geladen">
           <div className="hive-loading-line hive-loading-title"/>
           <div className="hive-loading-line hive-loading-copy"/>
           <div className="hive-loading-cards">{[0,1,2,3].map((item)=><span key={item}/>)}</div>
@@ -2112,6 +2124,7 @@ export default function StudioPage() {
             <button className="hsv-outline" type="button" onClick={() => void archiveBusiness()}><Trash2 size={15}/> Business archivieren</button>
           </div>}
         </form>}
+        {tab === 'branding' && activeWorkspace?.role === 'owner' && <BackupCard key={activeWorkspaceId} workspaceId={activeWorkspaceId} name={workspaceLabel(activeWorkspace)}/>}
         </>}
       </main>
     </div>

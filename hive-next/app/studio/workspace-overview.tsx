@@ -14,6 +14,11 @@ const name=(item:{customers?:{company?:string|null;contact_name?:string|null}|nu
 const date=(value:string)=>new Intl.DateTimeFormat('de-CH',{day:'2-digit',month:'short'}).format(new Date(value+'T12:00:00'));
 const statusText:Record<string,string>={planning:'Geplant',active:'In Arbeit',on_hold:'Pausiert',completed:'Abgeschlossen',overdue:'Überfällig',sent:'Offen',draft:'Entwurf',paid:'Bezahlt',cancelled:'Storniert'};
 
+function MoneyMetric({value}:{value:number}) {
+ const parts = new Intl.NumberFormat('de-CH',{style:'currency',currency:'CHF'}).formatToParts(value/100);
+ return <strong className="hive-kpi-money"><span className="hive-kpi-currency">CHF</span>{' '}<span className="hive-kpi-value">{parts.filter(part=>part.type!=='currency'&&part.type!=='literal').map(part=>part.value).join('')}</span></strong>;
+}
+
 export default function WorkspaceOverview({invoices,projects,customerCount,offerCount,activity,canViewFinance,onNavigate,onProject,onCreateProject}:Props){
  const open=invoices.filter(i=>i.status==='sent'||i.status==='overdue');
  const outstanding=open.reduce((sum,i)=>sum+Number(i.total_rappen),0);
@@ -25,8 +30,8 @@ export default function WorkspaceOverview({invoices,projects,customerCount,offer
  return <div className="hive-overview">
   <section className="hive-kpis" aria-label="Business-Kennzahlen">
    {canViewFinance ? <>
-    <button onClick={()=>onNavigate('invoices')}><span>Offene Forderungen <ArrowUpRight size={15}/></span><strong>{money(outstanding)}</strong><small>{overdue.length?`${overdue.length} davon überfällig`:'Keine überfälligen Rechnungen'}</small></button>
-    <button onClick={()=>onNavigate('invoices')}><span>Zahlungseingänge <ArrowDownLeft size={15}/></span><strong>{money(paid)}</strong><small>Bezahlte Rechnungen · gesamt</small></button>
+    <button onClick={()=>onNavigate('invoices')}><span>Offene Forderungen <ArrowUpRight size={15}/></span><MoneyMetric value={outstanding}/><small>{overdue.length?`${overdue.length} davon überfällig`:'Keine überfälligen Rechnungen'}</small></button>
+    <button onClick={()=>onNavigate('invoices')}><span>Zahlungseingänge <ArrowDownLeft size={15}/></span><MoneyMetric value={paid}/><small>Bezahlte Rechnungen · gesamt</small></button>
    </> : <>
     <div className="hive-kpi-locked"><span>Finanzen</span><strong>—</strong><small>Für deine Rolle eingeschränkt</small></div>
     <div className="hive-kpi-locked"><span>Pipeline</span><strong>—</strong><small>Für deine Rolle eingeschränkt</small></div>
