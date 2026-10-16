@@ -308,6 +308,8 @@
   overflow-wrap: anywhere;
 }
 .hsv.hive-system-app .hive-customer-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 12px;
 }
 .hsv.hive-system-app .hive-customer-metrics > div {
@@ -775,5 +777,11 @@
   }
   .hsv.hive-system-app .hive-row-actions .hsv-primary {
     max-width: 100%;
+  }
+}
+
+@media (max-width: 400px) {
+  .hsv.hive-system-app .hive-customer-metrics {
+    grid-template-columns: minmax(0, 1fr) !important;
   }
 }

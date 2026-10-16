@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 for (const theme of ["light", "dark"])
-  for (const width of [320, 390, 768, 1440])
+  for (const width of [320, 390, 688, 768, 1440])
     test(`customer directory and actions work at ${width}px ${theme}`, async ({
       page,
     }) => {
@@ -64,6 +64,15 @@ for (const theme of ["light", "dark"])
       await expect(
         detail.getByRole("heading", { name: "Nordkunde", exact: true }),
       ).toBeVisible();
+      if (width === 688)
+        expect(
+          await detail
+            .locator(".hive-customer-metrics")
+            .evaluate(
+              (node) =>
+                getComputedStyle(node).gridTemplateColumns.split(" ").length,
+            ),
+        ).toBe(2);
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= innerWidth,

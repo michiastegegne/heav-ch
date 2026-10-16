@@ -2360,7 +2360,7 @@ export default function StudioPage() {
             </div>
           </div>
 
-          <div className="hsv-cards hive-customer-metrics" style={{gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))'}}>
+          <div className="hive-customer-metrics">
             <div><span>AKTIVE PROJEKTE</span><strong>{customerWorkspace.metrics.activeProjectCount}</strong><small>{customerWorkspace.metrics.projectCount} total</small></div>
             {customerWorkspace.canViewFinance && <div><span>OFFEN</span><strong style={{fontSize:22}}>{money(customerWorkspace.metrics.openRappen)}</strong><small>Rechnungen</small></div>}
             {customerWorkspace.canViewFinance && <div><span>BEZAHLT</span><strong style={{fontSize:22}}>{money(customerWorkspace.metrics.paidRappen)}</strong><small>Rechnungswert</small></div>}
