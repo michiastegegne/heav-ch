@@ -161,6 +161,7 @@ export default function StudioPage() {
   const [emailMobileView, setEmailMobileView] = useState<'templates'|'history'>('templates');
   const [portal, setPortal] = useState<PortalData>({ memberships:[], invites:[], requests:[], files:[], reviews:[], activity:[] });
   const [portalMobileView, setPortalMobileView] = useState<'access'|'files'|'requests'|'activity'>('access');
+  const [settingsMobileView, setSettingsMobileView] = useState<'brand'|'contact'|'billing'>('brand');
   const [settings, setSettings] = useState<Settings | null>(null);
   const [activityFeed, setActivityFeed] = useState<UnifiedActivity[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -1670,11 +1671,20 @@ export default function StudioPage() {
 
         {tab === 'branding' && settings && <form className="hsv-branding" onSubmit={saveSettings}>
           <div className="hsv-brand-preview"><span>{settings.logo_url ? <img src={settings.logo_url} alt="Logo"/> : settings.business_name.charAt(0)}</span><div><strong>{settings.business_name}</strong><small>{activeWorkspace?.role} · Dev-Workspace</small></div></div>
+          <div className="hive-mobile-subtabs hive-settings-subtabs" role="tablist" aria-label="Business-Einstellungen">
+            <button type="button" role="tab" aria-selected={settingsMobileView==='brand'} onClick={() => setSettingsMobileView('brand')}>Brand</button>
+            <button type="button" role="tab" aria-selected={settingsMobileView==='contact'} onClick={() => setSettingsMobileView('contact')}>Kontakt</button>
+            <button type="button" role="tab" aria-selected={settingsMobileView==='billing'} onClick={() => setSettingsMobileView('billing')}>Abrechnung</button>
+          </div>
+          <section className="hive-settings-section" data-mobile-active={settingsMobileView==='brand'}>
           <label>Business-Name<input value={settings.business_name} onChange={(e) => setSettings({ ...settings, business_name: e.target.value })}/></label>
           <label>Rechtlicher Name<input value={settings.legal_name} onChange={(e) => setSettings({ ...settings, legal_name:e.target.value })}/></label>
           <label>Kontaktperson<input value={settings.contact_name} onChange={(e) => setSettings({ ...settings, contact_name:e.target.value })}/></label>
           <label>Business-Logo<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => void uploadBusinessLogo(e.target.files?.[0] || null)}/><small>PNG, JPG oder WebP · max. 5 MB</small></label>
           <label>Logo-URL<input value={settings.logo_url} onChange={(e) => setSettings({ ...settings, logo_url: e.target.value })} placeholder="https://…"/></label>
+          <label>Accent-Farbe<div className="hsv-color"><input type="color" value={settings.accent_color} onChange={(e) => setSettings({ ...settings, accent_color: e.target.value })}/><span>{settings.accent_color}</span></div></label>
+          </section>
+          <section className="hive-settings-section" data-mobile-active={settingsMobileView==='contact'}>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
             <label>Kontakt-E-Mail<input type="email" value={settings.email} onChange={(e) => setSettings({ ...settings, email: e.target.value })}/></label>
             <label>Telefon<input value={settings.phone} onChange={(e) => setSettings({ ...settings, phone:e.target.value })}/></label>
@@ -1686,6 +1696,8 @@ export default function StudioPage() {
             <label>Ort<input value={settings.city} onChange={(e) => setSettings({ ...settings, city: e.target.value })}/></label>
             <label>Land<input value={settings.country} onChange={(e) => setSettings({ ...settings, country:e.target.value })}/></label>
           </div>
+          </section>
+          <section className="hive-settings-section" data-mobile-active={settingsMobileView==='billing'}>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
             <label>UID<input value={settings.uid_number} onChange={(e) => setSettings({ ...settings, uid_number:e.target.value })} placeholder="CHE-…"/></label>
             <label>MWST-Nummer<input value={settings.vat_number} onChange={(e) => setSettings({ ...settings, vat_number:e.target.value })} placeholder="CHE-123.456.789 MWST"/></label>
@@ -1704,7 +1716,7 @@ export default function StudioPage() {
           </div>
           <label><input type="checkbox" checked={settings.invoice_reminders_enabled} onChange={(e) => setSettings({ ...settings, invoice_reminders_enabled:e.target.checked })}/> Automatische Zahlungserinnerungen</label>
           <label>Reminder vor Fälligkeit (Tage)<input type="number" min="1" max="30" value={settings.invoice_reminder_days} onChange={(e) => setSettings({ ...settings, invoice_reminder_days:Number(e.target.value) })}/></label>
-          <label>Accent-Farbe<div className="hsv-color"><input type="color" value={settings.accent_color} onChange={(e) => setSettings({ ...settings, accent_color: e.target.value })}/><span>{settings.accent_color}</span></div></label>
+          </section>
           <button className="hsv-primary hive-settings-save" type="submit">Speichern <Check size={15}/></button>
           {activeWorkspace?.role === 'owner' && activeWorkspace.slug.startsWith('hive-dev-') && <div style={{marginTop:28,paddingTop:22,borderTop:'1px solid rgba(0,0,0,.15)'}}>
             <span className="auth-kicker">DANGER ZONE</span>
