@@ -56,6 +56,9 @@ type InvoiceSendAttempt = {
   id:string; previous_status:string; state:'pending'|'sent'|'failed'; provider_id:string|null;
   created_at:string; completed_at:string|null;
 };
+type InvoiceDocumentAudit = {
+  version:number; filename:string; sha256:string; bytes:number; created_at:string;
+};
 
 type OfferHistoryEvent = {
   id:string; kind:string; details:Record<string,unknown>; created_at:string;
@@ -250,6 +253,7 @@ export default function StudioPage() {
   const [invoiceHistoryInvoice, setInvoiceHistoryInvoice] = useState<Invoice | null>(null);
   const [invoiceHistoryEvents, setInvoiceHistoryEvents] = useState<InvoiceHistoryEvent[]>([]);
   const [invoiceSendAttempts, setInvoiceSendAttempts] = useState<InvoiceSendAttempt[]>([]);
+  const [invoiceDocumentAudit, setInvoiceDocumentAudit] = useState<InvoiceDocumentAudit | null>(null);
   const [invoiceHistoryBusy, setInvoiceHistoryBusy] = useState(false);
   const [invoiceDraft, setInvoiceDraft] = useState({
     id: '', customerId: '', projectId: '', issueDate: today(), dueDate: afterDays(30),
@@ -1009,15 +1013,18 @@ export default function StudioPage() {
     setInvoiceHistoryInvoice(invoice);
     setInvoiceHistoryEvents([]);
     setInvoiceSendAttempts([]);
+    setInvoiceDocumentAudit(null);
     setInvoiceHistoryBusy(true);
     setInvoiceHistoryOpen(true);
     try {
       const data = await requestJson<{
         events:InvoiceHistoryEvent[];
         attempts:InvoiceSendAttempt[];
+        document:InvoiceDocumentAudit|null;
       }>(`/api/hive/invoices/${invoice.id}/history?workspace=${encodeURIComponent(activeWorkspaceId)}`);
       setInvoiceHistoryEvents(data.events);
       setInvoiceSendAttempts(data.attempts);
+      setInvoiceDocumentAudit(data.document);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Rechnungsverlauf konnte nicht geladen werden.');
       setInvoiceHistoryOpen(false);
@@ -2419,6 +2426,13 @@ export default function StudioPage() {
         <div><span>Betrag</span><strong>{money(invoiceHistoryInvoice.total_rappen, invoiceHistoryInvoice.currency)}</strong></div>
         <div><span>Fällig</span><strong>{shortDate(invoiceHistoryInvoice.due_date)}</strong></div>
       </div>
+      {!invoiceHistoryBusy && invoiceDocumentAudit && <div className="hive-invoice-document-audit">
+        <div><FileText size={16}/><span>Persistierter PDF-Snapshot</span></div>
+        <strong>v{invoiceDocumentAudit.version} · unveränderlich</strong>
+        <small>{invoiceDocumentAudit.filename}</small>
+        <small>{(invoiceDocumentAudit.bytes / 1024).toFixed(1)} KB · SHA-256 {invoiceDocumentAudit.sha256.slice(0,12)}… · {new Date(invoiceDocumentAudit.created_at).toLocaleString('de-CH')}</small>
+      </div>}
+      {!invoiceHistoryBusy && invoiceHistoryInvoice.number_finalized && !invoiceDocumentAudit && <p className="hive-document-pending">PDF-Snapshot wird beim ersten PDF-Download oder Versand dauerhaft erstellt.</p>}
       <div className="hive-invoice-history" aria-busy={invoiceHistoryBusy}>
         {invoiceHistoryBusy && <div className="hive-history-loading"><RefreshCw size={16}/><span>Verlauf wird geladen …</span></div>}
         {!invoiceHistoryBusy && !invoiceHistoryEvents.length && <p className="hsv-empty">Noch keine Audit-Ereignisse.</p>}
