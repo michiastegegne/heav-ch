@@ -1130,6 +1130,162 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
   return pdf.save();
 }
 
+type PersistedInvoiceDocument = {
+  id?: string;
+  invoice_id: string;
+  workspace_id: string;
+  version: number;
+  storage_bucket: string;
+  storage_path: string;
+  filename: string;
+  sha256: string;
+  bytes: number;
+};
+
+export const invoiceDocumentVersion = 1;
+export const invoiceDocumentBucket = "invoice-documents";
+
+export function invoiceDocumentPath(
+  invoice: Pick<Invoice, "id" | "workspace_id">,
+  version = invoiceDocumentVersion,
+) {
+  return `${invoice.workspace_id}/invoices/${invoice.id}/v${version}.pdf`;
+}
+
+export async function sha256Hex(bytes: Uint8Array) {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  const digest = await crypto.subtle.digest("SHA-256", copy.buffer);
+  return [...new Uint8Array(digest)]
+    .map((value) => value.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function storageBytes(
+  service: ReturnType<typeof createClient>,
+  bucket: string,
+  path: string,
+) {
+  const { data, error } = await service.storage.from(bucket).download(path);
+  if (error || !data) throw error || new Error("Gespeichertes Rechnungs-PDF fehlt.");
+  return new Uint8Array(await data.arrayBuffer());
+}
+
+async function verifiedPersistedInvoicePdf(
+  service: ReturnType<typeof createClient>,
+  document: PersistedInvoiceDocument,
+) {
+  const bytes = await storageBytes(
+    service,
+    document.storage_bucket,
+    document.storage_path,
+  );
+  const hash = await sha256Hex(bytes);
+  if (
+    hash !== document.sha256 ||
+    bytes.byteLength !== Number(document.bytes)
+  ) {
+    throw new Error(
+      "Das gespeicherte Rechnungs-PDF hat die Integritätsprüfung nicht bestanden.",
+    );
+  }
+  return { bytes, filename: document.filename };
+}
+
+export async function persistOrLoadInvoicePdf(
+  service: ReturnType<typeof createClient>,
+  invoice: Invoice,
+  settings: Settings,
+) {
+  const version = invoiceDocumentVersion;
+  const path = invoiceDocumentPath(invoice, version);
+
+  const { data: existing, error: existingError } = await service
+    .from("invoice_documents")
+    .select(
+      "invoice_id,workspace_id,version,storage_bucket,storage_path,filename,sha256,bytes",
+    )
+    .eq("invoice_id", invoice.id)
+    .eq("version", version)
+    .maybeSingle();
+
+  if (existingError) throw existingError;
+  if (existing) {
+    return verifiedPersistedInvoicePdf(
+      service,
+      existing as PersistedInvoiceDocument,
+    );
+  }
+
+  let bytes = await createInvoicePdf(invoice, settings);
+  let uploadedByThisRequest = false;
+
+  const { error: uploadError } = await service.storage
+    .from(invoiceDocumentBucket)
+    .upload(path, bytes, {
+      contentType: "application/pdf",
+      cacheControl: "31536000",
+      upsert: false,
+    });
+
+  if (uploadError) {
+    // Another concurrent request may have created the deterministic v1 path.
+    // Prefer those already persisted bytes instead of overwriting them.
+    try {
+      bytes = await storageBytes(service, invoiceDocumentBucket, path);
+    } catch {
+      throw uploadError;
+    }
+  } else {
+    uploadedByThisRequest = true;
+  }
+
+  const hash = await sha256Hex(bytes);
+  const filename = invoiceFilename(invoice);
+  const documentRow = {
+    invoice_id: invoice.id,
+    workspace_id: invoice.workspace_id,
+    version,
+    storage_bucket: invoiceDocumentBucket,
+    storage_path: path,
+    filename,
+    sha256: hash,
+    bytes: bytes.byteLength,
+  };
+
+  const { error: insertError } = await service
+    .from("invoice_documents")
+    .insert(documentRow);
+
+  if (insertError && String(insertError.code || "") !== "23505") {
+    if (uploadedByThisRequest) {
+      await service.storage.from(invoiceDocumentBucket).remove([path]);
+    }
+    throw insertError;
+  }
+
+  const { data: persisted, error: persistedError } = await service
+    .from("invoice_documents")
+    .select(
+      "invoice_id,workspace_id,version,storage_bucket,storage_path,filename,sha256,bytes",
+    )
+    .eq("invoice_id", invoice.id)
+    .eq("version", version)
+    .single();
+
+  if (persistedError || !persisted) {
+    throw persistedError ||
+      new Error("Rechnungs-PDF konnte nicht dauerhaft registriert werden.");
+  }
+
+  // On a race, the winning request is authoritative. Reload its exact bytes and
+  // verify the stored digest instead of returning a locally rendered variant.
+  return verifiedPersistedInvoicePdf(
+    service,
+    persisted as PersistedInvoiceDocument,
+  );
+}
+
 if (import.meta.main) {
   Deno.serve(async (request) => {
     const origin = request.headers.get("origin") || "";
@@ -1243,7 +1399,12 @@ if (import.meta.main) {
           "Stornierte Rechnungen können nicht mehr als Zahlungsdokument geöffnet oder versendet werden.",
         );
       }
-      const pdfBytes = await createInvoicePdf(invoice, settings);
+      const persistedDocument = await persistOrLoadInvoicePdf(
+        service,
+        invoice,
+        settings,
+      );
+      const pdfBytes = persistedDocument.bytes;
       if (action === "download") {
         if (canManage) {
           const { error: eventError } = await supabase.rpc(
@@ -1264,7 +1425,7 @@ if (import.meta.main) {
             ...responseCors,
             "Content-Type": "application/pdf",
             "Content-Disposition": `attachment; filename="${
-              invoiceFilename(invoice)
+              persistedDocument.filename
             }"`,
             "Cache-Control": "no-store",
           },
@@ -1334,7 +1495,7 @@ if (import.meta.main) {
             text,
             html: buildInvoiceEmailHtml(invoice, settings, text),
             attachments: [{
-              filename: invoiceFilename(invoice),
+              filename: persistedDocument.filename,
               content: base64(pdfBytes),
             }],
           }),
