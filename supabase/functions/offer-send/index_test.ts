@@ -185,8 +185,11 @@ Deno.test("offer-send leaves a reservation pending when the provider response is
   const fixture = installFixture({ throwProvider: true });
   try {
     const response = await handler(request());
-    assertEquals(response.status, 400);
-    assertMatch((await response.json()).error, /network connection lost/);
+    assertEquals(response.status, 502);
+    const payload = await response.json();
+    assertMatch(payload.error, /Zustellstatus unklar/);
+    assertEquals(payload.deliveryUncertain, true);
+    assertEquals(payload.retryable, true);
     assert(
       fixture.calls.some((call) => call.url.includes("/rpc/reserve_offer_send")),
       "send must be reserved before calling the provider",
