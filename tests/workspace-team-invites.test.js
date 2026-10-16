@@ -18,6 +18,10 @@ const claimCardUrl = new URL(
   "../hive-next/app/account/team-invite-card.tsx",
   import.meta.url,
 );
+const accountPageUrl = new URL(
+  "../hive-next/app/account/page.tsx",
+  import.meta.url,
+);
 
 test("workspace team invites store only a token hash and expire", async () => {
   const source = await readFile(migrationUrl, "utf8");
@@ -81,4 +85,13 @@ test("account claim card accepts invite links and returns to Studio", async () =
   assert.match(source, /params\.delete\('team_invite'\)/);
   assert.match(source, /\/api\/hive\/team\/invite\/claim/);
   assert.match(source, /Studio öffnen/);
+});
+
+
+test("team invite takes precedence over standalone new-account onboarding", async () => {
+  const source = await readFile(accountPageUrl, "utf8");
+
+  assert.match(source, /hasTeamInvite/);
+  assert.match(source, /startsWith\('hive_team_'\)/);
+  assert.match(source, /showIdentityMigration && !hasTeamInvite/);
 });
