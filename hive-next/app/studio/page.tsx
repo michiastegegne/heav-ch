@@ -10,6 +10,7 @@ import ThemeToggle from '@/app/components/theme-toggle';
 import WorkspaceOverview from './workspace-overview';
 import BusinessesOverview, { type BusinessOverviewItem } from './businesses-overview';
 import ProjectBoard from './project-board';
+import ProjectCalendar from './project-calendar';
 import DocumentEditor from './document-editor';
 import './studio.css';
 import './workspace-design.css';
@@ -165,12 +166,12 @@ export default function StudioPage() {
   const [quickCreateOpen, setQuickCreateOpen] = useState(false);
   const [listQuery, setListQuery] = useState('');
   const [listStatus, setListStatus] = useState('all');
-  const [projectView, setProjectView] = useState<'list'|'board'>('list');
+  const [projectView, setProjectView] = useState<'list'|'board'|'calendar'>('list');
   const [projectViewReady, setProjectViewReady] = useState(false);
   useEffect(() => { setListQuery(''); setListStatus('all'); }, [tab]);
   useEffect(() => {
     const stored=window.localStorage.getItem('hive.projectView.v1');
-    if (stored === 'list' || stored === 'board') setProjectView(stored);
+    if (stored === 'list' || stored === 'board' || stored === 'calendar') setProjectView(stored);
     setProjectViewReady(true);
   }, []);
   useEffect(() => {
@@ -1654,6 +1655,7 @@ export default function StudioPage() {
               <div className="hive-view-switch" role="group" aria-label="Projektansicht">
                 <button type="button" aria-pressed={projectView==='list'} onClick={()=>setProjectView('list')}>Liste</button>
                 <button type="button" aria-pressed={projectView==='board'} onClick={()=>setProjectView('board')}>Board</button>
+                <button type="button" aria-pressed={projectView==='calendar'} onClick={()=>setProjectView('calendar')}>Kalender</button>
               </div>
               <button className="hsv-primary" disabled={!customers.length} onClick={() => void openProject()}><Plus size={15}/> Projekt erstellen</button>
             </div>
@@ -1663,6 +1665,9 @@ export default function StudioPage() {
             onStatus={(project,status)=>void updateProjectStatus(project as Project,status)}
             onOpen={(projectId)=>void loadProjectWorkspace(projectId)}
             onEdit={(project)=>void openProject(project as Project)}
+          /> : projectView === 'calendar' ? <ProjectCalendar
+            projects={visibleProjects}
+            onOpen={(projectId)=>void loadProjectWorkspace(projectId)}
           /> : <div className="hsv-table hive-project-table">{visibleProjects.map((project) => <div key={project.id}>
             <span className="hsv-letter"><BriefcaseBusiness size={16}/></span>
             <span className="hsv-grow"><strong>{project.title}</strong><small>{relatedName(project.customers)}</small></span>
