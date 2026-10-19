@@ -1,3 +1,5 @@
+> Historical design iteration. The current surface and verification notes are in `FLOW_WORKSPACE.md`.
+
 # Hive: Notion-nahe Dokumentansicht mit OpenGlass UI
 
 ## Tatsächlich übernommener Code

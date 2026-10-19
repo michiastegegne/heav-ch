@@ -16,6 +16,7 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
+import WorkspaceHero from "./workspace-hero";
 import { Badge } from "@/components/ui/badge";
 
 type Invoice = {
@@ -149,7 +150,8 @@ export default function WorkspaceOverview({
     },
   ];
   return (
-    <div className="crm-ui space-y-6">
+    <div className="crm-ui hive-overview space-y-6">
+      <WorkspaceHero projects={projects} customerCount={customerCount} onProject={onProject} onCreate={onCreateProject} onCustomers={()=>onNavigate("customers")} onProjects={()=>onNavigate("projects")}/>
       <section
         className="crm-metrics grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
         aria-label="Business-Kennzahlen"
@@ -157,6 +159,7 @@ export default function WorkspaceOverview({
         {metrics.map((metric) => (
           <button
             key={metric.label}
+            data-tone={metric.tab === "invoices" ? (metric.label === "Zahlungseingänge" ? "mint" : "peach") : metric.tab === "projects" ? "lilac" : "blue"}
             onClick={() => onNavigate(metric.tab)}
             className="group min-w-0 rounded-xl border-0 bg-transparent p-0 text-left outline-offset-4 focus-visible:outline-2"
           >

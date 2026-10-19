@@ -8,6 +8,7 @@ import {
 import { createPublicSupabaseBrowserClient } from '@/lib/supabase/public-browser';
 import ThemeToggle from '@/app/components/theme-toggle';
 import WorkspaceOverview from './workspace-overview';
+import { useWorkspaceView } from './workspace-view';
 import WorkspaceNavigation from './workspace-navigation';
 import {WorkspaceGlassDock,WorkspaceViewSwitch} from './workspace-glass';
 import CustomerDirectory from './customer-directory';
@@ -163,6 +164,7 @@ const canAdminRole = (role?:string) => ['owner','admin'].includes(role || '');
 async function requestJson<T>(input: string, init?: RequestInit): Promise<T> {
   const response = await fetch(input, {
     ...init,
+    signal: init?.signal ?? ((!init?.method || init.method === 'GET') ? AbortSignal.timeout(15000) : undefined),
     headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
     cache: 'no-store',
   });
@@ -177,7 +179,7 @@ async function requestJson<T>(input: string, init?: RequestInit): Promise<T> {
 }
 
 export default function StudioPage() {
-  const [tab, setTab] = useState<Tab>('overview');
+  const [tab, setTab] = useWorkspaceView();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [installOpen, setInstallOpen] = useState(false);
   const [quickCreateOpen, setQuickCreateOpen] = useState(false);
@@ -187,13 +189,14 @@ export default function StudioPage() {
   const [projectViewReady, setProjectViewReady] = useState(false);
   useEffect(() => { setListQuery(''); setListStatus('all'); }, [tab]);
   useEffect(() => {
-    const stored=window.localStorage.getItem('hive.projectView.v1');
+    let stored:string|null=null;
+    try { stored=window.localStorage.getItem('hive.projectView.v1'); } catch { /* View selection works without browser storage. */ }
     if (stored === 'list' || stored === 'board' || stored === 'calendar') setProjectView(stored);
     setProjectViewReady(true);
   }, []);
   useEffect(() => {
     if (!projectViewReady) return;
-    window.localStorage.setItem('hive.projectView.v1', projectView);
+    try { window.localStorage.setItem('hive.projectView.v1', projectView); } catch { /* The selected view remains usable for this session. */ }
   }, [projectView, projectViewReady]);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [businessesOverview, setBusinessesOverview] = useState<BusinessOverviewItem[]>([]);
@@ -224,6 +227,8 @@ export default function StudioPage() {
   const [busy, setBusy] = useState(true);
   const [identityReady, setIdentityReady] = useState(false);
   const [backendError, setBackendError] = useState('');
+  const [secondaryPending, setSecondaryPending] = useState(false);
+  const [secondaryIssues, setSecondaryIssues] = useState<Record<string,string>>({});
   const [notice, setNotice] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -375,7 +380,7 @@ export default function StudioPage() {
     currentWorkspace.current = workspaceId;
     workspaceRequest.current += 1;
     setNotice(''); setListQuery(''); setListStatus('all');
-    setBusy(true); setLoadedWorkspaceId('');
+    setBusy(true); setLoadedWorkspaceId(''); setSecondaryIssues({}); setSecondaryPending(false);
     setCustomers([]); setProjects([]); setInvoices([]); setOffers([]); setProducts([]);
     setEmails([]); setEmailTemplates([]); setActivityFeed([]); setTeamInvites([]);
     setPortal({memberships:[], invites:[], requests:[], files:[], reviews:[], activity:[]});
@@ -584,16 +589,25 @@ export default function StudioPage() {
     setBackendError('');
     try {
       const q = encodeURIComponent(workspaceId);
-      const [customerData, projectData, invoiceData, offerData, productData, emailData, templateData, portalData, activityData, settingsData] = await Promise.all([
+      setSecondaryPending(true);
+      setSecondaryIssues({});
+      const optional = async <T,>(module:string, task:Promise<T>, fallback:T) => {
+        try { return { module, data:await task, error:'' }; }
+        catch (error) { return { module, data:fallback, error:error instanceof Error ? error.message : 'Verbindung fehlgeschlagen' }; }
+      };
+      // Start together, but an integration outage must not block core CRM data.
+      const extra = Promise.all([
+        optional('emails', admin ? requestJson<{emails:EmailLog[]}>(`/api/hive/emails?workspace=${q}`) : Promise.resolve({emails:[]}), {emails:[] as EmailLog[]}),
+        optional('emails', admin ? requestJson<{templates:EmailTemplateRow[]}>(`/api/hive/email-templates?workspace=${q}`) : Promise.resolve({templates:[]}), {templates:[] as EmailTemplateRow[]}),
+        optional('portal', requestJson<PortalData>(`/api/hive/portal?workspace=${q}`), {memberships:[],invites:[],requests:[],files:[],reviews:[],activity:[]} as PortalData),
+        optional('activity', requestJson<{activity:UnifiedActivity[]}>(`/api/hive/activity?workspace=${q}`), {activity:[] as UnifiedActivity[]}),
+      ]);
+      const [customerData, projectData, invoiceData, offerData, productData, settingsData] = await Promise.all([
         requestJson<{ customers: Customer[] }>(`/api/hive/customers?workspace=${q}`),
         requestJson<{ projects: Project[] }>(`/api/hive/projects?workspace=${q}`),
         finance ? requestJson<{ invoices: Invoice[] }>(`/api/hive/invoices?workspace=${q}`) : Promise.resolve({invoices:[] as Invoice[]}),
         finance ? requestJson<{ offers: Offer[] }>(`/api/hive/offers?workspace=${q}`) : Promise.resolve({offers:[] as Offer[]}),
         finance ? requestJson<{ products: Product[] }>(`/api/hive/products?workspace=${q}`) : Promise.resolve({products:[] as Product[]}),
-        admin ? requestJson<{ emails: EmailLog[] }>(`/api/hive/emails?workspace=${q}`) : Promise.resolve({emails:[] as EmailLog[]}),
-        admin ? requestJson<{ templates: EmailTemplateRow[] }>(`/api/hive/email-templates?workspace=${q}`) : Promise.resolve({templates:[] as EmailTemplateRow[]}),
-        requestJson<PortalData>(`/api/hive/portal?workspace=${q}`),
-        requestJson<{ activity: UnifiedActivity[] }>(`/api/hive/activity?workspace=${q}`),
         requestJson<{ settings: Settings }>(`/api/hive/settings?workspace=${q}`),
       ]);
       if (requestId !== workspaceRequest.current || currentWorkspace.current !== workspaceId) return;
@@ -603,17 +617,24 @@ export default function StudioPage() {
       setInvoices(invoiceData.invoices);
       setOffers(offerData.offers);
       setProducts(productData.products);
-      setEmails(emailData.emails);
-      setEmailTemplates(templateData.templates);
-      setPortal(portalData);
-      setActivityFeed(activityData.activity);
       setSettings(settingsData.settings);
+      setBusy(false);
+      const [emailData, templateData, portalData, activityData] = await extra;
+      if (requestId !== workspaceRequest.current || currentWorkspace.current !== workspaceId) return;
+      setEmails(emailData.data.emails);
+      setEmailTemplates(templateData.data.templates);
+      setPortal(portalData.data);
+      setActivityFeed(activityData.data.activity);
+      const issues:Record<string,string>={};
+      for (const result of [emailData, templateData, portalData, activityData]) if (result.error) issues[result.module]=result.error;
+      setSecondaryIssues(issues);
+      setSecondaryPending(false);
     } catch (error) {
       if (requestId !== workspaceRequest.current || currentWorkspace.current !== workspaceId) return;
       const message = error instanceof Error ? error.message : 'Workspace konnte nicht geladen werden';
       setBackendError(message);
     } finally {
-      if (requestId === workspaceRequest.current && currentWorkspace.current === workspaceId) setBusy(false);
+      if (requestId === workspaceRequest.current && currentWorkspace.current === workspaceId) { setBusy(false); setSecondaryPending(false); }
     }
   }, [workspaces]);
 
@@ -652,10 +673,11 @@ export default function StudioPage() {
     if (!canAdmin && (portalMobileView === 'access' || portalMobileView === 'requests')) setPortalMobileView('files');
   }, [canAdmin, portalMobileView]);
   useEffect(() => {
+    if (!activeWorkspace) return;
     const financeTabs:Tab[]=['invoices','offers','catalog'];
     const adminTabs:Tab[]=['emails','team','branding'];
     if ((!canViewFinance && financeTabs.includes(tab)) || (!canAdmin && adminTabs.includes(tab))) setTab('overview');
-  }, [tab, canViewFinance, canAdmin]);
+  }, [tab, canViewFinance, canAdmin, activeWorkspace, setTab]);
   useEffect(() => {
     const handler = (event:KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
@@ -1768,7 +1790,7 @@ export default function StudioPage() {
   const headingCopy:Partial<Record<Tab,string>> = {businesses:'Alle deine Businesses, getrennt geführt und gemeinsam im Blick.',overview:'Dein Studio auf einen Blick.',customers:'Kontakte, Beziehungen und die gemeinsame Arbeit.',projects:'Von der ersten Idee bis zur letzten Abgabe.',invoices:'Rechnungen, Fälligkeiten und Zahlungseingänge.',offers:'Aus Anfragen werden konkrete Aufträge.',catalog:'Deine Leistungen und Preise an einem Ort.',portal:'Dokumente und Freigaben für deine Kunden.',activity:'Was sich in deinem Workspace verändert hat.'};
 
 
-  return <div className="hsv hive-system-app hive-notion-app" style={{ '--business-accent': accent } as React.CSSProperties}>
+  return <div className="hsv hive-system-app hive-flow-app" style={{ '--business-accent': accent } as React.CSSProperties}>
     <header className="hsv-top">
       <div className="hsv-identity">
         <a className="hsv-hive" href="/" aria-label="Hive Startseite"><span className="hive-app-mark" aria-hidden="true">h</span><span>hive<span className="hive-wordmark-dot">.</span></span></a><span className="hsv-divider"/>
@@ -1794,7 +1816,6 @@ export default function StudioPage() {
         <div className="hive-breadcrumb"><span>{tab === 'businesses' ? 'Hive' : businessName.replace(/^Hive Dev · /,'')}</span><span>/</span><strong>{nav.find(([id])=>id===tab)?.[1]}</strong><time>{new Intl.DateTimeFormat('de-CH',{weekday:'short',day:'2-digit',month:'long',year:'numeric'}).format(new Date())}</time></div>
         <div className="hsv-heading" key={tab}>
           <div className="hive-document-heading"><h1>{nav.find(([id]) => id === tab)?.[1]}</h1><p>{busy ? 'Daten werden geladen …' : (headingCopy[tab] || 'Alles Wichtige an einem Ort.')}</p></div>
-          {tab === 'overview' && <button className="hsv-primary" disabled={!customers.length || busy} onClick={()=>void openProject()}><Plus size={15}/> Neues Projekt</button>}
         </div>
         {listTabs && tab !== 'customers' && <div className="hive-list-tools"><label><Search size={15}/><input aria-label="Liste durchsuchen" placeholder="Suchen nach Name, Kunde oder Nummer …" value={listQuery} onChange={e=>setListQuery(e.target.value)}/>{listQuery&&<button aria-label="Suche leeren" onClick={()=>setListQuery('')}><X size={13}/></button>}</label><select aria-label="Status filtern" value={listStatus} onChange={e=>setListStatus(e.target.value)}><option value="all">Alle Status</option>{(tab==='projects'?['planning','active','on_hold','completed']:tab==='invoices'?['draft','sent','overdue','paid','cancelled']:['draft','sent','accepted','withdrawn','expired']).map(value=><option value={value} key={value}>{stateLabel[value]}</option>)}</select><span>{tab === 'projects'?visibleProjects.length:tab === 'invoices'?visibleInvoices.length:visibleOffers.length} Einträge</span></div>}
 
@@ -1804,6 +1825,9 @@ export default function StudioPage() {
           <div className="hive-loading-cards">{[0,1,2,3].map((item)=><span key={item}/>)}</div>
           <div className="hive-loading-panel"><span/><span/><span/></div>
         </div> : <>
+        {Object.keys(secondaryIssues).length > 0 && <aside className="hive-module-notice" role="status"><div><strong>Ein Zusatzmodul ist gerade nicht erreichbar.</strong><p>Kunden, Projekte und Finanzen bleiben verfügbar. Betroffen: {Object.keys(secondaryIssues).map(key=>({emails:'E-Mail',portal:'Portal',activity:'Aktivität'}[key])).join(', ')}.</p></div><button type="button" onClick={()=>void loadWorkspaceData(activeWorkspaceId)}>Verbindung erneut prüfen</button></aside>}
+        {secondaryPending && ['emails','portal','activity'].includes(tab) && <div className="hsv-empty" role="status">Modul wird geladen …</div>}
+        {secondaryIssues[tab] && <div className="hsv-empty" role="alert"><strong>Dieses Modul ist vorübergehend nicht verfügbar.</strong><p>{secondaryIssues[tab]}</p><button className="hsv-outline" onClick={()=>void loadWorkspaceData(activeWorkspaceId)}>Erneut versuchen</button></div>}
         {tab === 'businesses' && <BusinessesOverview
           items={businessesOverview}
           busy={businessesOverviewBusy}
@@ -1897,7 +1921,7 @@ export default function StudioPage() {
           </div>)}</div>
         </>}
 
-        {tab === 'emails' && <>
+        {tab === 'emails' && !secondaryPending && !secondaryIssues['emails'] && <>
           <div className="hive-mobile-subtabs" role="tablist" aria-label="E-Mail-Bereiche">
             <button role="tab" aria-selected={emailMobileView==='templates'} onClick={() => setEmailMobileView('templates')}>Vorlagen</button>
             <button role="tab" aria-selected={emailMobileView==='history'} onClick={() => setEmailMobileView('history')}>Verlauf</button>
@@ -1925,7 +1949,7 @@ export default function StudioPage() {
           </section>
         </>}
 
-        {tab === 'portal' && <>
+        {tab === 'portal' && !secondaryPending && !secondaryIssues['portal'] && <>
           <div className="hsv-rowtop">
             <strong>{canAdmin ? `${portal.memberships.length} Mitglieder · ${portal.invites.length} Einladungen` : 'Kundenportal & Dateien'}</strong>
             {canAdmin && <button className="hsv-primary" disabled={!customers.length} onClick={() => void openPortalInvite()}><Plus size={15}/> Portal-Einladung</button>}
@@ -1997,7 +2021,7 @@ export default function StudioPage() {
           </section>
         </>}
 
-        {tab === 'activity' && <>
+        {tab === 'activity' && !secondaryPending && !secondaryIssues['activity'] && <>
           <div className="hsv-rowtop">
             <strong>{activityFeed.length} Ereignisse</strong>
             <button className="hsv-outline" onClick={() => activeWorkspaceId && void loadWorkspaceData(activeWorkspaceId)}><RefreshCw size={14}/> Aktualisieren</button>

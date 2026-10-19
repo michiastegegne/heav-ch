@@ -1,3 +1,5 @@
+> Historical design iteration. The current surface and verification notes are in `FLOW_WORKSPACE.md`.
+
 # Rounded Hive workspace
 
 The workspace keeps the existing shadcn controls and OpenGlass UI dependency. This iteration removes the document icons and decorative title punctuation, uses a cool neutral canvas, and reserves translucent material for the floating mobile navigation. Content cards remain opaque for legibility.

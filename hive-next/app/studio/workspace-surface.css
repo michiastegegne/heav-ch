@@ -1,0 +1,136 @@
+/* One surface system for Hive. Glass belongs to navigation; data remains opaque. */
+.hsv.hive-system-app.hive-flow-app {
+  --ui-background:#f5f3f0; --ui-card:#fff; --ui-sidebar:#eeece8;
+  --ui-foreground:#242332; --ui-muted:#eeedf3; --ui-muted-foreground:#716f7c;
+  --ui-border:#e4e1e8; --ui-primary:#634bc5; --ui-primary-foreground:#fff;
+  --hive-peach:#fff0e6; --hive-mint:#e8f5ee; --hive-lilac:#f0eaff; --hive-blue:#eaf2ff;
+  --hive-shadow:0 6px 24px #29213606;
+  background:var(--ui-background); min-height:100dvh;
+}
+html[data-theme="dark"] .hsv.hive-system-app.hive-flow-app {
+  --ui-background:#14131d; --ui-card:#211f2e; --ui-sidebar:#191723;
+  --ui-foreground:#f6f3fc; --ui-muted:#302c40; --ui-muted-foreground:#b7b0c8;
+  --ui-border:#383247; --ui-primary:#c5b4ff; --ui-primary-foreground:#211633;
+  --hive-peach:#3b2b2a; --hive-mint:#223a33; --hive-lilac:#32294a; --hive-blue:#25334b;
+  --hive-shadow:0 8px 28px #00000010;
+}
+.hsv.hive-system-app.hive-flow-app .hsv-top { height:72px; min-height:72px; padding:12px 24px; background:var(--ui-background); border-bottom:1px solid var(--ui-border); }
+.hsv.hive-system-app.hive-flow-app .hsv-logo { border-radius:12px; background:var(--ui-primary); color:var(--ui-primary-foreground); }
+.hsv.hive-system-app.hive-flow-app .hsv-layout { grid-template-columns:224px minmax(0,1fr); min-height:calc(100dvh - 72px); }
+.hsv.hive-system-app.hive-flow-app .hsv-nav { top:72px; height:calc(100dvh - 72px); padding:18px 12px; background:var(--ui-background); border-right:1px solid var(--ui-border); }
+.hive-workspace-sidebar [data-slot="sidebar-wrapper"] { flex:1; min-height:0; }
+.hsv.hive-system-app .hive-workspace-sidebar button { min-height:42px; border-radius:13px; padding:10px 12px; gap:12px; font-size:13px; color:var(--ui-muted-foreground); transition:background .2s,color .2s,transform .2s; }
+.hsv.hive-system-app .hive-workspace-sidebar button svg { width:18px; height:18px; stroke-width:1.6; }
+.hsv.hive-system-app .hive-workspace-sidebar button.on { color:var(--ui-primary); background:var(--hive-lilac); font-weight:650; }
+.hsv.hive-system-app .hive-workspace-sidebar [data-slot="sidebar-group-label"] { padding:12px; color:var(--ui-muted-foreground); font-size:10px; letter-spacing:.09em; text-transform:uppercase; }
+.hsv.hive-system-app .hive-workspace-sidebar [data-slot="sidebar-menu-badge"] { color:var(--ui-muted-foreground); }
+.hsv.hive-system-app.hive-flow-app .hsv-main { max-width:1600px; padding:24px clamp(24px,3.5vw,54px) 72px; }
+.hsv.hive-system-app.hive-flow-app .hive-breadcrumb { margin-bottom:22px; font-size:11px; }
+.hsv.hive-system-app.hive-flow-app .hsv-heading { margin-bottom:24px; animation:hive-arrive .35s ease-out; }
+.hsv.hive-system-app.hive-flow-app .hsv-heading h1 { font-size:30px; letter-spacing:-1.1px; font-weight:750; margin-bottom:6px; }
+.hsv.hive-system-app.hive-flow-app .hsv-heading p { font-size:13px; }
+.hsv.hive-system-app.hive-flow-app :is(.hsv-card,.hsv-panel,.hsv-brand-preview,[data-slot="card"]) { border-radius:22px; box-shadow:var(--hive-shadow); }
+.hsv.hive-system-app.hive-flow-app :is(input,select,textarea) { border-radius:12px; }
+.hsv.hive-system-app.hive-flow-app :is(.hsv-primary,.hsv-secondary,.hsv-outline) { border-radius:999px; }
+.hsv.hive-system-app button { transition:background .2s,box-shadow .2s,transform .2s; }
+.hsv.hive-system-app button:active { transform:scale(.98); }
+.hsv.hive-system-app button:focus-visible { outline:2px solid var(--ui-primary); outline-offset:3px; }
+.hive-workspace-hero { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); gap:36px; padding:34px; border-radius:28px; background:#392d55; color:#fff; position:relative; overflow:hidden; isolation:isolate; }
+.hive-workspace-hero::before { content:""; position:absolute; z-index:-1; width:480px; height:480px; top:-330px; right:-130px; border-radius:50%; background:radial-gradient(circle at 35% 65%,#ffc7a4,#d192d9 48%,#8063b1 72%); opacity:.8; }
+.hive-workspace-hero::after { content:""; position:absolute; z-index:-1; width:310px; height:310px; bottom:-270px; left:12%; border-radius:50%; box-shadow:0 0 100px 45px #ac7da04d; }
+.hive-hero-copy { align-self:center; min-width:0; }
+.hive-eyebrow { display:block; color:#d8cbe9; font-size:10px; font-weight:650; letter-spacing:.16em; line-height:1.6; }
+.hive-hero-copy h2 { font-size:clamp(28px,3.2vw,46px); font-weight:650; letter-spacing:-1.5px; line-height:1.12; margin:18px 0; color:#fff; }
+.hive-hero-copy h2 span { color:#f5cfbc; }
+.hive-hero-copy p { max-width:340px; color:#e0d8ed; font-size:13px; line-height:1.7; margin:0 0 22px; }
+.hsv.hive-system-app .hive-hero-create { display:inline-flex; align-items:center; gap:9px; min-height:44px; border:0; border-radius:999px; padding:12px 18px; background:#ffdabf; color:#402c33; font-size:12px; font-weight:650; box-shadow:0 4px 16px #0001; }
+.hsv.hive-system-app .hive-hero-create:hover { background:#ffe8d8; transform:translateY(-2px); }
+.hive-hero-focus { display:flex; flex-direction:column; min-width:0; gap:12px; justify-content:center; }
+.hsv.hive-system-app .hive-hero-project { display:flex; flex-direction:column; gap:14px; min-width:0; width:100%; text-align:left; border:1px solid #ffffff2e; border-radius:20px; padding:22px; background:#ffffff0d; color:#fff; }
+.hsv.hive-system-app .hive-hero-project:hover { background:#ffffff16; }
+.hive-hero-project-top { display:flex; align-items:center; justify-content:space-between; gap:10px; color:#e1d6ec; font-size:11px; }
+.hive-hero-project-top > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.hive-hero-project strong { font-size:20px; line-height:1.35; font-weight:600; overflow-wrap:anywhere; }
+.hive-hero-date { font-size:11px; color:#f5cfbc; }
+.hive-hero-empty > span { color:#e1d6ec; font-size:12px; line-height:1.7; }
+.hsv.hive-system-app .hive-hero-stages { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); padding:12px 0 0; border:0; background:transparent; color:#fff; text-align:left; }
+.hive-hero-stages > span { display:flex; flex-direction:column; gap:6px; border-left:1px solid #ffffff33; padding-left:14px; }
+.hive-hero-stages strong { font-size:20px; font-weight:500; line-height:1; }
+.hive-hero-stages small { font-size:10px; color:#d8cbe9; }
+.hive-overview .crm-metrics { gap:12px; }
+.hive-overview .crm-metrics > button { border-radius:20px; overflow:hidden; }
+.hive-overview .crm-metrics > button [data-slot="card"] { border:1px solid var(--ui-border); border-radius:20px; background:var(--ui-card); padding:20px 0; gap:14px; box-shadow:none; }
+.hive-overview .crm-metrics > button[data-tone="peach"] [data-slot="card"] { background:var(--hive-peach); }
+.hive-overview .crm-metrics > button[data-tone="mint"] [data-slot="card"] { background:var(--hive-mint); }
+.hive-overview .crm-metrics > button[data-tone="lilac"] [data-slot="card"] { background:var(--hive-lilac); }
+.hive-overview .crm-metrics > button[data-tone="blue"] [data-slot="card"] { background:var(--hive-blue); }
+.hive-overview .crm-metrics > button:hover { transform:translateY(-3px); box-shadow:var(--hive-shadow); }
+.hive-overview .crm-metrics [data-slot="card-description"] { font-size:12px; }
+.hive-kpi-value { display:flex; gap:5px; align-items:baseline; }
+.hive-metric-currency { font-size:10px; color:var(--ui-muted-foreground); font-weight:500; }
+.hive-overview .crm-metrics .hive-kpi-value { font-size:26px; }
+.hive-material-scope { min-width:0; }
+.hive-library-dock { display:none; }
+.hive-library-views { margin:0; border-radius:999px; }
+.hsv.hive-system-app .hive-library-views button { min-height:40px; padding:9px 14px; font-size:12px; }
+.hsv.hive-system-app .hive-theme-toggle { width:44px; height:44px; border-radius:999px; }
+.hsv.hive-system-app .hsv-dialog { border-radius:26px; animation:hive-arrive .25s ease-out; }
+.hsv.hive-system-app .hive-clean-project-card { transition:transform .2s,box-shadow .2s; }
+.hsv.hive-system-app .hive-clean-project-card:hover { transform:translateY(-2px); box-shadow:0 8px 24px #0000000c; }
+.hive-appearance-settings { grid-column:1/-1; padding:24px; border:1px solid var(--ui-border); background:var(--ui-card); border-radius:22px; }
+.hsv.hive-system-app .hive-settings-subtabs { display:flex; gap:4px; grid-column:1/-1; }
+.hsv.hive-system-app .hive-settings-subtabs button { flex:0 0 auto; padding:12px 16px; white-space:nowrap; border-radius:999px; font-size:12px; }
+.hsv.hive-system-app .hive-settings-subtabs button[aria-selected="true"] { color:var(--ui-primary); background:var(--ui-card); box-shadow:var(--hive-shadow); }
+.hsv.hive-system-app .hive-settings-section[data-mobile-active="false"] { display:none; }
+.hsv.hive-system-app .hive-appearance-settings[data-mobile-active="true"] { display:block; }
+.hive-module-notice { display:flex; gap:16px; align-items:center; justify-content:space-between; background:var(--hive-peach); border:1px solid var(--ui-border); border-radius:18px; padding:18px; margin-bottom:20px; }
+.hive-module-notice strong { font-size:13px; }
+.hive-module-notice p { margin:6px 0 0; font-size:12px; line-height:1.6; }
+.hive-module-notice button { flex-shrink:0; border:1px solid var(--ui-border); background:var(--ui-card); border-radius:999px; min-height:44px; padding:10px 16px; font-size:12px; }
+@keyframes hive-arrive { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+@keyframes hive-surface-in { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+@media(min-width:761px) and (max-width:1100px) {
+ .hsv.hive-system-app.hive-flow-app .hsv-layout { grid-template-columns:190px minmax(0,1fr); }
+ .hsv.hive-system-app.hive-flow-app .hsv-main { padding:24px; }
+ .hive-workspace-hero { grid-template-columns:minmax(0,1fr); gap:26px; }
+ .hive-hero-focus { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,.7fr); }
+ .hive-hero-focus > .hive-eyebrow { grid-column:1/-1; }
+}
+@media(max-width:760px) {
+ .hsv.hive-system-app.hive-flow-app .hsv-top { height:auto; min-height:68px; padding:calc(10px + env(safe-area-inset-top)) 16px 10px; }
+ .hsv.hive-system-app.hive-flow-app .hsv-layout { display:block; }
+ .hsv.hive-system-app.hive-flow-app .hsv-nav { display:none; }
+ .hsv.hive-system-app.hive-flow-app .hsv-main { padding:18px 16px calc(132px + env(safe-area-inset-bottom)); }
+ .hsv.hive-system-app.hive-flow-app .hive-breadcrumb { margin-bottom:18px; }
+ .hsv.hive-system-app.hive-flow-app .hsv-heading { margin-bottom:20px; }
+ .hsv.hive-system-app.hive-flow-app .hsv-heading h1 { font-size:28px; }
+ .hive-workspace-hero { padding:24px; border-radius:24px; grid-template-columns:minmax(0,1fr); gap:26px; }
+ .hive-hero-copy h2 { font-size:32px; letter-spacing:-1.1px; }
+ .hive-hero-copy p { font-size:12px; margin-bottom:18px; }
+ .hive-hero-focus > .hive-eyebrow { display:none; }
+ .hsv.hive-system-app .hive-hero-project { padding:18px; gap:12px; }
+ .hive-hero-project strong { font-size:17px; }
+ .hive-hero-stages { display:none!important; }
+ .hive-overview .crm-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+ .hive-overview .crm-metrics > button [data-slot="card"] { padding:16px 0; gap:12px; }
+ .hive-overview .crm-metrics [data-slot="card-header"],.hive-overview .crm-metrics [data-slot="card-content"] { padding-left:14px; padding-right:14px; }
+ .hive-overview .crm-metrics [data-slot="card-description"] { min-height:32px; font-size:11px; align-items:flex-start; }
+ .hive-overview .crm-metrics .hive-kpi-value { font-size:22px; flex-direction:column; align-items:flex-start; }
+ .hive-overview .crm-metrics [data-slot="card-content"] { min-height:30px; font-size:10px; align-items:flex-start; }
+ .hsv.hive-system-app .hive-library-dock { display:grid; position:fixed; inset:auto 14px max(12px,env(safe-area-inset-bottom)); width:auto; grid-template-columns:repeat(5,minmax(0,1fr)); padding:7px; z-index:40; border-radius:36px; border:1px solid #ffffff66; background:color-mix(in srgb,var(--ui-card) 76%,transparent)!important; -webkit-backdrop-filter:blur(28px) saturate(180%)!important; backdrop-filter:blur(28px) saturate(180%)!important; box-shadow:inset 0 1px 0 #ffffff80,0 14px 38px #19132626; }
+ .hsv.hive-system-app .hive-library-dock button { border-radius:28px; min-height:54px; padding:7px 0; }
+ .hsv.hive-system-app .hive-library-dock button[aria-current="page"] { background:var(--hive-lilac); color:var(--ui-primary); }
+ .hsv.hive-system-app .hive-library-views button { min-height:44px; padding:8px 12px; }
+ .hsv.hive-system-app .hive-settings-subtabs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .hsv.hive-system-app .hive-settings-subtabs button { min-height:44px; padding:10px 8px; }
+ .hsv.hive-system-app .hive-settings-subtabs button:last-child { grid-column:1/-1; }
+ .hive-appearance-settings { padding:18px; }
+ .hive-module-notice { flex-direction:column; align-items:flex-start; }
+}
+@media(prefers-reduced-motion:reduce) { .hsv.hive-system-app *, .hsv.hive-system-app *::before, .hsv.hive-system-app *::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; } }
+@media(prefers-contrast:more),(prefers-reduced-transparency:reduce),(forced-colors:active) {
+ .hsv.hive-system-app .hive-library-dock,.hsv.hive-system-app .hive-library-views,.hsv.hive-system-app .ogui-segments__indicator { -webkit-backdrop-filter:none!important; backdrop-filter:none!important; background:var(--ui-card)!important; }
+ .hive-flow-app .ogui-dock::before,.hive-flow-app .ogui-dock::after { display:none!important; }
+}
+.hsv.hive-system-app .hive-overview { background:transparent; color:var(--ui-foreground); }
+.hive-workspace-hero { animation:hive-arrive .45s ease-out; }

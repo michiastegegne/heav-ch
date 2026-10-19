@@ -3,6 +3,4 @@
 @import "./mobile.css" layer(legacy);
 @import "./studio-polish.css" layer(legacy);
 @import "./system-shell.css";
-@import "./notion-workspace.css";
-
-@import "./apple-workspace.css";
+@import "./workspace-surface.css";

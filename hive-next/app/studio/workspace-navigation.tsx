@@ -16,8 +16,7 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar";
 
-// Composition adapted from the official shadcn sidebar-10 (MIT), with Hive's
-// real modules and roles in place of the template's sample pages and teams.
+// Hive module navigation built from the MIT-licensed shadcn sidebar primitives.
 export default function WorkspaceNavigation<T extends string>({
   items,
   active,
@@ -55,7 +54,7 @@ export default function WorkspaceNavigation<T extends string>({
   ];
   return (
     <nav
-      className="hsv-nav hive-notion-sidebar crm-ui"
+      className="hsv-nav hive-workspace-sidebar crm-ui"
       aria-label="Business-Module"
     >
       <SidebarProvider className="min-h-0 w-full">
