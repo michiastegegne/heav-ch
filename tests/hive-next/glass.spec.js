@@ -16,10 +16,10 @@ test('iPhone installation guide is accessible, traps focus and closes back to wo
  await page.keyboard.press('Tab');expect(await dialog.evaluate(node=>node.contains(document.activeElement))).toBeTruthy();await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);
  await page.getByRole('navigation',{name:'Mobile Navigation'}).getByRole('button',{name:'Kunden',exact:true}).click();await expect(page.getByText('Nordkunde',{exact:true})).toBeVisible();
 });
-for(const theme of ['light','dark'])test(`glass materials and overview stay readable on iPhone ${theme}`,async({page})=>{
+for(const theme of ['light','dark'])test(`opaque navigation and overview stay readable on iPhone ${theme}`,async({page})=>{
  await page.addInitScript(mode=>localStorage.setItem('hive-appearance',mode),theme);await page.setViewportSize({width:390,height:844});await login(page);
  const nav=page.getByRole('navigation',{name:'Mobile Navigation'});await expect(nav).toBeVisible();
- expect(await nav.evaluate(node=>getComputedStyle(node).backdropFilter.includes('blur'))).toBeTruthy();
+ expect(await nav.evaluate(node=>getComputedStyle(node).backdropFilter)).toBe('none');
  const values=await page.locator('.hive-kpi-value').evaluateAll(nodes=>nodes.map(node=>({width:node.clientWidth,scroll:node.scrollWidth})));expect(values.every(value=>value.scroll<=value.width)).toBeTruthy();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
  await page.screenshot({path:`../../outputs/hive-glass-390-${theme}.png`,fullPage:false});

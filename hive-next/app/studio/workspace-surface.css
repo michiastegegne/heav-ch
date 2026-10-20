@@ -1,18 +1,18 @@
-/* One surface system for Hive. Glass belongs to navigation; data remains opaque. */
+/* Hive surfaces adapted from the supplied Atelier CRM reference. */
 .hsv.hive-system-app.hive-flow-app {
-  --ui-background:#f5f3f0; --ui-card:#fff; --ui-sidebar:#eeece8;
-  --ui-foreground:#242332; --ui-muted:#eeedf3; --ui-muted-foreground:#716f7c;
-  --ui-border:#e4e1e8; --ui-primary:#634bc5; --ui-primary-foreground:#fff;
-  --hive-peach:#fff0e6; --hive-mint:#e8f5ee; --hive-lilac:#f0eaff; --hive-blue:#eaf2ff;
-  --hive-shadow:0 6px 24px #29213606;
+  --ui-background:#faf9f5; --ui-card:#fff; --ui-sidebar:#f3f2ee;
+  --ui-foreground:#1d1d1f; --ui-muted:#f1f0ec; --ui-muted-foreground:#6e6e73;
+  --ui-border:#e5e4df; --ui-primary:#1d1d1f; --ui-primary-foreground:#fff;
+  --hive-peach:#fff; --hive-mint:#fff; --hive-lilac:#f1f0ec; --hive-blue:#fff;
+  --hive-shadow:none;
   background:var(--ui-background); min-height:100dvh;
 }
 html[data-theme="dark"] .hsv.hive-system-app.hive-flow-app {
-  --ui-background:#14131d; --ui-card:#211f2e; --ui-sidebar:#191723;
-  --ui-foreground:#f6f3fc; --ui-muted:#302c40; --ui-muted-foreground:#b7b0c8;
-  --ui-border:#383247; --ui-primary:#c5b4ff; --ui-primary-foreground:#211633;
-  --hive-peach:#3b2b2a; --hive-mint:#223a33; --hive-lilac:#32294a; --hive-blue:#25334b;
-  --hive-shadow:0 8px 28px #00000010;
+  --ui-background:#171717; --ui-card:#202020; --ui-sidebar:#1b1b1b;
+  --ui-foreground:#f5f5f2; --ui-muted:#2a2a29; --ui-muted-foreground:#b0b0aa;
+  --ui-border:#383836; --ui-primary:#f5f5f2; --ui-primary-foreground:#1d1d1f;
+  --hive-peach:#202020; --hive-mint:#202020; --hive-lilac:#2a2a29; --hive-blue:#202020;
+  --hive-shadow:none;
 }
 .hsv.hive-system-app.hive-flow-app .hsv-top { height:72px; min-height:72px; padding:12px 24px; background:var(--ui-background); border-bottom:1px solid var(--ui-border); }
 .hsv.hive-system-app.hive-flow-app .hsv-logo { border-radius:12px; background:var(--ui-primary); color:var(--ui-primary-foreground); }
@@ -29,37 +29,37 @@ html[data-theme="dark"] .hsv.hive-system-app.hive-flow-app {
 .hsv.hive-system-app.hive-flow-app .hsv-heading { margin-bottom:24px; animation:hive-arrive .35s ease-out; }
 .hsv.hive-system-app.hive-flow-app .hsv-heading h1 { font-size:30px; letter-spacing:-1.1px; font-weight:750; margin-bottom:6px; }
 .hsv.hive-system-app.hive-flow-app .hsv-heading p { font-size:13px; }
-.hsv.hive-system-app.hive-flow-app :is(.hsv-card,.hsv-panel,.hsv-brand-preview,[data-slot="card"]) { border-radius:22px; box-shadow:var(--hive-shadow); }
+.hsv.hive-system-app.hive-flow-app :is(.hsv-card,.hsv-panel,.hsv-brand-preview,[data-slot="card"]) { border-radius:16px; box-shadow:var(--hive-shadow); }
 .hsv.hive-system-app.hive-flow-app :is(input,select,textarea) { border-radius:12px; }
 .hsv.hive-system-app.hive-flow-app :is(.hsv-primary,.hsv-secondary,.hsv-outline) { border-radius:999px; }
 .hsv.hive-system-app button { transition:background .2s,box-shadow .2s,transform .2s; }
 .hsv.hive-system-app button:active { transform:scale(.98); }
 .hsv.hive-system-app button:focus-visible { outline:2px solid var(--ui-primary); outline-offset:3px; }
-.hive-workspace-hero { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); gap:36px; padding:34px; border-radius:28px; background:#392d55; color:#fff; position:relative; overflow:hidden; isolation:isolate; }
+.hive-workspace-hero { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); gap:36px; padding:34px; border-radius:16px; background:var(--ui-card); color:#fff; position:relative; overflow:hidden; isolation:isolate; }
 .hive-workspace-hero::before { content:""; position:absolute; z-index:-1; width:480px; height:480px; top:-330px; right:-130px; border-radius:50%; background:radial-gradient(circle at 35% 65%,#ffc7a4,#d192d9 48%,#8063b1 72%); opacity:.8; }
 .hive-workspace-hero::after { content:""; position:absolute; z-index:-1; width:310px; height:310px; bottom:-270px; left:12%; border-radius:50%; box-shadow:0 0 100px 45px #ac7da04d; }
 .hive-hero-copy { align-self:center; min-width:0; }
-.hive-eyebrow { display:block; color:#d8cbe9; font-size:10px; font-weight:650; letter-spacing:.16em; line-height:1.6; }
+.hive-eyebrow { display:block; color:var(--ui-muted-foreground); font-size:10px; font-weight:650; letter-spacing:.16em; line-height:1.6; }
 .hive-hero-copy h2 { font-size:clamp(28px,3.2vw,46px); font-weight:650; letter-spacing:-1.5px; line-height:1.12; margin:18px 0; color:#fff; }
-.hive-hero-copy h2 span { color:#f5cfbc; }
-.hive-hero-copy p { max-width:340px; color:#e0d8ed; font-size:13px; line-height:1.7; margin:0 0 22px; }
+.hive-hero-copy h2 span { color:var(--ui-foreground); }
+.hive-hero-copy p { max-width:340px; color:var(--ui-muted-foreground); font-size:13px; line-height:1.7; margin:0 0 22px; }
 .hsv.hive-system-app .hive-hero-create { display:inline-flex; align-items:center; gap:9px; min-height:44px; border:0; border-radius:999px; padding:12px 18px; background:#ffdabf; color:#402c33; font-size:12px; font-weight:650; box-shadow:0 4px 16px #0001; }
 .hsv.hive-system-app .hive-hero-create:hover { background:#ffe8d8; transform:translateY(-2px); }
 .hive-hero-focus { display:flex; flex-direction:column; min-width:0; gap:12px; justify-content:center; }
-.hsv.hive-system-app .hive-hero-project { display:flex; flex-direction:column; gap:14px; min-width:0; width:100%; text-align:left; border:1px solid #ffffff2e; border-radius:20px; padding:22px; background:#ffffff0d; color:#fff; }
+.hsv.hive-system-app .hive-hero-project { display:flex; flex-direction:column; gap:14px; min-width:0; width:100%; text-align:left; border:1px solid #ffffff2e; border-radius:14px; padding:22px; background:#ffffff0d; color:#fff; }
 .hsv.hive-system-app .hive-hero-project:hover { background:#ffffff16; }
-.hive-hero-project-top { display:flex; align-items:center; justify-content:space-between; gap:10px; color:#e1d6ec; font-size:11px; }
+.hive-hero-project-top { display:flex; align-items:center; justify-content:space-between; gap:10px; color:var(--ui-muted-foreground); font-size:11px; }
 .hive-hero-project-top > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .hive-hero-project strong { font-size:20px; line-height:1.35; font-weight:600; overflow-wrap:anywhere; }
-.hive-hero-date { font-size:11px; color:#f5cfbc; }
-.hive-hero-empty > span { color:#e1d6ec; font-size:12px; line-height:1.7; }
+.hive-hero-date { font-size:11px; color:var(--ui-foreground); }
+.hive-hero-empty > span { color:var(--ui-muted-foreground); font-size:12px; line-height:1.7; }
 .hsv.hive-system-app .hive-hero-stages { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); padding:12px 0 0; border:0; background:transparent; color:#fff; text-align:left; }
 .hive-hero-stages > span { display:flex; flex-direction:column; gap:6px; border-left:1px solid #ffffff33; padding-left:14px; }
 .hive-hero-stages strong { font-size:20px; font-weight:500; line-height:1; }
-.hive-hero-stages small { font-size:10px; color:#d8cbe9; }
+.hive-hero-stages small { font-size:10px; color:var(--ui-muted-foreground); }
 .hive-overview .crm-metrics { gap:12px; }
-.hive-overview .crm-metrics > button { border-radius:20px; overflow:hidden; }
-.hive-overview .crm-metrics > button [data-slot="card"] { border:1px solid var(--ui-border); border-radius:20px; background:var(--ui-card); padding:20px 0; gap:14px; box-shadow:none; }
+.hive-overview .crm-metrics > button { border-radius:14px; overflow:hidden; }
+.hive-overview .crm-metrics > button [data-slot="card"] { border:1px solid var(--ui-border); border-radius:14px; background:var(--ui-card); padding:20px 0; gap:14px; box-shadow:none; }
 .hive-overview .crm-metrics > button[data-tone="peach"] [data-slot="card"] { background:var(--hive-peach); }
 .hive-overview .crm-metrics > button[data-tone="mint"] [data-slot="card"] { background:var(--hive-mint); }
 .hive-overview .crm-metrics > button[data-tone="lilac"] [data-slot="card"] { background:var(--hive-lilac); }
@@ -74,10 +74,10 @@ html[data-theme="dark"] .hsv.hive-system-app.hive-flow-app {
 .hive-library-views { margin:0; border-radius:999px; }
 .hsv.hive-system-app .hive-library-views button { min-height:40px; padding:9px 14px; font-size:12px; }
 .hsv.hive-system-app .hive-theme-toggle { width:44px; height:44px; border-radius:999px; }
-.hsv.hive-system-app .hsv-dialog { border-radius:26px; animation:hive-arrive .25s ease-out; }
+.hsv.hive-system-app .hsv-dialog { border-radius:18px; animation:hive-arrive .25s ease-out; }
 .hsv.hive-system-app .hive-clean-project-card { transition:transform .2s,box-shadow .2s; }
 .hsv.hive-system-app .hive-clean-project-card:hover { transform:translateY(-2px); box-shadow:0 8px 24px #0000000c; }
-.hive-appearance-settings { grid-column:1/-1; padding:24px; border:1px solid var(--ui-border); background:var(--ui-card); border-radius:22px; }
+.hive-appearance-settings { grid-column:1/-1; padding:24px; border:1px solid var(--ui-border); background:var(--ui-card); border-radius:16px; }
 .hsv.hive-system-app .hive-settings-subtabs { display:flex; gap:4px; grid-column:1/-1; }
 .hsv.hive-system-app .hive-settings-subtabs button { flex:0 0 auto; padding:12px 16px; white-space:nowrap; border-radius:999px; font-size:12px; }
 .hsv.hive-system-app .hive-settings-subtabs button[aria-selected="true"] { color:var(--ui-primary); background:var(--ui-card); box-shadow:var(--hive-shadow); }
@@ -118,7 +118,7 @@ html[data-theme="dark"] .hsv.hive-system-app.hive-flow-app {
  .hive-overview .crm-metrics .hive-kpi-value { font-size:22px; flex-direction:column; align-items:flex-start; }
  .hive-overview .crm-metrics [data-slot="card-content"] { min-height:30px; font-size:10px; align-items:flex-start; }
  .hsv.hive-system-app .hive-library-dock { display:grid; position:fixed; inset:auto 14px max(12px,env(safe-area-inset-bottom)); width:auto; grid-template-columns:repeat(5,minmax(0,1fr)); padding:7px; z-index:40; border-radius:36px; border:1px solid #ffffff66; background:color-mix(in srgb,var(--ui-card) 76%,transparent)!important; -webkit-backdrop-filter:blur(28px) saturate(180%)!important; backdrop-filter:blur(28px) saturate(180%)!important; box-shadow:inset 0 1px 0 #ffffff80,0 14px 38px #19132626; }
- .hsv.hive-system-app .hive-library-dock button { border-radius:28px; min-height:54px; padding:7px 0; }
+ .hsv.hive-system-app .hive-library-dock button { border-radius:16px; min-height:54px; padding:7px 0; }
  .hsv.hive-system-app .hive-library-dock button[aria-current="page"] { background:var(--hive-lilac); color:var(--ui-primary); }
  .hsv.hive-system-app .hive-library-views button { min-height:44px; padding:8px 12px; }
  .hsv.hive-system-app .hive-settings-subtabs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
@@ -134,3 +134,84 @@ html[data-theme="dark"] .hsv.hive-system-app.hive-flow-app {
 }
 .hsv.hive-system-app .hive-overview { background:transparent; color:var(--ui-foreground); }
 .hive-workspace-hero { animation:hive-arrive .45s ease-out; }
+
+/* Quiet hierarchy: neutral surfaces, a strong title, fine rules and compact data. */
+.hsv.hive-system-app.hive-flow-app .hsv-heading h1 {
+ font-size:clamp(30px,3vw,40px); font-weight:700; letter-spacing:-.035em; line-height:1.15;
+}
+.hsv.hive-system-app.hive-flow-app .hsv-heading { margin-bottom:32px; }
+.hsv.hive-system-app.hive-flow-app .hsv-main { padding-top:28px; }
+.hsv.hive-system-app.hive-flow-app .hsv-top { background:var(--ui-card); }
+.hsv.hive-system-app .hive-workspace-sidebar button { border-radius:9px; }
+.hsv.hive-system-app .hive-workspace-sidebar button.on {
+ background:var(--ui-primary); color:var(--ui-primary-foreground);
+}
+.hsv.hive-system-app .hive-workspace-sidebar button.on [data-slot="sidebar-menu-badge"] { color:inherit; }
+.hive-workspace-hero { border:1px solid var(--ui-border); color:var(--ui-foreground); padding:30px; gap:32px; }
+.hive-workspace-hero::before,.hive-workspace-hero::after { content:none; }
+.hive-hero-copy h2 { color:var(--ui-foreground); font-size:clamp(28px,3vw,40px); }
+.hive-hero-copy h2 span { color:var(--ui-foreground); }
+.hsv.hive-system-app .hive-hero-create {
+ background:var(--ui-primary); color:var(--ui-primary-foreground); box-shadow:none;
+}
+.hsv.hive-system-app .hive-hero-create:hover { background:var(--ui-primary); opacity:.88; transform:none; }
+.hsv.hive-system-app .hive-hero-project {
+ color:var(--ui-foreground); background:var(--ui-background); border-color:var(--ui-border); border-radius:12px;
+}
+.hsv.hive-system-app .hive-hero-project:hover { background:var(--ui-muted); }
+.hsv.hive-system-app .hive-hero-stages { color:var(--ui-foreground); }
+.hive-hero-stages > span { border-color:var(--ui-border); }
+.hive-hero-stages small { color:var(--ui-muted-foreground); }
+.hive-overview .crm-metrics > button [data-slot="card"] { background:var(--ui-card); }
+.hive-overview .crm-metrics > button:hover { transform:none; }
+.hive-overview .crm-metrics .hive-kpi-value { font-weight:600; letter-spacing:-.04em; font-variant-numeric:tabular-nums; }
+.hsv.hive-system-app .hive-clean-project-card:hover { transform:none; box-shadow:none; }
+.hsv.hive-system-app .hive-project-table > div:not(.hive-no-results) { padding:16px 20px; }
+.hsv.hive-system-app .hsv-letter { background:var(--ui-muted); color:var(--ui-foreground); border-radius:50%; }
+.hsv.hive-system-app .crm-ui [data-slot="card"] { box-shadow:none; }
+.hsv.hive-system-app .crm-customer-table [data-slot="table-head"] { background:var(--ui-background); font-weight:500; font-size:12px; }
+.hsv.hive-system-app .crm-customer-table [data-slot="table-cell"] { padding-top:14px; padding-bottom:14px; }
+.hsv.hive-system-app .crm-customer-table [data-slot="table-row"]:hover { background:var(--ui-muted); }
+.hsv.hive-system-app .hive-status { padding:4px 9px; }
+.hsv.hive-system-app :is([data-state="planning"],[data-state="on_hold"],[data-state="sent"]) {
+ --status-bg:var(--ui-muted); --status-ink:var(--ui-muted-foreground); --status-edge:var(--ui-border);
+}
+.hsv.hive-system-app .hsv-dialog { box-shadow:0 12px 48px #00000012; }
+.hsv.hive-system-app .hive-mobile-create { box-shadow:none; }
+.hsv.hive-system-app .hive-library-views {
+ border:1px solid var(--ui-border); background:var(--ui-card); border-radius:999px; box-shadow:none;
+}
+.hsv.hive-system-app .hive-library-views button[aria-checked="true"] { color:var(--ui-primary-foreground); background:var(--ui-primary); }
+@media(max-width:760px) {
+ .hsv.hive-system-app.hive-flow-app .hsv-main { padding:20px 16px calc(140px + env(safe-area-inset-bottom)); }
+ .hsv.hive-system-app.hive-flow-app .hsv-heading { margin-bottom:24px; }
+ .hsv.hive-system-app .hive-workspace-hero { padding:22px; gap:24px; border-radius:16px; }
+ .hive-hero-copy h2 { font-size:30px; letter-spacing:-1px; }
+ .hive-overview .crm-metrics .hive-kpi-value { font-size:22px; }
+ .hsv.hive-system-app .hive-library-dock {
+  border:1px solid var(--ui-border); border-radius:20px; background:var(--ui-card)!important;
+  -webkit-backdrop-filter:none!important; backdrop-filter:none!important; box-shadow:0 2px 12px #00000008;
+ }
+ .hsv.hive-system-app .hive-library-dock button { border-radius:14px; }
+ .hsv.hive-system-app .hive-library-dock button[aria-current="page"] { background:var(--ui-primary); color:var(--ui-primary-foreground); }
+}
+.hsv.hive-system-app.hive-flow-app .hsv-main { margin:0 auto; }
+.hsv.hive-system-app.hive-flow-app .hsv-heading { animation:none; }
+.hive-workspace-hero { animation:none; }
+.hive-document { --doc-bg:#faf9f5; font-family:inherit; }
+html[data-theme="dark"] .hive-document { --doc-bg:#171717; }
+@media(min-width:761px) {
+ .hsv.hive-system-app :is(.hive-invoice-labels,.hive-invoice-table > div:not(.hive-no-results)) {
+  display:grid; grid-template-columns:36px minmax(140px,1fr) 100px 100px 150px; gap:14px; align-items:center; padding:16px 20px;
+ }
+ .hsv.hive-system-app .hive-invoice-labels { font-size:11px; letter-spacing:0; background:transparent; }
+ .hive-invoice-labels > span:first-child { grid-column:1/3; }
+ .hive-invoice-labels > span:last-child { text-align:right; }
+ .hive-invoice-table .hive-status { justify-self:start; }
+ .hive-invoice-table .hive-table-date { font-variant-numeric:tabular-nums; }
+ .hive-invoice-table > div > strong { text-align:right; font-variant-numeric:tabular-nums; }
+ .hsv.hive-system-app .hive-invoice-table .hive-record-actions {
+  grid-column:2/-1; display:flex; flex-wrap:wrap; justify-content:flex-end; gap:4px;
+ }
+ .hsv.hive-system-app .hive-invoice-table .hive-record-actions button { min-height:32px; padding:6px 10px; }
+}
