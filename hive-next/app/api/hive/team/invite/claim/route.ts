@@ -1,3 +1,4 @@
+import { previewNoLogin } from '@/lib/hive/preview-mode';
 import { z } from 'zod';
 import { jsonError, requireHiveDataAccess } from '@/lib/hive/access';
 
@@ -12,6 +13,7 @@ function sameOrigin(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    if (previewNoLogin()) return Response.json({ error: 'Invite claims are disabled in preview' }, { status: 403 });
     if (!sameOrigin(request)) {
       return Response.json({ error: 'Anfrage nicht erlaubt.' }, { status: 403 });
     }

@@ -1,3 +1,5 @@
+import { previewNoLogin } from '@/lib/hive/preview-mode';
+import { requireHiveDataAccess, jsonError } from '@/lib/hive/access';
 import { auth } from '@clerk/nextjs/server';
 import { z } from 'zod';
 import { getHiveAuthState } from '@/lib/hive/auth-provider';
@@ -15,6 +17,13 @@ function sameOrigin(request: Request) {
 }
 
 export async function GET() {
+  if (previewNoLogin()) {
+    try {
+      await requireHiveDataAccess();
+      return Response.json({ provider: 'preview', linked: true }, { headers: { 'Cache-Control': 'private, no-store' } });
+    } catch (error) { return jsonError(error); }
+  }
+
   const authState = getHiveAuthState();
   if (!authState.ready) {
     return Response.json(

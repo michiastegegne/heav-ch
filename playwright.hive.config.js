@@ -1,6 +1,6 @@
 import { defineConfig } from '@playwright/test';
 export default defineConfig({
- testDir:'./tests/hive-next',testMatch:'*.spec.js',workers:1,timeout:30000,
+ testDir:'./tests/hive-next',testMatch:'*.spec.js',testIgnore:'preview-no-login.spec.js',workers:1,timeout:30000,
  use:{baseURL:'http://localhost:4190',browserName:'chromium'},
  webServer:[
   {command:'node tests/hive-next/backend.mjs',url:'http://127.0.0.1:4499/health',reuseExistingServer:false},

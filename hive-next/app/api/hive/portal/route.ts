@@ -1,3 +1,4 @@
+import { previewNoLogin } from '@/lib/hive/preview-mode';
 import { z } from 'zod';
 import { getHiveAccessToken, assertWorkspaceAllowed, jsonError, requireHiveDataAccess } from '@/lib/hive/access';
 
@@ -91,7 +92,7 @@ export async function POST(request: Request) {
     const supabase = await requireHiveDataAccess();
     await assertWorkspaceAllowed(payload.workspaceId, supabase);
 
-    if (payload.action === 'create_invite' && process.env.HIVE_ENABLE_EMAIL_SEND === 'true') {
+    if (payload.action === 'create_invite' && (!previewNoLogin() && process.env.HIVE_ENABLE_EMAIL_SEND === 'true')) {
       const token = await getHiveAccessToken();
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

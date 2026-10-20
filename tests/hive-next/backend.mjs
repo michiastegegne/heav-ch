@@ -19,6 +19,7 @@ http.createServer(async(req,res)=>{
  const body=raw?JSON.parse(raw):{};
  const actor=req.headers.authorization===`Bearer ${readerToken}`?reader:user;
  const reply=(data,status=200)=>{res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(data));};
+ if(url.pathname==='/__preview_scope' && req.method==='POST'){workspaces[1].slug=body.live?'live-business':'hive-dev-sued';return reply({ok:true});}
  if(url.pathname==='/health')return reply({ok:true});
  if(url.pathname==='/auth/v1/token' && body.email===reader.email && body.password==='test-password')return reply({access_token:readerToken,refresh_token:'reader-refresh',token_type:'bearer',expires_in:3600,user:reader});
  if(url.pathname==='/auth/v1/token')return body.email===user.email&&body.password==='test-password' ? reply({access_token:token,refresh_token:'test-refresh',token_type:'bearer',expires_in:3600,user}) : reply({msg:'Invalid login credentials',code:'invalid_credentials'},400);

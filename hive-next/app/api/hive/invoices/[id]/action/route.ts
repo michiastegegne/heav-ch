@@ -1,3 +1,4 @@
+import { previewNoLogin } from '@/lib/hive/preview-mode';
 import { z } from 'zod';
 import { getHiveAccessToken, assertWorkspaceAllowed, jsonError, requireHiveDataAccess } from '@/lib/hive/access';
 
@@ -91,7 +92,7 @@ export async function POST(
       );
     }
 
-    if (action === 'send' && process.env.HIVE_ENABLE_EMAIL_SEND !== 'true') {
+    if (action === 'send' && (previewNoLogin() || process.env.HIVE_ENABLE_EMAIL_SEND !== 'true')) {
       return Response.json(
         { error: 'E-Mail-Versand ist in der Hive-Dev-Preview deaktiviert.' },
         { status: 403 },

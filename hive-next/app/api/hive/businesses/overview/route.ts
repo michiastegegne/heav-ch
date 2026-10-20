@@ -1,3 +1,4 @@
+import { previewNoLogin } from '@/lib/hive/preview-mode';
 import { allowedWorkspaceIds, jsonError, requireHiveDataAccess } from '@/lib/hive/access';
 
 type MembershipRow = {
@@ -28,7 +29,7 @@ export async function GET() {
       const raw = membership.workspaces;
       const workspace = Array.isArray(raw) ? raw[0] : raw;
       if (!workspace || workspace.status !== 'active') return [];
-      if (!configured.has(workspace.id) && !workspace.slug.startsWith('hive-dev-')) return [];
+      if ((previewNoLogin() || !configured.has(workspace.id)) && !workspace.slug.startsWith('hive-dev-')) return [];
       return [{ workspace, role:membership.role }];
     });
 

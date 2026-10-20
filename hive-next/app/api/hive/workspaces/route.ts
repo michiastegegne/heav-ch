@@ -1,3 +1,4 @@
+import { previewNoLogin } from '@/lib/hive/preview-mode';
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
 import {
@@ -30,7 +31,7 @@ export async function GET() {
       const raw = membership.workspaces;
       const workspace = Array.isArray(raw) ? raw[0] : raw;
       if (!workspace || workspace.status !== 'active') return [];
-      if (!configured.has(workspace.id) && !workspace.slug.startsWith('hive-dev-')) return [];
+      if ((previewNoLogin() || !configured.has(workspace.id)) && !workspace.slug.startsWith('hive-dev-')) return [];
 
       return [{
         id: workspace.id,

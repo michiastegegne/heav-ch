@@ -1,3 +1,4 @@
+import { previewNoLogin } from '@/lib/hive/preview-mode';
 import { createServerClient } from '@supabase/ssr';
 import { getHiveAuthState } from '@/lib/hive/auth-provider';
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
@@ -14,6 +15,22 @@ const clerk = clerkMiddleware(async (auth, request) => {
 });
 
 export default async function middleware(request: NextRequest, event: NextFetchEvent) {
+  if (previewNoLogin()) {
+    const path = request.nextUrl.pathname;
+    const headers = { 'Cache-Control': 'private, no-store' };
+    if (path === '/login' || path === '/account') {
+      const response = NextResponse.redirect(new URL('/studio', request.url));
+      response.headers.set('Cache-Control', 'private, no-store');
+      return response;
+    }
+    // Prevent identity changes and invite claims for the shared preview actor.
+    if ((path.startsWith('/api/auth/') && !(path === '/api/auth/identity-link' && request.method === 'GET')) || path === '/api/hive/team/invite/claim') {
+      return NextResponse.json({ error: 'Identity changes are disabled in preview' }, { status: 403, headers });
+    }
+    const response = NextResponse.next();
+    response.headers.set('Cache-Control', 'private, no-store');
+    return response;
+  }
   const authState = getHiveAuthState();
   const api = request.nextUrl.pathname.startsWith('/api/');
 
