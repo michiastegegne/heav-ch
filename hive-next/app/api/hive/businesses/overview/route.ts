@@ -29,7 +29,11 @@ export async function GET() {
       const raw = membership.workspaces;
       const workspace = Array.isArray(raw) ? raw[0] : raw;
       if (!workspace || workspace.status !== 'active') return [];
-      if ((previewNoLogin() || !configured.has(workspace.id)) && !workspace.slug.startsWith('hive-dev-')) return [];
+      if (process.env.VERCEL_ENV === 'production') {
+        if (workspace.slug.startsWith('hive-dev-') || !configured.has(workspace.id)) return [];
+      } else if ((previewNoLogin() || !configured.has(workspace.id)) && !workspace.slug.startsWith('hive-dev-')) {
+        return [];
+      }
       return [{ workspace, role:membership.role }];
     });
 
