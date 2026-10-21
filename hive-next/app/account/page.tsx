@@ -57,7 +57,7 @@ export default async function AccountPage({
             <SignoutButton/>
           </div>
         )}
-        <AuthReadinessCard/>
+        {process.env.VERCEL_ENV !== 'production' && <AuthReadinessCard/>}
         {authState.ready && <TeamInviteCard/>}
         {authState.ready && showIdentityMigration && !hasTeamInvite && <IdentityLinkCard provider={authState.requested}/>} 
       </section>
