@@ -411,10 +411,17 @@ export default function StudioPage() {
     return items.find((department) => department.is_default)?.id || items[0]?.id || '';
   }
 
+  function portalInviteAddress(customerId:string, departmentId:string, items:Department[]) {
+    const department=items.find((item) => item.id === departmentId);
+    const customer=customers.find((item) => item.id === customerId);
+    return (department?.contact_email || customer?.email || '').trim();
+  }
+
   async function openPortalInvite() {
     const customerId=customers[0]?.id || '';
     const items=await loadScopeDepartments(customerId);
-    setInviteDraft({ customerId, departmentId:preferredDepartmentId(items), email:'' });
+    const departmentId=preferredDepartmentId(items);
+    setInviteDraft({ customerId, departmentId, email:portalInviteAddress(customerId, departmentId, items) });
     setInviteOpen(true);
   }
 
@@ -1957,7 +1964,7 @@ export default function StudioPage() {
 
           <div className="hsv-intro" style={{ marginBottom: 18 }}>
             <span className="hsv-big-logo"><ShieldCheck size={26}/></span>
-            <div><span>KUNDENPORTAL</span><h2>Zugänge & Freigaben</h2><p>Einladungen, Portal-Mitglieder, Dateien, Reviews und Kundenanfragen laufen pro Business und Department. Im Dev-Modus wird keine Einladung per E-Mail versendet.</p></div>
+            <div><span>KUNDENPORTAL</span><h2>Zugänge & Freigaben</h2><p>Einladungen, Portal-Mitglieder, Dateien, Reviews und Kundenanfragen laufen pro Business und Department. {activeWorkspace?.slug.startsWith('hive-dev-') ? 'Im Dev-Modus wird keine Einladung per E-Mail versendet.' : 'Portal-Einladungen werden per E-Mail an die hinterlegte Kontaktadresse verschickt.'}</p></div>
           </div>
           <div className="hive-mobile-subtabs" role="tablist" aria-label="Portal-Bereiche">
             {canAdmin && <button role="tab" aria-selected={portalMobileView==='access'} onClick={() => setPortalMobileView('access')}>Zugänge</button>}
@@ -2317,12 +2324,18 @@ export default function StudioPage() {
         <label>Kunde<select required value={inviteDraft.customerId} onChange={async (e) => {
           const customerId=e.target.value;
           const items=await loadScopeDepartments(customerId);
-          setInviteDraft((current) => ({ ...current, customerId, departmentId:preferredDepartmentId(items) }));
+          const departmentId=preferredDepartmentId(items);
+          setInviteDraft((current) => ({ ...current, customerId, departmentId, email:portalInviteAddress(customerId, departmentId, items) }));
         }}>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customerName(customer)}</option>)}</select></label>
-        <label>Abteilung<select required value={inviteDraft.departmentId} onChange={(e) => setInviteDraft({ ...inviteDraft, departmentId:e.target.value })}>{scopeDepartments.map((department) => <option key={department.id} value={department.id}>{department.name}{department.is_default ? ' · Standard' : ''}</option>)}</select></label>
-        <label>E-Mail<input required type="email" value={inviteDraft.email} onChange={(e) => setInviteDraft({ ...inviteDraft, email:e.target.value })} placeholder="test@example.com"/></label>
-        <p className="hsv-warning">Dev-Modus: Die Einladung wird gespeichert, aber nicht versendet.</p>
-        <button className="hsv-primary" type="submit">Einladung anlegen <Check size={15}/></button>
+        <label>Abteilung<select required value={inviteDraft.departmentId} onChange={(e) => {
+          const departmentId=e.target.value;
+          setInviteDraft({ ...inviteDraft, departmentId, email:portalInviteAddress(inviteDraft.customerId, departmentId, scopeDepartments) });
+        }}>{scopeDepartments.map((department) => <option key={department.id} value={department.id}>{department.name}{department.is_default ? ' · Standard' : ''}</option>)}</select></label>
+        <label>E-Mail<input required readOnly type="email" value={inviteDraft.email} placeholder="E-Mail in Kunde/Abteilung hinterlegen"/></label>
+        <p className="hsv-warning">{activeWorkspace?.slug.startsWith('hive-dev-')
+          ? 'Dev-Modus: Die Einladung wird gespeichert, aber nicht versendet.'
+          : 'Live-Versand: Die Einladung geht an die E-Mail-Adresse der ausgewählten Abteilung (oder des Kunden). Zum Ändern die Kontaktadresse beim Kunden bearbeiten.'}</p>
+        <button className="hsv-primary" type="submit">{activeWorkspace?.slug.startsWith('hive-dev-') ? 'Einladung anlegen' : 'Einladung senden'} <Check size={15}/></button>
       </form>
     </Modal>}
 
