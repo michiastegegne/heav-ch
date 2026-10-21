@@ -1789,7 +1789,7 @@ export default function StudioPage() {
   ];
 
   const matchesList = (...values:unknown[]) => values.filter(Boolean).join(' ').toLocaleLowerCase('de-CH').includes(listQuery.toLocaleLowerCase('de-CH').trim());
-  const visibleCustomers = customers.filter(c => matchesList(customerName(c), c.email, c.city));
+  const visibleCustomers = customers.filter(c => matchesList(customerName(c), c.contact_name, c.email, c.phone, c.address_line1, c.postal_code, c.city, c.country, c.notes));
   const visibleProjects = projects.filter(p => matchesList(p.title,relatedName(p.customers)) && (listStatus === 'all' || p.status === listStatus));
   const visibleInvoices = invoices.filter(i => matchesList(i.invoice_number,relatedName(i.customers)) && (listStatus === 'all' || i.status === listStatus));
   const visibleOffers = offers.filter(o => matchesList(o.title,o.offer_number,relatedName(o.customers)) && (listStatus === 'all' || o.status === listStatus));
@@ -2395,6 +2395,26 @@ export default function StudioPage() {
             </div>
           </div>
 
+          <div className="hsv-rowtop" style={{marginBottom:12}}><strong>Kontaktdaten</strong></div>
+          <div className="hsv-table" style={{marginBottom:24}}>
+            {([
+              ['Kontaktperson', customerWorkspace.customer.contact_name],
+              ['E-Mail', customerWorkspace.customer.email],
+              ['Telefon', customerWorkspace.customer.phone],
+              ['Adresse', [
+                customerWorkspace.customer.address_line1,
+                [customerWorkspace.customer.postal_code, customerWorkspace.customer.city].filter(Boolean).join(' '),
+                customerWorkspace.customer.country,
+              ].filter(Boolean).join(', ')],
+              ['Notizen', customerWorkspace.customer.notes],
+            ] as Array<[string,string|null|undefined]>)
+              .filter(([,value]) => Boolean(value))
+              .map(([label,value]) => <div key={label}>
+                <span className="hsv-letter"><Users size={14}/></span>
+                <span className="hsv-grow"><strong>{label}</strong><small style={{whiteSpace:'pre-wrap'}}>{value}</small></span>
+              </div>)}
+          </div>
+
           <div className="hive-customer-metrics">
             <div><span>AKTIVE PROJEKTE</span><strong>{customerWorkspace.metrics.activeProjectCount}</strong><small>{customerWorkspace.metrics.projectCount} total</small></div>
             {customerWorkspace.canViewFinance && <div><span>OFFEN</span><strong style={{fontSize:22}}>{money(customerWorkspace.metrics.openRappen)}</strong><small>Rechnungen</small></div>}
@@ -2457,6 +2477,7 @@ export default function StudioPage() {
         <label>Telefon<input type="tel" inputMode="tel" autoComplete="tel" value={customerDraft.phone} onChange={(e) => setCustomerDraft({ ...customerDraft, phone: e.target.value })}/></label>
         <label>Adresse<input autoComplete="street-address" value={customerDraft.addressLine1} onChange={(e) => setCustomerDraft({ ...customerDraft, addressLine1: e.target.value })}/></label>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12 }}><label>PLZ<input inputMode="numeric" autoComplete="postal-code" value={customerDraft.postalCode} onChange={(e) => setCustomerDraft({ ...customerDraft, postalCode: e.target.value })}/></label><label>Ort<input autoComplete="address-level2" value={customerDraft.city} onChange={(e) => setCustomerDraft({ ...customerDraft, city: e.target.value })}/></label></div>
+        <label>Land<input autoComplete="country-name" value={customerDraft.country} onChange={(e) => setCustomerDraft({ ...customerDraft, country: e.target.value })}/></label>
         <label>Notiz<textarea rows={3} value={customerDraft.notes} onChange={(e) => setCustomerDraft({ ...customerDraft, notes: e.target.value })}/></label>
         <button className="hsv-primary" type="submit">Speichern <Check size={15}/></button>
       </form>
