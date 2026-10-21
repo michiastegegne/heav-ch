@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowLeft, ArrowRight, ArrowUpRight, BriefcaseBusiness, Building2, Check, Clock3, CreditCard, FileText,
+  ArrowLeft, ArrowRight, ArrowUpRight, BriefcaseBusiness, Building2, Check, ChevronDown, Clock3, CreditCard, FileText,
   LayoutDashboard, Mail, Menu, Package, Pencil, Plus, RefreshCw, Search, Settings2, ShieldCheck, Smartphone, Trash2, Users, X,
 } from 'lucide-react';
 import { createPublicSupabaseBrowserClient } from '@/lib/supabase/public-browser';
@@ -1824,7 +1824,7 @@ export default function StudioPage() {
         <div className="hsv-heading" key={tab}>
           <div className="hive-document-heading"><h1>{nav.find(([id]) => id === tab)?.[1]}</h1><p>{busy ? 'Daten werden geladen …' : (headingCopy[tab] || 'Alles Wichtige an einem Ort.')}</p></div>
         </div>
-        {listTabs && tab !== 'customers' && <div className="hive-list-tools"><label><Search size={15}/><input aria-label="Liste durchsuchen" placeholder="Suchen nach Name, Kunde oder Nummer …" value={listQuery} onChange={e=>setListQuery(e.target.value)}/>{listQuery&&<button aria-label="Suche leeren" onClick={()=>setListQuery('')}><X size={13}/></button>}</label><select aria-label="Status filtern" value={listStatus} onChange={e=>setListStatus(e.target.value)}><option value="all">Alle Status</option>{(tab==='projects'?['planning','active','on_hold','completed']:tab==='invoices'?['draft','sent','overdue','paid','cancelled']:['draft','sent','accepted','withdrawn','expired']).map(value=><option value={value} key={value}>{stateLabel[value]}</option>)}</select><span>{tab === 'projects'?visibleProjects.length:tab === 'invoices'?visibleInvoices.length:visibleOffers.length} Einträge</span></div>}
+        {listTabs && tab !== 'customers' && <div className="hive-list-tools"><label><Search size={15}/><input aria-label="Liste durchsuchen" placeholder="Suchen nach Name, Kunde oder Nummer …" value={listQuery} onChange={e=>setListQuery(e.target.value)}/>{listQuery&&<button aria-label="Suche leeren" onClick={()=>setListQuery('')}><X size={13}/></button>}</label><div className="hive-status-pill"><select aria-label="Status filtern" value={listStatus} onChange={e=>setListStatus(e.target.value)}><option value="all">Alle Status</option>{(tab==='projects'?['planning','active','on_hold','completed']:tab==='invoices'?['draft','sent','overdue','paid','cancelled']:['draft','sent','accepted','withdrawn','expired']).map(value=><option value={value} key={value}>{stateLabel[value]}</option>)}</select><ChevronDown size={15} aria-hidden="true"/></div><span>{tab === 'projects'?visibleProjects.length:tab === 'invoices'?visibleInvoices.length:visibleOffers.length} Einträge</span></div>}
 
         {!busy && !workspaces.length ? <div className="hsv-empty"><Building2 size={24}/><strong>Noch kein Business verfügbar.</strong><p>Erstelle dein erstes Business oder nimm eine Einladung in deinem Konto an.</p><button className="hsv-outline" onClick={()=>setBusinessOpen(true)}>Business erstellen</button></div> : backendError ? <div className="hsv-empty" role="alert"><strong>Workspace konnte nicht geladen werden.</strong><p>{backendError}</p><button className="hsv-outline" onClick={() => void loadWorkspaceData(activeWorkspaceId)}>Erneut versuchen</button></div> : !activeWorkspaceId || loadedWorkspaceId !== activeWorkspaceId ? <div className="hive-loading-state" role="status" aria-label="Business wird geladen">
           <div className="hive-loading-line hive-loading-title"/>
@@ -2145,10 +2145,19 @@ export default function StudioPage() {
       </main>
     </div>
 
-    <WorkspaceGlassDock>
-      {nav.filter(([id]) => ['overview','customers','projects'].includes(id)).map(([id,label,Icon]) => <button type="button" key={id} aria-current={tab===id?'page':undefined} onClick={() => { setTab(id); setMobileMenuOpen(false); setQuickCreateOpen(false); window.scrollTo({top:0,behavior:'smooth'}); }}><Icon size={22} strokeWidth={1.8}/><span>{label}</span></button>)}
-      <button type="button" aria-label="Weitere Bereiche öffnen" aria-expanded={mobileMenuOpen} aria-current={!['overview','customers','projects'].includes(tab)?'page':undefined} onClick={() => { setQuickCreateOpen(false); setMobileMenuOpen(true); }}><Menu size={22} strokeWidth={1.8}/><span>Mehr</span></button>
-    </WorkspaceGlassDock>
+    <WorkspaceGlassDock
+      value={tab === 'overview' || tab === 'customers' || tab === 'projects' ? tab : 'more'}
+      onChange={value => {
+        setQuickCreateOpen(false);
+        if (value === 'more') {
+          setMobileMenuOpen(true);
+          return;
+        }
+        setTab(value);
+        setMobileMenuOpen(false);
+        window.scrollTo({top:0,behavior:'smooth'});
+      }}
+    />
     {quickCreateOpen && <Modal title="Neu erstellen" onClose={() => setQuickCreateOpen(false)}>
       <div className="hive-mobile-quick-actions">
         <button type="button" onClick={() => { setQuickCreateOpen(false); openCustomer(); }}>
