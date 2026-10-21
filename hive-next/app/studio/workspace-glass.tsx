@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { Dock, GlassSystemProvider, SegmentedControl } from "open-glass-ui";
+import { GlassSystemProvider, SegmentedControl } from "open-glass-ui";
 
 function MaterialScope({ children }: { children: ReactNode }) {
   const [appearance, setAppearance] = useState<"light" | "dark">("dark");
@@ -29,16 +29,31 @@ function MaterialScope({ children }: { children: ReactNode }) {
     </GlassSystemProvider>
   );
 }
-export function WorkspaceGlassDock({ children }: { children: ReactNode }) {
+type MobileTab = "overview" | "customers" | "projects" | "more";
+const mobileTabs = [
+  { value: "overview" as const, label: "Übersicht" },
+  { value: "customers" as const, label: "Kunden" },
+  { value: "projects" as const, label: "Projekte" },
+  { value: "more" as const, label: "Mehr" },
+];
+
+/* Reuse the same Liquid Glass segmented control as Liste / Board / Kalender. */
+export function WorkspaceGlassDock({
+  value,
+  onChange,
+}: {
+  value: MobileTab;
+  onChange: (value: MobileTab) => void;
+}) {
   return (
     <MaterialScope>
-      <Dock
-        className="hive-mobile-nav hive-library-dock"
-        label="Mobile Navigation"
-        material="frosted"
-      >
-        {children}
-      </Dock>
+      <SegmentedControl
+        className="hive-library-views hive-mobile-segments"
+        aria-label="Mobile Navigation"
+        items={mobileTabs}
+        value={value}
+        onValueChange={onChange}
+      />
     </MaterialScope>
   );
 }
