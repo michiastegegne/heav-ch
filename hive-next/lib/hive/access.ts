@@ -61,6 +61,21 @@ export async function assertWorkspaceAllowed(
   supabase: Awaited<ReturnType<typeof createClerkSupabaseServerClient>>,
 ) {
   const configured = allowedWorkspaceIds();
+  if (process.env.VERCEL_ENV === 'production') {
+    if (!configured.has(workspaceId)) {
+      throw new HiveAccessError(403, 'Dieses Business ist nicht für Hive Live freigeschaltet.');
+    }
+    const { data: workspace, error: workspaceError } = await supabase
+      .from('workspaces')
+      .select('slug, status')
+      .eq('id', workspaceId)
+      .maybeSingle();
+    if (workspaceError || !workspace || workspace.status !== 'active' ||
+        workspace.slug?.startsWith('hive-dev-')) {
+      throw new HiveAccessError(403, 'Test-Workspaces sind in Hive Live nicht verfügbar.');
+    }
+    return;
+  }
   if (!previewNoLogin() && configured.has(workspaceId)) return;
 
   const { data, error } = await supabase.rpc('is_hive_preview_workspace', {
