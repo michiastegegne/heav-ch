@@ -2146,10 +2146,9 @@ export default function StudioPage() {
     </div>
 
     <WorkspaceGlassDock>
-      {nav.filter(([id]) => (canViewFinance ? ['overview','customers','projects','invoices'] : ['overview','customers','projects','businesses']).includes(id)).map(([id,label,Icon]) => <button key={id} aria-current={tab===id?'page':undefined} onClick={() => { setTab(id); setMobileMenuOpen(false); setQuickCreateOpen(false); window.scrollTo({top:0}); }}><Icon size={21}/><span>{label}</span></button>)}
-      <button aria-label="Weitere Module" aria-expanded={mobileMenuOpen} aria-current={!['overview','customers','projects','invoices'].includes(tab)?'page':undefined} onClick={() => { setQuickCreateOpen(false); setMobileMenuOpen(true); }}><Menu size={21}/><span>Mehr</span></button>
+      {nav.filter(([id]) => ['overview','customers','projects'].includes(id)).map(([id,label,Icon]) => <button type="button" key={id} aria-current={tab===id?'page':undefined} onClick={() => { setTab(id); setMobileMenuOpen(false); setQuickCreateOpen(false); window.scrollTo({top:0,behavior:'smooth'}); }}><Icon size={22} strokeWidth={1.8}/><span>{label}</span></button>)}
+      <button type="button" aria-label="Weitere Bereiche öffnen" aria-expanded={mobileMenuOpen} aria-current={!['overview','customers','projects'].includes(tab)?'page':undefined} onClick={() => { setQuickCreateOpen(false); setMobileMenuOpen(true); }}><Menu size={22} strokeWidth={1.8}/><span>Mehr</span></button>
     </WorkspaceGlassDock>
-    <button className="hive-mobile-create" type="button" aria-label="Neu erstellen" aria-expanded={quickCreateOpen} onClick={() => { setMobileMenuOpen(false); setQuickCreateOpen(true); }}><Plus size={22}/></button>
     {quickCreateOpen && <Modal title="Neu erstellen" onClose={() => setQuickCreateOpen(false)}>
       <div className="hive-mobile-quick-actions">
         <button type="button" onClick={() => { setQuickCreateOpen(false); openCustomer(); }}>
@@ -2172,11 +2171,13 @@ export default function StudioPage() {
 
     {installOpen && <Modal title="Hive auf deinem iPhone" onClose={()=>setInstallOpen(false)}><InstallGuide/></Modal>}
 
-    {mobileMenuOpen && <Modal title="Dein Workspace" onClose={() => setMobileMenuOpen(false)}>
-      <div className="hive-mobile-security"><ShieldCheck size={18}/><div><strong>Geschützter Dev-Workspace</strong><small>Live-Daten isoliert · Mailversand gesperrt</small></div></div>
-      <div className="hive-mobile-modules">{nav.map(([id,label,Icon]) => <button key={id} aria-current={tab===id?'page':undefined} onClick={() => {setTab(id);setMobileMenuOpen(false);window.scrollTo({top:0});}}><Icon size={21}/><span>{label}</span><ArrowRight size={16}/></button>)}</div>
-      <button className="hsv-outline" onClick={()=>{setMobileMenuOpen(false);setInstallOpen(true);}}><Smartphone size={17}/>Als App installieren</button>
-      <a className="hsv-outline" href="/account">Mein Konto <ArrowRight size={16}/></a>
+    {mobileMenuOpen && <Modal title="Weitere Bereiche" className="hive-mobile-more-sheet" onClose={() => setMobileMenuOpen(false)}>
+      <button className="hive-mobile-new-action" type="button" onClick={() => {setMobileMenuOpen(false);setQuickCreateOpen(true);}}><Plus size={20}/><span>Neu erstellen</span><ArrowRight size={16}/></button>
+      <div className="hive-mobile-modules">{nav.filter(([id]) => !['overview','customers','projects'].includes(id)).map(([id,label,Icon]) => <button type="button" key={id} aria-current={tab===id?'page':undefined} onClick={() => {setTab(id);setMobileMenuOpen(false);window.scrollTo({top:0,behavior:'smooth'});}}><Icon size={19}/><span>{label}</span><ArrowRight size={15}/></button>)}</div>
+      <div className="hive-mobile-more-footer">
+        <button className="hsv-outline" type="button" onClick={()=>{setMobileMenuOpen(false);setInstallOpen(true);}}><Smartphone size={17}/>App installieren</button>
+        <a className="hsv-outline" href="/account">Mein Konto <ArrowRight size={16}/></a>
+      </div>
     </Modal>}
 
     {searchOpen && <div className="hsv-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) setSearchOpen(false); }}>
