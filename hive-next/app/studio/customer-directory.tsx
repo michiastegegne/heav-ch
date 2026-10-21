@@ -42,6 +42,7 @@ type Customer = {
   contact_name: string | null;
   email: string | null;
   phone: string | null;
+  address_line1?: string | null;
   postal_code: string | null;
   city: string | null;
 };
@@ -177,7 +178,8 @@ export default function CustomerDirectory<T extends Customer>({
                   <TableHeader>
                     <TableRow className="bg-muted/40">
                       <TableHead className="pl-6">Kunde</TableHead>
-                      <TableHead>Kontakt</TableHead>
+                      <TableHead>E-Mail</TableHead>
+                      <TableHead>Telefon</TableHead>
                       <TableHead>Standort</TableHead>
                       <TableHead className="pr-6 text-right">
                         Aktionen
@@ -202,10 +204,16 @@ export default function CustomerDirectory<T extends Customer>({
                             "—"
                           )}
                         </TableCell>
+                        <TableCell className="crm-contact-cell text-muted-foreground">
+                          {customer.phone ? (
+                            <a href={`tel:${customer.phone.replace(/[^+\d]/g, "")}`} className="hover:text-foreground hover:underline">
+                              {customer.phone}
+                            </a>
+                          ) : "—"}
+                        </TableCell>
                         <TableCell className="crm-place-cell text-muted-foreground">
-                          {[customer.postal_code, customer.city]
-                            .filter(Boolean)
-                            .join(" ") || "—"}
+                          <span className="block">{[customer.postal_code, customer.city].filter(Boolean).join(" ") || "—"}</span>
+                          {customer.address_line1 && <span className="mt-1 block text-xs text-muted-foreground">{customer.address_line1}</span>}
                         </TableCell>
                         <TableCell className="crm-action-cell pr-4">
                           <div className="flex justify-end gap-1">
