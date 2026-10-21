@@ -312,24 +312,45 @@ html[data-theme="light"] .hsv.hive-system-app .hive-list-tools .hive-status-pill
     position: fixed !important;
     inset: auto auto calc(14px + env(safe-area-inset-bottom)) 50% !important;
     transform: translateX(-50%);
-    width: min(404px, calc(100% - 28px));
+    width: min(374px, calc(100% - 32px));
     min-width: 0;
-    min-height: 60px;
+    height: 54px;
+    min-height: 54px;
+    max-height: 54px;
     z-index: 45;
-    padding: 5px !important;
+    padding: 4px !important;
     margin: 0 !important;
-    overflow: visible;
+    box-sizing: border-box;
+    align-items: stretch;
+    justify-content: space-between;
+    overflow: hidden;
     isolation: isolate;
     -webkit-tap-highlight-color: transparent;
   }
   .hsv.hive-system-app .hive-mobile-segments button {
-    flex: 1 1 25%;
+    display: flex !important;
+    flex: 1 1 0% !important;
+    box-sizing: border-box;
+    justify-content: center !important;
+    align-items: center !important;
+    text-align: center !important;
+    white-space: nowrap;
     min-width: 0;
-    min-height: 50px;
-    padding: 8px 3px;
-    font-size: clamp(11px,3vw,13px);
+    width: auto;
+    min-height: 44px;
+    height: 44px;
+    margin: 0;
+    padding: 0 4px !important;
+    border-radius: 999px !important;
+    font-size: clamp(10.5px, 2.75vw, 12px) !important;
+    line-height: 1.15;
     font-weight: 560;
     touch-action: manipulation;
+  }
+  .hsv.hive-system-app .hive-mobile-segments .ogui-segments__indicator {
+    box-sizing: border-box;
+    border-radius: 999px;
+    max-height: calc(100% - 8px);
   }
   .hsv.hive-system-app .hive-mobile-create { display: none !important; }
   .hsv.hive-system-app.hive-flow-app .hsv-main {
