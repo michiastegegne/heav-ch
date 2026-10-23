@@ -45,10 +45,10 @@ function number(value: unknown, minimum = 0): number | null {
   const rounded = Math.round(parsed);
   return Number.isSafeInteger(rounded) && rounded >= minimum ? rounded : null;
 }
-function decimal(value: unknown, minimum = 0): number | null {
+function decimal(value: unknown, minimum = 0, maximum = Number.POSITIVE_INFINITY): number | null {
   if (value === null || value === undefined || value === "") return null;
   const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed >= minimum ? parsed : null;
+  return Number.isFinite(parsed) && parsed >= minimum && parsed <= maximum ? parsed : null;
 }
 function date(value: unknown): string {
   const candidate = text(value, 10);
@@ -257,7 +257,7 @@ function proposalPayload(kind: string, source: unknown): Record<string, unknown>
   if (kind === "invoice") {
     const result = cleanObject(source, {
       customer_id: (v) => text(v, 80), customer_email: (v) => text(v, 320), customer_company: (v) => text(v, 160), project_id: (v) => text(v, 80),
-      issue_date: date, due_date: date, tax_rate: (v) => decimal(v), notes: (v) => text(v, 6000),
+      issue_date: date, due_date: date, tax_rate: (v) => decimal(v, 0, 100), notes: (v) => text(v, 6000),
     });
     const input = source && typeof source === "object" ? source as Record<string, unknown> : {};
     const items = Array.isArray(input.items) ? input.items.slice(0, 10).map((item) => cleanObject(item, {

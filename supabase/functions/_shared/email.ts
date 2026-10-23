@@ -8,13 +8,18 @@ export async function loadEmailTemplate(
   ownerId: string,
   templateKey: string,
   fallback: EmailTemplate,
+  workspaceId?: string | null,
 ): Promise<EmailTemplate> {
-  const { data, error } = await client
+  let query = client
     .from("email_templates")
     .select("subject_template,text_template")
-    .eq("owner_id", ownerId)
-    .eq("template_key", templateKey)
-    .maybeSingle();
+    .eq("template_key", templateKey);
+
+  query = workspaceId
+    ? query.eq("workspace_id", workspaceId)
+    : query.eq("owner_id", ownerId);
+
+  const { data, error } = await query.maybeSingle();
   if (error) throw error;
   return data?.subject_template && data?.text_template ? data : fallback;
 }
@@ -36,5 +41,19 @@ export async function logEmail(
   } catch (error) {
     console.error("email log write failed", error);
     return { error };
+  }
+}
+
+// Read the authoritative workspace before any provider call or send reservation.
+// Missing records and lookup failures must never permit delivery.
+export async function assertWorkspaceEmailAllowed(
+  client: { from: (table: string) => any },
+  workspaceId: string,
+): Promise<void> {
+  const { data, error } = await client.from("workspaces")
+    .select("slug,status").eq("id", workspaceId).maybeSingle();
+  if (error || !data || data.status !== "active" ||
+    typeof data.slug !== "string" || !data.slug || data.slug.startsWith("hive-dev-")) {
+    throw new Error("Email delivery is disabled for this workspace.");
   }
 }

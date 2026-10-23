@@ -1,0 +1,22 @@
+/* Authentication and account use the same system typography and palette as Studio. */
+.auth-shell,.account-shell{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;background:#f0f3fa;color:#17223b}
+.auth-brand{background:radial-gradient(ellipse at 100% 0,#87a9ff66,transparent 60%),linear-gradient(155deg,#284a8b,#111c37);border:0}
+.auth-brand :is(h1,.auth-wordmark){font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif}.auth-brand h1{font-weight:650;letter-spacing:-4px}.auth-brand p{color:#c0cfe9}
+.auth-kicker{color:#748bb4}.auth-wordmark{color:white}
+.hive-login-form{border-radius:28px;border:1px solid #ffffffbb;box-shadow:0 22px 70px #2e467a0d;background:#ffffffd9;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
+.hive-login-form h2,.auth-setup h2,.account-content>h1{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;letter-spacing:-1.6px}
+.hive-login-form input{border-radius:14px;background:#f4f7fd;border-color:#dfe5ef;min-height:48px;color:#17223b}
+.hive-login-form button[type=submit],.auth-clerk-primary{background:#386bfa!important;color:white!important;border-radius:50px!important;min-height:48px}
+.hive-login-form>p,.hive-login-form label{color:#65728b}.auth-panel{background:radial-gradient(ellipse at 100% 100%,#c4cefb55,transparent 70%)}
+.account-head{background:#ffffff99;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-color:#dce4f0}.account-content{max-width:980px}.account-content>p{color:#65728b}
+html[data-theme=dark] :is(.auth-shell,.account-shell){background:#0d1424;color:#eff3ff}
+html[data-theme=dark] .auth-panel{background:radial-gradient(ellipse at 100% 100%,#2d427a33,transparent 70%)}
+html[data-theme=dark] .hive-login-form{background:#18243add;border-color:#354560;color:#eff3ff;box-shadow:0 20px 80px #01061233}
+html[data-theme=dark] .hive-login-form input{background:#202e48;border-color:#384760;color:#eff3ff}
+html[data-theme=dark] .hive-login-form>p,html[data-theme=dark] .hive-login-form label{color:#a5b4cf}
+html[data-theme=dark] .account-head{background:#1b2840b3;border-color:#31415d}
+@media(max-width:800px){.auth-brand{border-radius:0 0 32px 32px}.auth-brand h1{font-size:49px;line-height:1.04;letter-spacing:-2.4px}.auth-brand p{font-size:14px}.auth-panel{padding-top:26px}.hive-login-form{padding:28px}.account-head{padding-top:env(safe-area-inset-top);min-height:calc(68px + env(safe-area-inset-top));height:auto}}
+@media(prefers-reduced-transparency:reduce),(prefers-contrast:more){.hive-login-form,.account-head{backdrop-filter:none;-webkit-backdrop-filter:none;background:#fff}html[data-theme=dark] .hive-login-form,html[data-theme=dark] .account-head{background:#18243a}}
+html[data-theme=dark] .auth-brand{background:radial-gradient(ellipse at 100% 0,#87a9ff55,transparent 60%),linear-gradient(155deg,#284a8b,#111c37);border:0}
+.auth-setup{border-radius:24px;border-color:#dfe5ef}
+html[data-theme=dark] .auth-setup{background:#151f32;border-color:#31415d;color:#eff3ff}

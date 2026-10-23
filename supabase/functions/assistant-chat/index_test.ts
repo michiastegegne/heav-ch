@@ -131,6 +131,37 @@ Deno.test("normalizeModelResponse preserves unknown numeric fields and canonical
   assertEquals(new Set(result.proposals.map((proposal) => proposal.id)).size, 2);
 });
 
+Deno.test("normalizeModelResponse enforces the same numeric bounds as CRM validators", () => {
+  const result = normalizeModelResponse({
+    message: "Prüfung",
+    proposals: [
+      {
+        id: "90000000-0000-4000-8000-000000000101",
+        kind: "project",
+        label: "Unsicheres Budget",
+        payload: { title: "Film", budget_rappen: Number.MAX_SAFE_INTEGER * 4 },
+      },
+      {
+        id: "90000000-0000-4000-8000-000000000102",
+        kind: "invoice",
+        label: "Ungültige Menge",
+        payload: { tax_rate: 8.1, items: [{ description: "Produktion", quantity: "lol", unit_price_rappen: 10000 }] },
+      },
+      {
+        id: "90000000-0000-4000-8000-000000000103",
+        kind: "invoice",
+        label: "Ungültige MWST",
+        payload: { tax_rate: 101, items: [{ description: "Produktion", quantity: 1, unit_price_rappen: 10000 }] },
+      },
+    ],
+  });
+
+  assertEquals(result.proposals[0].payload.budget_rappen, undefined);
+  assertEquals(result.proposals.some((proposal) => proposal.label === "Ungültige Menge"), false);
+  const vatProposal = result.proposals.find((proposal) => proposal.label === "Ungültige MWST");
+  assertEquals(vatProposal?.payload.tax_rate, undefined);
+});
+
 Deno.test("handler keeps a client-named thread reachable and releases its rate slot after provider failure", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ url: string; method: string; body: string; hasSignal: boolean }> = [];

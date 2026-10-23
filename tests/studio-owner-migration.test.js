@@ -63,12 +63,16 @@ test("nur bestehende Studio-Owner dürfen neue Geschäftsdaten und Assistent-Cha
   assert.equal((await db.query("select public.reserve_assistant_request('30000000-0000-4000-8000-000000000004') as allowed")).rows[0].allowed, false);
   await db.query("select public.release_assistant_request('30000000-0000-4000-8000-000000000001')");
   await db.query("select public.release_assistant_request('30000000-0000-4000-8000-000000000002')");
+  // PostgreSQL now() is transaction-stable. Keep the rate-window assertion in
+  // one transaction so a wall-clock minute rollover cannot make this test flaky.
+  await db.exec("begin");
   for (let index = 0; index < 10; index += 1) {
     const requestId = `30000000-0000-4000-8000-${String(index + 10).padStart(12, '0')}`;
     assert.equal((await db.query(`select public.reserve_assistant_request('${requestId}') as allowed`)).rows[0].allowed, true);
     await db.query(`select public.release_assistant_request('${requestId}')`);
   }
   assert.equal((await db.query("select public.reserve_assistant_request('30000000-0000-4000-8000-000000000099') as allowed")).rows[0].allowed, false);
+  await db.exec("commit");
 
   await db.exec(`reset role; set role authenticated; select set_config('request.jwt.claim.sub', '${client}', false);`);
   await db.query(`update public.company_settings set company_name = 'Escalated' where owner_id = '${client}'`);
@@ -137,6 +141,7 @@ test("vollständige Migrationskette schützt alle exponierten SECURITY DEFINER R
     create role anon;
     create role authenticated;
     create role supabase_auth_admin;
+    create role service_role;
     create schema auth;
     create table auth.users (id uuid primary key, email text unique);
     create function auth.uid() returns uuid language sql stable as $$

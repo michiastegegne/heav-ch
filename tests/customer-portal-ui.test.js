@@ -16,6 +16,9 @@ test("Kundenportal ist eine private, eigene HEAV-Oberfläche mit Projekten, Doku
   assert.match(html, /id="portal-files"/);
   assert.match(html, /id="review-form"/);
   assert.match(script, /customer_portal_memberships/);
+  assert.match(script, /heav-portal-customer:/);
+  assert.match(script, /rememberedMembershipId/);
+  assert.match(script, /forgetRememberedMembership/);
   assert.match(script, /createSignedUrl/);
   assert.match(script, /customer_reviews/);
   assert.match(adminScript, /customer_portal_requests/);

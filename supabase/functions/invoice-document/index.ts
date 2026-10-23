@@ -3,7 +3,8 @@ import { degrees, PDFDocument, rgb } from "npm:pdf-lib@1.17.1";
 import fontkit from "npm:@pdf-lib/fontkit@1.1.1";
 // @ts-types="npm:@types/qrcode@1.5.5"
 import QRCode from "npm:qrcode@1.5.4";
-import { applyEmailTemplate, loadEmailTemplate, logEmail } from "../_shared/email.ts";
+import { assertWorkspaceEmailAllowed, applyEmailTemplate, loadEmailTemplate, logEmail } from "../_shared/email.ts";
+import { invoiceWordmarkBase64, invoicePortraitBase64 } from "../_shared/email-inline-assets.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Headers":
@@ -57,12 +58,14 @@ type Settings = {
 };
 type Invoice = {
   id: string;
+  workspace_id: string;
   owner_id: string;
   customer_id: string;
   invoice_number: string;
   payment_reference: string;
   project_title_snapshot?: string | null;
   is_legacy?: boolean;
+  number_finalized?: boolean;
   issue_date: string;
   due_date: string;
   sent_at?: string | null;
@@ -214,6 +217,21 @@ export function buildInvoiceText(invoice: Invoice, settings: Settings) {
   }\n${compactText(settings.company_name, 160)}`;
 }
 
+export const invoiceInlineImageAttachments = [
+  {
+    filename: "heav-email-wordmark.png",
+    content: invoiceWordmarkBase64,
+    content_id: "heav-wordmark",
+    content_type: "image/png",
+  },
+  {
+    filename: "michias-email-profile-headroom.jpg",
+    content: invoicePortraitBase64,
+    content_id: "heav-profile",
+    content_type: "image/jpeg",
+  },
+] as const;
+
 export function buildInvoiceEmailHtml(invoice: Invoice, settings: Settings, customText = "") {
   const { greeting, projectLine } = invoiceGreetingAndProject(invoice);
   const name = escapeHtml(compactText(settings.owner_name, 160));
@@ -222,8 +240,8 @@ export function buildInvoiceEmailHtml(invoice: Invoice, settings: Settings, cust
   const email = compactText(settings.email, 160);
   const website = safePublicUrl(settings.website_url, "https://heav.ch");
   const profileImage =
-    "https://heav.ch/assets/images/michias-email-profile-headroom.jpg";
-  const wordmarkImage = "https://heav.ch/assets/images/heav-email-wordmark.png";
+    "cid:heav-profile";
+  const wordmarkImage = "cid:heav-wordmark";
   const messageHtml = customText.trim()
     ? customText.split(/\n{2,}/u).map((paragraph) => `<p style="margin:0 0 20px;">${escapeHtml(paragraph).replace(/\n/gu, "<br>")}</p>`).join("")
     : `<p style="margin:0 0 20px;">Hello ${escapeHtml(greeting)}</p><p style="margin:0 0 20px;">${escapeHtml(projectLine)}</p><p style="margin:0 0 20px;">Thank you for the opportunity and the great collaboration.</p><p style="margin:0 0 26px;">If you have any questions, please feel free to get in touch.</p>`;
@@ -1128,6 +1146,169 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
   return pdf.save();
 }
 
+type PersistedInvoiceDocument = {
+  id?: string;
+  invoice_id: string;
+  workspace_id: string;
+  version: number;
+  storage_bucket: string;
+  storage_path: string;
+  filename: string;
+  sha256: string;
+  bytes: number;
+};
+
+export const invoiceDocumentVersion = 1;
+export const invoiceDocumentBucket = "invoice-documents";
+
+export function invoiceDocumentPath(
+  invoice: Pick<Invoice, "id" | "workspace_id">,
+  version = invoiceDocumentVersion,
+) {
+  return `${invoice.workspace_id}/invoices/${invoice.id}/v${version}.pdf`;
+}
+
+export async function sha256Hex(bytes: Uint8Array) {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  const digest = await crypto.subtle.digest("SHA-256", copy.buffer);
+  return [...new Uint8Array(digest)]
+    .map((value) => value.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+type InvoiceDocumentService = {
+  from: (relation: string) => any;
+  storage: {
+    from: (bucket: string) => any;
+  };
+};
+
+async function storageBytes(
+  service: InvoiceDocumentService,
+  bucket: string,
+  path: string,
+) {
+  const { data, error } = await service.storage.from(bucket).download(path);
+  if (error || !data) throw error || new Error("Gespeichertes Rechnungs-PDF fehlt.");
+  return new Uint8Array(await data.arrayBuffer());
+}
+
+async function verifiedPersistedInvoicePdf(
+  service: InvoiceDocumentService,
+  document: PersistedInvoiceDocument,
+) {
+  const bytes = await storageBytes(
+    service,
+    document.storage_bucket,
+    document.storage_path,
+  );
+  const hash = await sha256Hex(bytes);
+  if (
+    hash !== document.sha256 ||
+    bytes.byteLength !== Number(document.bytes)
+  ) {
+    throw new Error(
+      "Das gespeicherte Rechnungs-PDF hat die Integritätsprüfung nicht bestanden.",
+    );
+  }
+  return { bytes, filename: document.filename };
+}
+
+export async function persistOrLoadInvoicePdf(
+  service: InvoiceDocumentService,
+  invoice: Invoice,
+  settings: Settings,
+) {
+  const version = invoiceDocumentVersion;
+  const path = invoiceDocumentPath(invoice, version);
+
+  const { data: existing, error: existingError } = await service
+    .from("invoice_documents")
+    .select(
+      "invoice_id,workspace_id,version,storage_bucket,storage_path,filename,sha256,bytes",
+    )
+    .eq("invoice_id", invoice.id)
+    .eq("version", version)
+    .maybeSingle();
+
+  if (existingError) throw existingError;
+  if (existing) {
+    return verifiedPersistedInvoicePdf(
+      service,
+      existing as PersistedInvoiceDocument,
+    );
+  }
+
+  let bytes = await createInvoicePdf(invoice, settings);
+  let uploadedByThisRequest = false;
+
+  const { error: uploadError } = await service.storage
+    .from(invoiceDocumentBucket)
+    .upload(path, bytes, {
+      contentType: "application/pdf",
+      cacheControl: "31536000",
+      upsert: false,
+    });
+
+  if (uploadError) {
+    // Another concurrent request may have created the deterministic v1 path.
+    // Prefer those already persisted bytes instead of overwriting them.
+    try {
+      bytes = await storageBytes(service, invoiceDocumentBucket, path);
+    } catch {
+      throw uploadError;
+    }
+  } else {
+    uploadedByThisRequest = true;
+  }
+
+  const hash = await sha256Hex(bytes);
+  const filename = invoiceFilename(invoice);
+  const documentRow = {
+    invoice_id: invoice.id,
+    workspace_id: invoice.workspace_id,
+    version,
+    storage_bucket: invoiceDocumentBucket,
+    storage_path: path,
+    filename,
+    sha256: hash,
+    bytes: bytes.byteLength,
+  };
+
+  const { error: insertError } = await service
+    .from("invoice_documents")
+    .insert(documentRow);
+
+  if (insertError && String(insertError.code || "") !== "23505") {
+    if (uploadedByThisRequest) {
+      await service.storage.from(invoiceDocumentBucket).remove([path]);
+    }
+    throw insertError;
+  }
+
+  const { data: persisted, error: persistedError } = await service
+    .from("invoice_documents")
+    .select(
+      "invoice_id,workspace_id,version,storage_bucket,storage_path,filename,sha256,bytes",
+    )
+    .eq("invoice_id", invoice.id)
+    .eq("version", version)
+    .single();
+
+  if (persistedError || !persisted) {
+    throw persistedError ||
+      new Error("Rechnungs-PDF konnte nicht dauerhaft registriert werden.");
+  }
+
+  // On a race, the winning request is authoritative. Reload its exact bytes and
+  // verify the stored digest instead of returning a locally rendered variant.
+  return verifiedPersistedInvoicePdf(
+    service,
+    persisted as PersistedInvoiceDocument,
+  );
+}
+
 if (import.meta.main) {
   Deno.serve(async (request) => {
     const origin = request.headers.get("origin") || "";
@@ -1166,22 +1347,17 @@ if (import.meta.main) {
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
         { auth: { autoRefreshToken: false, persistSession: false } },
       );
-      const { data: userData, error: userError } = await supabase.auth
-        .getUser();
-      if (userError || !userData.user) throw new Error("Sitzung ungültig.");
-      const { invoiceId, action, requestKey } = await request.json();
+      const { data: actorId, error: actorError } = await supabase.rpc(
+        "current_app_user_id",
+      );
+      if (actorError || !actorId) throw new Error("Sitzung ungültig.");
+
+      const { invoiceId, action, requestKey, recipient: expectedRecipient } = await request.json();
       if (
         !invoiceId ||
         !["download", "send", "mark_paid", "cancel"].includes(action)
       ) throw new Error("Ungültige Rechnungsaktion.");
-      if (action !== "download") {
-        const { data: ownerAllowed, error: ownerError } = await supabase.rpc(
-          "is_studio_owner",
-        );
-        if (ownerError || ownerAllowed !== true) {
-          throw new Error("Studio-Zugriff erforderlich.");
-        }
-      }
+
       if (
         action === "send" &&
         !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -1189,6 +1365,28 @@ if (import.meta.main) {
       ) {
         throw new Error("Ungültige Versandanforderung.");
       }
+
+      const { data: storedInvoice, error: invoiceError } = await supabase
+        .from("invoices")
+        .select("*, invoice_items(*)")
+        .eq("id", invoiceId)
+        .single();
+      if (invoiceError || !storedInvoice) {
+        throw invoiceError || new Error("Rechnung nicht gefunden.");
+      }
+
+      const { data: accountantAllowed, error: accountantError } =
+        await supabase.rpc("is_workspace_member", {
+          p_workspace_id: storedInvoice.workspace_id,
+          p_required: "accountant",
+        });
+      if (accountantError) throw accountantError;
+
+      const canManage = accountantAllowed === true;
+      if (action !== "download" && !canManage) {
+        throw new Error("Rechnungszugriff für dieses Business fehlt.");
+      }
+
       if (["mark_paid", "cancel"].includes(action)) {
         const { error } = await supabase.rpc("record_invoice_action", {
           p_invoice_id: invoiceId,
@@ -1199,21 +1397,14 @@ if (import.meta.main) {
         if (error) throw error;
         return Response.json({ ok: true }, { headers: responseCors });
       }
-      const { data: storedInvoice, error: invoiceError } = await supabase
-        .from("invoices")
-        .select("*, invoice_items(*)")
-        .eq("id", invoiceId)
-        .single();
-      if (invoiceError || !storedInvoice) {
-        throw invoiceError || new Error("Rechnung nicht gefunden.");
-      }
-      const isOwner = storedInvoice.owner_id === userData.user.id;
-      if (!isOwner && action !== "download") {
-        throw new Error("Diese Rechnungsaktion ist nur für HEAV verfügbar.");
-      }
       if (storedInvoice.is_legacy) {
         throw new Error(
           "Diese historische Rechnung wurde vor der unveränderlichen Archivierung erstellt und kann nicht neu als Zahlungsdokument erzeugt oder versendet werden.",
+        );
+      }
+      if (storedInvoice.number_finalized === false) {
+        throw new Error(
+          "Dieser Rechnungsentwurf muss zuerst ausgestellt und final nummeriert werden.",
         );
       }
       if (!storedInvoice.customer_snapshot || !storedInvoice.issuer_snapshot) {
@@ -1231,9 +1422,14 @@ if (import.meta.main) {
           "Stornierte Rechnungen können nicht mehr als Zahlungsdokument geöffnet oder versendet werden.",
         );
       }
-      const pdfBytes = await createInvoicePdf(invoice, settings);
+      const persistedDocument = await persistOrLoadInvoicePdf(
+        service as unknown as InvoiceDocumentService,
+        invoice,
+        settings,
+      );
+      const pdfBytes = persistedDocument.bytes;
       if (action === "download") {
-        if (isOwner) {
+        if (canManage) {
           const { error: eventError } = await supabase.rpc(
             "record_invoice_action",
             {
@@ -1252,12 +1448,14 @@ if (import.meta.main) {
             ...responseCors,
             "Content-Type": "application/pdf",
             "Content-Disposition": `attachment; filename="${
-              invoiceFilename(invoice)
+              persistedDocument.filename
             }"`,
             "Cache-Control": "no-store",
           },
         });
       }
+      await assertWorkspaceEmailAllowed(service, invoice.workspace_id);
+
       const resendKey = Deno.env.get("RESEND_API_KEY");
       const fromEmail = Deno.env.get("RESEND_FROM_EMAIL");
       if (!resendKey || !fromEmail) {
@@ -1275,9 +1473,10 @@ if (import.meta.main) {
       if (
         !["draft", "sent", "overdue"].includes(invoice.status)
       ) throw new Error("Diese Rechnung kann nicht versendet werden.");
-      if (!validMailbox(customer.email)) {
-        throw new Error("Die Kunden-E-Mail ist ungültig.");
-      }
+      const {error: contactError} = await supabase.rpc("document_email_recipient", {
+        p_kind:"invoice", p_document_id:invoiceId, p_expected_recipient:expectedRecipient ?? null,
+      });
+      if (contactError) throw contactError;
       const { data: reservations, error: reservationError } = await supabase
         .rpc("reserve_invoice_send", {
           p_invoice_id: invoiceId,
@@ -1290,17 +1489,22 @@ if (import.meta.main) {
       if (
         !reservation?.attempt_id || !reservation?.idempotency_key
       ) throw new Error("E-Mail-Versand konnte nicht reserviert werden.");
+      const {data: recipient, error: recipientError} = await supabase.rpc("document_email_recipient", {
+        p_kind:"invoice", p_document_id:invoiceId, p_request_key:requestKey, p_expected_recipient:expectedRecipient ?? null,
+      });
+      if (recipientError || !recipient || !validMailbox(recipient.email)) throw recipientError || new Error("Rechnungskontakt fehlt");
+      const emailInvoice = {...invoice, customers:{...customer,contact_name:recipient.name}};
       const idempotencyKey = safeHeader(reservation.idempotency_key).replace(
         /[^a-zA-Z0-9._-]/g,
         "-",
       );
       let emailResponse: Response;
       let emailData: { id?: string; message?: string; [key: string]: unknown };
-      const firstName = (customer.contact_name || customer.company || "Guten Tag").trim().split(/\s+/)[0];
+      const firstName = recipient.name.trim().split(/\s+/)[0];
       const template = await loadEmailTemplate(service, invoice.owner_id, "invoice_send", {
         subject_template: "Rechnung {{invoice_number}} von {{company_name}}",
-        text_template: buildInvoiceText(invoice, settings),
-      });
+        text_template: buildInvoiceText(emailInvoice, settings),
+      }, invoice.workspace_id);
       const templateValues = { first_name: firstName, invoice_number: invoice.invoice_number, amount: formatCHF(invoice.total_rappen), due_date: invoice.due_date, company_name: settings.company_name, owner_name: settings.owner_name };
       const subject = applyEmailTemplate(template.subject_template, templateValues);
       const text = applyEmailTemplate(template.text_template, templateValues);
@@ -1314,32 +1518,37 @@ if (import.meta.main) {
           },
           body: JSON.stringify({
             from: fromEmail,
-            to: [customer.email],
+            to: [recipient.email],
+            ...(recipient.cc?.length ? {cc:recipient.cc} : {}),
             reply_to: settings.email,
             subject: safeHeader(subject),
             text,
-            html: buildInvoiceEmailHtml(invoice, settings, text),
+            html: buildInvoiceEmailHtml(emailInvoice, settings, text),
             attachments: [{
-              filename: invoiceFilename(invoice),
+              filename: persistedDocument.filename,
               content: base64(pdfBytes),
-            }],
+            }, ...invoiceInlineImageAttachments],
           }),
         });
         emailData = await responsePayload(emailResponse);
       } catch (sendError) {
-        // The provider may have accepted the request even when the response was lost.
-        // Keep the durable reservation pending: a retry reuses the same idempotency key
-        // and cancellation/deletion remain blocked until the outcome is resolved.
-        throw sendError;
+        // The provider may already have accepted the request. Keep the durable
+        // reservation pending so a retry reuses the exact same idempotency key.
+        console.error("invoice provider response lost", sendError);
+        return Response.json({
+          error: "Zustellstatus unklar. Bitte erneut versuchen; derselbe sichere Versandauftrag wird wiederverwendet.",
+          deliveryUncertain: true,
+          retryable: true,
+        }, { status: 502, headers: responseCors });
       }
       if (!emailResponse.ok) {
-        await logEmail(service, { owner_id: invoice.owner_id, template_key: "invoice_send", status: "failed", recipient_email: customer.email, recipient_name: firstName, customer_id: invoice.customer_id, invoice_id: invoice.id, subject, text_body: text, error_message: String(emailData.message || "provider error"), idempotency_key: idempotencyKey });
+        await logEmail(service, { workspace_id: invoice.workspace_id, owner_id: invoice.owner_id, template_key: "invoice_send", status: "failed", recipient_email: recipient.email, recipient_name: firstName, customer_id: invoice.customer_id, invoice_id: invoice.id, subject, text_body: text, error_message: String(emailData.message || "provider error"), idempotency_key: idempotencyKey });
         const { error: completionError } = await supabase.rpc(
           "complete_invoice_send",
           {
             p_attempt_id: reservation.attempt_id,
             p_success: false,
-            p_recipient: customer.email,
+            p_recipient: recipient.email,
             p_details: emailData,
           },
         );
@@ -1355,7 +1564,7 @@ if (import.meta.main) {
         {
           p_attempt_id: reservation.attempt_id,
           p_success: true,
-          p_recipient: customer.email,
+          p_recipient: recipient.email,
           p_details: {
             resend_id: emailData.id,
             idempotency_key: idempotencyKey,
@@ -1365,7 +1574,7 @@ if (import.meta.main) {
       if (completionError) {
         throw completionError;
       }
-      await logEmail(service, { owner_id: invoice.owner_id, template_key: "invoice_send", status: "sent", recipient_email: customer.email, recipient_name: firstName, customer_id: invoice.customer_id, invoice_id: invoice.id, subject, text_body: text, provider_id: emailData.id || null, idempotency_key: idempotencyKey });
+      await logEmail(service, { workspace_id: invoice.workspace_id, owner_id: invoice.owner_id, template_key: "invoice_send", status: "sent", recipient_email: recipient.email, recipient_name: firstName, customer_id: invoice.customer_id, invoice_id: invoice.id, subject, text_body: text, provider_id: emailData.id || null, idempotency_key: idempotencyKey });
       return Response.json({ ok: true, emailId: emailData.id }, {
         headers: responseCors,
       });

@@ -56,3 +56,32 @@ test("validateInvoice verlangt Kunde, Positionen, Datum und Fälligkeit", () => 
     items: "Mindestens eine vollständige Position mit positivem Betrag ist erforderlich.",
   });
 });
+
+test("validateInvoice akzeptiert unbekannte Preise nicht implizit als CHF 0", () => {
+  for (const unitPrice of [null, undefined, "", Number.NaN, Number.POSITIVE_INFINITY]) {
+    const errors = validateInvoice({
+      customerId: "customer",
+      issueDate: "2026-08-03",
+      dueDate: "2026-08-30",
+      items: [{ description: "Produktion", quantity: 1, unitPrice }],
+    });
+    assert.equal(
+      errors.items,
+      "Mindestens eine vollständige Position mit positivem Betrag ist erforderlich.",
+    );
+  }
+});
+
+test("validateInvoice verlangt insgesamt einen positiven Rechnungsbetrag", () => {
+  const errors = validateInvoice({
+    customerId: "customer",
+    issueDate: "2026-08-03",
+    dueDate: "2026-08-30",
+    items: [{ description: "Gratis", quantity: 1, unitPrice: 0 }],
+  });
+
+  assert.equal(
+    errors.items,
+    "Mindestens eine vollständige Position mit positivem Betrag ist erforderlich.",
+  );
+});

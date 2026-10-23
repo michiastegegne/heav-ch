@@ -2,11 +2,16 @@ import { assert, assertEquals, assertGreater } from "jsr:@std/assert@1";
 import { PDFDocument } from "npm:pdf-lib@1.17.1";
 import {
   buildInvoiceEmailHtml,
+  invoiceInlineImageAttachments,
   buildInvoicePaymentMessage,
   buildInvoiceText,
   buildSwissQrPayload,
   createInvoicePdf,
   escapeHtml,
+  invoiceDocumentBucket,
+  invoiceDocumentPath,
+  invoiceDocumentVersion,
+  sha256Hex,
   formatDiscountPercent,
   formatDocumentReference,
   formatPaymentReference,
@@ -171,13 +176,18 @@ Deno.test("E-Mail-Banner enthält Portrait, Kontaktdaten und sichere Projekttext
     website_url: "https://heav.ch",
   };
   const html = buildInvoiceEmailHtml(invoice as never, settings as never);
-  assert(html.includes("heav-email-wordmark.png"));
+  assert(html.includes('src="cid:heav-wordmark"'));
+  assertEquals(invoiceInlineImageAttachments.length, 2);
+  assertEquals(invoiceInlineImageAttachments[0].content_id, "heav-wordmark");
+  assertEquals(invoiceInlineImageAttachments[1].content_id, "heav-profile");
+  assert(invoiceInlineImageAttachments[0].content.startsWith("iVBOR"));
+  assert(invoiceInlineImageAttachments[1].content.startsWith("/9j/"));
   assert(html.includes("background:#080909"));
   assert(!html.includes("heav-email-wordmark-transparent.png"));
   assert(!html.includes("background:#2453ff"));
   assert(html.includes("margin:0 0 28px"));
   assert(html.includes('width="154" height="35"'));
-  assert(html.includes("michias-email-profile-headroom.jpg"));
+  assert(html.includes('src="cid:heav-profile"'));
   assert(!html.includes("michias-email-portrait.jpg"));
   assert(html.includes("border-radius:50%"));
   assert(html.includes("Founder &amp; Owner | HEAV"));
@@ -249,6 +259,26 @@ Deno.test("PDF-Dateiname verwendet zuerst den Projekt-Titel und sonst den Kunden
   assertEquals(
     invoiceFilename(base as never),
     "HEAV-Rechnung-Kunde-Partner-AG-00009.pdf",
+  );
+});
+
+Deno.test("invoice document snapshot path is deterministic and workspace scoped", () => {
+  const invoice = {
+    id: "22222222-2222-4222-8222-222222222222",
+    workspace_id: "11111111-1111-4111-8111-111111111111",
+  };
+  assertEquals(invoiceDocumentBucket, "invoice-documents");
+  assertEquals(invoiceDocumentVersion, 1);
+  assertEquals(
+    invoiceDocumentPath(invoice),
+    "11111111-1111-4111-8111-111111111111/invoices/22222222-2222-4222-8222-222222222222/v1.pdf",
+  );
+});
+
+Deno.test("invoice document SHA-256 is stable", async () => {
+  assertEquals(
+    await sha256Hex(new TextEncoder().encode("Hive invoice snapshot")),
+    "9669f5bcf5a76037472c14c03e13a83fe775b1f80620605f7fb79eee38a6fecd",
   );
 });
 

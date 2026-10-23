@@ -20,6 +20,7 @@ const privateBaseCss = await Promise.all([
   readFile(new URL("../portal/assets/portal.css", import.meta.url), "utf8"),
 ]);
 const offerSendSource = await readFile(new URL("../supabase/functions/offer-send/index.ts", import.meta.url), "utf8").catch(() => "");
+const hiveOfferRouteSource = await readFile(new URL("../hive-next/app/api/hive/offers/[id]/route.ts", import.meta.url), "utf8");
 const offerSendReliabilityMigration = await readFile(new URL("../supabase/migrations/20260917_offer_send_reliability.sql", import.meta.url), "utf8");
 
 test("Produktionsfrontend ist mit dem HEAV-Supabase-Projekt verbunden", () => {
@@ -50,7 +51,7 @@ test("Studio lädt das isolierte Operator-Designsystem in stabiler Reihenfolge",
     "/admin/assets/admin-actions.css?v=20260910-layout",
     "/admin/assets/workspace.css?v=20261007-hive-workspaces-1",
     "/admin/assets/crm-theme.css?v=shadcn-dark-1",
-    "/admin/assets/studio-editorial.css?v=shadcn-dark-1",
+    "/admin/assets/studio-editorial.css?v=20261016-ai-history-1",
     "/admin/assets/motion-primitives.css?v=20260922-design-geometry-1",
     "/admin/assets/studio-operator.css?v=20261007-workspace-repair-1",
   ];
@@ -60,7 +61,7 @@ test("Studio lädt das isolierte Operator-Designsystem in stabiler Reihenfolge",
   assert.match(studioHtml, /<html lang="de-CH" class="studio-editorial-root" data-assistant-enabled="false">/);
   assert.match(studioHtml, /<meta name="theme-color" content="#0a0a0a"/);
   assert.match(studioHtml, /<body class="crm-theme studio-editorial-theme">/);
-  assert.match(studioHtml, /src="\/admin\/assets\/app\.js\?v=20261007-workspace-repair-1"/);
+  assert.match(studioHtml, /src="\/admin\/assets\/app\.js\?v=20261016-ai-history-1"/);
   assert.match(adminSource, /dashboard\.js\?v=20260916-revenue-1/);
   assert.match(studioCss, /--studio-card-radius:\s*24px/);
   assert.match(studioCss, /--studio-control-radius:\s*18px/);
@@ -119,13 +120,19 @@ test("Offerten können zuverlässig kopiert und per HEAV-Mail versendet werden",
   assert.match(offerSendSource, /const allowedOrigins = new Set/);
   assert.match(offerSendSource, /origin && !allowedOrigins\.has\(origin\)/);
   assert.match(offerSendSource, /authorization\.startsWith\("Bearer "\)/);
-  assert.match(offerSendSource, /caller\.auth\.getUser\(\)/);
-  assert.match(offerSendSource, /\.eq\("id", offerId\)\.eq\("owner_id", identity\.user\.id\)/);
+  assert.match(offerSendSource, /rpc\("current_app_user_id"\)/);
+  assert.match(offerSendSource, /rpc\(\s*"is_workspace_member"/);
+  assert.match(offerSendSource, /p_required:\s*"accountant"/);
+  assert.match(offerSendSource, /\.eq\("workspace_id", offer\.workspace_id\)/);
+  assert.doesNotMatch(offerSendSource, /caller\.auth\.getUser\(\)/);
   assert.match(offerSendSource, /offer\.status !== "sent"/);
   assert.match(offerSendSource, /offer\.valid_until < new Date\(\)/);
   assert.match(offerSendSource, /customer_portal_memberships/);
   assert.match(offerSendSource, /\.eq\("status", "active"\)/);
   assert.match(offerSendSource, /requestKey/);
+  assert.match(hiveOfferRouteSource, /action:\s*z\.literal\('send'\),\s*requestKey:\s*z\.string\(\)\.uuid\(\)/s);
+  assert.match(hiveOfferRouteSource, /requestKey:action\.requestKey/);
+  assert.doesNotMatch(hiveOfferRouteSource, /requestKey:\s*crypto\.randomUUID\(\)/);
   assert.match(offerSendSource, /reserve_offer_send/);
   assert.match(offerSendSource, /complete_offer_send/);
   assert.match(offerSendSource, /Idempotency-Key.*reservation\.idempotency_key/s);
@@ -151,7 +158,7 @@ test("Login loads the cache-safe owner-authority client", async () => {
 });
 
 test("Portal lädt die atomare Kontowechsel-Logik cache-sicher", () => {
-  assert.match(clientHtml, /src="\/portal\/assets\/portal\.js\?v=crm-multi-membership-3"/);
+  assert.match(clientHtml, /src="\/portal\/assets\/portal\.js\?v=crm-multi-membership-4"/);
 });
 
 test("Assistant Edge Function requires gateway JWT verification", async () => {
