@@ -216,19 +216,6 @@ export function buildInvoiceText(invoice: Invoice, settings: Settings) {
   }\n${compactText(settings.company_name, 160)}`;
 }
 
-export const invoiceInlineImages = [
-  {
-    path: "https://raw.githubusercontent.com/michiastegegne/heav-ch/85bb36c83b9dff54ca5b62bc7413e753bd848ceb/assets/images/heav-email-wordmark.png",
-    filename: "heav-email-wordmark.png",
-    content_id: "heav-wordmark",
-  },
-  {
-    path: "https://raw.githubusercontent.com/michiastegegne/heav-ch/85bb36c83b9dff54ca5b62bc7413e753bd848ceb/assets/images/michias-email-profile-headroom.jpg",
-    filename: "michias-email-profile-headroom.jpg",
-    content_id: "heav-profile",
-  },
-] as const;
-
 export function buildInvoiceEmailHtml(invoice: Invoice, settings: Settings, customText = "") {
   const { greeting, projectLine } = invoiceGreetingAndProject(invoice);
   const name = escapeHtml(compactText(settings.owner_name, 160));
@@ -237,8 +224,8 @@ export function buildInvoiceEmailHtml(invoice: Invoice, settings: Settings, cust
   const email = compactText(settings.email, 160);
   const website = safePublicUrl(settings.website_url, "https://heav.ch");
   const profileImage =
-    "cid:heav-profile";
-  const wordmarkImage = "cid:heav-wordmark";
+    "https://heav.ch/assets/images/michias-email-profile-headroom.jpg";
+  const wordmarkImage = "https://heav.ch/assets/images/heav-email-wordmark.png";
   const messageHtml = customText.trim()
     ? customText.split(/\n{2,}/u).map((paragraph) => `<p style="margin:0 0 20px;">${escapeHtml(paragraph).replace(/\n/gu, "<br>")}</p>`).join("")
     : `<p style="margin:0 0 20px;">Hello ${escapeHtml(greeting)}</p><p style="margin:0 0 20px;">${escapeHtml(projectLine)}</p><p style="margin:0 0 20px;">Thank you for the opportunity and the great collaboration.</p><p style="margin:0 0 26px;">If you have any questions, please feel free to get in touch.</p>`;
@@ -1517,7 +1504,7 @@ if (import.meta.main) {
             attachments: [{
               filename: persistedDocument.filename,
               content: base64(pdfBytes),
-            }, ...invoiceInlineImages],
+            }],
           }),
         });
         emailData = await responsePayload(emailResponse);
