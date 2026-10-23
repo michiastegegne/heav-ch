@@ -4,6 +4,7 @@ import fontkit from "npm:@pdf-lib/fontkit@1.1.1";
 // @ts-types="npm:@types/qrcode@1.5.5"
 import QRCode from "npm:qrcode@1.5.4";
 import { assertWorkspaceEmailAllowed, applyEmailTemplate, loadEmailTemplate, logEmail } from "../_shared/email.ts";
+import { invoiceWordmarkBase64, invoicePortraitBase64 } from "../_shared/email-inline-assets.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Headers":
@@ -216,6 +217,21 @@ export function buildInvoiceText(invoice: Invoice, settings: Settings) {
   }\n${compactText(settings.company_name, 160)}`;
 }
 
+export const invoiceInlineImageAttachments = [
+  {
+    filename: "heav-email-wordmark.png",
+    content: invoiceWordmarkBase64,
+    content_id: "heav-wordmark",
+    content_type: "image/png",
+  },
+  {
+    filename: "michias-email-profile-headroom.jpg",
+    content: invoicePortraitBase64,
+    content_id: "heav-profile",
+    content_type: "image/jpeg",
+  },
+] as const;
+
 export function buildInvoiceEmailHtml(invoice: Invoice, settings: Settings, customText = "") {
   const { greeting, projectLine } = invoiceGreetingAndProject(invoice);
   const name = escapeHtml(compactText(settings.owner_name, 160));
@@ -224,8 +240,8 @@ export function buildInvoiceEmailHtml(invoice: Invoice, settings: Settings, cust
   const email = compactText(settings.email, 160);
   const website = safePublicUrl(settings.website_url, "https://heav.ch");
   const profileImage =
-    "https://heav.ch/assets/images/michias-email-profile-headroom.jpg";
-  const wordmarkImage = "https://heav.ch/assets/images/heav-email-wordmark.png";
+    "cid:heav-profile";
+  const wordmarkImage = "cid:heav-wordmark";
   const messageHtml = customText.trim()
     ? customText.split(/\n{2,}/u).map((paragraph) => `<p style="margin:0 0 20px;">${escapeHtml(paragraph).replace(/\n/gu, "<br>")}</p>`).join("")
     : `<p style="margin:0 0 20px;">Hello ${escapeHtml(greeting)}</p><p style="margin:0 0 20px;">${escapeHtml(projectLine)}</p><p style="margin:0 0 20px;">Thank you for the opportunity and the great collaboration.</p><p style="margin:0 0 26px;">If you have any questions, please feel free to get in touch.</p>`;
@@ -1336,7 +1352,7 @@ if (import.meta.main) {
       );
       if (actorError || !actorId) throw new Error("Sitzung ungültig.");
 
-      const { invoiceId, action, requestKey } = await request.json();
+      const { invoiceId, action, requestKey, recipient: expectedRecipient } = await request.json();
       if (
         !invoiceId ||
         !["download", "send", "mark_paid", "cancel"].includes(action)
@@ -1457,9 +1473,10 @@ if (import.meta.main) {
       if (
         !["draft", "sent", "overdue"].includes(invoice.status)
       ) throw new Error("Diese Rechnung kann nicht versendet werden.");
-      if (!validMailbox(customer.email)) {
-        throw new Error("Die Kunden-E-Mail ist ungültig.");
-      }
+      const {error: contactError} = await supabase.rpc("document_email_recipient", {
+        p_kind:"invoice", p_document_id:invoiceId, p_expected_recipient:expectedRecipient ?? null,
+      });
+      if (contactError) throw contactError;
       const { data: reservations, error: reservationError } = await supabase
         .rpc("reserve_invoice_send", {
           p_invoice_id: invoiceId,
@@ -1472,16 +1489,21 @@ if (import.meta.main) {
       if (
         !reservation?.attempt_id || !reservation?.idempotency_key
       ) throw new Error("E-Mail-Versand konnte nicht reserviert werden.");
+      const {data: recipient, error: recipientError} = await supabase.rpc("document_email_recipient", {
+        p_kind:"invoice", p_document_id:invoiceId, p_request_key:requestKey, p_expected_recipient:expectedRecipient ?? null,
+      });
+      if (recipientError || !recipient || !validMailbox(recipient.email)) throw recipientError || new Error("Rechnungskontakt fehlt");
+      const emailInvoice = {...invoice, customers:{...customer,contact_name:recipient.name}};
       const idempotencyKey = safeHeader(reservation.idempotency_key).replace(
         /[^a-zA-Z0-9._-]/g,
         "-",
       );
       let emailResponse: Response;
       let emailData: { id?: string; message?: string; [key: string]: unknown };
-      const firstName = (customer.contact_name || customer.company || "Guten Tag").trim().split(/\s+/)[0];
+      const firstName = recipient.name.trim().split(/\s+/)[0];
       const template = await loadEmailTemplate(service, invoice.owner_id, "invoice_send", {
         subject_template: "Rechnung {{invoice_number}} von {{company_name}}",
-        text_template: buildInvoiceText(invoice, settings),
+        text_template: buildInvoiceText(emailInvoice, settings),
       }, invoice.workspace_id);
       const templateValues = { first_name: firstName, invoice_number: invoice.invoice_number, amount: formatCHF(invoice.total_rappen), due_date: invoice.due_date, company_name: settings.company_name, owner_name: settings.owner_name };
       const subject = applyEmailTemplate(template.subject_template, templateValues);
@@ -1496,15 +1518,16 @@ if (import.meta.main) {
           },
           body: JSON.stringify({
             from: fromEmail,
-            to: [customer.email],
+            to: [recipient.email],
+            ...(recipient.cc?.length ? {cc:recipient.cc} : {}),
             reply_to: settings.email,
             subject: safeHeader(subject),
             text,
-            html: buildInvoiceEmailHtml(invoice, settings, text),
+            html: buildInvoiceEmailHtml(emailInvoice, settings, text),
             attachments: [{
               filename: persistedDocument.filename,
               content: base64(pdfBytes),
-            }],
+            }, ...invoiceInlineImageAttachments],
           }),
         });
         emailData = await responsePayload(emailResponse);
@@ -1519,13 +1542,13 @@ if (import.meta.main) {
         }, { status: 502, headers: responseCors });
       }
       if (!emailResponse.ok) {
-        await logEmail(service, { workspace_id: invoice.workspace_id, owner_id: invoice.owner_id, template_key: "invoice_send", status: "failed", recipient_email: customer.email, recipient_name: firstName, customer_id: invoice.customer_id, invoice_id: invoice.id, subject, text_body: text, error_message: String(emailData.message || "provider error"), idempotency_key: idempotencyKey });
+        await logEmail(service, { workspace_id: invoice.workspace_id, owner_id: invoice.owner_id, template_key: "invoice_send", status: "failed", recipient_email: recipient.email, recipient_name: firstName, customer_id: invoice.customer_id, invoice_id: invoice.id, subject, text_body: text, error_message: String(emailData.message || "provider error"), idempotency_key: idempotencyKey });
         const { error: completionError } = await supabase.rpc(
           "complete_invoice_send",
           {
             p_attempt_id: reservation.attempt_id,
             p_success: false,
-            p_recipient: customer.email,
+            p_recipient: recipient.email,
             p_details: emailData,
           },
         );
@@ -1541,7 +1564,7 @@ if (import.meta.main) {
         {
           p_attempt_id: reservation.attempt_id,
           p_success: true,
-          p_recipient: customer.email,
+          p_recipient: recipient.email,
           p_details: {
             resend_id: emailData.id,
             idempotency_key: idempotencyKey,
@@ -1551,7 +1574,7 @@ if (import.meta.main) {
       if (completionError) {
         throw completionError;
       }
-      await logEmail(service, { workspace_id: invoice.workspace_id, owner_id: invoice.owner_id, template_key: "invoice_send", status: "sent", recipient_email: customer.email, recipient_name: firstName, customer_id: invoice.customer_id, invoice_id: invoice.id, subject, text_body: text, provider_id: emailData.id || null, idempotency_key: idempotencyKey });
+      await logEmail(service, { workspace_id: invoice.workspace_id, owner_id: invoice.owner_id, template_key: "invoice_send", status: "sent", recipient_email: recipient.email, recipient_name: firstName, customer_id: invoice.customer_id, invoice_id: invoice.id, subject, text_body: text, provider_id: emailData.id || null, idempotency_key: idempotencyKey });
       return Response.json({ ok: true, emailId: emailData.id }, {
         headers: responseCors,
       });

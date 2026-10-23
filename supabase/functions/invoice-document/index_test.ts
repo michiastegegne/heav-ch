@@ -2,6 +2,7 @@ import { assert, assertEquals, assertGreater } from "jsr:@std/assert@1";
 import { PDFDocument } from "npm:pdf-lib@1.17.1";
 import {
   buildInvoiceEmailHtml,
+  invoiceInlineImageAttachments,
   buildInvoicePaymentMessage,
   buildInvoiceText,
   buildSwissQrPayload,
@@ -175,13 +176,18 @@ Deno.test("E-Mail-Banner enthält Portrait, Kontaktdaten und sichere Projekttext
     website_url: "https://heav.ch",
   };
   const html = buildInvoiceEmailHtml(invoice as never, settings as never);
-  assert(html.includes("heav-email-wordmark.png"));
+  assert(html.includes('src="cid:heav-wordmark"'));
+  assertEquals(invoiceInlineImageAttachments.length, 2);
+  assertEquals(invoiceInlineImageAttachments[0].content_id, "heav-wordmark");
+  assertEquals(invoiceInlineImageAttachments[1].content_id, "heav-profile");
+  assert(invoiceInlineImageAttachments[0].content.startsWith("iVBOR"));
+  assert(invoiceInlineImageAttachments[1].content.startsWith("/9j/"));
   assert(html.includes("background:#080909"));
   assert(!html.includes("heav-email-wordmark-transparent.png"));
   assert(!html.includes("background:#2453ff"));
   assert(html.includes("margin:0 0 28px"));
   assert(html.includes('width="154" height="35"'));
-  assert(html.includes("michias-email-profile-headroom.jpg"));
+  assert(html.includes('src="cid:heav-profile"'));
   assert(!html.includes("michias-email-portrait.jpg"));
   assert(html.includes("border-radius:50%"));
   assert(html.includes("Founder &amp; Owner | HEAV"));
