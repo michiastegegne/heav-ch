@@ -137,6 +137,12 @@ type CustomerWorkspaceData = {
 };
 
 type Tab = 'businesses' | 'overview' | 'customers' | 'projects' | 'invoices' | 'offers' | 'catalog' | 'emails' | 'portal' | 'activity' | 'team' | 'branding';
+type EmailRecipient = {email:string;name:string;cc:string[]};
+type SendConfirmation =
+  | {kind:'invoice';item:Invoice;recipient:EmailRecipient;workspaceId:string}
+  | {kind:'offer';item:Offer;recipient:EmailRecipient;workspaceId:string}
+  | {kind:'portal';invite:{customerId:string;departmentId:string;email:string};recipient:EmailRecipient;workspaceId:string};
+
 type LineDraft = { description: string; quantity: number; unitPrice: number };
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -287,6 +293,9 @@ export default function StudioPage() {
   const [productDraft, setProductDraft] = useState({ id:'', name:'', description:'', sku:'', unitPrice:0, taxRate:0, active:true });
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteDraft, setInviteDraft] = useState({ customerId:'', departmentId:'', email:'' });
+  const [sendConfirmation, setSendConfirmation] = useState<SendConfirmation|null>(null);
+  const [sendPreparing, setSendPreparing] = useState('');
+  const [sendConfirmationBusy, setSendConfirmationBusy] = useState(false);
   const [fileOpen, setFileOpen] = useState(false);
   const [fileDraft, setFileDraft] = useState<{ customerId:string; departmentId:string; projectId:string; title:string; kind:'image'|'video'|'gallery'|'offer'|'document'; file:File|null }>({
     customerId:'', departmentId:'', projectId:'', title:'', kind:'document', file:null,
@@ -295,7 +304,7 @@ export default function StudioPage() {
     installOpen || mobileMenuOpen || quickCreateOpen || searchOpen || businessOpen || teamOpen ||
     customerOpen || customerWorkspaceOpen || departmentOpen || projectOpen ||
     projectWorkspaceOpen || invoiceOpen || invoiceHistoryOpen || offerOpen || offerHistoryOpen || productOpen || inviteOpen ||
-    fileOpen;
+    fileOpen || Boolean(sendConfirmation);
 
   useEffect(() => {
     const closeFullscreenWorkspace=(event:KeyboardEvent) => {
@@ -303,7 +312,7 @@ export default function StudioPage() {
       const modalOwnsEscape =
         installOpen || mobileMenuOpen || quickCreateOpen || searchOpen || businessOpen || teamOpen ||
         customerOpen || projectOpen || invoiceOpen || invoiceHistoryOpen || offerOpen || offerHistoryOpen || productOpen ||
-        inviteOpen || fileOpen;
+        inviteOpen || fileOpen || Boolean(sendConfirmation);
       if (modalOwnsEscape) return;
       if (departmentOpen) setDepartmentOpen(false);
       else if (customerWorkspaceOpen) setCustomerWorkspaceOpen(false);
@@ -314,7 +323,7 @@ export default function StudioPage() {
   }, [
     installOpen, mobileMenuOpen, quickCreateOpen, searchOpen, businessOpen, teamOpen,
     customerOpen, projectOpen, invoiceOpen, invoiceHistoryOpen, offerOpen, offerHistoryOpen, productOpen, inviteOpen,
-    fileOpen, departmentOpen, customerWorkspaceOpen, projectWorkspaceOpen,
+    fileOpen, sendConfirmation, departmentOpen, customerWorkspaceOpen, projectWorkspaceOpen,
   ]);
 
   useEffect(() => {
@@ -388,7 +397,7 @@ export default function StudioPage() {
     setOfferOpen(false); setOfferHistoryOpen(false); setQuickCreateOpen(false); setDepartmentOpen(false);
     setProjectWorkspaceOpen(false); setCustomerWorkspaceOpen(false); setProductOpen(false); setInviteOpen(false);
     setFileOpen(false); setTeamOpen(false); setSearchOpen(false); setSearchQuery(''); setTeamMembers([]);
-    setScopeDepartments([]); setSettings(null);
+    setScopeDepartments([]); setSettings(null); setSendConfirmation(null); setSendPreparing('');
     setActiveWorkspaceId(workspaceId);
     setTab(nextTab);
     window.scrollTo({top:0});
@@ -1084,11 +1093,29 @@ export default function StudioPage() {
     }
   }
 
-  async function invoiceAction(invoice: Invoice, action: 'issue' | 'download' | 'send' | 'mark_paid' | 'cancel') {
+  async function prepareDocumentEmailSend(kind:'invoice'|'offer', item:Invoice|Offer) {
+    if (sendPreparing || sendConfirmation || invoiceSendBusyIds.has(item.id) || offerSendBusyIds.has(item.id)) return;
+    const workspaceId=item.workspace_id;
+    setSendPreparing(`${kind}:${item.id}`);
+    try {
+      const {recipient}=await requestJson<{recipient:EmailRecipient}>(
+        `/api/hive/email-recipient?kind=${kind}&documentId=${encodeURIComponent(item.id)}`,
+      );
+      if (currentWorkspace.current !== workspaceId) return;
+      if (kind === 'invoice') setSendConfirmation({kind,item:item as Invoice,recipient,workspaceId});
+      else setSendConfirmation({kind,item:item as Offer,recipient,workspaceId});
+    } catch(error) {
+      setNotice(error instanceof Error ? error.message : 'Empfängeradresse konnte nicht geprüft werden.');
+    } finally {
+      setSendPreparing('');
+    }
+  }
+
+  async function invoiceAction(invoice: Invoice, action: 'issue' | 'download' | 'send' | 'mark_paid' | 'cancel', recipient?:EmailRecipient) {
     if (action === 'issue' && !confirm('Rechnung jetzt ausstellen? Die definitive Rechnungsnummer wird vergeben und der Inhalt danach gesperrt.')) return;
     if (action === 'mark_paid' && !confirm(`${invoice.invoice_number} wirklich als bezahlt markieren?`)) return;
     if (action === 'cancel' && !confirm(`${invoice.invoice_number} wirklich stornieren? Dieser Status kann nicht einfach zurückgesetzt werden.`)) return;
-    if (action === 'send' && invoiceSendBusyIds.has(invoice.id)) return;
+    if (action === 'send' && (invoiceSendBusyIds.has(invoice.id) || !recipient)) return;
 
     let requestKey = '';
     if (action === 'send') {
@@ -1125,7 +1152,7 @@ export default function StudioPage() {
       }
       await requestJson(`/api/hive/invoices/${invoice.id}/action`, {
         method: 'POST',
-        body: JSON.stringify(action === 'send' ? { action, requestKey } : { action }),
+        body: JSON.stringify(action === 'send' ? { action, requestKey, recipient } : { action }),
       });
       if (action === 'send') {
         invoiceSendKeys.current.delete(invoice.id);
@@ -1244,10 +1271,10 @@ export default function StudioPage() {
     }
   }
 
-  async function offerAction(offer: Offer, action: 'share' | 'withdraw' | 'delete' | 'send') {
+  async function offerAction(offer: Offer, action: 'share' | 'withdraw' | 'delete' | 'send', recipient?:EmailRecipient) {
     if (action === 'delete' && !confirm(`${offer.offer_number} wirklich löschen?`)) return;
     if (action === 'withdraw' && !confirm(`${offer.offer_number} wirklich zurückziehen?`)) return;
-    if (action === 'send' && offerSendBusyIds.has(offer.id)) return;
+    if (action === 'send' && (offerSendBusyIds.has(offer.id) || !recipient)) return;
 
     let requestKey = '';
     if (action === 'send') {
@@ -1461,27 +1488,53 @@ export default function StudioPage() {
     }
   }
 
-  async function createPortalInvite(event: FormEvent) {
+  function createPortalInvite(event:FormEvent) {
     event.preventDefault();
-    if (!activeWorkspaceId) return;
+    if (!activeWorkspaceId || !inviteDraft.email) return;
+    const customer=customers.find((item) => item.id === inviteDraft.customerId);
+    setSendConfirmation({
+      kind:'portal', workspaceId:activeWorkspaceId, invite:{...inviteDraft},
+      recipient:{email:inviteDraft.email,name:customerName(customer),cc:[]},
+    });
+  }
+
+  async function dispatchPortalInvite(invite:{customerId:string;departmentId:string;email:string},workspaceId:string) {
     try {
       const result=await requestJson<{emailSent?:boolean;email?:string;message?:string}>('/api/hive/portal',{
         method:'POST',
         body:JSON.stringify({
-          action:'create_invite',
-          workspaceId:activeWorkspaceId,
-          customerId:inviteDraft.customerId,
-          departmentId:inviteDraft.departmentId || null,
-          email:inviteDraft.email,
+          action:'create_invite',workspaceId,
+          customerId:invite.customerId,
+          departmentId:invite.departmentId || null,
+          email:invite.email,
         }),
       });
       setInviteOpen(false);
       setNotice(result.emailSent
-        ? `Portal-Einladung an ${result.email || inviteDraft.email} versendet.`
-        : (result.message || 'Dev-Einladung angelegt. Es wurde keine E-Mail versendet.'));
-      await loadWorkspaceData(activeWorkspaceId);
-    } catch (error) {
+        ? `Portal-Einladung an ${result.email || invite.email} versendet.`
+        : result.message || 'Dev-Einladung angelegt. Es wurde keine E-Mail versendet.');
+      if (currentWorkspace.current === workspaceId) await loadWorkspaceData(workspaceId);
+    } catch(error) {
       setNotice(error instanceof Error ? error.message : 'Portal-Einladung konnte nicht erstellt werden.');
+    }
+  }
+
+  async function confirmEmailSend() {
+    const pending=sendConfirmation;
+    if (!pending || sendConfirmationBusy) return;
+    if (currentWorkspace.current !== pending.workspaceId) {
+      setSendConfirmation(null);
+      setNotice('Business gewechselt. Bitte Versand erneut starten.');
+      return;
+    }
+    setSendConfirmationBusy(true);
+    try {
+      if (pending.kind === 'invoice') await invoiceAction(pending.item,'send',pending.recipient);
+      else if (pending.kind === 'offer') await offerAction(pending.item,'send',pending.recipient);
+      else await dispatchPortalInvite(pending.invite,pending.workspaceId);
+    } finally {
+      setSendConfirmationBusy(false);
+      setSendConfirmation(null);
     }
   }
 
@@ -1885,7 +1938,7 @@ export default function StudioPage() {
             <button onClick={() => void openInvoiceHistory(invoice)}><Clock3 size={14}/> Verlauf</button>
             <button onClick={() => void duplicateInvoice(invoice)}>Duplizieren</button>
             {invoice.number_finalized && <button onClick={() => void invoiceAction(invoice, 'download')}>PDF</button>}
-            {!invoice.is_legacy && invoice.number_finalized && ['draft','sent','overdue'].includes(invoice.status) && <button aria-label="Rechnung per E-Mail senden" disabled={invoiceSendBusyIds.has(invoice.id)} aria-busy={invoiceSendBusyIds.has(invoice.id)} onClick={() => void invoiceAction(invoice, 'send')}>{invoiceSendBusyIds.has(invoice.id) ? 'Wird gesendet …' : 'E-Mail'}</button>}
+            {!invoice.is_legacy && invoice.number_finalized && ['draft','sent','overdue'].includes(invoice.status) && <button aria-label="Rechnung per E-Mail senden" disabled={invoiceSendBusyIds.has(invoice.id) || Boolean(sendPreparing)} aria-busy={invoiceSendBusyIds.has(invoice.id) || sendPreparing === `invoice:${invoice.id}`} onClick={() => void prepareDocumentEmailSend('invoice', invoice)}>{invoiceSendBusyIds.has(invoice.id) ? 'Wird gesendet …' : sendPreparing === `invoice:${invoice.id}` ? 'Prüfe Empfänger …' : 'E-Mail'}</button>}
             {invoice.status === 'draft' && !invoice.is_legacy && !invoice.number_finalized && <button onClick={() => void openInvoiceDraft(invoice)}>Bearbeiten</button>}
             {invoice.status === 'draft' && !invoice.is_legacy && !invoice.number_finalized && <button onClick={() => void invoiceAction(invoice, 'issue')}>Ausstellen</button>}
             {invoice.status === 'draft' && !invoice.is_legacy && !invoice.number_finalized && <button aria-label="Rechnung löschen" onClick={() => void deleteInvoice(invoice)}><Trash2 size={16}/></button>}
@@ -1908,7 +1961,7 @@ export default function StudioPage() {
             <button onClick={() => openOfferDocument(offer)}>Drucken/PDF</button>
             {offer.status === 'draft' && <button onClick={() => void openOfferDraft(offer)}>Bearbeiten</button>}
             {offer.status === 'draft' && <button onClick={() => void offerAction(offer, 'share')}>Portal freigeben</button>}
-            {offer.status === 'sent' && <button aria-label="Offerte per E-Mail senden" disabled={offerSendBusyIds.has(offer.id)} aria-busy={offerSendBusyIds.has(offer.id)} onClick={() => void offerAction(offer, 'send')}>{offerSendBusyIds.has(offer.id) ? 'Wird gesendet …' : 'E-Mail'}</button>}
+            {offer.status === 'sent' && <button aria-label="Offerte per E-Mail senden" disabled={offerSendBusyIds.has(offer.id) || Boolean(sendPreparing)} aria-busy={offerSendBusyIds.has(offer.id) || sendPreparing === `offer:${offer.id}`} onClick={() => void prepareDocumentEmailSend('offer', offer)}>{offerSendBusyIds.has(offer.id) ? 'Wird gesendet …' : sendPreparing === `offer:${offer.id}` ? 'Prüfe Empfänger …' : 'E-Mail'}</button>}
             {offer.status === 'sent' && <button onClick={() => void offerAction(offer, 'withdraw')}>Zurückziehen</button>}
             {offer.status === 'accepted' && !convertedOfferIds.has(offer.id) && <button onClick={() => void convertOfferToInvoice(offer)}>Rechnung erstellen</button>}
             {offer.status === 'accepted' && convertedOfferIds.has(offer.id) && <small>Rechnung erstellt</small>}
@@ -2158,6 +2211,23 @@ export default function StudioPage() {
         window.scrollTo({top:0,behavior:'smooth'});
       }}
     />
+    {sendConfirmation && <Modal title="Versand bestätigen" onClose={() => { if (!sendConfirmationBusy) setSendConfirmation(null); }} className="hive-send-confirm-dialog">
+      <div className="hive-send-confirm-content">
+        <span className="hive-send-confirm-symbol"><Mail size={22}/></span>
+        <h3>Diese E-Mail wirklich senden?</h3>
+        <p>Kontrolliere die Adresse. Erst mit «Jetzt senden» wird die Nachricht verschickt.</p>
+        <div className="hive-send-confirm-details">
+          <span>Dokument</span><strong>{sendConfirmation.kind === 'invoice' ? `Rechnung ${sendConfirmation.item.invoice_number}` : sendConfirmation.kind === 'offer' ? `Offerte ${sendConfirmation.item.offer_number}` : 'Portal-Einladung'}</strong>
+          <span>An</span><strong className="hive-send-confirm-address">{sendConfirmation.recipient.name} · {sendConfirmation.recipient.email}</strong>
+          {sendConfirmation.recipient.cc.length > 0 && <><span>CC</span><strong className="hive-send-confirm-address">{sendConfirmation.recipient.cc.join(', ')}</strong></>}
+        </div>
+        {sendConfirmation.kind === 'portal' && activeWorkspace?.slug.startsWith('hive-dev-') && <small className="hsv-warning">Dev-Modus: Einladung anlegen, ohne E-Mail-Versand.</small>}
+        <div className="hive-send-confirm-actions">
+          <button type="button" className="hsv-outline" disabled={sendConfirmationBusy} onClick={() => setSendConfirmation(null)}>Abbrechen</button>
+          <button type="button" className="hsv-primary" disabled={sendConfirmationBusy} onClick={() => void confirmEmailSend()}><Mail size={15}/>{sendConfirmationBusy ? 'Wird verarbeitet …' : sendConfirmation.kind === 'portal' && activeWorkspace?.slug.startsWith('hive-dev-') ? 'Einladung anlegen' : 'Jetzt senden'}</button>
+        </div>
+      </div>
+    </Modal>}
     {quickCreateOpen && <Modal title="Neu erstellen" onClose={() => setQuickCreateOpen(false)}>
       <div className="hive-mobile-quick-actions">
         <button type="button" onClick={() => { setQuickCreateOpen(false); openCustomer(); }}>
@@ -2329,7 +2399,7 @@ export default function StudioPage() {
       </div>
     </div>}
 
-    {inviteOpen && <Modal title="Portal-Einladung" onClose={() => setInviteOpen(false)}>
+    {inviteOpen && sendConfirmation?.kind !== 'portal' && <Modal title="Portal-Einladung" onClose={() => setInviteOpen(false)}>
       <form onSubmit={createPortalInvite}>
         <label>Kunde<select required value={inviteDraft.customerId} onChange={async (e) => {
           const customerId=e.target.value;

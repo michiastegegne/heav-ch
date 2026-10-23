@@ -3,9 +3,10 @@ import { z } from 'zod';
 import { getHiveAccessToken, assertWorkspaceAllowed, jsonError, requireHiveDataAccess } from '@/lib/hive/access';
 
 const idSchema = z.string().uuid();
+const emailRecipientSchema = z.object({ email:z.string().email(), name:z.string().min(1), cc:z.array(z.string().email()) });
 const actionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.enum(['share', 'withdraw', 'delete']) }),
-  z.object({ action: z.literal('send'), requestKey: z.string().uuid() }),
+  z.object({ action: z.literal('send'), requestKey: z.string().uuid(), recipient:emailRecipientSchema }),
   z.object({
     action: z.literal('convert'),
     issueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -202,7 +203,7 @@ export async function POST(
           apikey:supabaseKey,
           'Content-Type':'application/json',
         },
-        body:JSON.stringify({ offerId, requestKey:action.requestKey }),
+        body:JSON.stringify({ offerId, requestKey:action.requestKey, recipient:action.recipient }),
         cache:'no-store',
       });
       const data = await upstream.json().catch(() => ({ error:'Offertenversand fehlgeschlagen.' }));

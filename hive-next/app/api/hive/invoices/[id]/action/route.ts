@@ -3,9 +3,10 @@ import { z } from 'zod';
 import { getHiveAccessToken, assertWorkspaceAllowed, jsonError, requireHiveDataAccess } from '@/lib/hive/access';
 
 const idSchema = z.string().uuid();
+const emailRecipientSchema = z.object({ email:z.string().email(), name:z.string().min(1), cc:z.array(z.string().email()) });
 const actionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.enum(['issue', 'download', 'mark_paid', 'cancel']) }),
-  z.object({ action: z.literal('send'), requestKey: z.string().uuid() }),
+  z.object({ action: z.literal('send'), requestKey: z.string().uuid(), recipient:emailRecipientSchema }),
   z.object({
     action: z.literal('duplicate'),
     issueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -110,8 +111,8 @@ export async function POST(
       return Response.json({ error: 'Invoice backend is not configured' }, { status: 503 });
     }
 
-    const payload: Record<string, string> = { invoiceId, action };
-    if (action === 'send') payload.requestKey = input.requestKey;
+    const payload: Record<string, unknown> = { invoiceId, action };
+    if (action === 'send') { payload.requestKey = input.requestKey; payload.recipient = input.recipient; }
 
     const upstream = await fetch(`${supabaseUrl}/functions/v1/invoice-document`, {
       method: 'POST',
