@@ -1,0 +1,601 @@
+/* The composer owns its layout; it does not inherit the printable paper styles. */
+.hive-document-overlay {
+  padding: 0 !important;
+  display: block !important;
+  background: #0006;
+  overflow: hidden;
+  backdrop-filter: blur(5px);
+}
+.hive-document {
+  --doc-bg: #f6f6f4;
+  --doc-surface: #fff;
+  --doc-input: #fcfcfb;
+  --doc-line: #e5e5e1;
+  --doc-text: #242423;
+  --doc-muted: #72726e;
+  --doc-strong: #222;
+  --doc-on-strong: #fff;
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  background: var(--doc-bg);
+  color: var(--doc-text);
+  font:
+    14px/1.5 "DM Sans",
+    sans-serif;
+  isolation: isolate;
+}
+html[data-theme="dark"] .hive-document {
+  --doc-bg: #141414;
+  --doc-surface: #1c1c1c;
+  --doc-input: #222;
+  --doc-line: #353535;
+  --doc-text: #ededeb;
+  --doc-muted: #ababa6;
+  --doc-strong: #ededeb;
+  --doc-on-strong: #191919;
+}
+.hive-document * {
+  box-sizing: border-box;
+  min-width: 0;
+}
+.hive-document-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 22px max(28px, calc((100vw - 1180px) / 2));
+  border-bottom: 1px solid var(--doc-line);
+  background: var(--doc-surface);
+}
+.hive-document-symbol {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex: none;
+  border: 1px solid var(--doc-line);
+  border-radius: 14px;
+  background: var(--doc-bg);
+}
+.hive-document-eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.4px;
+  color: var(--doc-muted);
+}
+.hive-document-eyebrow > span {
+  padding: 0 7px;
+  color: var(--doc-line);
+}
+.hive-document-header h1 {
+  margin: 4px 0 0;
+  font-size: 23px;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: -0.7px;
+}
+.hive-document-close {
+  display: grid;
+  place-items: center;
+  margin-left: auto;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border: 1px solid var(--doc-line);
+  border-radius: 50%;
+  color: var(--doc-muted);
+  background: transparent;
+}
+.hive-document-form {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 0;
+  margin: 0;
+}
+.hive-document-scroll {
+  overflow: auto;
+  overscroll-behavior: contain;
+  scroll-padding: 24px;
+}
+.hive-document-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 28px;
+  max-width: 1236px;
+  padding: 32px 28px 40px;
+  margin: auto;
+  align-items: start;
+}
+.hive-document-main {
+  display: grid;
+  gap: 24px;
+}
+.hive-document-section {
+  background: var(--doc-surface);
+  border: 1px solid var(--doc-line);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.hive-document-section > header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 22px 24px;
+  border-bottom: 1px solid var(--doc-line);
+}
+.hive-document-step {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border: 1px solid var(--doc-line);
+  border-radius: 9px;
+  color: var(--doc-muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.hive-document h2 {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  margin: 0;
+  line-height: 1.4;
+}
+.hive-document-section header p {
+  font-size: 12px;
+  color: var(--doc-muted);
+  margin: 3px 0 0;
+}
+.hive-document-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  padding: 24px;
+}
+.hive-document label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--doc-text);
+}
+.hive-document :is(input, select, textarea) {
+  appearance: auto;
+  width: 100%;
+  min-height: 46px;
+  margin: 0;
+  border: 1px solid var(--doc-line);
+  border-radius: 8px;
+  padding: 11px 12px;
+  font:
+    400 14px/1.5 "DM Sans",
+    sans-serif;
+  color: var(--doc-text);
+  background: var(--doc-input);
+  box-shadow: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.hive-document textarea {
+  resize: vertical;
+  min-height: 96px;
+}
+.hive-document input[type="number"] {
+  font-variant-numeric: tabular-nums;
+}
+.hive-document :is(input, textarea)::placeholder {
+  color: var(--doc-muted);
+  opacity: 0.75;
+}
+.hive-document :is(input, select, textarea):focus {
+  outline: 0;
+  border-color: var(--doc-muted);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--doc-muted) 12%, transparent);
+}
+.hive-document .hive-document-field-pair {
+  grid-column: 1/-1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.hive-document-wide {
+  grid-column: 1/-1;
+}
+.hive-document-count {
+  display: grid;
+  place-items: center;
+  margin-left: auto;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: 8px;
+  background: var(--doc-bg);
+  color: var(--doc-muted);
+  font-size: 11px;
+}
+.hive-document-lines {
+  padding: 0 24px;
+}
+.hive-document-line {
+  display: grid;
+  grid-template-columns: 90px minmax(120px, 1fr) minmax(100px, 1fr);
+  gap: 16px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--doc-line);
+}
+.hive-document-line-heading {
+  grid-column: 1/-1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--doc-muted);
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+.hive-document-line-heading button {
+  display: grid;
+  place-items: center;
+  min-width: 36px;
+  min-height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--doc-bg);
+  color: var(--doc-muted);
+}
+.hive-document-description {
+  grid-column: 1/-1;
+}
+.hive-document-line-total {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  text-align: right;
+}
+.hive-document-line-total span {
+  font-size: 12px;
+  color: var(--doc-muted);
+}
+.hive-document-line-total strong {
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.hive-document-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: calc(100% - 48px);
+  min-height: 46px;
+  margin: 20px 24px 24px;
+  padding: 10px 14px;
+  border: 1px dashed var(--doc-line);
+  border-radius: 8px;
+  background: var(--doc-bg);
+  color: var(--doc-text);
+  font:
+    500 12px/1.4 "DM Sans",
+    sans-serif;
+}
+.hive-document-summary {
+  position: sticky;
+  top: 0;
+  padding: 24px;
+  background: var(--doc-surface);
+  border: 1px solid var(--doc-line);
+  border-radius: 16px;
+}
+.hive-document-summary h2 {
+  margin-top: 10px;
+  font-size: 17px;
+}
+.hive-document-summary dl {
+  display: grid;
+  gap: 15px;
+  margin: 26px 0 22px;
+}
+.hive-document-summary dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--doc-muted);
+}
+.hive-document-summary dd {
+  margin: 0;
+  color: var(--doc-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.hive-document-summary dl > .hive-document-grand {
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 20px;
+  border-top: 1px solid var(--doc-line);
+  color: var(--doc-text);
+}
+.hive-document-grand dd {
+  font-size: 30px;
+  font-weight: 500;
+  letter-spacing: -1px;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.hive-document-summary p {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  color: var(--doc-text);
+  margin: 0 0 7px;
+}
+.hive-document-draft-dot {
+  width: 5px;
+  height: 5px;
+  flex: none;
+  background: #999;
+  border-radius: 50%;
+}
+.hive-document-summary small {
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--doc-muted);
+  display: block;
+}
+.hive-document-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px max(28px, calc((100vw - 1180px) / 2));
+  border-top: 1px solid var(--doc-line);
+  background: var(--doc-surface);
+}
+.hive-document-footer-total {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-right: auto;
+}
+.hive-document-footer-total span {
+  font-size: 11px;
+  color: var(--doc-muted);
+}
+.hive-document-footer-total strong {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  font-variant-numeric: tabular-nums;
+}
+.hive-document-cancel,
+.hive-document-save {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 12px 18px;
+  border-radius: 9px;
+  font:
+    500 13px/1.4 "DM Sans",
+    sans-serif;
+  border: 1px solid var(--doc-line);
+  background: var(--doc-surface);
+  color: var(--doc-text);
+}
+.hive-document-save {
+  background: var(--doc-strong);
+  color: var(--doc-on-strong);
+  border-color: var(--doc-strong);
+}
+.hive-document button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.hive-document button:not(:disabled):hover {
+  filter: brightness(0.94);
+}
+.hive-document button:focus-visible {
+  outline: 2px solid var(--doc-muted);
+  outline-offset: 3px;
+}
+.hive-document-spinner {
+  animation: hive-document-spin 1s linear infinite;
+}
+@keyframes hive-document-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (max-width: 900px) {
+  .hive-document-grid {
+    grid-template-columns: minmax(0, 1fr) 260px;
+    gap: 20px;
+    padding: 24px 20px;
+  }
+  .hive-document-summary {
+    padding: 20px;
+  }
+  .hive-document-fields {
+    gap: 16px;
+    padding: 20px;
+  }
+  .hive-document-section > header {
+    padding: 20px;
+  }
+}
+@media (max-width: 760px) {
+  .hive-document {
+    inset: 0;
+    padding-top: env(safe-area-inset-top);
+  }
+  .hive-document-header {
+    padding: 14px max(16px, env(safe-area-inset-right)) 14px
+      max(16px, env(safe-area-inset-left));
+    gap: 10px;
+  }
+  .hive-document-symbol {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+  }
+  .hive-document-header h1 {
+    font-size: 19px;
+    letter-spacing: -0.5px;
+  }
+  .hive-document-eyebrow {
+    font-size: 8px;
+    letter-spacing: 1.1px;
+  }
+  .hive-document-close {
+    width: 40px;
+    height: 40px;
+  }
+  .hive-document-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+    padding: 20px max(16px, env(safe-area-inset-right)) 24px
+      max(16px, env(safe-area-inset-left));
+  }
+  .hive-document-main {
+    gap: 20px;
+  }
+  .hive-document-section {
+    border-radius: 13px;
+  }
+  .hive-document-section > header {
+    padding: 18px 16px;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .hive-document-step {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+  }
+  .hive-document h2 {
+    font-size: 14px;
+  }
+  .hive-document-section header p {
+    font-size: 11px;
+    line-height: 1.6;
+    max-width: 220px;
+  }
+  .hive-document-fields {
+    padding: 18px 16px;
+    gap: 18px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .hive-document label {
+    font-size: 12px;
+    gap: 7px;
+  }
+  .hive-document :is(input, select, textarea) {
+    font-size: 16px;
+    min-height: 48px;
+    border-radius: 8px;
+  }
+  .hive-document .hive-document-field-pair {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+  .hive-document-lines {
+    padding: 0 16px;
+  }
+  .hive-document-line {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 14px;
+    padding: 18px 0;
+  }
+  .hive-document-line-total {
+    grid-column: 1/-1;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    text-align: left;
+  }
+  .hive-document-line-heading button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .hive-document-add {
+    width: calc(100% - 32px);
+    margin: 18px 16px;
+    min-height: 48px;
+  }
+  .hive-document-summary {
+    position: static;
+    border-radius: 13px;
+    padding: 20px;
+  }
+  .hive-document-grand dd {
+    font-size: 28px;
+  }
+  .hive-document-footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    padding: 12px max(16px, env(safe-area-inset-right))
+      calc(12px + env(safe-area-inset-bottom))
+      max(16px, env(safe-area-inset-left));
+    box-shadow: 0 -4px 20px #00000008;
+  }
+  .hive-document-footer-total {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    margin: 0;
+  }
+  .hive-document-footer-total strong {
+    font-size: 18px;
+    white-space: nowrap;
+  }
+  .hive-document-footer-total span {
+    font-size: 11px;
+  }
+  .hive-document-cancel {
+    display: none;
+  }
+  .hive-document-save {
+    width: 100%;
+    min-height: 48px;
+    font-size: 13px;
+  }
+}
+@media (min-width: 430px) and (max-width: 760px) {
+  .hive-document .hive-document-field-pair {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hive-document * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+.hive-document-summary-fields {
+  margin-top: 22px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--doc-line);
+}
+.hive-document-catalog {
+  padding: 20px 24px 0;
+}
+.hive-document-notes {
+  padding: 24px;
+}
+@media (max-width: 760px) {
+  .hive-document-catalog {
+    padding: 18px 16px 0;
+  }
+  .hive-document-notes {
+    padding: 18px 16px;
+  }
+}

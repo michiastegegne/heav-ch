@@ -1,17 +1,32 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
-import { applyEmailTemplate, loadEmailTemplate, logEmail } from "../_shared/email.ts";
+import { assertWorkspaceEmailAllowed, applyEmailTemplate, loadEmailTemplate, logEmail } from "../_shared/email.ts";
 
-const allowedOrigins = new Set(["https://heav.ch", "https://www.heav.ch", "http://127.0.0.1:4179", "http://localhost:4179"]);
+const allowedOrigins = new Set([
+  "https://heav.ch",
+  "https://www.heav.ch",
+  "http://127.0.0.1:4179",
+  "http://localhost:4179",
+]);
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const validMailbox = (value: unknown) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
-const esc = (value: unknown) => String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
-const chf = (rappen: number) => new Intl.NumberFormat("de-CH", { style: "currency", currency: "CHF" }).format(Number(rappen || 0) / 100);
+const validMailbox = (value: unknown) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+const esc = (value: unknown) =>
+  String(value || "").replace(/[&<>"']/g, (char) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!
+  );
+const chf = (rappen: number) =>
+  new Intl.NumberFormat("de-CH", { style: "currency", currency: "CHF" })
+    .format(Number(rappen || 0) / 100);
 
-function reply(payload: Record<string, unknown>, status: number, headers: Record<string, string>) {
+function reply(
+  payload: Record<string, unknown>,
+  status: number,
+  headers: Record<string, string>,
+) {
   return Response.json(payload, { status, headers });
 }
 
-Deno.serve(async (request) => {
+export async function handler(request: Request) {
   const origin = request.headers.get("origin") || "";
   const headers = {
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -21,82 +36,251 @@ Deno.serve(async (request) => {
   };
   if (request.method === "OPTIONS") return new Response("ok", { headers });
   if (request.method !== "POST") return reply({ error: "Method not allowed" }, 405, headers);
-  if (origin && !allowedOrigins.has(origin)) return reply({ error: "Origin not allowed" }, 403, headers);
+  if (origin && !allowedOrigins.has(origin)) {
+    return reply({ error: "Origin not allowed" }, 403, headers);
+  }
 
   try {
     const authorization = request.headers.get("authorization") || "";
-    if (!authorization.startsWith("Bearer ")) return reply({ error: "Anmeldung erforderlich." }, 401, headers);
+    if (!authorization.startsWith("Bearer ")) {
+      return reply({ error: "Anmeldung erforderlich." }, 401, headers);
+    }
     const { offerId, requestKey } = await request.json();
-    if (typeof offerId !== "string" || !uuidPattern.test(offerId) || typeof requestKey !== "string" || !uuidPattern.test(requestKey)) return reply({ error: "Ungültige Offerte." }, 400, headers);
+    if (
+      typeof offerId !== "string" || !uuidPattern.test(offerId) ||
+      typeof requestKey !== "string" || !uuidPattern.test(requestKey)
+    ) {
+      return reply({ error: "Ungültige Offerte." }, 400, headers);
+    }
 
     const url = Deno.env.get("SUPABASE_URL")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const caller = createClient(url, anonKey, { global: { headers: { Authorization: authorization } }, auth: { autoRefreshToken: false, persistSession: false } });
-    const { data: identity, error: identityError } = await caller.auth.getUser();
-    if (identityError || !identity.user) return reply({ error: "Anmeldung erforderlich." }, 401, headers);
-    const { data: ownerAllowed, error: ownerError } = await caller.rpc("is_studio_owner");
-    if (ownerError || ownerAllowed !== true) return reply({ error: "Studio-Zugriff erforderlich." }, 403, headers);
+    const caller = createClient(url, anonKey, {
+      global: { headers: { Authorization: authorization } },
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const service = createClient(url, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
 
-    const service = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
-    const { data: offer, error: offerError } = await service.from("offers")
-      .select("id,owner_id,customer_id,department_id,offer_number,title,valid_until,status,total_rappen")
-      .eq("id", offerId).eq("owner_id", identity.user.id).maybeSingle();
+    const { data: actorId, error: actorError } = await caller.rpc("current_app_user_id");
+    if (actorError || !actorId) {
+      return reply({ error: "Anmeldung erforderlich." }, 401, headers);
+    }
+
+    const { data: offer, error: offerError } = await caller.from("offers")
+      .select("id,workspace_id,owner_id,customer_id,department_id,offer_number,title,valid_until,status,total_rappen")
+      .eq("id", offerId)
+      .maybeSingle();
     if (offerError) throw offerError;
     if (!offer) return reply({ error: "Offerte nicht gefunden." }, 404, headers);
-    if (offer.status !== "sent") return reply({ error: "Die Offerte muss zuerst freigegeben werden." }, 409, headers);
-    if (offer.valid_until < new Date().toISOString().slice(0, 10)) return reply({ error: "Diese Offerte ist abgelaufen." }, 409, headers);
 
-    const [{ data: customer, error: customerError }, { data: department, error: departmentError }, { data: memberships, error: membershipError }, { data: settings, error: settingsError }] = await Promise.all([
-      service.from("customers").select("email,company,contact_name").eq("id", offer.customer_id).eq("owner_id", identity.user.id).maybeSingle(),
-      service.from("customer_departments").select("id,name,contact_name,contact_email").eq("id", offer.department_id).eq("customer_id", offer.customer_id).eq("owner_id", identity.user.id).maybeSingle(),
-      service.from("customer_portal_memberships").select("id").eq("customer_id", offer.customer_id).eq("department_id", offer.department_id).eq("status", "active").limit(1),
-      service.from("company_settings").select("company_name,owner_name,email").eq("owner_id", identity.user.id).maybeSingle(),
+    const { data: accountantAllowed, error: accountantError } = await caller.rpc(
+      "is_workspace_member",
+      { p_workspace_id: offer.workspace_id, p_required: "accountant" },
+    );
+    if (accountantError || accountantAllowed !== true) {
+      return reply({ error: "Business-Zugriff erforderlich." }, 403, headers);
+    }
+
+    if (offer.status !== "sent") {
+      return reply({ error: "Die Offerte muss zuerst freigegeben werden." }, 409, headers);
+    }
+    if (offer.valid_until < new Date().toISOString().slice(0, 10)) {
+      return reply({ error: "Diese Offerte ist abgelaufen." }, 409, headers);
+    }
+
+    const [
+      { data: customer, error: customerError },
+      { data: department, error: departmentError },
+      { data: memberships, error: membershipError },
+      { data: settings, error: settingsError },
+    ] = await Promise.all([
+      service.from("customers")
+        .select("email,company,contact_name")
+        .eq("id", offer.customer_id)
+        .eq("workspace_id", offer.workspace_id)
+        .maybeSingle(),
+      service.from("customer_departments")
+        .select("id,name,contact_name,contact_email")
+        .eq("id", offer.department_id)
+        .eq("customer_id", offer.customer_id)
+        .eq("workspace_id", offer.workspace_id)
+        .maybeSingle(),
+      service.from("customer_portal_memberships")
+        .select("id")
+        .eq("workspace_id", offer.workspace_id)
+        .eq("customer_id", offer.customer_id)
+        .eq("department_id", offer.department_id)
+        .eq("status", "active")
+        .limit(1),
+      service.from("workspace_settings")
+        .select("business_name,contact_name,email")
+        .eq("workspace_id", offer.workspace_id)
+        .maybeSingle(),
     ]);
-    if (customerError || departmentError || membershipError || settingsError) throw customerError || departmentError || membershipError || settingsError;
-    if (!customer || !department) return reply({ error: "Kunde oder Abteilung der Offerte wurde nicht gefunden." }, 409, headers);
-    const recipientEmail = (department.contact_email || customer.email || "").trim().toLowerCase();
-    if (!validMailbox(recipientEmail)) return reply({ error: "Für diese Abteilung fehlt eine gültige E-Mail-Adresse." }, 409, headers);
-    if (!memberships?.length) return reply({ error: "Der Kundenportalzugang dieser Abteilung muss zuerst per Einladung freigeschaltet werden." }, 409, headers);
-    if (!settings || !validMailbox(settings.email)) return reply({ error: "Die HEAV-Antwortadresse ist ungültig." }, 409, headers);
+    if (customerError || departmentError || membershipError || settingsError) {
+      throw customerError || departmentError || membershipError || settingsError;
+    }
+    if (!customer || !department) {
+      return reply({ error: "Kunde oder Abteilung der Offerte wurde nicht gefunden." }, 409, headers);
+    }
+
+    const recipientEmail = (department.contact_email || customer.email || "")
+      .trim().toLowerCase();
+    if (!validMailbox(recipientEmail)) {
+      return reply({ error: "Für diese Abteilung fehlt eine gültige E-Mail-Adresse." }, 409, headers);
+    }
+    if (!memberships?.length) {
+      return reply({
+        error: "Der Kundenportalzugang dieser Abteilung muss zuerst freigeschaltet werden.",
+      }, 409, headers);
+    }
+    if (!settings || !validMailbox(settings.email)) {
+      return reply({ error: "Die Business-Antwortadresse ist ungültig." }, 409, headers);
+    }
+
+    await assertWorkspaceEmailAllowed(service, offer.workspace_id);
 
     const resendKey = Deno.env.get("RESEND_API_KEY");
     const fromEmail = Deno.env.get("RESEND_FROM_EMAIL");
-    if (!resendKey || !validMailbox(fromEmail)) return reply({ error: "E-Mail-Versand ist noch nicht konfiguriert." }, 503, headers);
-    const { data: reservationRows, error: reservationError } = await caller.rpc("reserve_offer_send", { p_offer_id: offer.id, p_request_key: requestKey });
+    if (!resendKey || !validMailbox(fromEmail)) {
+      return reply({ error: "E-Mail-Versand ist noch nicht konfiguriert." }, 503, headers);
+    }
+
+    const { data: reservationRows, error: reservationError } = await caller.rpc(
+      "reserve_offer_send",
+      { p_offer_id: offer.id, p_request_key: requestKey },
+    );
     if (reservationError) throw reservationError;
     const reservation = Array.isArray(reservationRows) ? reservationRows[0] : reservationRows;
-    if (!reservation?.attempt_id || !reservation.idempotency_key) throw new Error("Offertenversand konnte nicht reserviert werden.");
-    if (reservation.state === "sent") return reply({ ok: true, recipient: recipientEmail, idempotent: true }, 200, headers);
-    const recipientName = (department.contact_name || customer.contact_name || customer.company || "Guten Tag").trim().split(/\s+/)[0];
-    const portalLink = `https://heav.ch/client/?offer=${encodeURIComponent(offer.id)}`;
-    const template = await loadEmailTemplate(service, identity.user.id, "offer_send", {
-      subject_template: "Offerte {{offer_number}} von {{company_name}}",
-      text_template: "Hallo {{first_name}}\n\nDeine Offerte {{offer_title}} über {{amount}} liegt bereit.\n\nIm geschützten Kundenportal ansehen und verbindlich annehmen:\n{{portal_link}}\n\nFreundliche Grüsse\n{{owner_name}}\n{{company_name}}",
-    });
-    const values = { first_name: recipientName, offer_number: offer.offer_number, offer_title: offer.title, amount: chf(offer.total_rappen), portal_link: portalLink, owner_name: settings.owner_name || "HEAV", company_name: settings.company_name || "HEAV" };
+    if (!reservation?.attempt_id || !reservation.idempotency_key) {
+      throw new Error("Offertenversand konnte nicht reserviert werden.");
+    }
+    if (reservation.state === "sent") {
+      return reply({ ok: true, recipient: recipientEmail, idempotent: true }, 200, headers);
+    }
+
+    const recipientName = (
+      department.contact_name || customer.contact_name || customer.company || "Guten Tag"
+    ).trim().split(/\s+/)[0];
+    const portalBase = Deno.env.get("PORTAL_BASE_URL") || "https://heav.ch/client/";
+    const portalLink = `${portalBase}?offer=${encodeURIComponent(offer.id)}`;
+    const template = await loadEmailTemplate(
+      service,
+      offer.owner_id,
+      "offer_send",
+      {
+        subject_template: "Offerte {{offer_number}} von {{company_name}}",
+        text_template:
+          "Hallo {{first_name}}\n\nDeine Offerte {{offer_title}} über {{amount}} liegt bereit.\n\nIm geschützten Kundenportal ansehen und verbindlich annehmen:\n{{portal_link}}\n\nFreundliche Grüsse\n{{owner_name}}\n{{company_name}}",
+      },
+      offer.workspace_id,
+    );
+
+    const values = {
+      first_name: recipientName,
+      offer_number: offer.offer_number,
+      offer_title: offer.title,
+      amount: chf(offer.total_rappen),
+      portal_link: portalLink,
+      owner_name: settings.contact_name || settings.business_name,
+      company_name: settings.business_name,
+    };
     const subject = applyEmailTemplate(template.subject_template, values);
     const text = applyEmailTemplate(template.text_template, values);
-    const htmlText = text.split(/\n{2,}/u).map((paragraph) => `<p style="margin:0 0 20px;line-height:1.55">${esc(paragraph).replace(/\n/gu, "<br>")}</p>`).join("");
-    const html = `<div style="margin:0;padding:32px 20px;background:#eeeae0;color:#090a08;font-family:Arial,sans-serif"><div style="max-width:620px;margin:0 auto;background:#fffdf8"><div style="padding:24px 28px;background:#090a08;color:#eeeae0;font-size:25px;font-weight:700;letter-spacing:-1px">HEAV</div><div style="padding:34px 28px">${htmlText}<p style="margin:28px 0"><a href="${portalLink}" style="display:inline-block;padding:14px 20px;background:#e8e4dc;color:#090a08;text-decoration:none;font-weight:700">Offerte ansehen</a></p></div></div></div>`;
-    const emailResponse = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json", "Idempotency-Key": reservation.idempotency_key },
-      body: JSON.stringify({ from: fromEmail, to: [recipientEmail], reply_to: settings.email, subject, text, html }),
-    });
-    const emailData = await emailResponse.json().catch(() => ({}));
-    if (!emailResponse.ok) {
-      await logEmail(service, { owner_id: identity.user.id, template_key: "offer_send", status: "failed", recipient_email: recipientEmail, recipient_name: recipientName, customer_id: offer.customer_id, offer_id: offer.id, subject, text_body: text, error_message: String(emailData.message || "provider error"), idempotency_key: reservation.idempotency_key });
-      const { error: completionError } = await caller.rpc("complete_offer_send", { p_attempt_id: reservation.attempt_id, p_success: false, p_recipient: recipientEmail, p_details: { provider_error: String(emailData.message || "provider error") } });
-      if (completionError) throw completionError;
-      return reply({ error: String(emailData.message || "E-Mail konnte nicht gesendet werden.") }, 502, headers);
+    const htmlText = text.split(/\n{2,}/u)
+      .map((paragraph) =>
+        `<p style="margin:0 0 20px;line-height:1.55">${esc(paragraph).replace(/\n/gu, "<br>")}</p>`
+      ).join("");
+    const html =
+      `<div style="margin:0;padding:32px 20px;background:#eeeae0;color:#090a08;font-family:Arial,sans-serif"><div style="max-width:620px;margin:0 auto;background:#fffdf8"><div style="padding:24px 28px;background:#090a08;color:#eeeae0;font-size:25px;font-weight:700;letter-spacing:-1px">${esc(settings.business_name)}</div><div style="padding:34px 28px">${htmlText}<p style="margin:28px 0"><a href="${esc(portalLink)}" style="display:inline-block;padding:14px 20px;background:#e8e4dc;color:#090a08;text-decoration:none;font-weight:700">Offerte ansehen</a></p></div></div></div>`;
+
+    let emailResponse: Response;
+    try {
+      emailResponse = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${resendKey}`,
+          "Content-Type": "application/json",
+          "Idempotency-Key": reservation.idempotency_key,
+        },
+        body: JSON.stringify({
+          from: fromEmail,
+          to: [recipientEmail],
+          reply_to: settings.email,
+          subject,
+          text,
+          html,
+        }),
+      });
+    } catch (sendError) {
+      // The provider may already have accepted the request. Keep the reservation
+      // pending so a retry reuses the exact same provider idempotency key.
+      console.error("offer provider response lost", sendError);
+      return reply({
+        error: "Zustellstatus unklar. Bitte erneut versuchen; derselbe sichere Versandauftrag wird wiederverwendet.",
+        deliveryUncertain: true,
+        retryable: true,
+      }, 502, headers);
     }
-    await logEmail(service, { owner_id: identity.user.id, template_key: "offer_send", status: "sent", recipient_email: recipientEmail, recipient_name: recipientName, customer_id: offer.customer_id, offer_id: offer.id, subject, text_body: text, provider_id: emailData.id || null, idempotency_key: reservation.idempotency_key });
-    const { error: completionError } = await caller.rpc("complete_offer_send", { p_attempt_id: reservation.attempt_id, p_success: true, p_provider_id: emailData.id || null, p_recipient: recipientEmail, p_details: { resend_id: emailData.id || null } });
+    const emailData = await emailResponse.json().catch(() => ({}));
+
+    const logBase = {
+      workspace_id: offer.workspace_id,
+      owner_id: offer.owner_id,
+      template_key: "offer_send",
+      recipient_email: recipientEmail,
+      recipient_name: recipientName,
+      customer_id: offer.customer_id,
+      offer_id: offer.id,
+      subject,
+      text_body: text,
+      idempotency_key: reservation.idempotency_key,
+    };
+
+    if (!emailResponse.ok) {
+      await logEmail(service, {
+        ...logBase,
+        status: "failed",
+        error_message: String(emailData.message || "provider error"),
+      });
+      const { error: completionError } = await caller.rpc("complete_offer_send", {
+        p_attempt_id: reservation.attempt_id,
+        p_success: false,
+        p_recipient: recipientEmail,
+        p_details: { provider_error: String(emailData.message || "provider error") },
+      });
+      if (completionError) throw completionError;
+      return reply({
+        error: String(emailData.message || "E-Mail konnte nicht gesendet werden."),
+      }, 502, headers);
+    }
+
+    await logEmail(service, {
+      ...logBase,
+      status: "sent",
+      provider_id: emailData.id || null,
+    });
+    const { error: completionError } = await caller.rpc("complete_offer_send", {
+      p_attempt_id: reservation.attempt_id,
+      p_success: true,
+      p_provider_id: emailData.id || null,
+      p_recipient: recipientEmail,
+      p_details: { resend_id: emailData.id || null },
+    });
     if (completionError) throw completionError;
+
     return reply({ ok: true, recipient: recipientEmail }, 200, headers);
   } catch (error) {
     console.error("offer email failed", error);
-    return reply({ error: error instanceof Error ? error.message : "Offerte konnte nicht per E-Mail gesendet werden." }, 400, headers);
+    return reply({
+      error: error instanceof Error ? error.message : "Offerte konnte nicht per E-Mail gesendet werden.",
+    }, 400, headers);
   }
-});
+}
+
+if (import.meta.main) {
+  Deno.serve(handler);
+}

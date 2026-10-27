@@ -80,13 +80,27 @@ export function validateInvoice(invoice) {
   } else if (invoice.issueDate && invoice.dueDate < invoice.issueDate) {
     errors.dueDate = "Das Fälligkeitsdatum darf nicht vor dem Rechnungsdatum liegen.";
   }
-  const completeItem = invoice.items?.some(
-    (item) =>
+  const completeItems = (invoice.items || []).filter((item) => {
+    const quantity = item?.quantity;
+    const unitPrice = item?.unitPrice;
+    if (
+      quantity === null || quantity === undefined || quantity === "" ||
+      unitPrice === null || unitPrice === undefined || unitPrice === ""
+    ) return false;
+    const parsedQuantity = Number(quantity);
+    const parsedUnitPrice = Number(unitPrice);
+    return Boolean(
       String(item.description || "").trim() &&
-      Number(item.quantity) > 0 &&
-      Number(item.unitPrice) >= 0,
+      Number.isFinite(parsedQuantity) &&
+      parsedQuantity > 0 &&
+      Number.isFinite(parsedUnitPrice) &&
+      parsedUnitPrice >= 0
+    );
+  });
+  const hasPositiveTotal = completeItems.some(
+    (item) => Number(item.quantity) * Number(item.unitPrice) > 0,
   );
-  if (!completeItem) {
+  if (!completeItems.length || !hasPositiveTotal) {
     errors.items = "Mindestens eine vollständige Position mit positivem Betrag ist erforderlich.";
   }
   return errors;
