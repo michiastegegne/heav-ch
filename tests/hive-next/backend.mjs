@@ -27,6 +27,7 @@ http.createServer(async(req,res)=>{
  if(url.pathname==='/auth/v1/logout')return reply({});
  if(url.pathname.startsWith('/rest/v1/rpc/')){
   const name=url.pathname.split('/').pop();
+  if(name==='document_email_recipient')return reply({email:'anna@example.test',name:'Anna',cc:[]});
   if(name==='current_app_user_id')return reply(actor.id);
   if(name==='is_hive_preview_workspace')return reply([a,b].includes(body.p_workspace_id));
   if(name==='is_workspace_member')return reply([a,b].includes(body.p_workspace_id));

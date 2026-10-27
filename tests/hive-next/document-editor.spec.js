@@ -1,3 +1,4 @@
+import { navigate, openNavigation } from "./navigation.mjs";
 import { test, expect } from "@playwright/test";
 async function login(page, appearance) {
   await page.addInitScript(
@@ -9,12 +10,12 @@ async function login(page, appearance) {
   await page.getByLabel("Passwort", { exact: true }).fill("test-password");
   await page.getByRole("button", { name: "Anmelden", exact: true }).click();
   await expect(
-    page.getByText("Dein Studio auf einen Blick.", { exact: true }),
+    page.getByText("Was steht heute an?", { exact: true }),
   ).toBeVisible();
   if(page.viewportSize().width<=760) {
-    await page.getByRole('navigation',{name:'Mobile Navigation'}).getByRole('button',{name:'Mehr',exact:true}).click();
+    await openNavigation(page);
     await page.getByRole('dialog').getByRole('button',{name:'Rechnungen',exact:true}).click();
-  } else await page.getByRole('navigation',{name:'Business-Module'}).getByRole('button',{name:'Rechnungen',exact:true}).click();
+  } else await navigate(page,'Rechnungen');
   await page
     .getByRole("button", { name: "Rechnung erstellen", exact: true })
     .click();

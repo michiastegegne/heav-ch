@@ -1,3 +1,4 @@
+import { navigate, openNavigation } from "./navigation.mjs";
 import { test, expect } from "@playwright/test";
 test.use({ isMobile: true, hasTouch: true });
 async function login(page) {
@@ -9,7 +10,7 @@ async function login(page) {
   await page.getByRole("button", { name: "Anmelden", exact: true }).click();
   await expect(page.locator(".crm-metrics button")).toHaveCount(4);
   await expect(
-    page.getByText("Dein Studio auf einen Blick.", { exact: true }),
+    page.getByText("Was steht heute an?", { exact: true }),
   ).toBeVisible();
 }
 async function fits(page) {
@@ -68,10 +69,10 @@ for (const appearance of ["light", "dark"])
         await expect(value).toHaveCSS('white-space', 'nowrap');
         expect(await value.evaluate(node=>node.scrollWidth<=node.clientWidth)).toBeTruthy();
       }
-      const nav = page.getByRole("navigation", { name: "Mobile Navigation" });
+      const nav = await openNavigation(page);
       await expect(nav).toBeVisible();
-      await touchTargets(page, ".hive-app-dock button");
-      const quickCreate = page.getByRole("button", { name: "Neu erstellen", exact: true });
+      await touchTargets(page, ".hive-workspace-sidebar button:visible");
+      const quickCreate = nav.getByRole("button", { name: "Neu erstellen", exact: true });
       await expect(quickCreate).toBeVisible();
       await quickCreate.click();
       const quickDialog = page.getByRole("dialog", { name: "Neu erstellen" });
@@ -91,16 +92,13 @@ for (const appearance of ["light", "dark"])
         fullPage: true,
       });
       for (const name of ["Kunden", "Projekte", "Rechnungen"]) {
-        if(name==='Rechnungen') {
-          await nav.getByRole('button',{name:'Mehr',exact:true}).click();
-          await page.getByRole('dialog').getByRole('button',{name,exact:true}).click();
-        } else await nav.getByRole("button", { name, exact: true }).click();
+        await navigate(page,name);
         await expect(
           page.getByRole("heading", { name, exact: true }),
         ).toBeVisible();
         await fits(page);
       }
-      await nav.getByRole("button", { name: "Mehr" }).click();
+      await openNavigation(page);
       await page
         .getByRole("dialog")
         .getByRole("button", { name: "Offerten", exact: true })
@@ -141,7 +139,7 @@ for (const appearance of ["light", "dark"])
       await fits(page);
       await page.getByRole("button", { name: "Suche schliessen" }).click();
 
-      await nav.getByRole("button", { name: "Mehr" }).click();
+      await openNavigation(page);
       await page
         .getByRole("dialog")
         .getByRole("button", { name: "Businesses", exact: true })
@@ -149,9 +147,9 @@ for (const appearance of ["light", "dark"])
       await expect(page.getByRole("heading", { name: "Businesses", exact: true })).toBeVisible();
       await expect(page.locator(".hive-business-card")).toHaveCount(2);
       await fits(page);
-      await nav.getByRole("button", { name: "Übersicht", exact: true }).click();
+      await navigate(page,"Übersicht");
 
-      await nav.getByRole("button", { name: "Mehr" }).click();
+      await openNavigation(page);
       await page
         .getByRole("dialog")
         .getByRole("button", { name: "Portal", exact: true })
@@ -165,7 +163,7 @@ for (const appearance of ["light", "dark"])
         await fits(page);
       }
 
-      await nav.getByRole("button", { name: "Mehr" }).click();
+      await openNavigation(page);
       await page
         .getByRole("dialog")
         .getByRole("button", { name: "E-Mail", exact: true })
@@ -179,7 +177,7 @@ for (const appearance of ["light", "dark"])
         await fits(page);
       }
 
-      await nav.getByRole("button", { name: "Mehr" }).click();
+      await openNavigation(page);
       await page
         .getByRole("dialog")
         .getByRole("button", { name: "Einstellungen", exact: true })
@@ -193,14 +191,14 @@ for (const appearance of ["light", "dark"])
         await fits(page);
       }
 
-      await nav.getByRole("button", { name: "Kunden", exact: true }).click();
+      await navigate(page,"Kunden");
       await page.getByRole("button", { name: /Kundenakte/ }).first().click();
       const customerWorkspace = page.getByRole("dialog", { name: "Workspace Details" });
       await expect(customerWorkspace).toBeVisible();
       await fits(page);
       await customerWorkspace.getByRole("button", { name: "Schliessen" }).click();
 
-      await nav.getByRole("button", { name: "Projekte", exact: true }).click();
+      await navigate(page,"Projekte");
       await page.getByRole("button", { name: "Kalender", exact: true }).click();
       await expect(page.locator(".hive-project-agenda")).toBeVisible();
       await fits(page);
@@ -211,15 +209,13 @@ for (const appearance of ["light", "dark"])
       await fits(page);
       await projectWorkspace.getByRole("button", { name: "Schliessen" }).click();
 
-      await nav
-        .getByRole("button", { name: "Rechnungen", exact: true })
-        .click();
+      await navigate(page,"Rechnungen");
       await page
         .getByRole("button", { name: "Rechnung erstellen", exact: true })
         .click();
       await fits(page);
       await page.keyboard.press("Escape");
-      await nav.getByRole("button", { name: "Kunden", exact: true }).click();
+      await navigate(page,"Kunden");
       await page.getByRole("button", { name: "Kunde hinzufügen" }).click();
       await page.getByLabel("Firma", { exact: true }).fill("Mobile Test");
       await fits(page);
@@ -232,8 +228,8 @@ for (const appearance of ["light", "dark"])
       await expect(page.locator(".crm-metrics button")).toHaveCount(4);
       await fits(page);
 
-      const studioNav = page.getByRole("navigation", { name: "Mobile Navigation" });
-      await studioNav.getByRole("button", { name: "Kunden", exact: true }).click();
+      const studioNav = await openNavigation(page);
+      await navigate(page,"Kunden");
       await expect(page.getByText("Nordkunde", { exact: true })).toBeVisible();
       await page
         .getByLabel("Business auswählen")

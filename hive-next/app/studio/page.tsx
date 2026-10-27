@@ -3,14 +3,14 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft, ArrowRight, ArrowUpRight, BriefcaseBusiness, Building2, Check, ChevronDown, Clock3, CreditCard, FileText,
-  LayoutDashboard, Mail, Menu, Package, Pencil, Plus, RefreshCw, Search, Settings2, ShieldCheck, Smartphone, Trash2, Users, X,
+  LayoutDashboard, Mail, Menu, Package, PanelLeft, Pencil, Plus, SquarePen, RefreshCw, Search, Settings2, ShieldCheck, Smartphone, Trash2, Users, X,
 } from 'lucide-react';
 import { createPublicSupabaseBrowserClient } from '@/lib/supabase/public-browser';
 import ThemeToggle from '@/app/components/theme-toggle';
 import WorkspaceOverview from './workspace-overview';
 import { useWorkspaceView } from './workspace-view';
 import WorkspaceNavigation from './workspace-navigation';
-import {WorkspaceGlassDock,WorkspaceViewSwitch} from './workspace-glass';
+import {WorkspaceViewSwitch} from './workspace-glass';
 import CustomerDirectory from './customer-directory';
 import BusinessesOverview, { type BusinessOverviewItem } from './businesses-overview';
 import ProjectBoard from './project-board';
@@ -187,6 +187,7 @@ async function requestJson<T>(input: string, init?: RequestInit): Promise<T> {
 export default function StudioPage() {
   const [tab, setTab] = useWorkspaceView();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarCollapsed,setSidebarCollapsed] = useState(false);
   const [installOpen, setInstallOpen] = useState(false);
   const [quickCreateOpen, setQuickCreateOpen] = useState(false);
   const [listQuery, setListQuery] = useState('');
@@ -754,7 +755,7 @@ export default function StudioPage() {
     for (const project of projects) {
       const label=project.title;
       const hay=[label,relatedName(project.customers),project.status].join(' ').toLowerCase();
-      if (hay.includes(q)) matches.push({kind:'project',id:project.id,label,meta:`${relatedName(project.customers)} · ${project.status}`});
+      if (hay.includes(q)) matches.push({kind:'project',id:project.id,label,meta:`${relatedName(project.customers)} · ${stateLabel[project.status] || project.status}`});
     }
     for (const invoice of invoices) {
       const label=invoice.number_finalized ? invoice.invoice_number : 'Rechnungsentwurf';
@@ -1852,34 +1853,23 @@ export default function StudioPage() {
   const headingCopy:Partial<Record<Tab,string>> = {businesses:'Alle deine Businesses, getrennt geführt und gemeinsam im Blick.',overview:'Dein Studio auf einen Blick.',customers:'Kontakte, Beziehungen und die gemeinsame Arbeit.',projects:'Von der ersten Idee bis zur letzten Abgabe.',invoices:'Rechnungen, Fälligkeiten und Zahlungseingänge.',offers:'Aus Anfragen werden konkrete Aufträge.',catalog:'Deine Leistungen und Preise an einem Ort.',portal:'Dokumente und Freigaben für deine Kunden.',activity:'Was sich in deinem Workspace verändert hat.'};
 
 
-  return <div className="hsv hive-system-app hive-flow-app" data-view={tab} style={{ '--business-accent': accent } as React.CSSProperties}>
+  return <div className="hsv hive-system-app hive-flow-app" data-view={tab} data-sidebar={sidebarCollapsed?'collapsed':'open'} style={{ '--business-accent': accent } as React.CSSProperties}>
     <header className="hsv-top">
-      <div className="hsv-identity">
-        <a className="hsv-hive" href="/" aria-label="Hive Startseite"><span className="hive-app-mark" aria-hidden="true">h</span><span>hive<span className="hive-wordmark-dot">.</span></span></a><span className="hsv-divider"/>
-        <span className="hsv-logo">{settings?.logo_url ? <img src={settings.logo_url} alt="Business Logo"/> : businessName.charAt(0)}</span>
-        <select aria-label="Business auswählen" value={activeWorkspaceId} onChange={(event) => switchWorkspace(event.target.value, tab === 'businesses' ? 'businesses' : tab)}>
-          {workspaces.map((workspace) => <option key={workspace.id} value={workspace.id}>{workspaceLabel(workspace)}</option>)}
-        </select>
-        <button className="hsv-outline" aria-label="Neues Business erstellen" type="button" onClick={() => {
-          setBusinessDraft({ name:'', invoicePrefix:'HIVE' });
-          setBusinessOpen(true);
-        }}><Plus size={14}/> Business</button>
-      </div>
-      <button className="hsv-outline" aria-label="Workspace durchsuchen" type="button" onClick={() => setSearchOpen(true)}><Search size={14}/> Suchen … <kbd>⌘K</kbd></button>
-      <button className="hive-install-trigger" aria-label="Als App installieren" onClick={()=>setInstallOpen(true)}><Smartphone size={17}/><span>Als App installieren</span></button><span className="hsv-mode"><span/> Dev Preview</span>
-      <ThemeToggle/>
-      <a className="hsv-back" href="/account">Mein Konto <ArrowRight size={15}/></a>
+      <button className="hive-sidebar-toggle" aria-label={sidebarCollapsed?'Seitenleiste öffnen':'Seitenleiste einklappen'} aria-expanded={!sidebarCollapsed} onClick={()=>setSidebarCollapsed(value=>!value)}><PanelLeft size={20}/></button>
+      <button className="hive-mobile-menu-toggle" aria-label="Menü öffnen" aria-expanded={mobileMenuOpen} onClick={()=>setMobileMenuOpen(true)}><Menu size={21}/></button>
+      <div className="hsv-identity"><span className="hive-header-title">Hive</span><select aria-label="Business auswählen" value={activeWorkspaceId} onChange={event=>switchWorkspace(event.target.value,tab==='businesses'?'businesses':tab)}>{workspaces.map(workspace=><option key={workspace.id} value={workspace.id}>{workspaceLabel(workspace)}</option>)}</select></div>
+      <div className="hive-header-actions"><button className="hive-mobile-search" aria-label="Workspace durchsuchen" onClick={()=>setSearchOpen(true)}><Search size={20}/></button><ThemeToggle/><button className="hive-header-new" aria-label="Neu erstellen" onClick={()=>setQuickCreateOpen(true)}><SquarePen size={20}/></button></div>
     </header>
 
     <div className="hsv-layout">
-      <WorkspaceNavigation items={nav} active={tab} onSelect={setTab} customerCount={customers.length}/>
+      <WorkspaceNavigation items={nav} active={tab} onSelect={setTab} customerCount={customers.length} onCreate={()=>setQuickCreateOpen(true)} onSearch={()=>setSearchOpen(true)} onInstall={()=>setInstallOpen(true)} onNewBusiness={()=>{setBusinessDraft({name:'',invoicePrefix:'HIVE'});setBusinessOpen(true);}} onCollapse={()=>setSidebarCollapsed(true)} recentProjects={projects.slice(0,3)} onProject={id=>void loadProjectWorkspace(id)} businessName={businessName}/>
 
       <main className="hsv-main">
         <div className="hive-breadcrumb"><span>{tab === 'businesses' ? 'Hive' : businessName.replace(/^Hive Dev · /,'')}</span><span>/</span><strong>{nav.find(([id])=>id===tab)?.[1]}</strong><time>{new Intl.DateTimeFormat('de-CH',{weekday:'short',day:'2-digit',month:'long',year:'numeric'}).format(new Date())}</time></div>
         <div className="hsv-heading" key={tab}>
           <div className="hive-document-heading"><h1>{nav.find(([id]) => id === tab)?.[1]}</h1><p>{busy ? 'Daten werden geladen …' : (headingCopy[tab] || 'Alles Wichtige an einem Ort.')}</p></div>
           <div className="hive-heading-actions">
-            {tab === 'overview' && <button className="hsv-primary" onClick={()=>setQuickCreateOpen(true)}><Plus size={17}/> Neu erstellen</button>}
+
             {tab === 'customers' && <button className="hsv-primary" onClick={()=>openCustomer()}><Plus size={17}/> Kunde hinzufügen</button>}
             {tab === 'projects' && <button className="hsv-primary" disabled={!customers.length} onClick={()=>void openProject()}><Plus size={17}/> Projekt erstellen</button>}
             {tab === 'invoices' && <button className="hsv-primary" disabled={!customers.length} onClick={openNewInvoice}><Plus size={17}/> Rechnung erstellen</button>}
@@ -1905,7 +1895,7 @@ export default function StudioPage() {
           onOpen={(workspaceId)=>switchWorkspace(workspaceId,'overview')}
         />}
 
-        {tab === 'overview' && <WorkspaceOverview invoices={invoices} projects={projects} customerCount={customers.length} offerCount={offers.filter(o=>o.status==='draft'||o.status==='sent').length} activity={activityFeed} canViewFinance={canViewFinance} onNavigate={setTab} onProject={id=>void loadProjectWorkspace(id)} onCreateProject={()=>void openProject()}/>}
+        {tab === 'overview' && <WorkspaceOverview invoices={invoices} projects={projects} customerCount={customers.length} offerCount={offers.filter(o=>o.status==='draft'||o.status==='sent').length} activity={activityFeed} canViewFinance={canViewFinance} onNavigate={setTab} onProject={id=>void loadProjectWorkspace(id)} onCreateProject={()=>void openProject()} onSearch={query=>{setSearchQuery(query);setSearchOpen(true);}} onCreate={()=>setQuickCreateOpen(true)}/>}
 
         {tab === 'customers' && <CustomerDirectory customers={visibleCustomers} total={customers.length} query={listQuery} onQuery={setListQuery} onCreate={()=>openCustomer()} onOpen={customer=>void openCustomerWorkspace(customer)} onEdit={openCustomer} onDepartments={customer=>void openDepartments(customer)} onDelete={customer=>void deleteCustomer(customer)}/>}
 
@@ -2207,20 +2197,6 @@ export default function StudioPage() {
       </main>
     </div>
 
-    <WorkspaceGlassDock
-      onCreate={()=>{setMobileMenuOpen(false);setQuickCreateOpen(true);}}
-      value={tab === 'overview' || tab === 'customers' || tab === 'projects' ? tab : 'more'}
-      onChange={value => {
-        setQuickCreateOpen(false);
-        if (value === 'more') {
-          setMobileMenuOpen(true);
-          return;
-        }
-        setTab(value);
-        setMobileMenuOpen(false);
-        window.scrollTo({top:0,behavior:'smooth'});
-      }}
-    />
     {sendConfirmation && <Modal title="Versand bestätigen" onClose={() => { if (!sendConfirmationBusy) setSendConfirmation(null); }} className="hive-send-confirm-dialog">
       <div className="hive-send-confirm-content">
         <span className="hive-send-confirm-symbol"><Mail size={22}/></span>
@@ -2260,13 +2236,8 @@ export default function StudioPage() {
 
     {installOpen && <Modal title="Hive auf deinem iPhone" onClose={()=>setInstallOpen(false)}><InstallGuide/></Modal>}
 
-    {mobileMenuOpen && <Modal title="Weitere Bereiche" className="hive-mobile-more-sheet" onClose={() => setMobileMenuOpen(false)}>
-      <button className="hive-mobile-new-action" type="button" onClick={() => {setMobileMenuOpen(false);setQuickCreateOpen(true);}}><Plus size={20}/><span>Neu erstellen</span><ArrowRight size={16}/></button>
-      <div className="hive-mobile-modules">{nav.filter(([id]) => !['overview','customers','projects'].includes(id)).map(([id,label,Icon]) => <button type="button" key={id} aria-current={tab===id?'page':undefined} onClick={() => {setTab(id);setMobileMenuOpen(false);window.scrollTo({top:0,behavior:'smooth'});}}><Icon size={19}/><span>{label}</span><ArrowRight size={15}/></button>)}</div>
-      <div className="hive-mobile-more-footer">
-        <button className="hsv-outline" type="button" onClick={()=>{setMobileMenuOpen(false);setInstallOpen(true);}}><Smartphone size={17}/>App installieren</button>
-        <a className="hsv-outline" href="/account">Mein Konto <ArrowRight size={16}/></a>
-      </div>
+    {mobileMenuOpen && <Modal title="Navigation" className="hive-navigation-drawer" onClose={()=>setMobileMenuOpen(false)}>
+      <WorkspaceNavigation items={nav} active={tab} customerCount={customers.length} onSelect={id=>{setTab(id);setMobileMenuOpen(false);window.scrollTo({top:0});}} onCreate={()=>{setMobileMenuOpen(false);setQuickCreateOpen(true);}} onSearch={()=>{setMobileMenuOpen(false);setSearchOpen(true);}} onInstall={()=>{setMobileMenuOpen(false);setInstallOpen(true);}} onNewBusiness={()=>{setMobileMenuOpen(false);setBusinessDraft({name:'',invoicePrefix:'HIVE'});setBusinessOpen(true);}} recentProjects={projects.slice(0,3)} onProject={id=>{setMobileMenuOpen(false);void loadProjectWorkspace(id);}} businessName={businessName}/>
     </Modal>}
 
     {searchOpen && <div className="hsv-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) setSearchOpen(false); }}>
@@ -2282,7 +2253,7 @@ export default function StudioPage() {
           {searchResults.map((result) => <button key={`${result.kind}-${result.id}`} type="button" onClick={() => selectSearchResult(result)} style={{width:'100%',textAlign:'left'}}>
             <span className="hsv-letter">{result.kind === 'customer' ? 'K' : result.kind === 'project' ? 'P' : result.kind === 'invoice' ? 'R' : 'O'}</span>
             <span className="hsv-grow"><strong>{result.label}</strong><small>{result.meta}</small></span>
-            <small>{result.kind}</small><ArrowRight size={15}/>
+            <small>{{customer:"Kunde",project:"Projekt",invoice:"Rechnung",offer:"Offerte"}[result.kind]}</small><ArrowRight size={15}/>
           </button>)}
         </div>
       </div>

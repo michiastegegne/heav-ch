@@ -1,3 +1,4 @@
+import { navigate, openNavigation } from "./navigation.mjs";
 import { test, expect } from "@playwright/test";
 for (const theme of ["light", "dark"])
   for (const width of [390, 1440])
@@ -16,10 +17,8 @@ for (const theme of ["light", "dark"])
       await page.getByLabel("Passwort", { exact: true }).fill("test-password");
       await page.getByRole("button", { name: "Anmelden", exact: true }).click();
       await expect(page.locator(".crm-metrics button")).toHaveCount(4);
-      const nav = page.getByRole("navigation", {
-        name: width <= 760 ? "Mobile Navigation" : "Business-Module",
-      });
-      await nav.getByRole("button", { name: "Projekte", exact: true }).click();
+      const nav = await openNavigation(page);
+      await navigate(page,"Projekte");
       await page
         .getByRole("button", { name: "Projekt erstellen", exact: true })
         .click();
@@ -71,9 +70,9 @@ for (const theme of ["light", "dark"])
         fullPage: true,
       });
       if(width<=760) {
-        await nav.getByRole('button',{name:'Mehr',exact:true}).click();
+        await openNavigation(page);
         await page.getByRole('dialog').getByRole('button',{name:'Rechnungen',exact:true}).click();
-      } else await nav.getByRole('button',{name:'Rechnungen',exact:true}).click();
+      } else await navigate(page,'Rechnungen');
       const paid = page.locator(".hive-status[data-state=paid]").first(),
         overdue = page.locator(".hive-status[data-state=overdue]").first();
       await expect(paid).toBeVisible();

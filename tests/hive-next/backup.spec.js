@@ -1,3 +1,4 @@
+import { navigate, openNavigation } from "./navigation.mjs";
 import {test,expect} from '@playwright/test';
 import {readFile} from 'node:fs/promises';
 import {decryptBackup} from '../../hive-next/lib/hive/backup-crypto.mjs';
@@ -28,7 +29,7 @@ test('backup isolates businesses, downloads encrypted and can be recovered offli
  expect(exportData.counts.products).toBe(501);
  expect(new Set(exportData.records.products.map(row=>row.id)).size).toBe(501);
  expect(exportData.records.customer_portal_invites).toBeUndefined();
- await page.getByRole('navigation',{name:'Mobile Navigation'}).getByRole('button',{name:'Mehr'}).click();
+ await openNavigation(page);
  await page.getByRole('dialog').getByRole('button',{name:'Einstellungen',exact:true}).click();
  await page.getByRole('tab',{name:'Daten',exact:true}).click();
  const card=page.getByRole('region',{name:'Datensicherung'});

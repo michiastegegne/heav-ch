@@ -1,3 +1,4 @@
+import { navigate, openNavigation } from "./navigation.mjs";
 import { test, expect } from "@playwright/test";
 for (const theme of ["light", "dark"])
   for (const width of [320, 390, 688, 768, 1440])
@@ -18,10 +19,8 @@ for (const theme of ["light", "dark"])
       await page.getByLabel("Passwort", { exact: true }).fill("test-password");
       await page.getByRole("button", { name: "Anmelden", exact: true }).click();
       await expect(page.locator(".crm-metrics button")).toHaveCount(4);
-      const nav = page.getByRole("navigation", {
-        name: width <= 760 ? "Mobile Navigation" : "Business-Module",
-      });
-      await nav.getByRole("button", { name: "Kunden", exact: true }).click();
+      const nav = await openNavigation(page);
+      await navigate(page,"Kunden");
       const directory = page.getByRole("region", { name: "Kundenverzeichnis" });
       await expect(
         directory.getByRole("button", { name: "Nordkunde", exact: true }),

@@ -1,3 +1,4 @@
+import { navigate, openNavigation, openAppearance } from "./navigation.mjs";
 import { test, expect } from '@playwright/test';
 const a='44172eb9-89a2-47ad-8fda-b95e36c93270';
 const b='0540bbcf-343c-456c-8ac0-d6125fc74b84';
@@ -7,9 +8,9 @@ async function login(page){
  await page.getByLabel('Passwort',{exact:true}).fill('test-password');
  await page.getByRole('button',{name:'Anmelden',exact:true}).click();
  await expect(page).toHaveURL(/\/studio$/);
- await expect(page.getByRole('heading',{name:'Übersicht',exact:true})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Was steht heute an?',exact:true})).toBeVisible();
  await expect(page.locator('.crm-metrics button')).toHaveCount(4);
- await expect(page.getByText('Dein Studio auf einen Blick.',{exact:true})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Was steht heute an?',exact:true})).toBeVisible();
 }
 test('root opens real CRM login; APIs reject anonymous callers and cross-site login',async({page,request})=>{
  await page.goto('/');await expect(page).toHaveURL(/\/login$/);
@@ -22,14 +23,14 @@ test('login, persist customer through API, reload, isolate businesses, logout',a
  const cookies=await context.cookies();
  expect(cookies.some(c=>c.name.includes('auth-token')&&c.httpOnly)).toBeTruthy();
  expect((await page.request.get('/api/hive/customers?workspace=033fe942-b8de-4298-9762-5f23550afbd9')).status()).toBe(403);
- await page.getByRole('navigation').getByRole('button',{name:/Kunden/}).click();
+ await navigate(page,/Kunden/);
  await expect(page.getByText('Nordkunde',{exact:true})).toBeVisible();
  await page.getByRole('button',{name:'Kunde hinzufügen',exact:true}).click();
  await page.getByLabel('Firma',{exact:true}).fill('Testkunde aus Formular');
  await page.getByRole('button',{name:/Speichern/}).click();
  await expect(page.getByText('Testkunde aus Formular',{exact:true})).toBeVisible();
  await page.reload();
- await page.getByRole('navigation').getByRole('button',{name:/Kunden/}).click();
+ await navigate(page,/Kunden/);
  await expect(page.getByText('Testkunde aus Formular',{exact:true})).toBeVisible();
  await page.getByLabel('Business auswählen').selectOption(b);
  await expect(page.getByText('Südkunde',{exact:true})).toBeVisible();
@@ -45,19 +46,19 @@ test('active business persists only when the stored workspace is still allowed',
  await expect(page.getByLabel('Business auswählen')).toHaveValue(b);
  await page.reload();
  await expect(page.getByLabel('Business auswählen')).toHaveValue(b);
- await page.getByRole('navigation').getByRole('button',{name:'Kunden',exact:true}).click();
+ await navigate(page,'Kunden');
  await expect(page.getByText('Südkunde',{exact:true})).toBeVisible();
 
  await page.evaluate(() => localStorage.setItem('hive.activeWorkspace.v2','033fe942-b8de-4298-9762-5f23550afbd9'));
  await page.reload();
  await expect(page.getByLabel('Business auswählen')).toHaveValue(a);
- await page.getByRole('navigation').getByRole('button',{name:'Kunden',exact:true}).click();
+ await navigate(page,'Kunden');
  await expect(page.getByText('Nordkunde',{exact:true})).toBeVisible();
 });
 
 test('late workspace responses cannot overwrite the selected business',async({page})=>{
  await login(page);
- await page.getByRole('navigation').getByRole('button',{name:/Kunden/}).click();
+ await navigate(page,/Kunden/);
  await page.route(`**/api/hive/customers?workspace=${b}`,async route=>{const response=await route.fetch();await new Promise(r=>setTimeout(r,500));await route.fulfill({response});});
  await page.getByLabel('Business auswählen').selectOption(b);
  await expect(page.getByText('Nordkunde',{exact:true})).toHaveCount(0);
@@ -71,10 +72,10 @@ for(const width of [390,1440])test(`rounded workspace fits ${width}px`,async({pa
  await page.addInitScript(() => localStorage.setItem('hive-appearance','light'));
  await page.setViewportSize({width,height:950});await login(page);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
- const button=width<=760?page.getByRole('navigation',{name:'Mobile Navigation'}).locator('[aria-current=page]'):page.locator('.hsv-nav button.on');
- await expect(button).toHaveCSS('color','rgb(29, 29, 31)');
+ const button=(await openNavigation(page)).locator('[aria-current=page]');
+ await expect(button).toHaveCSS('color','rgb(13, 13, 13)');
  await page.screenshot({path:`../../outputs/hive-workspace-refined-${width}.png`,fullPage:true,animations:'disabled'});
- await page.getByRole('navigation').getByRole('button',{name:/Kunden/}).click();
+ await navigate(page,/Kunden/);
  await expect(page.getByText('Nordkunde',{exact:true})).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
  await page.screenshot({path:`../../outputs/hive-customers-refined-${width}.png`,fullPage:true,animations:'disabled'});
@@ -84,11 +85,11 @@ test('mobile-only subnavigation stays hidden on desktop',async({page})=>{
  await page.setViewportSize({width:1440,height:950});
  await login(page);
  const nav=page.getByRole('navigation',{name:'Business-Module'});
- await nav.getByRole('button',{name:'Portal',exact:true}).click();
+ await navigate(page,'Portal');
  await expect(page.getByRole('tablist',{name:'Portal-Bereiche'})).toBeHidden();
- await nav.getByRole('button',{name:'E-Mail',exact:true}).click();
+ await navigate(page,'E-Mail');
  await expect(page.getByRole('tablist',{name:'E-Mail-Bereiche'})).toBeHidden();
- await nav.getByRole('button',{name:'Einstellungen',exact:true}).click();
+ await navigate(page,'Einstellungen');
  await expect(page.getByRole('tablist',{name:'Business-Einstellungen'})).toBeVisible();
  await expect(page.getByRole('radio',{name:'Automatisch',exact:true})).toBeChecked();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
@@ -110,13 +111,13 @@ test('businesses overview only exposes memberships and opens the selected busine
  expect(north.pipelineRappen).toBe(240000);
 
  const nav=page.getByRole('navigation',{name:'Business-Module'});
- await nav.getByRole('button',{name:'Businesses',exact:true}).click();
+ await navigate(page,'Businesses');
  await expect(page.getByRole('heading',{name:'Businesses',exact:true})).toBeVisible();
  const southCard=page.locator('.hive-business-card').filter({hasText:'Studio Süd'}).first();
  await expect(southCard).toBeVisible();
  await southCard.getByRole('button',{name:'Business öffnen',exact:true}).click();
  await expect(page.getByLabel('Business auswählen')).toHaveValue(b);
- await expect(page.getByRole('heading',{name:'Übersicht',exact:true})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Was steht heute an?',exact:true})).toBeVisible();
 });
 
 test('invoice duplication creates a new draft without reusing the issued number',async({page})=>{
@@ -153,11 +154,12 @@ test('invoice email retry survives a lost browser response and clears the key on
    });
  });
 
- await page.getByRole('navigation',{name:'Business-Module'}).getByRole('button',{name:'Rechnungen',exact:true}).click();
+ await navigate(page,'Rechnungen');
  const row=page.locator('.hive-invoice-table>div').filter({hasText:'TEST-2026-002'}).first();
  const sendButton=row.getByRole('button',{name:'Rechnung per E-Mail senden',exact:true});
 
  await sendButton.click();
+ await page.getByRole('dialog',{name:'Versand bestätigen',exact:true}).getByRole('button',{name:'Jetzt senden',exact:true}).click();
  await expect(sendButton).toBeDisabled();
  await expect(sendButton).toHaveText('Wird gesendet …');
  await expect(page.getByRole('status')).toContainText('denselben sicheren Versandauftrag');
@@ -168,6 +170,7 @@ test('invoice email retry survives a lost browser response and clears the key on
  expect(await page.evaluate((invoiceId)=>sessionStorage.getItem(`hive.invoiceSendRequest.${invoiceId}`),'30000000-0000-4000-8000-000000000002')).toBe(firstKey);
 
  await sendButton.click();
+ await page.getByRole('dialog',{name:'Versand bestätigen',exact:true}).getByRole('button',{name:'Jetzt senden',exact:true}).click();
  await expect(page.getByRole('status')).toContainText('Rechnung per E-Mail versendet.');
  expect(sendBodies).toHaveLength(2);
  expect(sendBodies[1].requestKey).toBe(firstKey);
@@ -179,7 +182,7 @@ test('invoice history is workspace scoped and visible from the invoice list',asy
  const foreign=await page.request.get('/api/hive/invoices/30000000-0000-4000-8000-000000000001/history?workspace=033fe942-b8de-4298-9762-5f23550afbd9');
  expect(foreign.status()).toBe(403);
 
- await page.getByRole('navigation').getByRole('button',{name:'Rechnungen',exact:true}).click();
+ await navigate(page,'Rechnungen');
  const invoiceRow=page.locator('.hive-invoice-table>div').filter({hasText:'TEST-2026-001'}).first();
  await expect(invoiceRow).toBeVisible();
  await invoiceRow.getByRole('button',{name:/Verlauf/}).click();
@@ -223,10 +226,11 @@ test('offer email retries reuse the same durable request key across reloads',asy
  });
 
  const nav=page.getByRole('navigation',{name:'Business-Module'});
- await nav.getByRole('button',{name:'Offerten',exact:true}).click();
+ await navigate(page,'Offerten');
  let offerRow=page.locator('.hive-offer-table>div').filter({hasText:'OFF-2026-001'}).first();
  let sendButton=offerRow.getByRole('button',{name:'Offerte per E-Mail senden',exact:true});
  await sendButton.click();
+ await page.getByRole('dialog',{name:'Versand bestätigen',exact:true}).getByRole('button',{name:'Jetzt senden',exact:true}).click();
  await expect(sendButton).toBeDisabled();
  await expect(sendButton).toHaveText('Wird gesendet …');
  await expect(page.getByRole('status')).toContainText('denselben sicheren Versandauftrag');
@@ -238,10 +242,11 @@ test('offer email retries reuse the same durable request key across reloads',asy
  expect(await page.evaluate((offerId)=>sessionStorage.getItem(`hive.offerSendRequest.${offerId}`),'50000000-0000-4000-8000-000000000001')).toBe(firstKey);
 
  await page.reload();
- await page.getByRole('navigation',{name:'Business-Module'}).getByRole('button',{name:'Offerten',exact:true}).click();
+ await navigate(page,'Offerten');
  offerRow=page.locator('.hive-offer-table>div').filter({hasText:'OFF-2026-001'}).first();
  sendButton=offerRow.getByRole('button',{name:'Offerte per E-Mail senden',exact:true});
  await sendButton.click();
+ await page.getByRole('dialog',{name:'Versand bestätigen',exact:true}).getByRole('button',{name:'Jetzt senden',exact:true}).click();
  await expect(page.getByRole('status')).toContainText('denselben sicheren Versandauftrag');
  expect(sendBodies).toHaveLength(2);
  expect(sendBodies[1].requestKey).toBe(firstKey);
@@ -270,11 +275,12 @@ test('offer email retry survives a lost browser response and clears the key only
  });
 
  const nav=page.getByRole('navigation',{name:'Business-Module'});
- await nav.getByRole('button',{name:'Offerten',exact:true}).click();
+ await navigate(page,'Offerten');
  const offerRow=page.locator('.hive-offer-table>div').filter({hasText:'OFF-2026-001'}).first();
  const sendButton=offerRow.getByRole('button',{name:'Offerte per E-Mail senden',exact:true});
 
  await sendButton.click();
+ await page.getByRole('dialog',{name:'Versand bestätigen',exact:true}).getByRole('button',{name:'Jetzt senden',exact:true}).click();
  await expect(sendButton).toBeDisabled();
  await expect(page.getByRole('status')).toContainText('denselben sicheren Versandauftrag');
  await expect(sendButton).toBeEnabled();
@@ -284,6 +290,7 @@ test('offer email retry survives a lost browser response and clears the key only
  expect(await page.evaluate((offerId)=>sessionStorage.getItem(`hive.offerSendRequest.${offerId}`),'50000000-0000-4000-8000-000000000001')).toBe(firstKey);
 
  await sendButton.click();
+ await page.getByRole('dialog',{name:'Versand bestätigen',exact:true}).getByRole('button',{name:'Jetzt senden',exact:true}).click();
  await expect(page.getByRole('status')).toContainText('Offerte per E-Mail versendet.');
  expect(sendBodies).toHaveLength(2);
  expect(sendBodies[1].requestKey).toBe(firstKey);
@@ -296,7 +303,7 @@ test('offer history is workspace scoped and visible from the offer list',async({
  expect(foreign.status()).toBe(403);
 
  const nav=page.getByRole('navigation',{name:'Business-Module'});
- await nav.getByRole('button',{name:'Offerten',exact:true}).click();
+ await navigate(page,'Offerten');
  const offerRow=page.locator('.hive-offer-table>div').filter({hasText:'OFF-2026-001'}).first();
  await expect(offerRow).toBeVisible();
  await offerRow.getByRole('button',{name:/Verlauf/}).click();
@@ -312,7 +319,7 @@ test('offer history is workspace scoped and visible from the offer list',async({
 
 test('project calendar shows deadlines across months',async({page})=>{
  await login(page);
- await page.getByRole('navigation').getByRole('button',{name:'Projekte',exact:true}).click();
+ await navigate(page,'Projekte');
  await page.getByRole('button',{name:'Kalender',exact:true}).click();
  await expect(page.getByRole('button',{name:/Herbstkampagne — Brand Film/}).first()).toBeVisible();
  await page.getByRole('button',{name:'Nächster Monat',exact:true}).click();
@@ -321,7 +328,7 @@ test('project calendar shows deadlines across months',async({page})=>{
 
 test('project board persists status changes and keeps the preferred view',async({page})=>{
  await login(page);
- await page.getByRole('navigation').getByRole('button',{name:'Projekte',exact:true}).click();
+ await navigate(page,'Projekte');
  await page.getByRole('button',{name:'Board',exact:true}).click();
  await expect(page.locator('.hive-project-column')).toHaveCount(4);
 
@@ -331,7 +338,7 @@ test('project board persists status changes and keeps the preferred view',async(
  await expect(status).toHaveValue('active');
 
  await page.reload();
- await page.getByRole('navigation').getByRole('button',{name:'Projekte',exact:true}).click();
+ await navigate(page,'Projekte');
  await expect(page.getByRole('button',{name:'Board',exact:true})).toHaveAttribute('aria-pressed','true');
  const persisted=page.getByLabel('Status für Portraits für das neue Team');
  await expect(persisted).toHaveValue('active');
@@ -342,12 +349,12 @@ test('project board persists status changes and keeps the preferred view',async(
 
 test('customer lists support search and invoice lists support status filtering',async({page})=>{
  await login(page);
- await page.getByRole('navigation').getByRole('button',{name:/Kunden/}).click();
+ await navigate(page,/Kunden/);
  await page.getByLabel('Liste durchsuchen').fill('not-a-customer');
  await expect(page.getByText('Nordkunde',{exact:true})).toHaveCount(0);
  await page.getByRole('button',{name:'Suche leeren'}).click();
  await expect(page.getByText('Nordkunde',{exact:true})).toBeVisible();
- await page.getByRole('navigation').getByRole('button',{name:'Rechnungen',exact:true}).click();
+ await navigate(page,'Rechnungen');
  await expect(page.getByText('TEST-2026-001',{exact:true})).toBeVisible();
  await page.getByLabel('Status filtern').selectOption('paid');
  await expect(page.getByText('TEST-2026-001',{exact:true})).toHaveCount(0);
@@ -359,7 +366,7 @@ for(const width of [390,1440])test(`dark appearance persists across login, reloa
  await page.emulateMedia({colorScheme:'dark'});
  await page.goto('/login');
  await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
- await page.getByRole('button',{name:'Erscheinungsbild einstellen'}).click();
+ await openAppearance(page);
  await page.getByRole('radio',{name:'Hell',exact:true}).check();
  await page.getByRole('button',{name:'Erscheinungsbild schließen'}).click();
  await expect(page.locator('html')).toHaveAttribute('data-theme','light');
@@ -367,24 +374,24 @@ for(const width of [390,1440])test(`dark appearance persists across login, reloa
  await expect(page.locator('html')).toHaveAttribute('data-theme','light');
  await login(page);
  await expect(page.locator('html')).toHaveAttribute('data-theme','light');
- await page.getByRole('button',{name:'Erscheinungsbild einstellen'}).click();
+ await openAppearance(page);
  await page.getByRole('radio',{name:'Dunkel',exact:true}).check();
  await page.reload();
  await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
  await expect(page.locator('.crm-metrics button')).toHaveCount(4);
- await expect(page.locator('[data-slot=card]').filter({hasText:'Projekte im Fokus'}).first()).toHaveCSS('background-color','rgb(38, 38, 38)');
+ await expect(page.getByRole('region',{name:'Projekte im Fokus',exact:true})).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
- await expect(page.getByText('Dein Studio auf einen Blick.',{exact:true})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Was steht heute an?',exact:true})).toBeVisible();
  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
  await page.screenshot({path:`../../outputs/hive-darkmode-ready-${width}.png`,fullPage:true,animations:'disabled'});
- await page.getByRole('navigation').getByRole('button',{name:/Kunden/}).click();
+ await navigate(page,/Kunden/);
  await page.getByRole('button',{name:'Kunde hinzufügen',exact:true}).click();
  await expect(page.getByLabel('Firma',{exact:true})).toHaveCSS('background-color','rgb(33, 33, 33)');
- await expect(page.locator('.hsv-dialog')).toHaveCSS('background-color','rgb(38, 38, 38)');
+ await expect(page.locator('.hsv-dialog')).toHaveCSS('background-color','rgb(33, 33, 33)');
  await page.getByRole('button',{name:'Schliessen',exact:true}).click();
  await page.goto('/account');
  await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
- await page.getByRole('button',{name:'Erscheinungsbild einstellen'}).click();
+ await openAppearance(page);
  await page.getByRole('radio',{name:'Hell',exact:true}).check();
  await page.getByRole('button',{name:'Erscheinungsbild schließen'}).click();
  await expect(page.locator('html')).toHaveAttribute('data-theme','light');
