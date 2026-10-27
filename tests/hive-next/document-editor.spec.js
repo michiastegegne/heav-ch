@@ -11,10 +11,10 @@ async function login(page, appearance) {
   await expect(
     page.getByText("Dein Studio auf einen Blick.", { exact: true }),
   ).toBeVisible();
-  await page
-    .getByRole("navigation")
-    .getByRole("button", { name: "Rechnungen", exact: true })
-    .click();
+  if(page.viewportSize().width<=760) {
+    await page.getByRole('navigation',{name:'Mobile Navigation'}).getByRole('button',{name:'Mehr',exact:true}).click();
+    await page.getByRole('dialog').getByRole('button',{name:'Rechnungen',exact:true}).click();
+  } else await page.getByRole('navigation',{name:'Business-Module'}).getByRole('button',{name:'Rechnungen',exact:true}).click();
   await page
     .getByRole("button", { name: "Rechnung erstellen", exact: true })
     .click();

@@ -64,6 +64,14 @@ for (const theme of ["light", "dark"])
       await expect(
         detail.getByRole("heading", { name: "Nordkunde", exact: true }),
       ).toBeVisible();
+      const sections=detail.getByRole('tablist',{name:'Kundenakte Bereiche'});
+      await sections.getByRole('tab',{name:'Projekte',exact:true}).click();
+      await expect(detail.getByRole('tabpanel',{name:'Projekte',exact:true})).toBeVisible();
+      await sections.getByRole('tab',{name:'Kontakt',exact:true}).click();
+      await page.keyboard.press('End');
+      await expect(sections.getByRole('tab',{name:'Verlauf',exact:true})).toHaveAttribute('aria-selected','true');
+      await page.keyboard.press('Home');
+      await expect(sections.getByRole('tab',{name:'Kontakt',exact:true})).toHaveAttribute('aria-selected','true');
       if (width === 688)
         expect(
           await detail

@@ -32,7 +32,7 @@ export default function WorkspaceNavigation<T extends string>({
     {
       label: "Workspace",
       items: items.filter(([id]) =>
-        ["businesses", "overview", "customers", "projects"].includes(id),
+        ["overview", "customers", "projects"].includes(id),
       ),
     },
     {
@@ -49,7 +49,7 @@ export default function WorkspaceNavigation<T extends string>({
     },
     {
       label: "Verwaltung",
-      items: items.filter(([id]) => ["team", "branding"].includes(id)),
+      items: items.filter(([id]) => ["businesses", "team", "branding"].includes(id)),
     },
   ];
   return (

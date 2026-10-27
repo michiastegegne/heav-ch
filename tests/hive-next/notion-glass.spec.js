@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 for (const theme of ["light", "dark"])
   for (const width of [390, 1440])
-    test(`Rounded workspace and installed glass controls work at ${width}px ${theme}`, async ({
+    test(`Workspace navigation and project views work at ${width}px ${theme}`, async ({
       page,
     }) => {
       const errors = [];
@@ -24,8 +24,7 @@ for (const theme of ["light", "dark"])
       if (width > 760)
         await expect(nav.locator("[data-slot=sidebar]")).toBeVisible();
       else {
-        await expect(nav).toHaveClass(/ogui-dock/);
-        await expect(nav).toHaveAttribute("data-ogui-glass", "");
+        await expect(nav.getByRole('button',{name:'Neu erstellen',exact:true})).toBeVisible();
       }
       await page.screenshot({
         animations: "disabled",
@@ -33,7 +32,7 @@ for (const theme of ["light", "dark"])
       });
       await nav.getByRole("button", { name: "Projekte", exact: true }).click();
       const views = page.getByRole("group", { name: "Projektansicht" });
-      await expect(views).toHaveClass(/ogui-segments/);
+      await expect(views.getByRole('button',{name:'Liste',exact:true})).toHaveAttribute('aria-pressed','true');
       await views.getByRole("button", { name: "Board", exact: true }).click();
       await expect(page.locator(".hive-clean-board")).toBeVisible();
       await expect(
@@ -54,14 +53,14 @@ for (const theme of ["light", "dark"])
       await page.getByRole('button', {name:'Erscheinungsbild einstellen'}).click();
       await page.getByRole('radio', {name:theme === 'light' ? 'Dunkel' : 'Hell', exact:true}).check();
       await expect(
-        page.locator(".hive-material-scope").first(),
+        page.locator("html"),
       ).toHaveAttribute(
-        "data-ogui-appearance",
+        "data-theme",
         theme === "light" ? "dark" : "light",
       );
       await page.getByRole('button',{name:'Erscheinungsbild schließen'}).click();
       if (width <= 760) {
-        await nav.getByRole('button',{name:'Weitere Module'}).click();
+        await nav.getByRole('button',{name:'Mehr'}).click();
         await page.getByRole('dialog').getByRole('button',{name:'Einstellungen',exact:true}).click();
       } else await nav.getByRole('button',{name:'Einstellungen',exact:true}).click();
       await expect(page.getByRole('radio',{name:theme === 'light' ? 'Dunkel' : 'Hell',exact:true})).toBeChecked();

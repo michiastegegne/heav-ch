@@ -70,9 +70,10 @@ for (const theme of ["light", "dark"])
         path: `../../outputs/hive-project-board-${width}-${theme}.png`,
         fullPage: true,
       });
-      await nav
-        .getByRole("button", { name: "Rechnungen", exact: true })
-        .click();
+      if(width<=760) {
+        await nav.getByRole('button',{name:'Mehr',exact:true}).click();
+        await page.getByRole('dialog').getByRole('button',{name:'Rechnungen',exact:true}).click();
+      } else await nav.getByRole('button',{name:'Rechnungen',exact:true}).click();
       const paid = page.locator(".hive-status[data-state=paid]").first(),
         overdue = page.locator(".hive-status[data-state=overdue]").first();
       await expect(paid).toBeVisible();

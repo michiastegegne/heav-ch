@@ -1,84 +1,34 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
-import { GlassSystemProvider, SegmentedControl } from "open-glass-ui";
+import { BriefcaseBusiness, LayoutDashboard, MoreHorizontal, Plus, Users } from "lucide-react";
 
-function MaterialScope({ children }: { children: ReactNode }) {
-  const [appearance, setAppearance] = useState<"light" | "dark">("dark");
-  useEffect(() => {
-    const sync = () =>
-      setAppearance(
-        document.documentElement.dataset.theme === "light" ? "light" : "dark",
-      );
-    sync();
-    const observer = new MutationObserver(sync);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-theme"],
-    });
-    return () => observer.disconnect();
-  }, []);
-  return (
-    <GlassSystemProvider
-      renderer="css"
-      design="liquid"
-      toasts={false}
-      theme={{ appearance, className: "hive-material-scope" }}
-    >
-      {children}
-    </GlassSystemProvider>
-  );
-}
 type MobileTab = "overview" | "customers" | "projects" | "more";
 const mobileTabs = [
-  { value: "overview" as const, label: "Übersicht" },
-  { value: "customers" as const, label: "Kunden" },
-  { value: "projects" as const, label: "Projekte" },
-  { value: "more" as const, label: "Mehr" },
+  { value: "overview" as const, label: "Übersicht", icon: LayoutDashboard },
+  { value: "customers" as const, label: "Kunden", icon: Users },
+  { value: "projects" as const, label: "Projekte", icon: BriefcaseBusiness },
+  { value: "more" as const, label: "Mehr", icon: MoreHorizontal },
 ];
 
-/* Reuse the same Liquid Glass segmented control as Liste / Board / Kalender. */
-export function WorkspaceGlassDock({
-  value,
-  onChange,
-}: {
+export function WorkspaceGlassDock({ value, onChange, onCreate }: {
   value: MobileTab;
   onChange: (value: MobileTab) => void;
+  onCreate: () => void;
 }) {
-  return (
-    <MaterialScope>
-      <SegmentedControl
-        className="hive-library-views hive-mobile-segments"
-        aria-label="Mobile Navigation"
-        items={mobileTabs}
-        value={value}
-        onValueChange={onChange}
-      />
-    </MaterialScope>
-  );
+  return <nav className="hive-app-dock" aria-label="Mobile Navigation">
+    <div role="group" aria-label="Mobile Navigation">
+      {mobileTabs.map(({value: tab, label, icon: Icon}, index) => <div className="hive-dock-item" key={tab}>
+        {index === 2 && <button className="hive-dock-create" type="button" aria-label="Neu erstellen" onClick={onCreate}><span><Plus size={22}/></span><small>Neu</small></button>}
+        <button type="button" aria-current={value === tab ? "page" : undefined} onClick={()=>onChange(tab)}><Icon size={21}/><small>{label}</small></button>
+      </div>)}
+    </div>
+  </nav>;
 }
+
 type View = "list" | "board" | "calendar";
-const views = [
-  { value: "list" as const, label: "Liste" },
-  { value: "board" as const, label: "Board" },
-  { value: "calendar" as const, label: "Kalender" },
-];
-export function WorkspaceViewSwitch({
-  value,
-  onChange,
-}: {
-  value: View;
-  onChange: (view: View) => void;
-}) {
-  return (
-    <MaterialScope>
-      <SegmentedControl
-        className="hive-library-views"
-        aria-label="Projektansicht"
-        items={views}
-        value={value}
-        onValueChange={onChange}
-      />
-    </MaterialScope>
-  );
+const views = [{value:"list" as const,label:"Liste"},{value:"board" as const,label:"Board"},{value:"calendar" as const,label:"Kalender"}];
+export function WorkspaceViewSwitch({ value, onChange }: { value:View; onChange:(view:View)=>void }) {
+  return <div className="hive-library-views hive-view-switch" role="group" aria-label="Projektansicht">
+    {views.map(view=><button type="button" key={view.value} aria-pressed={value===view.value} onClick={()=>onChange(view.value)}>{view.label}</button>)}
+  </div>;
 }

@@ -245,6 +245,7 @@ export default function StudioPage() {
   const [teamDraft, setTeamDraft] = useState<{email:string;role:'admin'|'member'|'accountant'}>({ email:'', role:'member' });
   const [customerOpen, setCustomerOpen] = useState(false);
   const [customerWorkspaceOpen, setCustomerWorkspaceOpen] = useState(false);
+  const [customerSection,setCustomerSection] = useState<'contact'|'projects'|'documents'|'activity'>('contact');
   const [customerWorkspace, setCustomerWorkspace] = useState<CustomerWorkspaceData | null>(null);
   const [customerDraft, setCustomerDraft] = useState({
     id: '', company: '', contactName: '', email: '', phone: '',
@@ -1753,6 +1754,7 @@ export default function StudioPage() {
         `/api/hive/customers/${customer.id}/workspace?workspace=${encodeURIComponent(activeWorkspaceId)}`,
       );
       setCustomerWorkspace(data);
+      setCustomerSection('contact');
       setCustomerWorkspaceOpen(true);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Kunden-Workspace konnte nicht geladen werden.');
@@ -1850,7 +1852,7 @@ export default function StudioPage() {
   const headingCopy:Partial<Record<Tab,string>> = {businesses:'Alle deine Businesses, getrennt geführt und gemeinsam im Blick.',overview:'Dein Studio auf einen Blick.',customers:'Kontakte, Beziehungen und die gemeinsame Arbeit.',projects:'Von der ersten Idee bis zur letzten Abgabe.',invoices:'Rechnungen, Fälligkeiten und Zahlungseingänge.',offers:'Aus Anfragen werden konkrete Aufträge.',catalog:'Deine Leistungen und Preise an einem Ort.',portal:'Dokumente und Freigaben für deine Kunden.',activity:'Was sich in deinem Workspace verändert hat.'};
 
 
-  return <div className="hsv hive-system-app hive-flow-app" style={{ '--business-accent': accent } as React.CSSProperties}>
+  return <div className="hsv hive-system-app hive-flow-app" data-view={tab} style={{ '--business-accent': accent } as React.CSSProperties}>
     <header className="hsv-top">
       <div className="hsv-identity">
         <a className="hsv-hive" href="/" aria-label="Hive Startseite"><span className="hive-app-mark" aria-hidden="true">h</span><span>hive<span className="hive-wordmark-dot">.</span></span></a><span className="hsv-divider"/>
@@ -1876,6 +1878,13 @@ export default function StudioPage() {
         <div className="hive-breadcrumb"><span>{tab === 'businesses' ? 'Hive' : businessName.replace(/^Hive Dev · /,'')}</span><span>/</span><strong>{nav.find(([id])=>id===tab)?.[1]}</strong><time>{new Intl.DateTimeFormat('de-CH',{weekday:'short',day:'2-digit',month:'long',year:'numeric'}).format(new Date())}</time></div>
         <div className="hsv-heading" key={tab}>
           <div className="hive-document-heading"><h1>{nav.find(([id]) => id === tab)?.[1]}</h1><p>{busy ? 'Daten werden geladen …' : (headingCopy[tab] || 'Alles Wichtige an einem Ort.')}</p></div>
+          <div className="hive-heading-actions">
+            {tab === 'overview' && <button className="hsv-primary" onClick={()=>setQuickCreateOpen(true)}><Plus size={17}/> Neu erstellen</button>}
+            {tab === 'customers' && <button className="hsv-primary" onClick={()=>openCustomer()}><Plus size={17}/> Kunde hinzufügen</button>}
+            {tab === 'projects' && <button className="hsv-primary" disabled={!customers.length} onClick={()=>void openProject()}><Plus size={17}/> Projekt erstellen</button>}
+            {tab === 'invoices' && <button className="hsv-primary" disabled={!customers.length} onClick={openNewInvoice}><Plus size={17}/> Rechnung erstellen</button>}
+            {tab === 'offers' && <button className="hsv-primary" disabled={!customers.length} onClick={openNewOffer}><Plus size={17}/> Offerte erstellen</button>}
+          </div>
         </div>
         {listTabs && tab !== 'customers' && <div className="hive-list-tools"><label><Search size={15}/><input aria-label="Liste durchsuchen" placeholder="Suchen nach Name, Kunde oder Nummer …" value={listQuery} onChange={e=>setListQuery(e.target.value)}/>{listQuery&&<button aria-label="Suche leeren" onClick={()=>setListQuery('')}><X size={13}/></button>}</label><div className="hive-status-pill"><select aria-label="Status filtern" value={listStatus} onChange={e=>setListStatus(e.target.value)}><option value="all">Alle Status</option>{(tab==='projects'?['planning','active','on_hold','completed']:tab==='invoices'?['draft','sent','overdue','paid','cancelled']:['draft','sent','accepted','withdrawn','expired']).map(value=><option value={value} key={value}>{stateLabel[value]}</option>)}</select><ChevronDown size={15} aria-hidden="true"/></div><span>{tab === 'projects'?visibleProjects.length:tab === 'invoices'?visibleInvoices.length:visibleOffers.length} Einträge</span></div>}
 
@@ -1905,7 +1914,7 @@ export default function StudioPage() {
             <strong>{projects.length} Projekte</strong>
             <div className="hive-row-actions">
               <WorkspaceViewSwitch value={projectView} onChange={setProjectView}/>
-              <button className="hsv-primary" disabled={!customers.length} onClick={() => void openProject()}><Plus size={15}/> Projekt erstellen</button>
+
             </div>
           </div>
           {projectView === 'board' ? <ProjectBoard
@@ -1929,7 +1938,7 @@ export default function StudioPage() {
         </>}
 
         {tab === 'invoices' && <>
-          <div className="hsv-rowtop"><strong>{invoices.length} Rechnungen</strong><button className="hsv-primary" disabled={!customers.length} onClick={openNewInvoice}><Plus size={15}/> Rechnung erstellen</button></div>
+          <div className="hsv-rowtop"><strong>{invoices.length} Rechnungen</strong></div>
           <div className="hive-table-labels hive-invoice-labels"><span>Rechnung / Kunde</span><span>Status</span><span>Fälligkeit</span><span>Betrag / Aktionen</span></div><div className="hsv-table hive-invoice-table">{visibleInvoices.map((invoice) => <div key={invoice.id}>
             <span className="hsv-letter"><CreditCard size={16}/></span>
             <span className="hsv-grow"><strong>{invoice.number_finalized ? invoice.invoice_number : 'Entwurf'}</strong><small>{relatedName(invoice.customers)}</small></span><span className={`hive-status status-${invoice.status}`} data-state={invoice.status}>{stateLabel[invoice.status] || invoice.status}</span><span className="hive-table-date">{shortDate(invoice.due_date)}</span>
@@ -1950,7 +1959,7 @@ export default function StudioPage() {
         </>}
 
         {tab === 'offers' && <>
-          <div className="hsv-rowtop"><strong>{offers.length} Offerten</strong><button className="hsv-primary" disabled={!customers.length} onClick={openNewOffer}><Plus size={15}/> Offerte erstellen</button></div>
+          <div className="hsv-rowtop"><strong>{offers.length} Offerten</strong></div>
           <div className="hsv-table hive-offer-table">{visibleOffers.map((offer) => <div key={offer.id}>
             <span className="hsv-letter"><FileText size={16}/></span>
             <span className="hsv-grow"><strong>{offer.offer_number} · {offer.title}</strong><small>{relatedName(offer.customers)} · gültig bis {shortDate(offer.valid_until)}</small></span>
@@ -2199,6 +2208,7 @@ export default function StudioPage() {
     </div>
 
     <WorkspaceGlassDock
+      onCreate={()=>{setMobileMenuOpen(false);setQuickCreateOpen(true);}}
       value={tab === 'overview' || tab === 'customers' || tab === 'projects' ? tab : 'more'}
       onChange={value => {
         setQuickCreateOpen(false);
@@ -2475,8 +2485,19 @@ export default function StudioPage() {
             </div>
           </div>
 
-          <div className="hsv-rowtop" style={{marginBottom:12}}><strong>Kontaktdaten</strong></div>
-          <div className="hsv-table" style={{marginBottom:24}}>
+          <div className="hive-detail-tabs" role="tablist" aria-label="Kundenakte Bereiche" onKeyDown={event=>{
+            const keys=['ArrowRight','ArrowLeft','Home','End'];
+            if(!keys.includes(event.key))return;
+            const buttons=Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+            const index=buttons.indexOf(document.activeElement as HTMLButtonElement);
+            const next=event.key==='Home'?0:event.key==='End'?buttons.length-1:(index+(event.key==='ArrowRight'?1:-1)+buttons.length)%buttons.length;
+            event.preventDefault();buttons[next]?.focus();buttons[next]?.click();
+          }}>
+            {([['contact','Kontakt'],['projects','Projekte'],['documents','Dokumente'],['activity','Verlauf']] as const).filter(([id])=>id!=='documents'||customerWorkspace.canViewFinance||customerWorkspace.files.length>0).map(([id,label])=><button type="button" key={id} role="tab" tabIndex={customerSection===id?0:-1} id={`customer-tab-${id}`} aria-selected={customerSection===id} aria-controls={`customer-panel-${id}`} onClick={()=>setCustomerSection(id)}>{label}</button>)}
+          </div>
+          <section role="tabpanel" id="customer-panel-contact" aria-labelledby="customer-tab-contact" hidden={customerSection!=='contact'}>
+          <div className="hsv-rowtop" style={{marginBottom:12}}><strong>Kontaktdaten</strong><button className="hsv-outline" onClick={()=>{setCustomerWorkspaceOpen(false);openCustomer(customerWorkspace.customer);}}><Pencil size={14}/> Bearbeiten</button></div>
+          <div className="hsv-table hive-contact-fields" style={{marginBottom:24}}>
             {([
               ['Kontaktperson', customerWorkspace.customer.contact_name],
               ['E-Mail', customerWorkspace.customer.email],
@@ -2509,26 +2530,30 @@ export default function StudioPage() {
             <span className="hsv-grow"><strong>{department.name}{department.is_default ? ' · Standard' : ''}</strong><small>{department.contact_name || 'Keine Kontaktperson'} · {department.contact_email || 'Keine E-Mail'} · {department.active ? 'aktiv' : 'inaktiv'}</small></span>
           </div>)}</div>
 
+          </section>
+          <section role="tabpanel" id="customer-panel-projects" aria-labelledby="customer-tab-projects" hidden={customerSection!=='projects'}>
           <div className="hsv-rowtop" style={{marginTop:26}}><strong>Projekte</strong></div>
           <div className="hsv-table">{customerWorkspace.projects.length ? customerWorkspace.projects.map((project) => <div key={project.id}>
             <span className="hsv-letter"><BriefcaseBusiness size={15}/></span>
-            <span className="hsv-grow"><strong>{project.title}</strong><small>{project.status}{project.due_date ? ` · fällig ${project.due_date}` : ''}</small></span>
+            <span className="hsv-grow"><strong>{project.title}</strong><small>{stateLabel[project.status] || project.status}{project.due_date ? ` · fällig ${shortDate(project.due_date)}` : ''}</small></span>
             <strong>{money(project.budget_rappen)}</strong>
             <button onClick={() => { setCustomerWorkspaceOpen(false); setTab('projects'); void loadProjectWorkspace(project.id); }}>Öffnen</button>
           </div>) : <p className="hsv-empty">Keine Projekte.</p>}</div>
 
+          </section>
+          <section role="tabpanel" id="customer-panel-documents" aria-labelledby="customer-tab-documents" hidden={customerSection!=='documents'}>
           {customerWorkspace.canViewFinance && <>
             <div className="hsv-rowtop" style={{marginTop:26}}><strong>Rechnungen</strong></div>
             <div className="hsv-table">{customerWorkspace.invoices.length ? customerWorkspace.invoices.map((invoice) => <div key={invoice.id}>
               <span className="hsv-letter"><CreditCard size={15}/></span>
-              <span className="hsv-grow"><strong>{invoice.number_finalized ? invoice.invoice_number : 'Entwurf'}</strong><small>{invoice.status} · fällig {invoice.due_date}</small></span>
+              <span className="hsv-grow"><strong>{invoice.number_finalized ? invoice.invoice_number : 'Entwurf'}</strong><small>{stateLabel[invoice.status] || invoice.status} · fällig {shortDate(invoice.due_date)}</small></span>
               <strong>{money(invoice.total_rappen,invoice.currency)}</strong>
             </div>) : <p className="hsv-empty">Keine Rechnungen.</p>}</div>
 
             <div className="hsv-rowtop" style={{marginTop:26}}><strong>Offerten</strong></div>
             <div className="hsv-table">{customerWorkspace.offers.length ? customerWorkspace.offers.map((offer) => <div key={offer.id}>
               <span className="hsv-letter"><FileText size={15}/></span>
-              <span className="hsv-grow"><strong>{offer.offer_number} · {offer.title}</strong><small>{offer.status} · gültig bis {offer.valid_until}</small></span>
+              <span className="hsv-grow"><strong>{offer.offer_number} · {offer.title}</strong><small>{stateLabel[offer.status] || offer.status} · gültig bis {shortDate(offer.valid_until)}</small></span>
               <strong>{money(offer.total_rappen)}</strong>
             </div>) : <p className="hsv-empty">Keine Offerten.</p>}</div>
           </>}
@@ -2539,12 +2564,16 @@ export default function StudioPage() {
             <span className="hsv-grow"><strong>{file.title}</strong><small>{file.original_filename} · {file.kind} · {file.published_at ? 'Portal' : 'intern'}</small></span>
           </div>) : <p className="hsv-empty">Keine Dateien.</p>}</div>
 
+          </section>
+          <section role="tabpanel" id="customer-panel-activity" aria-labelledby="customer-tab-activity" hidden={customerSection!=='activity'}>
           <div className="hsv-rowtop" style={{marginTop:26}}><strong>Aktivität</strong></div>
+          {!customerWorkspace.activity.length && <p className="hsv-empty">Noch keine Aktivitäten für diesen Kunden.</p>}
           <div className="hsv-table">{customerWorkspace.activity.slice(0,25).map((item) => <div key={item.id}>
             <span className="hsv-letter"><RefreshCw size={14}/></span>
             <span className="hsv-grow"><strong>{item.summary}</strong><small>{item.event_type} · {item.visibility}</small></span>
             <small>{new Date(item.created_at).toLocaleString('de-CH')}</small>
           </div>)}</div>
+          </section>
         </div>
       </div>
     </div>}

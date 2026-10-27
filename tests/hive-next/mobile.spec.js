@@ -70,7 +70,7 @@ for (const appearance of ["light", "dark"])
       }
       const nav = page.getByRole("navigation", { name: "Mobile Navigation" });
       await expect(nav).toBeVisible();
-      await touchTargets(page, ".hive-mobile-nav button, .hive-mobile-create");
+      await touchTargets(page, ".hive-app-dock button");
       const quickCreate = page.getByRole("button", { name: "Neu erstellen", exact: true });
       await expect(quickCreate).toBeVisible();
       await quickCreate.click();
@@ -91,13 +91,16 @@ for (const appearance of ["light", "dark"])
         fullPage: true,
       });
       for (const name of ["Kunden", "Projekte", "Rechnungen"]) {
-        await nav.getByRole("button", { name, exact: true }).click();
+        if(name==='Rechnungen') {
+          await nav.getByRole('button',{name:'Mehr',exact:true}).click();
+          await page.getByRole('dialog').getByRole('button',{name,exact:true}).click();
+        } else await nav.getByRole("button", { name, exact: true }).click();
         await expect(
           page.getByRole("heading", { name, exact: true }),
         ).toBeVisible();
         await fits(page);
       }
-      await nav.getByRole("button", { name: "Weitere Module" }).click();
+      await nav.getByRole("button", { name: "Mehr" }).click();
       await page
         .getByRole("dialog")
         .getByRole("button", { name: "Offerten", exact: true })
@@ -138,7 +141,7 @@ for (const appearance of ["light", "dark"])
       await fits(page);
       await page.getByRole("button", { name: "Suche schliessen" }).click();
 
-      await nav.getByRole("button", { name: "Weitere Module" }).click();
+      await nav.getByRole("button", { name: "Mehr" }).click();
       await page
         .getByRole("dialog")
         .getByRole("button", { name: "Businesses", exact: true })
@@ -148,7 +151,7 @@ for (const appearance of ["light", "dark"])
       await fits(page);
       await nav.getByRole("button", { name: "Übersicht", exact: true }).click();
 
-      await nav.getByRole("button", { name: "Weitere Module" }).click();
+      await nav.getByRole("button", { name: "Mehr" }).click();
       await page
         .getByRole("dialog")
         .getByRole("button", { name: "Portal", exact: true })
@@ -162,7 +165,7 @@ for (const appearance of ["light", "dark"])
         await fits(page);
       }
 
-      await nav.getByRole("button", { name: "Weitere Module" }).click();
+      await nav.getByRole("button", { name: "Mehr" }).click();
       await page
         .getByRole("dialog")
         .getByRole("button", { name: "E-Mail", exact: true })
@@ -176,7 +179,7 @@ for (const appearance of ["light", "dark"])
         await fits(page);
       }
 
-      await nav.getByRole("button", { name: "Weitere Module" }).click();
+      await nav.getByRole("button", { name: "Mehr" }).click();
       await page
         .getByRole("dialog")
         .getByRole("button", { name: "Einstellungen", exact: true })

@@ -4,3 +4,5 @@
 @import "./studio-polish.css" layer(legacy);
 @import "./system-shell.css";
 @import "./workspace-surface.css";
+
+@import "./chatgpt-refinement.css";
