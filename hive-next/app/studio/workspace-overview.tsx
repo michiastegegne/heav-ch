@@ -36,7 +36,7 @@ export default function WorkspaceOverview({invoices,projects,customerCount,offer
   <section className="hive-start-intro" aria-label="Dein Workspace">
    <h1>Was steht heute an?</h1>
    <form className="hive-composer" onSubmit={submit} role="search" aria-label="Workspace-Suche">
-    <div className="hive-composer-field"><Search size={16} aria-hidden="true"/><input aria-label="Im Workspace suchen" placeholder="Kunden, Projekte oder Dokumente suchen" value={query} onChange={event=>setQuery(event.target.value)} autoComplete="off"/></div>
+    <div className="hive-composer-field"><Search size={16} aria-hidden="true"/><input aria-label="Im Workspace suchen" placeholder="Im Workspace suchen …" value={query} onChange={event=>setQuery(event.target.value)} autoComplete="off"/></div>
     <div className="hive-composer-controls">
      <button type="button" aria-label="Schnell erstellen" onClick={onCreate} className="hive-composer-plus"><Plus size={22}/></button>
      <span>Dein Workspace</span>

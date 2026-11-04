@@ -63,7 +63,7 @@ html[data-theme=dark] .hsv.hive-system-app.hive-flow-app{--ui-background:#191919
 .hsv.hive-system-app .hive-start-screen .crm-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:0;padding:0;border:1px solid var(--ui-border);border-radius:14px;background:var(--ui-card)}
 .hsv.hive-system-app .hive-start-screen .crm-metrics button{display:flex;flex-direction:column;gap:7px;padding:16px;border:0;border-radius:10px;text-align:left;background:transparent;min-width:0;color:var(--ui-foreground)}
 .hive-start-screen .crm-metrics button>span{color:var(--ui-muted-foreground);font-size:12px}
-.hsv.hive-system-app .hive-start-screen .crm-metrics .hive-kpi-value{font-size:23px;font-weight:500;letter-spacing:-.5px;line-height:1.4;overflow-wrap:anywhere}
+.hsv.hive-system-app .hive-start-screen .crm-metrics .hive-kpi-value{font-size:23px;font-weight:500;letter-spacing:-.5px;line-height:1.4;white-space:nowrap}
 .hive-start-screen .crm-metrics small{font-size:10px;color:var(--ui-muted-foreground)}
 .hive-start-sections{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;margin-top:18px}
 .hive-start-section{min-width:0;border:1px solid var(--ui-border);border-radius:14px;background:var(--ui-card);padding:4px 14px}
@@ -168,7 +168,7 @@ html[data-theme=light] .hsv.hive-system-app.hive-flow-app{--ui-background:#fff;-
 @media(max-width:760px){
 .hsv.hive-system-app .hive-navigation-drawer .hive-sidebar-appearance .hive-theme-toggle{width:44px;height:44px;min-width:44px;min-height:44px}
 .hsv.hive-system-app .hsv-identity select{font-size:16px}
-.hsv.hive-system-app .hive-start-screen .crm-metrics .hive-kpi-value{font-size:clamp(18px,5.4vw,23px)}
+.hsv.hive-system-app .hive-start-screen .crm-metrics .hive-kpi-value{font-size:clamp(17px,5.2vw,23px)}
 }
 
 .hive-start-section-label { align-items: center; margin-bottom: 12px; }
@@ -184,7 +184,7 @@ html[data-theme=light] .hsv.hive-system-app.hive-flow-app{--ui-background:#fff;-
 .hive-composer-field svg { flex: none; }
 .hsv.hive-system-app .hive-composer-field > input { min-width: 0; }
 .hive-start-record .hive-status { display: inline-block; flex: none; line-height: 1.25; }
-.hive-start-amount .hive-status { margin-left: auto; }
+.hive-start-amount .hive-status { display: table; margin-left: auto; }
 .hsv.hive-system-app .hive-start-screen .crm-metrics button:hover { background: var(--ui-muted); }
 .hsv.hive-system-app .hive-list-tools > label { background: var(--ui-card); border: 1px solid var(--ui-border); }
 
@@ -263,6 +263,7 @@ html[data-theme=dark] .hsv.hive-system-app {
 @media (max-width: 760px) {
   .hsv.hive-system-app .hive-composer-controls > button { width: 44px; min-height: 44px; }
   .hsv.hive-system-app .hive-search-dialog { padding-bottom: env(safe-area-inset-bottom); }
+  .hsv.hive-system-app .hive-start-screen .crm-metrics button { padding-inline: 12px; }
   .hive-start-section-label > span { text-align: right; }
   .hive-start-record-icon { width: 22px; }
   .hsv.hive-system-app .hive-start-record .hive-status { font-size: 10px; padding: 4px 7px; }
