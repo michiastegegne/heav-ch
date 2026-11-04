@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { ArrowUp, ArrowUpRight, BriefcaseBusiness, Check, ChevronRight, CreditCard, FileText, Plus, Users } from "lucide-react";
+import { ArrowUp, ArrowUpRight, BriefcaseBusiness, CircleCheck, ChevronRight, Database, CreditCard, FileText, Plus, Search, Users } from "lucide-react";
+import { stateLabel } from "./status-labels";
 
 type Related = { customers?: { company?:string|null; contact_name?:string|null }|null };
 type Invoice = Related & {id:string;invoice_number:string;status:string;due_date:string;total_rappen:number;currency:string};
@@ -35,7 +36,7 @@ export default function WorkspaceOverview({invoices,projects,customerCount,offer
   <section className="hive-start-intro" aria-label="Dein Workspace">
    <h1>Was steht heute an?</h1>
    <form className="hive-composer" onSubmit={submit} role="search" aria-label="Workspace-Suche">
-    <input aria-label="Im Workspace suchen" placeholder="Kunden, Projekte oder Dokumente suchen" value={query} onChange={event=>setQuery(event.target.value)} autoComplete="off"/>
+    <div className="hive-composer-field"><Search size={16} aria-hidden="true"/><input aria-label="Im Workspace suchen" placeholder="Kunden, Projekte oder Dokumente suchen" value={query} onChange={event=>setQuery(event.target.value)} autoComplete="off"/></div>
     <div className="hive-composer-controls">
      <button type="button" aria-label="Schnell erstellen" onClick={onCreate} className="hive-composer-plus"><Plus size={22}/></button>
      <span>Dein Workspace</span>
@@ -45,14 +46,14 @@ export default function WorkspaceOverview({invoices,projects,customerCount,offer
    <div className="hive-start-shortcuts">{shortcuts.map(({label,icon:Icon,tab})=><button key={tab} onClick={()=>onNavigate(tab)}><Icon size={16}/>{label}</button>)}</div>
   </section>
   <section className="hive-start-content" aria-label="Workspace im Überblick">
-   <div className="hive-start-section-label"><span>Dein Überblick</span><span>{offerCount ? `${offerCount} offene ${offerCount===1?'Offerte':'Offerten'}`:'Alles an einem Ort'}</span></div>
+   <div className="hive-start-section-label"><h2><Database size={15} aria-hidden="true"/> Workspace im Überblick</h2><span>{offerCount ? `${offerCount} offene ${offerCount===1?'Offerte':'Offerten'}`:'Alles an einem Ort'}</span></div>
    <div className="crm-metrics" role="group" aria-label="Business-Kennzahlen">{metrics.map(metric=><button key={metric.label} onClick={()=>onNavigate(metric.tab)}><span>{metric.label}</span><strong className="hive-kpi-value">{metric.value}</strong><small>{metric.note}</small></button>)}</div>
    <div className="hive-start-sections">
     <section className="hive-start-section" aria-label="Projekte im Fokus">
-     <header><h3>Projekte im Fokus</h3><button onClick={()=>onNavigate('projects')} aria-label="Alle Projekte"><ArrowUpRight size={17}/></button></header>
-     {focus.length?focus.map(p=><button className="hive-start-record" onClick={()=>onProject(p.id)} key={p.id}><span className="hive-start-record-icon"><BriefcaseBusiness size={18}/></span><span><strong>{p.title}</strong><small>{name(p)}{p.due_date?` · ${date(p.due_date)}`:''}</small></span><ChevronRight size={16}/></button>):<div className="hive-start-empty"><p>Dein nächstes Projekt beginnt hier.</p><button onClick={customerCount?onCreateProject:()=>onNavigate('customers')}><Plus size={16}/>{customerCount?'Projekt anlegen':'Ersten Kunden anlegen'}</button></div>}
+     <header><h3><BriefcaseBusiness size={15} aria-hidden="true"/> Projekte im Fokus</h3><button onClick={()=>onNavigate('projects')} aria-label="Alle Projekte"><ArrowUpRight size={17}/></button></header>
+     {focus.length?focus.map(p=><button className="hive-start-record" onClick={()=>onProject(p.id)} key={p.id}><span className="hive-start-record-icon"><BriefcaseBusiness size={18}/></span><span><strong>{p.title}</strong><small>{name(p)}{p.due_date?` · ${date(p.due_date)}`:''}</small></span><span className="hive-status" data-state={p.status}>{stateLabel[p.status] || p.status}</span></button>):<div className="hive-start-empty"><p>Dein nächstes Projekt beginnt hier.</p><button onClick={customerCount?onCreateProject:()=>onNavigate('customers')}><Plus size={16}/>{customerCount?'Projekt anlegen':'Ersten Kunden anlegen'}</button></div>}
     </section>
-    {canViewFinance&&<section className="hive-start-section" aria-label="Offene Rechnungen"><header><h3>Offene Rechnungen</h3><button onClick={()=>onNavigate('invoices')} aria-label="Alle Rechnungen"><ArrowUpRight size={17}/></button></header>{open.length?[...open].sort((a,b)=>a.due_date.localeCompare(b.due_date)).slice(0,3).map(i=><button className="hive-start-record" onClick={()=>onNavigate('invoices')} key={i.id}><span className="hive-start-record-icon"><FileText size={18}/></span><span><strong>{name(i)}</strong><small>{i.invoice_number} · {date(i.due_date)}</small></span><span className="hive-start-amount">{money(i.total_rappen,i.currency)}<small className={i.status==='overdue'?'hive-overdue-text':''}>{i.status==='overdue'?'Überfällig':'Offen'}</small></span></button>):<p className="hive-start-settled"><Check size={16}/>Alles ausgeglichen.</p>}</section>}
+    {canViewFinance&&<section className="hive-start-section" aria-label="Offene Rechnungen"><header><h3><FileText size={15} aria-hidden="true"/> Offene Rechnungen</h3><button onClick={()=>onNavigate('invoices')} aria-label="Alle Rechnungen"><ArrowUpRight size={17}/></button></header>{open.length?[...open].sort((a,b)=>a.due_date.localeCompare(b.due_date)).slice(0,3).map(i=><button className="hive-start-record" onClick={()=>onNavigate('invoices')} key={i.id}><span className="hive-start-record-icon"><FileText size={18}/></span><span><strong>{name(i)}</strong><small>{i.invoice_number} · {date(i.due_date)}</small></span><span className="hive-start-amount">{money(i.total_rappen,i.currency)}<small className="hive-status" data-state={i.status}>{stateLabel[i.status] || i.status}</small></span></button>):<p className="hive-start-settled"><CircleCheck size={15} aria-hidden="true"/> Alles ausgeglichen.</p>}</section>}
    </div>
    {activity.length>0&&<button className="hive-start-latest" onClick={()=>onNavigate('activity')}><span><span className="hive-activity-dot"/>{activity[0].summary}</span><span>Verlauf <ChevronRight size={14}/></span></button>}
   </section>

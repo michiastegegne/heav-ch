@@ -2,12 +2,13 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowLeft, ArrowRight, ArrowUpRight, BriefcaseBusiness, Building2, Check, ChevronDown, Clock3, CreditCard, FileText,
-  LayoutDashboard, Mail, Menu, Package, PanelLeft, Pencil, Plus, SquarePen, RefreshCw, Search, Settings2, ShieldCheck, Smartphone, Trash2, Users, X,
+  ArrowLeft, ArrowRight, ArrowUpRight, BriefcaseBusiness, Building2, Check, CircleCheck, ChevronDown, Clock3, CreditCard, FileText,
+  LayoutDashboard, Mail, Menu, Package, PanelLeft, Paperclip, Pencil, Plus, SquarePen, RefreshCw, Search, Settings2, ShieldCheck, Smartphone, Trash2, Users, X,
 } from 'lucide-react';
 import { createPublicSupabaseBrowserClient } from '@/lib/supabase/public-browser';
 import ThemeToggle from '@/app/components/theme-toggle';
 import WorkspaceOverview from './workspace-overview';
+import { stateLabel } from './status-labels';
 import { useWorkspaceView } from './workspace-view';
 import WorkspaceNavigation from './workspace-navigation';
 import {WorkspaceViewSwitch} from './workspace-glass';
@@ -153,7 +154,6 @@ const afterDays = (days: number) => {
 };
 const money = (rappen: number, currency = 'CHF') =>
   new Intl.NumberFormat('de-CH', { style: 'currency', currency }).format((Number(rappen) || 0) / 100);
-const stateLabel:Record<string,string> = { planning:'Geplant', active:'In Arbeit', completed:'Abgeschlossen', on_hold:'Pausiert', draft:'Entwurf', sent:'Offen', paid:'Bezahlt', overdue:'Überfällig', cancelled:'Storniert', accepted:'Angenommen', withdrawn:'Zurückgezogen', expired:'Abgelaufen' };
 const shortDate = (value:string) => value ? new Intl.DateTimeFormat('de-CH',{day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date(value+'T12:00:00')) : '—';
 const customerName = (customer?: Partial<Customer> | null) =>
   customer?.company?.trim() || customer?.contact_name?.trim() || 'Ohne Name';
@@ -236,7 +236,9 @@ export default function StudioPage() {
   const [backendError, setBackendError] = useState('');
   const [secondaryPending, setSecondaryPending] = useState(false);
   const [secondaryIssues, setSecondaryIssues] = useState<Record<string,string>>({});
-  const [notice, setNotice] = useState('');
+  const [notice, setNoticeState] = useState({ message: '', success: false });
+  const setNotice = useCallback((message: string) => setNoticeState({ message, success: false }), []);
+  const setSuccess = useCallback((message: string) => setNoticeState({ message, success: true }), []);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -461,7 +463,7 @@ export default function StudioPage() {
       setBusinessDraft({ name:'', invoicePrefix:'HIVE' });
       setWorkspaces((current) => [...current.filter((item) => item.id !== data.workspace.id), data.workspace]);
       setActiveWorkspaceId(data.workspace.id);
-      setNotice('Business erstellt.');
+      setSuccess('Business erstellt.');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Business konnte nicht erstellt werden.');
     }
@@ -541,7 +543,7 @@ export default function StudioPage() {
       });
       setTeamInviteToken(data.token);
       setTeamInviteExpiresAt(data.expiresAt);
-      setNotice('Team-Einladung erstellt.');
+      setSuccess('Team-Einladung erstellt.');
       await loadTeam(activeWorkspaceId);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Team-Einladung konnte nicht erstellt werden.');
@@ -555,7 +557,7 @@ export default function StudioPage() {
         method:'POST',
         body:JSON.stringify({ action:'revoke_invite', workspaceId:activeWorkspaceId, inviteId:invite.invite_id }),
       });
-      setNotice('Team-Einladung widerrufen.');
+      setSuccess('Team-Einladung widerrufen.');
       await loadTeam(activeWorkspaceId);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Einladung konnte nicht widerrufen werden.');
@@ -566,7 +568,7 @@ export default function StudioPage() {
     if (!teamInviteToken || !navigator.clipboard) return;
     const url=`${window.location.origin}/account?team_invite=${encodeURIComponent(teamInviteToken)}`;
     await navigator.clipboard.writeText(url);
-    setNotice('Einladungslink kopiert.');
+    setSuccess('Einladungslink kopiert.');
   }
 
   async function updateTeamRole(member:TeamMember, role:'admin'|'member'|'accountant') {
@@ -576,7 +578,7 @@ export default function StudioPage() {
         method:'POST',
         body:JSON.stringify({ action:'role', workspaceId:activeWorkspaceId, userId:member.user_id, role }),
       });
-      setNotice('Rolle aktualisiert.');
+      setSuccess('Rolle aktualisiert.');
       await loadTeam(activeWorkspaceId);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Rolle konnte nicht geändert werden.');
@@ -590,7 +592,7 @@ export default function StudioPage() {
         method:'POST',
         body:JSON.stringify({ action:'remove', workspaceId:activeWorkspaceId, userId:member.user_id }),
       });
-      setNotice('Teammitglied entfernt.');
+      setSuccess('Teammitglied entfernt.');
       await loadTeam(activeWorkspaceId);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Teammitglied konnte nicht entfernt werden.');
@@ -800,7 +802,7 @@ export default function StudioPage() {
         await requestJson('/api/hive/customers', { method: 'POST', body: JSON.stringify(payload) });
       }
       setCustomerOpen(false);
-      setNotice(customerDraft.id ? 'Kunde aktualisiert.' : 'Kunde erstellt.');
+      setSuccess(customerDraft.id ? 'Kunde aktualisiert.' : 'Kunde erstellt.');
       await loadWorkspaceData(activeWorkspaceId);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Kunde konnte nicht gespeichert werden.');
@@ -811,7 +813,7 @@ export default function StudioPage() {
     if (!activeWorkspaceId || !confirm(`${customerName(customer)} wirklich löschen?`)) return;
     try {
       await requestJson(`/api/hive/customers/${customer.id}?workspace=${encodeURIComponent(activeWorkspaceId)}`, { method: 'DELETE' });
-      setNotice('Kunde gelöscht.');
+      setSuccess('Kunde gelöscht.');
       await loadWorkspaceData(activeWorkspaceId);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Kunde konnte nicht gelöscht werden.');
@@ -866,7 +868,7 @@ export default function StudioPage() {
           { method:'POST', body:JSON.stringify(payload) },
         );
       }
-      setNotice(departmentDraft.id ? 'Abteilung aktualisiert.' : 'Abteilung erstellt.');
+      setSuccess(departmentDraft.id ? 'Abteilung aktualisiert.' : 'Abteilung erstellt.');
       setDepartmentDraft({ id:'', name:'', code:'', contactName:'', contactEmail:'', contactPhone:'', isDefault:false, active:true });
       await reloadDepartments();
     } catch (error) {
@@ -881,7 +883,7 @@ export default function StudioPage() {
         `/api/hive/customers/${departmentCustomer.id}/departments/${department.id}?workspace=${encodeURIComponent(activeWorkspaceId)}`,
         { method:'DELETE' },
       );
-      setNotice('Abteilung gelöscht.');
+      setSuccess('Abteilung gelöscht.');
       await reloadDepartments();
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Abteilung konnte nicht gelöscht werden.');
@@ -933,7 +935,7 @@ export default function StudioPage() {
         await requestJson('/api/hive/projects', { method: 'POST', body: JSON.stringify(payload) });
       }
       setProjectOpen(false);
-      setNotice(projectDraft.id ? 'Projekt aktualisiert.' : 'Projekt erstellt.');
+      setSuccess(projectDraft.id ? 'Projekt aktualisiert.' : 'Projekt erstellt.');
       await loadWorkspaceData(activeWorkspaceId);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Projekt konnte nicht gespeichert werden.');
@@ -961,7 +963,7 @@ export default function StudioPage() {
         method:'POST',
         body:JSON.stringify({ workspaceId:activeWorkspaceId, projectId:projectWorkspaceId, ...payload }),
       });
-      setNotice(successMessage);
+      setSuccess(successMessage);
       const data = await requestJson<ProjectWorkspaceData>(
         `/api/hive/project-workspace?workspace=${encodeURIComponent(activeWorkspaceId)}&project=${encodeURIComponent(projectWorkspaceId)}`,
       );
@@ -999,7 +1001,7 @@ export default function StudioPage() {
     if (!activeWorkspaceId || !confirm(`${project.title} wirklich löschen?`)) return;
     try {
       await requestJson(`/api/hive/projects/${project.id}`, { method: 'DELETE' });
-      setNotice('Projekt gelöscht.');
+      setSuccess('Projekt gelöscht.');
       await loadWorkspaceData(activeWorkspaceId);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Projekt konnte nicht gelöscht werden.');
@@ -1036,7 +1038,7 @@ export default function StudioPage() {
         });
       }
       setInvoiceOpen(false);
-      setNotice(invoiceDraft.id ? 'Rechnungsentwurf aktualisiert.' : 'Rechnungsentwurf erstellt.');
+      setSuccess(invoiceDraft.id ? 'Rechnungsentwurf aktualisiert.' : 'Rechnungsentwurf erstellt.');
       await loadWorkspaceData(activeWorkspaceId);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Rechnung konnte nicht erstellt werden.');
@@ -1160,7 +1162,7 @@ export default function StudioPage() {
         invoiceSendKeys.current.delete(invoice.id);
         try { sessionStorage.removeItem(invoiceSendStorageKey(invoice.id)); } catch {}
       }
-      setNotice(
+      setSuccess(
         action === 'issue' ? 'Rechnung ausgestellt und final nummeriert.'
         : action === 'send' ? 'Rechnung per E-Mail versendet.'
         : action === 'mark_paid' ? 'Rechnung als bezahlt markiert.'
@@ -1194,7 +1196,7 @@ export default function StudioPage() {
           dueDate:afterDays(settings?.default_due_days || 30),
         }),
       });
-      setNotice(`Kopie von ${invoice.invoice_number} als neuer Entwurf erstellt.`);
+      setSuccess(`Kopie von ${invoice.invoice_number} als neuer Entwurf erstellt.`);
       if (activeWorkspaceId) await loadWorkspaceData(activeWorkspaceId);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Rechnung konnte nicht dupliziert werden.');
@@ -1205,7 +1207,7 @@ export default function StudioPage() {
     if (!confirm(`${invoice.invoice_number} wirklich löschen?`)) return;
     try {
       await requestJson(`/api/hive/invoices/${invoice.id}`, { method: 'DELETE' });
-      setNotice('Rechnungsentwurf gelöscht.');
+      setSuccess('Rechnungsentwurf gelöscht.');
       if (activeWorkspaceId) await loadWorkspaceData(activeWorkspaceId);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Rechnung konnte nicht gelöscht werden.');
@@ -1223,7 +1225,7 @@ export default function StudioPage() {
           dueDate:afterDays(settings?.default_due_days || 30),
         }),
       });
-      setNotice('Rechnungsentwurf aus Offerte erstellt.');
+      setSuccess('Rechnungsentwurf aus Offerte erstellt.');
       await loadWorkspaceData(activeWorkspaceId);
       setTab('invoices');
     } catch (error) {
@@ -1266,7 +1268,7 @@ export default function StudioPage() {
           validUntil:afterDays(30),
         }),
       });
-      setNotice(`Kopie von ${offer.offer_number} erstellt.`);
+      setSuccess(`Kopie von ${offer.offer_number} erstellt.`);
       if (activeWorkspaceId) await loadWorkspaceData(activeWorkspaceId);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Offerte konnte nicht dupliziert werden.');
@@ -1302,7 +1304,7 @@ export default function StudioPage() {
         offerSendKeys.current.delete(offer.id);
         try { sessionStorage.removeItem(offerSendStorageKey(offer.id)); } catch {}
       }
-      setNotice(
+      setSuccess(
         action === 'share' ? 'Offerte im Kundenportal freigegeben.'
         : action === 'send' ? 'Offerte per E-Mail versendet.'
         : action === 'withdraw' ? 'Offerte zurückgezogen.'
@@ -1351,7 +1353,7 @@ export default function StudioPage() {
         });
       }
       setProductOpen(false);
-      setNotice(productDraft.id ? 'Leistung aktualisiert.' : 'Leistung erstellt.');
+      setSuccess(productDraft.id ? 'Leistung aktualisiert.' : 'Leistung erstellt.');
       await loadWorkspaceData(activeWorkspaceId);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Leistung konnte nicht gespeichert werden.');
@@ -1362,7 +1364,7 @@ export default function StudioPage() {
     if (!activeWorkspaceId || !confirm(`${product.name} wirklich löschen?`)) return;
     try {
       await requestJson(`/api/hive/products/${product.id}?workspace=${encodeURIComponent(activeWorkspaceId)}`, { method:'DELETE' });
-      setNotice('Leistung gelöscht.');
+      setSuccess('Leistung gelöscht.');
       await loadWorkspaceData(activeWorkspaceId);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Leistung konnte nicht gelöscht werden.');
@@ -1469,7 +1471,7 @@ export default function StudioPage() {
         });
       }
       setOfferOpen(false);
-      setNotice(offerDraft.id ? 'Offertenentwurf aktualisiert.' : 'Offertenentwurf erstellt.');
+      setSuccess(offerDraft.id ? 'Offertenentwurf aktualisiert.' : 'Offertenentwurf erstellt.');
       await loadWorkspaceData(activeWorkspaceId);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Offerte konnte nicht erstellt werden.');
@@ -1483,7 +1485,7 @@ export default function StudioPage() {
         method: 'POST',
         body: JSON.stringify({ workspaceId: activeWorkspaceId, ...payload }),
       });
-      setNotice(successMessage);
+      setSuccess(successMessage);
       await loadWorkspaceData(activeWorkspaceId);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Portal-Aktion fehlgeschlagen.');
@@ -1512,7 +1514,7 @@ export default function StudioPage() {
         }),
       });
       setInviteOpen(false);
-      setNotice(result.emailSent
+      (result.emailSent ? setSuccess : setNotice)(result.emailSent
         ? `Portal-Einladung an ${result.email || invite.email} versendet.`
         : result.message || 'Dev-Einladung angelegt. Es wurde keine E-Mail versendet.');
       if (currentWorkspace.current === workspaceId) await loadWorkspaceData(workspaceId);
@@ -1575,7 +1577,7 @@ export default function StudioPage() {
       });
       setFileOpen(false);
       setFileDraft({ customerId:'', departmentId:'', projectId:'', title:'', kind:'document', file:null });
-      setNotice('Datei hochgeladen. Sie ist noch nicht im Kundenportal veröffentlicht.');
+      setSuccess('Datei hochgeladen. Sie ist noch nicht im Kundenportal veröffentlicht.');
       await loadWorkspaceData(activeWorkspaceId);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Datei konnte nicht hochgeladen werden.');
@@ -1602,7 +1604,7 @@ export default function StudioPage() {
           downloadEnabled:true,
         }),
       });
-      setNotice(file.published_at ? 'Datei aus dem Portal genommen.' : 'Datei im Portal veröffentlicht.');
+      setSuccess(file.published_at ? 'Datei aus dem Portal genommen.' : 'Datei im Portal veröffentlicht.');
       await loadWorkspaceData(activeWorkspaceId);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Datei konnte nicht aktualisiert werden.');
@@ -1613,7 +1615,7 @@ export default function StudioPage() {
     if (!activeWorkspaceId || !confirm(`${file.title} wirklich löschen?`)) return;
     try {
       await requestJson(`/api/hive/files/${file.id}`, { method:'DELETE' });
-      setNotice('Datei gelöscht.');
+      setSuccess('Datei gelöscht.');
       await loadWorkspaceData(activeWorkspaceId);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Datei konnte nicht gelöscht werden.');
@@ -1632,7 +1634,7 @@ export default function StudioPage() {
           textTemplate:template.text_template,
         }),
       });
-      setNotice('E-Mail-Vorlage gespeichert.');
+      setSuccess('E-Mail-Vorlage gespeichert.');
       await loadWorkspaceData(activeWorkspaceId);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'E-Mail-Vorlage konnte nicht gespeichert werden.');
@@ -1674,7 +1676,7 @@ export default function StudioPage() {
         }),
       });
       setSettings({...settings,logo_url:completed.logoUrl});
-      setNotice('Business-Logo hochgeladen.');
+      setSuccess('Business-Logo hochgeladen.');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Logo konnte nicht hochgeladen werden.');
     }
@@ -1723,7 +1725,7 @@ export default function StudioPage() {
           ? { ...workspace, name:data.settings.business_name }
           : workspace
       ));
-      setNotice('Business-Einstellungen gespeichert.');
+      setSuccess('Business-Einstellungen gespeichert.');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Einstellungen konnten nicht gespeichert werden.');
     }
@@ -1742,7 +1744,7 @@ export default function StudioPage() {
       setWorkspaces(remaining);
       setActiveWorkspaceId(remaining[0]?.id || '');
       setTab('overview');
-      setNotice('Business archiviert.');
+      setSuccess('Business archiviert.');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Business konnte nicht archiviert werden.');
     }
@@ -1785,7 +1787,7 @@ export default function StudioPage() {
         body:JSON.stringify({workspaceId:activeWorkspaceId,status}),
       });
       setProjects((current)=>current.map((item)=>item.id===project.id?{...item,status:data.project.status}:item));
-      setNotice(`${project.title}: ${stateLabel[status] || status}.`);
+      setSuccess(`${project.title}: ${stateLabel[status] || status}.`);
     } catch (error) {
       setProjects((current)=>current.map((item)=>item.id===project.id?{...item,status:previous}:item));
       setNotice(error instanceof Error ? error.message : 'Projektstatus konnte nicht geändert werden.');
@@ -2241,17 +2243,17 @@ export default function StudioPage() {
     </Modal>}
 
     {searchOpen && <div className="hsv-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) setSearchOpen(false); }}>
-      <div role="dialog" aria-modal="true" aria-label="Workspace durchsuchen" className="hsv-dialog hive-search-dialog" style={{maxWidth:680,padding:0,overflow:'hidden'}}>
-        <div style={{display:'flex',alignItems:'center',gap:12,padding:'16px 18px',borderBottom:'1px solid rgba(0,0,0,.12)'}}>
+      <div role="dialog" aria-modal="true" aria-label="Workspace durchsuchen" className="hsv-dialog hive-search-dialog">
+        <div className="hive-search-field">
           <Search size={18}/>
-          <input aria-label="Workspace durchsuchen" autoFocus value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Kunden, Projekte, Rechnungen, Offerten…" style={{border:0,outline:'none',fontSize:18,width:'100%',background:'transparent'}}/>
+          <input aria-label="Workspace durchsuchen" autoFocus value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Kunden, Projekte, Rechnungen, Offerten…"/>
           <button type="button" className="hsv-icon" aria-label="Suche schliessen" onClick={() => setSearchOpen(false)}><X size={20}/></button>
         </div>
-        <div className="hsv-table" style={{maxHeight:480,overflow:'auto'}}>
+        <div className="hive-search-results">
           {!searchQuery.trim() && <p className="hsv-empty">Tippen, um im aktuellen Business zu suchen.</p>}
           {searchQuery.trim() && !searchResults.length && <p className="hsv-empty">Keine Treffer.</p>}
-          {searchResults.map((result) => <button key={`${result.kind}-${result.id}`} type="button" onClick={() => selectSearchResult(result)} style={{width:'100%',textAlign:'left'}}>
-            <span className="hsv-letter">{result.kind === 'customer' ? 'K' : result.kind === 'project' ? 'P' : result.kind === 'invoice' ? 'R' : 'O'}</span>
+          {searchResults.map((result) => <button key={`${result.kind}-${result.id}`} type="button" onClick={() => selectSearchResult(result)}>
+            <span className="hsv-letter">{result.kind === 'customer' ? <Users size={15}/> : result.kind === 'project' ? <BriefcaseBusiness size={15}/> : <FileText size={15}/>}</span>
             <span className="hsv-grow"><strong>{result.label}</strong><small>{result.meta}</small></span>
             <small>{{customer:"Kunde",project:"Projekt",invoice:"Rechnung",offer:"Offerte"}[result.kind]}</small><ArrowRight size={15}/>
           </button>)}
@@ -2259,7 +2261,7 @@ export default function StudioPage() {
       </div>
     </div>}
 
-    {notice && <div className="hsv-toast" role="status">{notice}<button aria-label="Schliessen" onClick={() => setNotice('')}><X size={16}/></button></div>}
+    {notice.message && <div className="hsv-toast" data-success={notice.success} role="status">{notice.success && <CircleCheck size={16} aria-hidden="true"/>}<span>{notice.message}</span><button aria-label="Schliessen" onClick={() => setNotice('')}><X size={16}/></button></div>}
 
     {businessOpen && <Modal title="Neues Business" onClose={() => setBusinessOpen(false)}>
       <form onSubmit={createBusiness}>
@@ -2304,7 +2306,7 @@ export default function StudioPage() {
         }}><option value="">Kein Projekt</option>{projects.filter((project) => project.customer_id === fileDraft.customerId).map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}</select></label>
         <label>Titel<input value={fileDraft.title} onChange={(e) => setFileDraft({ ...fileDraft, title:e.target.value })} placeholder="z.B. Final Photos"/></label>
         <label>Typ<select value={fileDraft.kind} onChange={(e) => setFileDraft({ ...fileDraft, kind:e.target.value as typeof fileDraft.kind })}><option value="document">Dokument</option><option value="image">Bild</option><option value="video">Video</option><option value="gallery">Galerie</option><option value="offer">Offerte</option></select></label>
-        <label>Datei<input required type="file" onChange={(e) => setFileDraft({ ...fileDraft, file:e.target.files?.[0] || null })}/></label>
+        <label><span className="hive-field-label"><Paperclip size={14} aria-hidden="true"/> Datei</span><input required type="file" onChange={(e) => setFileDraft({ ...fileDraft, file:e.target.files?.[0] || null })}/></label>
         <p className="hsv-warning">Max. 50 MB pro Datei. Nach dem Upload bleibt sie zuerst unveröffentlicht.</p>
         <button className="hsv-primary" type="submit">Hochladen <Check size={15}/></button>
       </form>

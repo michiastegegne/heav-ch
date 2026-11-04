@@ -1,0 +1,1 @@
+export const stateLabel:Record<string,string> = { planning:'Geplant', active:'In Arbeit', completed:'Abgeschlossen', on_hold:'Pausiert', draft:'Entwurf', sent:'Offen', paid:'Bezahlt', overdue:'Überfällig', cancelled:'Storniert', accepted:'Angenommen', withdrawn:'Zurückgezogen', expired:'Abgelaufen' };
