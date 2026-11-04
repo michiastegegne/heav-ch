@@ -108,7 +108,7 @@ html[data-theme=dark] .hsv.hive-system-app.hive-flow-app{--ui-background:#191919
 .hsv.hive-system-app.hive-flow-app .hsv-layout>.hsv-nav{display:none}
 .hsv.hive-system-app.hive-flow-app .hsv-main{padding:18px 20px calc(32px + env(safe-area-inset-bottom));width:100%;max-width:800px}
 .hsv.hive-system-app .hive-sidebar-toggle{display:none}
-.hsv.hive-system-app :is(.hive-mobile-menu-toggle,.hive-mobile-search,.hive-header-new){display:inline-flex;width:40px;min-width:40px;min-height:44px}
+.hsv.hive-system-app :is(.hive-mobile-menu-toggle,.hive-mobile-search,.hive-header-new){display:inline-flex;width:44px;min-width:44px;min-height:44px}
 .hive-header-title{font-size:18px}
 .hsv.hive-system-app .hsv-identity{gap:8px;min-width:0}
 .hsv.hive-system-app .hsv-identity select{max-width:125px;min-width:0;font-size:12px;flex:1}
@@ -150,7 +150,6 @@ html[data-theme=dark] .hsv.hive-system-app.hive-flow-app{--ui-background:#191919
 @media(max-width:360px){
 .hsv.hive-system-app.hive-flow-app .hsv-main{padding-left:16px;padding-right:16px}
 .hsv.hive-system-app .hsv-identity select{max-width:95px}
-.hsv.hive-system-app .hive-mobile-search{display:none}
 .hive-start-intro h1{font-size:25px}
 .hive-start-record-icon{width:24px}
 .hsv.hive-system-app .hive-start-screen .crm-metrics .hive-kpi-value{font-size:21px}
