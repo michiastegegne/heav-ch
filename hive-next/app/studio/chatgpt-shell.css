@@ -267,3 +267,16 @@ html[data-theme=dark] .hsv.hive-system-app {
   .hive-start-record-icon { width: 22px; }
   .hsv.hive-system-app .hive-start-record .hive-status { font-size: 10px; padding: 4px 7px; }
 }
+
+@media (max-width: 760px) {
+  .hive-navigation-drawer .hive-sidebar-appearance { position: relative; }
+  .hive-navigation-drawer .hive-appearance-quick { position: static; }
+  .hive-navigation-drawer .hive-appearance-popover {
+    top: auto;
+    right: 0;
+    bottom: 100%;
+    left: 0;
+    width: auto;
+    padding: 12px;
+  }
+}
