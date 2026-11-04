@@ -386,8 +386,8 @@ for(const width of [390,1440])test(`dark appearance persists across login, reloa
  await page.screenshot({path:`../../outputs/hive-darkmode-ready-${width}.png`,fullPage:true,animations:'disabled'});
  await navigate(page,/Kunden/);
  await page.getByRole('button',{name:'Kunde hinzufügen',exact:true}).click();
- await expect(page.getByLabel('Firma',{exact:true})).toHaveCSS('background-color','rgb(33, 33, 33)');
- await expect(page.locator('.hsv-dialog')).toHaveCSS('background-color','rgb(33, 33, 33)');
+ await expect(page.getByLabel('Firma',{exact:true})).toHaveCSS('background-color','rgb(25, 25, 25)');
+ await expect(page.locator('.hsv-dialog')).toHaveCSS('background-color','rgb(30, 30, 30)');
  await page.getByRole('button',{name:'Schliessen',exact:true}).click();
  await page.goto('/account');
  await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
