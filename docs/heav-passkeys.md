@@ -11,11 +11,11 @@ Stand: 9. November 2026. Implementiert auf dem bestehenden Dark-Design-Stand `e5
 - Supabase übernimmt WebAuthn-Signaturen, Origin/RP-Prüfung, Benutzerverifikation, Ablauf und einmalige Verwendung der Challenges sowie die Credential-Speicherung. Keine eigene Datenbankmigration und kein Service-Role-Schlüssel nötig.
 - Clerk-Modus bleibt bei dessen vorhandenen SignIn/UserProfile-Komponenten; der neue Supabase-Endpunkt ist dort gesperrt. Änderungen sind auch in der gemeinsamen Preview ohne Login gesperrt.
 
-## Noch ausstehende Freischaltung
+## Freischaltung erfolgt — echter Anmeldetest noch offen
 
-Das verbundene Projekt `bkazlpqjvbuhwmjcwexn` antwortet auf den realen Start der Passkey-Anmeldung mit `passkey_disabled`. Die verbundene Supabase-App bietet keine Auth-Konfigurationsaktion; das Dashboard verlangt eine Anmeldung. Es wurde keine Auth-Einstellung verändert und nichts produktiv ausgerollt.
+Am 9. November 2026 nach Anmeldung des Benutzers in Safari im verbundenen Projekt `bkazlpqjvbuhwmjcwexn` aktiviert. Das Dashboard bestätigte „Passkey settings updated successfully“. Ein anschliessender echter `POST /auth/v1/passkeys/authentication/options` lieferte HTTP 200, eine Challenge und `rpId: os.michiastegegne.com`. Die Passkey-Einstellung wurde gespeichert; die CRM-Anwendung wurde nicht produktiv ausgerollt.
 
-In Supabase → Authentication → Passkeys aktivieren, nach Bestätigung der tatsächlichen CRM-Domain:
+Gespeicherte Konfiguration in Supabase → Authentication → Passkeys:
 
 - Display Name: `HEAV CRM`
 - RP ID: `os.michiastegegne.com` (bisherige CRM-Produktionsdomain)
@@ -32,9 +32,9 @@ Dokumentation: https://supabase.com/docs/guides/auth/passkeys
 - TypeScript und Produktionsbuild erfolgreich.
 - 129 bestehende Tests und 6 neue ausführbare Route-Tests erfolgreich (135 insgesamt).
 - Neue Route-Tests verwenden einen simulierten Auth-Provider: Login-Start/Verifikation ohne Token-Ausgabe, Registrierung/Umbenennung/Löschen, anonyme Zugriffssperre, Origin-Prüfung, Eingabevalidierung, Preview-/Clerk-Sperre und Weitergabe von Provider-Fehlern. Sie ersetzen keine kryptografische WebAuthn-Verifikation gegen das echte Backend.
-- Browser: Desktop und 390px Mobilansicht in Dark Mode geprüft; Passkey-Button ruft die echte Route auf und zeigt beim noch deaktivierten Provider einen verständlichen Fallback-Hinweis. Passwortformular bleibt bedienbar.
+- Browser: Desktop und 390px Mobilansicht in Dark Mode geprüft; Passkey-Button ruft die echte Route auf und zeigte vor der Aktivierung einen verständlichen Fallback-Hinweis. Passwortformular bleibt bedienbar. Nach der Aktivierung wurde der echte Auth-Challenge-Endpunkt erfolgreich mit HTTP 200 geprüft.
 - Anonymer Aufruf von `/account/security` leitet zum Login; Passkey-Liste liefert 401. Ungültige Passwort-Eingaben werden weiterhin abgelehnt.
-- Ein echter erfolgreicher Passwortlogin, Passkey-Registrierung und erneuter Login sind noch nicht verifiziert: dafür fehlen ein angemeldetes Testkonto und die Provider-Freischaltung auf einer passenden Domain. Keine Passkeys für den Benutzer angelegt oder entfernt.
+- Ein echter erfolgreicher Passwortlogin, Passkey-Registrierung und erneuter Login sind noch nicht verifiziert: dafür fehlen die Veröffentlichung dieser Implementierung auf der erlaubten Domain und ein angemeldetes Testkonto. Keine Passkeys für den Benutzer angelegt oder entfernt.
 - Der separate Lint-Befehl ist bereits im Projekt nicht nutzbar, weil eine ESLint-9-Konfigurationsdatei fehlt. Build/Typprüfung laufen durch.
 
 ## Abschliessender Funktionstest nach Freischaltung
