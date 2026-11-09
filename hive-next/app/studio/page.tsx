@@ -144,7 +144,7 @@ type SendConfirmation =
   | {kind:'offer';item:Offer;recipient:EmailRecipient;workspaceId:string}
   | {kind:'portal';invite:{customerId:string;departmentId:string;email:string};recipient:EmailRecipient;workspaceId:string};
 
-type LineDraft = { description: string; quantity: number; unitPrice: number };
+type LineDraft = { description: string; quantity: number; unitPrice: number; unit?: string | null };
 
 const today = () => new Date().toISOString().slice(0, 10);
 const afterDays = (days: number) => {
@@ -282,7 +282,7 @@ export default function StudioPage() {
   const [invoiceSendBusyIds, setInvoiceSendBusyIds] = useState<Set<string>>(() => new Set());
   const [invoiceDraft, setInvoiceDraft] = useState({
     id: '', customerId: '', projectId: '', issueDate: today(), dueDate: afterDays(30),
-    taxRate: 0, notes: '', lines: [{ description: '', quantity: 1, unitPrice: 0 }] as LineDraft[],
+    taxRate: 0, notes: '', lines: [{ description: '', quantity: 1, unitPrice: 0, unit: 'h' }] as LineDraft[],
   });
   const [offerOpen, setOfferOpen] = useState(false);
   const [offerHistoryOpen, setOfferHistoryOpen] = useState(false);
@@ -482,7 +482,7 @@ export default function StudioPage() {
       dueDate:afterDays(settings?.default_due_days || 30),
       taxRate:Number(settings?.default_tax_rate || 0),
       notes:'',
-      lines:[{description:'',quantity:1,unitPrice:0}],
+      lines:[{description:'',quantity:1,unitPrice:0,unit:'h'}],
     });
     setInvoiceOpen(true);
   }
@@ -1023,6 +1023,7 @@ export default function StudioPage() {
           items: invoiceDraft.lines.map((line) => ({
             description: line.description,
             quantity: line.quantity,
+            unit: line.unit || null,
             unitPriceRappen: Math.round(line.unitPrice * 100),
           })),
       };
@@ -1050,7 +1051,7 @@ export default function StudioPage() {
     try {
       const data = await requestJson<{
         invoice: Invoice & { notes?:string|null };
-        items: Array<{description:string;quantity:number|string;unit_price_rappen:number}>;
+        items: Array<{description:string;quantity:number|string;unit?:string|null;unit_price_rappen:number}>;
       }>(`/api/hive/invoices/${invoice.id}?workspace=${encodeURIComponent(activeWorkspaceId)}`);
       setInvoiceDraft({
         id:invoice.id,
@@ -1063,6 +1064,7 @@ export default function StudioPage() {
         lines:data.items.map((item) => ({
           description:item.description,
           quantity:Number(item.quantity),
+          unit:item.unit || null,
           unitPrice:Number(item.unit_price_rappen) / 100,
         })),
       });
@@ -1390,7 +1392,7 @@ export default function StudioPage() {
     setInvoiceDraft({
       ...invoiceDraft,
       taxRate:Number(product.tax_rate || invoiceDraft.taxRate),
-      lines:[...invoiceDraft.lines, { description:product.name, quantity:1, unitPrice:product.unit_price_rappen / 100 }],
+      lines:[...invoiceDraft.lines, { description:product.name, quantity:1, unit:'Stk.', unitPrice:product.unit_price_rappen / 100 }],
     });
   }
 
@@ -2691,11 +2693,11 @@ export default function StudioPage() {
       </details>}
     </Modal>}
 
-    {invoiceOpen && <DocumentEditor onSubmit={createInvoice} saveLabel={invoiceDraft.id ? 'Änderungen speichern' : 'Rechnungsentwurf erstellen'} title={invoiceDraft.id ? 'Rechnung bearbeiten' : 'Rechnung erstellen'} lines={invoiceDraft.lines} total={invoiceTotal} taxRate={invoiceDraft.taxRate} onClose={() => setInvoiceOpen(false)}
+    {invoiceOpen && <DocumentEditor showUnit onSubmit={createInvoice} saveLabel={invoiceDraft.id ? 'Änderungen speichern' : 'Rechnungsentwurf erstellen'} title={invoiceDraft.id ? 'Rechnung bearbeiten' : 'Rechnung erstellen'} lines={invoiceDraft.lines} total={invoiceTotal} taxRate={invoiceDraft.taxRate} onClose={() => setInvoiceOpen(false)}
       summaryFields={<label>Steuersatz %<input type="number" min="0" max="100" step="0.1" value={invoiceDraft.taxRate} onChange={(e) => setInvoiceDraft({ ...invoiceDraft, taxRate: Number(e.target.value) })}/></label>}
       notes={<label className="hive-document-wide">Notiz<textarea rows={2} value={invoiceDraft.notes} onChange={(e) => setInvoiceDraft({ ...invoiceDraft, notes: e.target.value })}/></label>}
       catalog={products.some((product) => product.active) && <label className="hive-document-wide">Leistung hinzufügen<select defaultValue="" onChange={(e) => { if (e.target.value) addProductToInvoice(e.target.value); e.currentTarget.value=''; }}><option value="">Aus Katalog wählen…</option>{products.filter((product) => product.active).map((product) => <option key={product.id} value={product.id}>{product.name} · {money(product.unit_price_rappen)}</option>)}</select></label>}
-      onAddLine={() => setInvoiceDraft({ ...invoiceDraft, lines: [...invoiceDraft.lines, { description: '', quantity: 1, unitPrice: 0 }] })}
+      onAddLine={() => setInvoiceDraft({ ...invoiceDraft, lines: [...invoiceDraft.lines, { description: '', quantity: 1, unitPrice: 0, unit: 'h' }] })}
       onLineChange={(index, line) => setInvoiceDraft({ ...invoiceDraft, lines: invoiceDraft.lines.map((current, i) => i === index ? line : current) })}
       onLineDelete={(index) => setInvoiceDraft({ ...invoiceDraft, lines: invoiceDraft.lines.filter((_, i) => i !== index) })}>
       <>
