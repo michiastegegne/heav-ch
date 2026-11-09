@@ -194,7 +194,13 @@ Deno.test("E-Mail-Banner enthält Portrait, Kontaktdaten und sichere Projekttext
   assert(html.includes("background:#080909"));
   assert(!html.includes("heav-email-wordmark-transparent.png"));
   assert(!html.includes("background:#2453ff"));
-  assert(html.includes("margin:0 0 28px"));
+  assert(html.includes('name="viewport" content="width=device-width, initial-scale=1"'));
+  assert(html.includes('class="heav-email-container"'));
+  assert(html.includes("max-width:600px"));
+  assert(html.includes("@media only screen and (max-width:600px)"));
+  assert(html.includes("@media only screen and (max-width:360px)"));
+  assert(html.includes("heav-email-signature-info"));
+  assert(!html.includes("white-space:nowrap"));
   assert(html.includes('width="154" height="35"'));
   assert(html.includes('src="cid:heav-profile"'));
   assert(!html.includes("michias-email-portrait.jpg"));
@@ -205,6 +211,30 @@ Deno.test("E-Mail-Banner enthält Portrait, Kontaktdaten und sichere Projekttext
   assert(html.includes("&lt;Yousty Video&gt;"));
   assert(html.includes("Please find attached the invoice"));
   assert(!html.includes("<script>"));
+});
+
+Deno.test("Responsives E-Mail-Template übernimmt Kundentext ohne doppelte Signatur", () => {
+  const invoice = {
+    customers: { contact_name: "Replay" },
+    project_title_snapshot: "Live-Fotoproduktion",
+  };
+  const settings = {
+    owner_name: "Michias Tegegne",
+    company_name: "HEAV",
+    email: "michias@heav.ch",
+    website_url: "https://heav.ch",
+    phone: "+41 76 518 80 70",
+  };
+  const html = buildInvoiceEmailHtml(
+    invoice as never,
+    settings as never,
+    "Hi Replay,\\n\\nPlease find the invoice attached.\\n\\nKind regards\\nMichias Tegegne",
+  );
+  assertEquals(html.split("Kind regards").length - 1, 1);
+  assert(html.includes("max-width:600px"));
+  assert(html.includes("width:100%"));
+  assert(html.includes('src="cid:heav-wordmark"'));
+  assert(html.includes('src="cid:heav-profile"'));
 });
 
 Deno.test("Rechnungsversand enthält Textalternative, HTML-Design und PDF", async () => {
