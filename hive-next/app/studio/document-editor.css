@@ -227,6 +227,9 @@ html[data-theme="dark"] .hive-document {
   padding: 20px 0;
   border-bottom: 1px solid var(--doc-line);
 }
+.hive-document-line-with-unit {
+  grid-template-columns: minmax(70px, 0.7fr) minmax(94px, 0.9fr) minmax(115px, 1.1fr) minmax(105px, 1fr);
+}
 .hive-document-line-heading {
   grid-column: 1/-1;
   display: flex;
@@ -512,6 +515,8 @@ html[data-theme="dark"] .hive-document {
     gap: 14px;
     padding: 18px 0;
   }
+  .hive-document-line-with-unit { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+  .hive-document-line-with-unit .hive-document-line-total { grid-column: 1/-1; }
   .hive-document-line-total {
     grid-column: 1/-1;
     flex-direction: row;
