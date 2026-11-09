@@ -11,9 +11,9 @@ Stand: 9. November 2026. Implementiert auf dem bestehenden Dark-Design-Stand `e5
 - Supabase übernimmt WebAuthn-Signaturen, Origin/RP-Prüfung, Benutzerverifikation, Ablauf und einmalige Verwendung der Challenges sowie die Credential-Speicherung. Keine eigene Datenbankmigration und kein Service-Role-Schlüssel nötig.
 - Clerk-Modus bleibt bei dessen vorhandenen SignIn/UserProfile-Komponenten; der neue Supabase-Endpunkt ist dort gesperrt. Änderungen sind auch in der gemeinsamen Preview ohne Login gesperrt.
 
-## Freischaltung erfolgt — echter Anmeldetest noch offen
+## Produktiv veröffentlicht — persönliche Passkey-Registrierung noch offen
 
-Am 9. November 2026 nach Anmeldung des Benutzers in Safari im verbundenen Projekt `bkazlpqjvbuhwmjcwexn` aktiviert. Das Dashboard bestätigte „Passkey settings updated successfully“. Ein anschliessender echter `POST /auth/v1/passkeys/authentication/options` lieferte HTTP 200, eine Challenge und `rpId: os.michiastegegne.com`. Die Passkey-Einstellung wurde gespeichert; die CRM-Anwendung wurde nicht produktiv ausgerollt.
+Am 9. November 2026 nach Anmeldung des Benutzers in Safari im verbundenen Projekt `bkazlpqjvbuhwmjcwexn` aktiviert. Das Dashboard bestätigte „Passkey settings updated successfully“. Ein anschliessender echter `POST /auth/v1/passkeys/authentication/options` lieferte HTTP 200, eine Challenge und `rpId: os.michiastegegne.com`. Die Passkey-Einstellung wurde gespeichert. Am selben Tag wurde auf ausdrücklichen Wunsch des Benutzers der getestete Commit `6ac0ddd06bd7e0baaac268c2e0a3429e918c22b1` mit den bestehenden Production-Einstellungen veröffentlicht. Deployment `dpl_8vnQY3G3tyrE428HiXghcHE9ucxB` ist READY und unter `https://os.michiastegegne.com` aktiv. Vorherige Version für einen eventuellen Rollback: `dpl_AGYiewyp7Z7coaq6hGMRaNSJX9bw` (`05cb4cd`).
 
 Gespeicherte Konfiguration in Supabase → Authentication → Passkeys:
 
@@ -34,10 +34,10 @@ Dokumentation: https://supabase.com/docs/guides/auth/passkeys
 - Neue Route-Tests verwenden einen simulierten Auth-Provider: Login-Start/Verifikation ohne Token-Ausgabe, Registrierung/Umbenennung/Löschen, anonyme Zugriffssperre, Origin-Prüfung, Eingabevalidierung, Preview-/Clerk-Sperre und Weitergabe von Provider-Fehlern. Sie ersetzen keine kryptografische WebAuthn-Verifikation gegen das echte Backend.
 - Browser: Desktop und 390px Mobilansicht in Dark Mode geprüft; Passkey-Button ruft die echte Route auf und zeigte vor der Aktivierung einen verständlichen Fallback-Hinweis. Passwortformular bleibt bedienbar. Nach der Aktivierung wurde der echte Auth-Challenge-Endpunkt erfolgreich mit HTTP 200 geprüft.
 - Anonymer Aufruf von `/account/security` leitet zum Login; Passkey-Liste liefert 401. Ungültige Passwort-Eingaben werden weiterhin abgelehnt.
-- Ein echter erfolgreicher Passwortlogin, Passkey-Registrierung und erneuter Login sind noch nicht verifiziert: dafür fehlen die Veröffentlichung dieser Implementierung auf der erlaubten Domain und ein angemeldetes Testkonto. Keine Passkeys für den Benutzer angelegt oder entfernt.
+- Ein echter erfolgreicher Passwortlogin, Passkey-Registrierung und erneuter Login sind noch nicht verifiziert: die persönliche Registrierung des ersten Passkeys und der anschliessende erneute Login stehen noch aus. Die vorhandene Safari-Sitzung bleibt angemeldet und konnte die Security-Seite sowie die leere Passkey-Liste erfolgreich laden. Keine Passkeys für den Benutzer angelegt oder entfernt.
 - Der separate Lint-Befehl ist bereits im Projekt nicht nutzbar, weil eine ESLint-9-Konfigurationsdatei fehlt. Build/Typprüfung laufen durch.
 
-## Abschliessender Funktionstest nach Freischaltung
+## Abschliessender persönlicher Funktionstest
 
 1. Auf der erlaubten Domain mit bestehender E-Mail und Passwort anmelden.
 2. Konto → Passkeys verwalten → Passkey hinzufügen; Betriebssystem-Prompt selbst bestätigen.
@@ -45,3 +45,11 @@ Dokumentation: https://supabase.com/docs/guides/auth/passkeys
 4. Abmelden, mit Passkey erneut anmelden und dieselben vorhandenen CRM-Daten prüfen.
 5. Abmelden, E-Mail/Passwort-Fallback erfolgreich testen.
 6. Einen explizit dafür erstellten Test-Passkey entfernen; erneute Anmeldung damit muss scheitern, Passwort weiterhin funktionieren.
+
+## Prüfung nach Veröffentlichung
+
+- Vercel: Production, READY, Commit `6ac0ddd`, Domain `os.michiastegegne.com`.
+- Live `/login`: HTTP 200 und „Mit Passkey anmelden“ sichtbar.
+- Live `POST /api/auth/passkeys` mit `login-start`: HTTP 200, WebAuthn-Challenge für `os.michiastegegne.com`, `Cache-Control: private, no-store`.
+- Bestehende Safari-Anmeldung: `/account/security` erfolgreich geladen, leere Liste ohne Fehlermeldung, „Passkey hinzufügen“ verfügbar. Kein neuer persönlicher Passkey wurde vom Agenten angelegt.
+- Vercel-Laufzeitprotokolle dieses Deployments direkt nach Veröffentlichung: keine Error-/Fatal-Einträge gefunden.
