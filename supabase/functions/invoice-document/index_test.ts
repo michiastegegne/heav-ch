@@ -13,6 +13,7 @@ import {
   invoiceDocumentVersion,
   sha256Hex,
   formatDiscountPercent,
+  formatInvoiceQuantity,
   formatDocumentReference,
   formatPaymentReference,
   invoiceFilename,
@@ -27,6 +28,14 @@ Deno.test("escapeHtml neutralisiert Kundendaten im E-Mail-HTML", () => {
     escapeHtml(`<img src=x onerror="alert('x')"> & Firma`),
     "&lt;img src=x onerror=&quot;alert(&#39;x&#39;)&quot;&gt; &amp; Firma",
   );
+});
+
+Deno.test("Rechnungspositionen zeigen Stunden und Legacy-Mengen korrekt", () => {
+  assertEquals(formatInvoiceQuantity({quantity: 4, unit: "h"}), "4 h");
+  assertEquals(formatInvoiceQuantity({quantity: 2.5, unit: "h"}), "2.5 h");
+  assertEquals(formatInvoiceQuantity({quantity: 3, unit: "Stk."}), "3 Stk.");
+  assertEquals(formatInvoiceQuantity({quantity: 1, unit: "Pauschale"}), "1 Pauschale");
+  assertEquals(formatInvoiceQuantity({quantity: 2, unit: null}), "2");
 });
 
 Deno.test("Zahlungsreferenzen bleiben in ISO-11649-Vierergruppen lesbar", () => {
