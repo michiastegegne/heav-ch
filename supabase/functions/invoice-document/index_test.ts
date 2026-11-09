@@ -204,11 +204,11 @@ Deno.test("Rechnungsversand enthält Textalternative, HTML-Design und PDF", asyn
     new URL("./index.ts", import.meta.url),
   );
   const resendPayload = source.match(
-    /body: JSON\.stringify\(\{[\s\S]*?attachments: \[\{[\s\S]*?\}\],[\s\S]*?\}\),/,
+    /body: JSON\.stringify\(\{[\s\S]*?attachments: \[[\s\S]*?\],[\s\S]*?\}\),/,
   )?.[0] ?? "";
   assert(resendPayload.includes("text,"));
   assert(
-    resendPayload.includes("html: buildInvoiceEmailHtml(invoice, settings, text)"),
+    resendPayload.includes("html: buildInvoiceEmailHtml(emailInvoice, settings, text)"),
   );
   assert(resendPayload.includes("attachments:"));
 });
