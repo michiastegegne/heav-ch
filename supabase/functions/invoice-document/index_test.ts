@@ -15,6 +15,7 @@ import {
   formatDiscountPercent,
   formatDocumentReference,
   formatPaymentReference,
+  formatIban,
   invoiceFilename,
   shouldRenderPaymentPartOnFirstPage,
   shouldRenderPaymentPartTearOffGuide,
@@ -366,4 +367,13 @@ Deno.test("QR-Zusatzinformation bleibt bei freien Positionszeichen kontrolliert"
     message,
   });
   assert(payload.includes("\nHEAV 01267\nEPD\n"));
+});
+
+Deno.test("IBAN grouping preserves digits and is idempotent", () => {
+  const expected = "CH69 0900 0000 1651 4266 5";
+  for (const input of [expected, "CH6909000000165142665", "CH69 090 0 00 00 1 651 4266 5", " ch69\u00a00900\t0000 1651 4266 5\n"]) {
+    assertEquals(formatIban(input), expected);
+    assertEquals(formatIban(formatIban(input)), expected);
+    assertEquals(formatIban(input).replace(/\s/g, ""), input.replace(/\s/g, "").toUpperCase());
+  }
 });

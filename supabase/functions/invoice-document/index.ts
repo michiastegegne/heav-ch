@@ -153,6 +153,9 @@ export const shouldRenderPaymentPartOnFirstPage = (displayRowCount: number) =>
   displayRowCount <= 5;
 export const shouldRenderPaymentPartTearOffGuide = () => false;
 const formatDate = (date: string) => date.split("-").reverse().join(".");
+export const formatIban = (value: string) =>
+  value.replace(/\s+/g, "").toUpperCase().replace(/(.{4})/g, "$1 ").trim();
+
 export const formatPaymentReference = (value: string) =>
   String(value ?? "")
     .replace(/\s+/g, "")
@@ -982,7 +985,7 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
     pdraw("Empfangsschein", 14, sectionTop - 22, 11, paymentBold);
     pdraw("Konto / Zahlbar an", 14, sectionTop - 43, 6, paymentBold);
     pdraw(
-      settings.iban.replace(/(.{4})/g, "$1 ").trim(),
+      formatIban(settings.iban),
       14,
       sectionTop - 55,
       8,
@@ -1084,7 +1087,7 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
     const infoX = 356;
     pdraw("Konto / Zahlbar an", infoX, sectionTop - 43, 6, paymentBold);
     pdraw(
-      settings.iban.replace(/(.{4})/g, "$1 ").trim(),
+      formatIban(settings.iban),
       infoX,
       sectionTop - 55,
       8,
