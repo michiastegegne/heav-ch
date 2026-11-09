@@ -67,7 +67,7 @@ begin
   insert into public.invoice_events(workspace_id, owner_id, invoice_id, kind) values (v_workspace, v_owner, v_invoice_id, 'created');
   return query select v_invoice_id, v_number, v_reference;
 end;
-$function$
+$function$;
 
 
 -- Preserve existing auth, validation and accounting rules for create_workspace_invoice_draft
@@ -179,7 +179,7 @@ begin
 
   return query select v_invoice_id,v_draft_number;
 end;
-$function$
+$function$;
 
 
 -- Preserve existing auth, validation and accounting rules for update_invoice
@@ -231,7 +231,7 @@ begin
   insert into public.invoice_events(owner_id, invoice_id, kind, details)
   values (v_owner, p_invoice_id, 'updated', jsonb_build_object('status', p_status));
 end;
-$function$
+$function$;
 
 
 -- Preserve existing auth, validation and accounting rules for update_workspace_invoice_draft
@@ -306,6 +306,4 @@ begin
   insert into public.invoice_events(workspace_id,owner_id,invoice_id,kind,details)
   values(v_invoice.workspace_id,v_invoice.owner_id,p_invoice_id,'updated','{"status":"draft"}'::jsonb);
 end;
-$function$
-
-
+$function$;
