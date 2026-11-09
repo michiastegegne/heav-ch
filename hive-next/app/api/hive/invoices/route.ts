@@ -13,6 +13,7 @@ const invoiceSchema = z.object({
   items: z.array(z.object({
     description: z.string().trim().min(1).max(500),
     quantity: z.number().positive().max(1_000_000),
+    unit: z.enum(['h', 'Stk.', 'Pauschale']).nullable().optional(),
     unitPriceRappen: z.number().int().min(0).max(9_000_000_000),
   })).min(1).max(10),
 }).refine((value) => value.dueDate >= value.issueDate, {
@@ -64,6 +65,7 @@ export async function POST(request: Request) {
       p_items: payload.items.map((item) => ({
         description: item.description,
         quantity: item.quantity,
+        unit: item.unit ?? null,
         unit_price_rappen: item.unitPriceRappen,
       })),
     });
