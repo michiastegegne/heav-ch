@@ -54,6 +54,7 @@ export default async function AccountPage({
             <span>ANGEMELDET</span>
             <h2>{user?.email}</h2>
             <p>Mit deinem bestehenden Konto verbunden.</p>
+            <p><a href="/account/security">Passkeys verwalten →</a></p>
             <SignoutButton/>
           </div>
         )}

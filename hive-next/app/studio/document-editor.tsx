@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "rea
 import { Check, FileText, LoaderCircle, Plus, Trash2, X } from "lucide-react";
 import "./document-editor.css";
 
-type Line = { description: string; quantity: number; unitPrice: number };
+type Line = { description: string; quantity: number; unitPrice: number; unit?: string | null };
 type Props = {
   title: string;
   saveLabel: string;
@@ -20,6 +20,7 @@ type Props = {
   notes: ReactNode;
   summaryFields: ReactNode;
   catalog?: ReactNode;
+  showUnit?: boolean;
 };
 const money = (rappen: number) =>
   new Intl.NumberFormat("de-CH", { style: "currency", currency: "CHF" }).format(
@@ -41,6 +42,7 @@ export default function DocumentEditor({
   notes,
   summaryFields,
   catalog,
+  showUnit = false,
 }: Props) {
   const [saving, setSaving] = useState(false);
   const submitting = useRef(false);
@@ -130,7 +132,7 @@ export default function DocumentEditor({
                   )}
                   <div className="hive-document-lines">
                     {lines.map((line, index) => (
-                      <div className="hive-document-line" key={index}>
+                      <div className={`hive-document-line ${showUnit ? "hive-document-line-with-unit" : ""}`} key={index}>
                         <div className="hive-document-line-heading">
                           <span>
                             POSITION {String(index + 1).padStart(2, "0")}
@@ -179,6 +181,26 @@ export default function DocumentEditor({
                             }
                           />
                         </label>
+                        {showUnit && (
+                          <label>
+                            Einheit
+                            <select
+                              aria-label={`Position ${index + 1}: Einheit`}
+                              value={line.unit || ""}
+                              onChange={(event) =>
+                                onLineChange(index, {
+                                  ...line,
+                                  unit: event.target.value || null,
+                                })
+                              }
+                            >
+                              <option value="">Ohne</option>
+                              <option value="h">h – Stunden</option>
+                              <option value="Stk.">Stk. – Stück</option>
+                              <option value="Pauschale">Pauschale</option>
+                            </select>
+                          </label>
+                        )}
                         <label>
                           CHF / Einheit
                           <input

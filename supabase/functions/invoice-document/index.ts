@@ -30,6 +30,7 @@ const colors = {
 type InvoiceItem = {
   description: string;
   quantity: number;
+  unit?: string | null;
   unit_price_rappen: number;
   position: number;
 };
@@ -174,6 +175,13 @@ export const buildInvoicePaymentMessage = (
 
 const compactText = (value: unknown, maxLength: number) =>
   String(value ?? "").replace(/[\r\n]+/g, " ").trim().slice(0, maxLength);
+
+export const formatInvoiceQuantity = (item: Pick<InvoiceItem, "quantity" | "unit">) => {
+  const quantity = String(Number(item.quantity));
+  // Preserve historical rendering when no unit was saved.
+  const unit = ["h", "Stk.", "Pauschale"].includes(item.unit || "") ? item.unit : null;
+  return unit ? `${quantity} ${unit}` : quantity;
+};
 const normalizedVatNumber = (value: unknown) =>
   String(value ?? "").trim().toUpperCase();
 export const validVatNumber = (value: unknown) =>
@@ -221,13 +229,13 @@ export const invoiceInlineImageAttachments = [
   {
     filename: "heav-email-wordmark.png",
     content: invoiceWordmarkBase64,
-    content_id: "heav-wordmark",
+    content_id: "heav-wordmark@heav.ch",
     content_type: "image/png",
   },
   {
     filename: "michias-email-profile-headroom.jpg",
     content: invoicePortraitBase64,
-    content_id: "heav-profile",
+    content_id: "heav-profile@heav.ch",
     content_type: "image/jpeg",
   },
 ] as const;
@@ -240,47 +248,77 @@ export function buildInvoiceEmailHtml(invoice: Invoice, settings: Settings, cust
   const email = compactText(settings.email, 160);
   const website = safePublicUrl(settings.website_url, "https://heav.ch");
   const profileImage =
-    "cid:heav-profile";
-  const wordmarkImage = "cid:heav-wordmark";
+    "cid:heav-profile@heav.ch";
+  const wordmarkImage = "cid:heav-wordmark@heav.ch";
   const messageHtml = customText.trim()
     ? customText.split(/\n{2,}/u).map((paragraph) => `<p style="margin:0 0 20px;">${escapeHtml(paragraph).replace(/\n/gu, "<br>")}</p>`).join("")
     : `<p style="margin:0 0 20px;">Hello ${escapeHtml(greeting)}</p><p style="margin:0 0 20px;">${escapeHtml(projectLine)}</p><p style="margin:0 0 20px;">Thank you for the opportunity and the great collaboration.</p><p style="margin:0 0 26px;">If you have any questions, please feel free to get in touch.</p>`;
+  const closingHtml = customText.trim()
+    ? ""
+    : `<p style="margin:0 0 24px;">Kind regards<br>${name}<br>${company}</p>`;
   const phoneRow = phone
     ? `<br><a href="tel:${
       escapeHtml(phone.replace(/[^+0-9]/g, ""))
     }" style="color:#777777;text-decoration:none;">${escapeHtml(phone)}</a>`
     : "";
-  return `<div style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;color:#151515;font-size:16px;line-height:1.55;">
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin:0 0 28px;padding:0;background:#080909;">
+  // Fixed table layout bounds unloaded CID placeholders in Apple Mail.
+  // Separate photo and text rows remain readable even when styles are stripped.
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="color-scheme" content="light only">
+  <meta name="supported-color-schemes" content="light">
+  <style type="text/css">
+    :root { color-scheme: light only; supported-color-schemes: light; }
+    body { margin:0 !important; padding:0 !important; background:#fff !important; }
+    @media only screen and (max-width:600px) {
+      .heav-email-outer { padding:0 !important; }
+      .heav-email-container { max-width:100% !important; width:100% !important; }
+      .heav-email-header { padding:17px 20px !important; }
+      .heav-email-content { padding:24px 20px 28px !important; }
+    }
+  </style>
+</head>
+<body bgcolor="#ffffff" style="margin:0;padding:0;background:#ffffff;color:#151515;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;border-collapse:collapse;background:#ffffff;">
     <tr>
-      <td style="padding:18px 20px;">
-        <img src="${wordmarkImage}" width="154" height="35" alt="HEAV" style="display:block;width:154px;height:35px;border:0;outline:none;text-decoration:none;" />
+      <td class="heav-email-outer" align="center" style="padding:20px 16px;">
+        <table role="presentation" class="heav-email-container" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;max-width:600px;table-layout:fixed;border-collapse:collapse;background:#ffffff;">
+          <tr>
+            <td class="heav-email-header" bgcolor="#080909" style="background:#080909;background-image:linear-gradient(#080909,#080909);padding:18px 20px;">
+              <img src="${wordmarkImage}" width="154" height="35" alt="HEAV" style="display:block;width:154px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;">
+            </td>
+          </tr>
+          <tr>
+            <td class="heav-email-content" style="padding:28px 20px 30px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.65;color:#151515;word-break:normal;overflow-wrap:break-word;">
+              ${messageHtml}
+              ${closingHtml}
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;table-layout:fixed;border-collapse:collapse;">
+                <tr>
+                  <td style="padding:0 0 14px;">
+                    <img src="${profileImage}" width="66" height="66" alt="${name}" style="display:block;width:66px;max-width:66px;height:66px;border:1px solid #151515;border-radius:50%;">
+                  </td>
+                </tr>
+                <tr>
+                  <td style="width:100%;padding:0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#151515;word-break:normal;overflow-wrap:break-word;">
+                    <strong style="display:block;font-size:17px;line-height:1.3;color:#151515;">${name}</strong>
+                    <span style="display:block;margin:3px 0 7px;color:#777777;font-size:13px;">Founder &amp; Owner | ${company}</span>
+                    <a href="mailto:${escapeHtml(email)}" style="color:#151515;text-decoration:underline;">${escapeHtml(email)}</a>${phoneRow}
+                    <br><a href="${escapeHtml(website)}" style="color:#777777;font-size:13px;text-decoration:underline;">${escapeHtml(website.replace(/^https?:\/\//, "").replace(/\/$/, ""))}</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
       </td>
     </tr>
   </table>
-  ${messageHtml}
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin:0;padding:0;">
-    <tr>
-      <td valign="middle" style="padding:0 18px 0 0;">
-        <img src="${profileImage}" width="88" height="88" alt="${name}" style="display:block;width:88px;height:88px;border:1px solid #151515;border-radius:50%;object-fit:cover;" />
-      </td>
-      <td valign="middle" style="padding:0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.45;">
-        <strong style="display:block;color:#111111;font-size:18px;line-height:1.2;">${name}</strong>
-        <span style="display:block;margin:3px 0 7px;color:#777777;">Founder &amp; Owner | ${company}</span>
-        <a href="mailto:${
-    escapeHtml(email)
-  }" style="color:#111111;text-decoration:underline;text-underline-offset:2px;">${
-    escapeHtml(email)
-  }</a>${phoneRow}<br>
-        <a href="${
-    escapeHtml(website)
-  }" style="color:#777777;text-decoration:underline;text-underline-offset:2px;">${
-    escapeHtml(website.replace(/^https?:\/\//, "").replace(/\/$/, ""))
-  }</a>
-      </td>
-    </tr>
-  </table>
-</div>`;
+</body>
+</html>`;
 }
 
 const isoCountryCodes = new Set(
@@ -805,7 +843,7 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
         descriptionSize,
         paymentRegular,
       );
-      drawRight(String(Number(item.quantity)), 404, y - 9, 7.5, dm);
+      drawRight(formatInvoiceQuantity(item), 404, y - 9, 7.5, dm);
       drawRight(
         formatCHF(item.unit_price_rappen).replace("CHF ", ""),
         486,
@@ -1527,6 +1565,7 @@ if (import.meta.main) {
             attachments: [{
               filename: persistedDocument.filename,
               content: base64(pdfBytes),
+              content_type: "application/pdf",
             }, ...invoiceInlineImageAttachments],
           }),
         });

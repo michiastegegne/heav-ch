@@ -40,3 +40,12 @@
 .hive-login-form button,.hive-signout{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:46px;padding:12px 18px;border:0;border-radius:18px;background:#171717;color:#fff;font:500 14px Manrope,sans-serif;cursor:pointer}
 .hive-login-form small{display:block;font-size:12px;color:#737373;line-height:1.6;margin-top:22px}.hive-login-form .hive-auth-error{color:#b91c1c;font-size:14px}.hive-login-form :focus-visible,.hive-signout:focus-visible{outline:2px solid #171717;outline-offset:3px}.hive-login-form button:disabled{opacity:.6;cursor:wait}.auth-setup{border-color:#e5e5e5;border-radius:24px}.auth-setup h2{overflow-wrap:anywhere}
 @media(max-width:500px){.hive-login-form{padding:26px 22px}.auth-brand h1{font-size:48px;letter-spacing:-.05em}.auth-panel{padding:24px 16px 40px}}
+
+/* Security uses the same form controls and palette as the existing login. */
+.passkey-settings{width:min(100%,600px)}
+.passkey-settings>button{min-height:46px;padding:12px 18px;border:1px solid currentColor;border-radius:18px;background:transparent;color:inherit;font:inherit;cursor:pointer}
+.passkey-settings>button:disabled{opacity:.6;cursor:default}
+.passkey-settings .hive-login-form{width:100%;margin-top:24px;box-shadow:none}
+.passkey-settings .hive-login-form button+button{margin-top:10px;background:transparent!important;color:inherit!important;border:1px solid currentColor}
+.passkey-settings :focus-visible{outline:2px solid currentColor;outline-offset:3px}
+@media(max-width:500px){.passkey-settings{padding:24px 18px}.passkey-settings .hive-login-form{padding:20px 16px}}
