@@ -38,7 +38,7 @@ export async function POST(
     if (input.action === 'duplicate') {
       const { data: items, error: itemsError } = await supabase
         .from('invoice_items')
-        .select('description, quantity, unit_price_rappen')
+        .select('description, quantity, unit, unit_price_rappen')
         .eq('workspace_id', invoice.workspace_id)
         .eq('invoice_id', invoiceId)
         .order('position');
@@ -61,6 +61,7 @@ export async function POST(
         p_items:items.map((item) => ({
           description:item.description,
           quantity:Number(item.quantity),
+          unit:item.unit,
           unit_price_rappen:Number(item.unit_price_rappen),
         })),
       });
