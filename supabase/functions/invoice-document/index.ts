@@ -253,6 +253,9 @@ export function buildInvoiceEmailHtml(invoice: Invoice, settings: Settings, cust
   const messageHtml = customText.trim()
     ? customText.split(/\n{2,}/u).map((paragraph) => `<p style="margin:0 0 20px;">${escapeHtml(paragraph).replace(/\n/gu, "<br>")}</p>`).join("")
     : `<p style="margin:0 0 20px;">Hello ${escapeHtml(greeting)}</p><p style="margin:0 0 20px;">${escapeHtml(projectLine)}</p><p style="margin:0 0 20px;">Thank you for the opportunity and the great collaboration.</p><p style="margin:0 0 26px;">If you have any questions, please feel free to get in touch.</p>`;
+  const closingHtml = customText.trim()
+    ? ""
+    : `<p style="margin:0 0 24px;">Kind regards<br>${name}<br>${company}</p>`;
   const phoneRow = phone
     ? `<br><a href="tel:${
       escapeHtml(phone.replace(/[^+0-9]/g, ""))
@@ -299,7 +302,7 @@ export function buildInvoiceEmailHtml(invoice: Invoice, settings: Settings, cust
           <tr>
             <td class="heav-email-content" style="padding:28px 20px 30px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.65;color:#151515;overflow-wrap:break-word;">
               ${messageHtml}
-              <p style="margin:0 0 24px;">Kind regards<br>${name}<br>${company}</p>
+              ${closingHtml}
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;max-width:480px;table-layout:auto;border-collapse:collapse;">
                 <tr>
                   <td class="heav-email-signature-photo" width="82" valign="middle" style="width:82px;padding:0 12px 0 0;">
@@ -309,7 +312,7 @@ export function buildInvoiceEmailHtml(invoice: Invoice, settings: Settings, cust
                     <strong style="display:block;font-size:16px;line-height:1.25;color:#151515;">${name}</strong>
                     <span style="display:block;margin:2px 0 5px;color:#777777;font-size:12px;">Founder &amp; Owner | ${company}</span>
                     <a href="mailto:${escapeHtml(email)}" style="display:inline-block;max-width:100%;color:#151515;font-size:13px;text-decoration:underline;word-break:break-word;">${escapeHtml(email)}</a>${phoneRow}
-                    <br><a href="${escapeHtml(website)}" style="color:#777777;font-size:12px;text-decoration:underline;word-break:break-word;">${escapeHtml(website.replace(/^https?:\\/\\//, "").replace(/\\/$/, ""))}</a>
+                    <br><a href="${escapeHtml(website)}" style="color:#777777;font-size:12px;text-decoration:underline;word-break:break-word;">${escapeHtml(website.replace(/^https?:\/\//, "").replace(/\/$/, ""))}</a>
                   </td>
                 </tr>
               </table>
