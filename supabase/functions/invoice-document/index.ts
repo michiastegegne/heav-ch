@@ -29,6 +29,7 @@ const colors = {
 type InvoiceItem = {
   description: string;
   quantity: number;
+  unit?: string | null;
   unit_price_rappen: number;
   position: number;
 };
@@ -171,6 +172,13 @@ export const buildInvoicePaymentMessage = (
 
 const compactText = (value: unknown, maxLength: number) =>
   String(value ?? "").replace(/[\r\n]+/g, " ").trim().slice(0, maxLength);
+
+export const formatInvoiceQuantity = (item: Pick<InvoiceItem, "quantity" | "unit">) => {
+  const quantity = String(Number(item.quantity));
+  // Historical invoices without an explicit unit retain their original display.
+  const unit = ["h", "Stk.", "Pauschale"].includes(item.unit || "") ? item.unit : null;
+  return unit ? `${quantity} ${unit}` : quantity;
+};
 const normalizedVatNumber = (value: unknown) =>
   String(value ?? "").trim().toUpperCase();
 export const validVatNumber = (value: unknown) =>
@@ -787,7 +795,7 @@ export async function createInvoicePdf(invoice: Invoice, settings: Settings) {
         descriptionSize,
         paymentRegular,
       );
-      drawRight(String(Number(item.quantity)), 404, y - 9, 7.5, dm);
+      drawRight(formatInvoiceQuantity(item), 404, y - 9, 7.5, dm);
       drawRight(
         formatCHF(item.unit_price_rappen).replace("CHF ", ""),
         486,
