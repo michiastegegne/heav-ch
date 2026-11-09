@@ -959,6 +959,7 @@ function readInvoiceEditorItems() {
     return {
       description,
       quantity: Number(row.querySelector('[name="item_quantity"]').value),
+      unit: row.querySelector('[name="item_unit"]')?.value || null,
       unitPrice: Number(row.querySelector('[name="item_price"]').value),
     };
   });
@@ -971,9 +972,13 @@ function addInvoiceItem(item = null, kind = "service") {
   row.className = `invoice-item ${isDiscount ? "is-discount" : ""}`;
   row.dataset.kind = isDiscount ? "discount" : "service";
   const remove = `<button class="remove-item" type="button" data-remove-item aria-label="Position entfernen">×</button>`;
+  const selectedUnit = item ? (item.unit || "") : "h";
+  const unitSelector = dialogForm.dataset.type === "invoice"
+    ? `<select name="item_unit" aria-label="Einheit"><option value="" ${selectedUnit === "" ? "selected" : ""}>Ohne</option><option value="h" ${selectedUnit === "h" ? "selected" : ""}>h</option><option value="Stk." ${selectedUnit === "Stk." ? "selected" : ""}>Stk.</option><option value="Pauschale" ${selectedUnit === "Pauschale" ? "selected" : ""}>Pauschale</option></select>`
+    : "";
   row.innerHTML = isDiscount
     ? `<input name="item_description" placeholder="Rabatt" aria-label="Rabatt" value="${esc(item?.description || "Rabatt")}" required><span class="discount-kind" aria-label="Rabattart: fixer Betrag">Rabatt</span><input name="discount_value" type="number" min="0.01" step="0.01" placeholder="CHF" value="${item ? Math.abs(Number(item.unit_price_rappen)) / 100 : ""}" aria-label="Rabatt in CHF" required>${remove}`
-    : `<input name="item_description" placeholder="Leistung" aria-label="Leistung" value="${esc(item?.description || "")}" required><input name="item_quantity" type="number" value="${item?.quantity ?? 1}" min="0.01" step="0.01" aria-label="Menge" required><input name="item_price" type="number" min="0" step="0.05" placeholder="CHF" value="${item ? item.unit_price_rappen / 100 : ""}" aria-label="Einzelpreis in CHF" required>${remove}`;
+    : `<input name="item_description" placeholder="Leistung" aria-label="Leistung" value="${esc(item?.description || "")}" required><input name="item_quantity" type="number" value="${item?.quantity ?? 1}" min="0.01" step="0.01" aria-label="Menge" required>${unitSelector}<input name="item_price" type="number" min="0" step="0.05" placeholder="CHF" value="${item ? item.unit_price_rappen / 100 : ""}" aria-label="Einzelpreis in CHF" required>${remove}`;
   list.append(row);
   updateInvoiceTotal();
 }
@@ -1001,7 +1006,7 @@ async function saveEditor(type) {
   if (type === "project") { const payload = { customer_id: data.customer_id, department_id: data.department_id, title: data.title.trim(), status: data.status, budget_rappen: Math.round(Number(data.budget || 0) * 100), start_date: data.start_date || null, due_date: data.due_date || null, description: data.description.trim() }; if (dialogForm.dataset.editId) await adapter.updateProject(dialogForm.dataset.editId, payload); else await adapter.saveProject(payload); }
   if (type === "invoice") {
     const editorItems = readInvoiceEditorItems();
-    const items = editorItems.map((item) => ({ description: item.description, quantity: item.quantity, unit_price_rappen: Math.round(item.unitPrice * 100) }));
+    const items = editorItems.map((item) => ({ description: item.description, quantity: item.quantity, unit: item.unit, unit_price_rappen: Math.round(item.unitPrice * 100) }));
     const payload = { customerId: data.customer_id, issueDate: data.issue_date, dueDate: data.due_date, items: editorItems };
     const errors = validateInvoice(payload); if (Object.keys(errors).length) { formError.textContent = Object.values(errors)[0]; return false; }
     const invoicePayload = { customer_id: data.customer_id, department_id: data.department_id, project_id: data.project_id || null, issue_date: data.issue_date, due_date: data.due_date, status: data.status || "draft", tax_rate: Number(data.tax_rate || 0), notes: data.notes.trim(), items }; if (dialogForm.dataset.editId) await adapter.updateInvoice(dialogForm.dataset.editId, invoicePayload); else await adapter.saveInvoice(invoicePayload);
