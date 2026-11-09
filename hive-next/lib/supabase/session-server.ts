@@ -7,6 +7,7 @@ export async function createSessionSupabaseClient() {
   if (!url || !key) throw new Error('Die Anmeldung ist noch nicht eingerichtet.');
   const store = await cookies();
   return createServerClient(url, key, {
+    auth: { experimental: { passkey: true } },
     cookieOptions: { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' },
     cookies: {
       getAll: () => store.getAll(),
