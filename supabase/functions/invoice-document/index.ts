@@ -229,13 +229,13 @@ export const invoiceInlineImageAttachments = [
   {
     filename: "heav-email-wordmark.png",
     content: invoiceWordmarkBase64,
-    content_id: "heav-wordmark",
+    content_id: "heav-wordmark@heav.ch",
     content_type: "image/png",
   },
   {
     filename: "michias-email-profile-headroom.jpg",
     content: invoicePortraitBase64,
-    content_id: "heav-profile",
+    content_id: "heav-profile@heav.ch",
     content_type: "image/jpeg",
   },
 ] as const;
@@ -248,8 +248,8 @@ export function buildInvoiceEmailHtml(invoice: Invoice, settings: Settings, cust
   const email = compactText(settings.email, 160);
   const website = safePublicUrl(settings.website_url, "https://heav.ch");
   const profileImage =
-    "cid:heav-profile";
-  const wordmarkImage = "cid:heav-wordmark";
+    "cid:heav-profile@heav.ch";
+  const wordmarkImage = "cid:heav-wordmark@heav.ch";
   const messageHtml = customText.trim()
     ? customText.split(/\n{2,}/u).map((paragraph) => `<p style="margin:0 0 20px;">${escapeHtml(paragraph).replace(/\n/gu, "<br>")}</p>`).join("")
     : `<p style="margin:0 0 20px;">Hello ${escapeHtml(greeting)}</p><p style="margin:0 0 20px;">${escapeHtml(projectLine)}</p><p style="margin:0 0 20px;">Thank you for the opportunity and the great collaboration.</p><p style="margin:0 0 26px;">If you have any questions, please feel free to get in touch.</p>`;
@@ -261,8 +261,8 @@ export function buildInvoiceEmailHtml(invoice: Invoice, settings: Settings, cust
       escapeHtml(phone.replace(/[^+0-9]/g, ""))
     }" style="color:#777777;text-decoration:none;">${escapeHtml(phone)}</a>`
     : "";
-  // Fluid tables and inline styles provide a safe fallback even in email clients
-  // that strip <style>; media queries stack the signature on narrow phones.
+  // Fixed table layout bounds unloaded CID placeholders in Apple Mail.
+  // Separate photo and text rows remain readable even when styles are stripped.
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -280,39 +280,34 @@ export function buildInvoiceEmailHtml(invoice: Invoice, settings: Settings, cust
       .heav-email-header { padding:17px 20px !important; }
       .heav-email-content { padding:24px 20px 28px !important; }
     }
-    @media only screen and (max-width:360px) {
-      .heav-email-signature-photo, .heav-email-signature-info {
-        display:block !important; width:100% !important;
-      }
-      .heav-email-signature-photo { padding:0 0 12px !important; }
-      .heav-email-signature-info { padding:0 !important; }
-    }
   </style>
 </head>
 <body bgcolor="#ffffff" style="margin:0;padding:0;background:#ffffff;color:#151515;font-family:Arial,Helvetica,sans-serif;">
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;border-collapse:collapse;background:#ffffff;">
     <tr>
       <td class="heav-email-outer" align="center" style="padding:20px 16px;">
-        <table role="presentation" class="heav-email-container" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;max-width:600px;border-collapse:collapse;background:#ffffff;">
+        <table role="presentation" class="heav-email-container" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;max-width:600px;table-layout:fixed;border-collapse:collapse;background:#ffffff;">
           <tr>
             <td class="heav-email-header" bgcolor="#080909" style="background:#080909;background-image:linear-gradient(#080909,#080909);padding:18px 20px;">
               <img src="${wordmarkImage}" width="154" height="35" alt="HEAV" style="display:block;width:154px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;">
             </td>
           </tr>
           <tr>
-            <td class="heav-email-content" style="padding:28px 20px 30px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.65;color:#151515;overflow-wrap:break-word;">
+            <td class="heav-email-content" style="padding:28px 20px 30px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.65;color:#151515;word-break:normal;overflow-wrap:break-word;">
               ${messageHtml}
               ${closingHtml}
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;max-width:480px;table-layout:auto;border-collapse:collapse;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;table-layout:fixed;border-collapse:collapse;">
                 <tr>
-                  <td class="heav-email-signature-photo" width="82" valign="middle" style="width:82px;padding:0 12px 0 0;">
-                    <img src="${profileImage}" width="66" height="66" alt="${name}" style="display:block;width:66px;height:66px;border:1px solid #151515;border-radius:50%;">
+                  <td style="padding:0 0 14px;">
+                    <img src="${profileImage}" width="66" height="66" alt="${name}" style="display:block;width:66px;max-width:66px;height:66px;border:1px solid #151515;border-radius:50%;">
                   </td>
-                  <td class="heav-email-signature-info" valign="middle" style="padding:0;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.45;color:#151515;overflow-wrap:anywhere;word-break:break-word;">
-                    <strong style="display:block;font-size:16px;line-height:1.25;color:#151515;">${name}</strong>
-                    <span style="display:block;margin:2px 0 5px;color:#777777;font-size:12px;">Founder &amp; Owner | ${company}</span>
-                    <a href="mailto:${escapeHtml(email)}" style="display:inline-block;max-width:100%;color:#151515;font-size:13px;text-decoration:underline;word-break:break-word;">${escapeHtml(email)}</a>${phoneRow}
-                    <br><a href="${escapeHtml(website)}" style="color:#777777;font-size:12px;text-decoration:underline;word-break:break-word;">${escapeHtml(website.replace(/^https?:\/\//, "").replace(/\/$/, ""))}</a>
+                </tr>
+                <tr>
+                  <td style="width:100%;padding:0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#151515;word-break:normal;overflow-wrap:break-word;">
+                    <strong style="display:block;font-size:17px;line-height:1.3;color:#151515;">${name}</strong>
+                    <span style="display:block;margin:3px 0 7px;color:#777777;font-size:13px;">Founder &amp; Owner | ${company}</span>
+                    <a href="mailto:${escapeHtml(email)}" style="color:#151515;text-decoration:underline;">${escapeHtml(email)}</a>${phoneRow}
+                    <br><a href="${escapeHtml(website)}" style="color:#777777;font-size:13px;text-decoration:underline;">${escapeHtml(website.replace(/^https?:\/\//, "").replace(/\/$/, ""))}</a>
                   </td>
                 </tr>
               </table>
@@ -1570,6 +1565,7 @@ if (import.meta.main) {
             attachments: [{
               filename: persistedDocument.filename,
               content: base64(pdfBytes),
+              content_type: "application/pdf",
             }, ...invoiceInlineImageAttachments],
           }),
         });
