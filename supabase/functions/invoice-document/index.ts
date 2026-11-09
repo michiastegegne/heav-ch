@@ -258,37 +258,69 @@ export function buildInvoiceEmailHtml(invoice: Invoice, settings: Settings, cust
       escapeHtml(phone.replace(/[^+0-9]/g, ""))
     }" style="color:#777777;text-decoration:none;">${escapeHtml(phone)}</a>`
     : "";
-  return `<div style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;color:#151515;font-size:16px;line-height:1.55;">
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin:0 0 28px;padding:0;background:#080909;">
+  // Fluid tables and inline styles provide a safe fallback even in email clients
+  // that strip <style>; media queries stack the signature on narrow phones.
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="color-scheme" content="light only">
+  <meta name="supported-color-schemes" content="light">
+  <style type="text/css">
+    :root { color-scheme: light only; supported-color-schemes: light; }
+    body { margin:0 !important; padding:0 !important; background:#fff !important; }
+    @media only screen and (max-width:600px) {
+      .heav-email-outer { padding:0 !important; }
+      .heav-email-container { max-width:100% !important; width:100% !important; }
+      .heav-email-header { padding:17px 20px !important; }
+      .heav-email-content { padding:24px 20px 28px !important; }
+    }
+    @media only screen and (max-width:360px) {
+      .heav-email-signature-photo, .heav-email-signature-info {
+        display:block !important; width:100% !important;
+      }
+      .heav-email-signature-photo { padding:0 0 12px !important; }
+      .heav-email-signature-info { padding:0 !important; }
+    }
+  </style>
+</head>
+<body bgcolor="#ffffff" style="margin:0;padding:0;background:#ffffff;color:#151515;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;border-collapse:collapse;background:#ffffff;">
     <tr>
-      <td style="padding:18px 20px;">
-        <img src="${wordmarkImage}" width="154" height="35" alt="HEAV" style="display:block;width:154px;height:35px;border:0;outline:none;text-decoration:none;" />
+      <td class="heav-email-outer" align="center" style="padding:20px 16px;">
+        <table role="presentation" class="heav-email-container" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;max-width:600px;border-collapse:collapse;background:#ffffff;">
+          <tr>
+            <td class="heav-email-header" bgcolor="#080909" style="background:#080909;background-image:linear-gradient(#080909,#080909);padding:18px 20px;">
+              <img src="${wordmarkImage}" width="154" height="35" alt="HEAV" style="display:block;width:154px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;">
+            </td>
+          </tr>
+          <tr>
+            <td class="heav-email-content" style="padding:28px 20px 30px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.65;color:#151515;overflow-wrap:break-word;">
+              ${messageHtml}
+              <p style="margin:0 0 24px;">Kind regards<br>${name}<br>${company}</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;max-width:480px;table-layout:auto;border-collapse:collapse;">
+                <tr>
+                  <td class="heav-email-signature-photo" width="82" valign="middle" style="width:82px;padding:0 12px 0 0;">
+                    <img src="${profileImage}" width="66" height="66" alt="${name}" style="display:block;width:66px;height:66px;border:1px solid #151515;border-radius:50%;">
+                  </td>
+                  <td class="heav-email-signature-info" valign="middle" style="padding:0;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.45;color:#151515;overflow-wrap:anywhere;word-break:break-word;">
+                    <strong style="display:block;font-size:16px;line-height:1.25;color:#151515;">${name}</strong>
+                    <span style="display:block;margin:2px 0 5px;color:#777777;font-size:12px;">Founder &amp; Owner | ${company}</span>
+                    <a href="mailto:${escapeHtml(email)}" style="display:inline-block;max-width:100%;color:#151515;font-size:13px;text-decoration:underline;word-break:break-word;">${escapeHtml(email)}</a>${phoneRow}
+                    <br><a href="${escapeHtml(website)}" style="color:#777777;font-size:12px;text-decoration:underline;word-break:break-word;">${escapeHtml(website.replace(/^https?:\\/\\//, "").replace(/\\/$/, ""))}</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
       </td>
     </tr>
   </table>
-  ${messageHtml}
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin:0;padding:0;">
-    <tr>
-      <td valign="middle" style="padding:0 18px 0 0;">
-        <img src="${profileImage}" width="88" height="88" alt="${name}" style="display:block;width:88px;height:88px;border:1px solid #151515;border-radius:50%;object-fit:cover;" />
-      </td>
-      <td valign="middle" style="padding:0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.45;">
-        <strong style="display:block;color:#111111;font-size:18px;line-height:1.2;">${name}</strong>
-        <span style="display:block;margin:3px 0 7px;color:#777777;">Founder &amp; Owner | ${company}</span>
-        <a href="mailto:${
-    escapeHtml(email)
-  }" style="color:#111111;text-decoration:underline;text-underline-offset:2px;">${
-    escapeHtml(email)
-  }</a>${phoneRow}<br>
-        <a href="${
-    escapeHtml(website)
-  }" style="color:#777777;text-decoration:underline;text-underline-offset:2px;">${
-    escapeHtml(website.replace(/^https?:\/\//, "").replace(/\/$/, ""))
-  }</a>
-      </td>
-    </tr>
-  </table>
-</div>`;
+</body>
+</html>`;
 }
 
 const isoCountryCodes = new Set(
