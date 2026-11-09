@@ -286,6 +286,8 @@ Deno.test("invoice document SHA-256 is stable", async () => {
 Deno.test("createInvoicePdf erzeugt eine valide einseitige HEAV-Rechnung", async () => {
   const bytes = await createInvoicePdf({
     id: "invoice-test",
+    workspace_id: "workspace-test",
+    customer_id: "customer-test",
     owner_id: "owner-test",
     invoice_number: "HEAV-2026-TEST",
     payment_reference: "RF43HEAV2026002",
